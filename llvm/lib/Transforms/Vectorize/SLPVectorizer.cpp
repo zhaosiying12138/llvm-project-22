@@ -7853,8 +7853,59 @@ public:
 
 void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
                             const EdgeInfo &UserTreeIdx,
-                            unsigned InterleaveFactor) {
+                            unsigned InterleaveFactor) {{
   assert((allConstant(VL) || allSameType(VL)) && "Invalid types!");
+
+  Instruction *Star = dyn_cast<Instruction>(VL.front());
+  bool AllInstrsDependOr = (all_of(SmallVector<Value*>(VL.begin() + 1, VL.end()), [Star](Value *V){
+    auto *I = dyn_cast<Instruction>(V);
+    if (!I || !Star) return false;
+    if (I->getParent() != Star->getParent()) return false;
+    if (Star->getOpcode() != Instruction::Or) return false;
+    return llvm::any_of(I->operands(), [Star](const Use &U){
+      return U.get() == Star;
+    });
+  }));
+  if (AllInstrsDependOr) {
+    llvm::outs() << "[ZSY-BoUpSLP] I found a Bundler which all other intrs depends on the first one: ";
+    Star->print(llvm::outs());
+    llvm::outs() << "\n";
+  }
+
+  SmallVector<Value*, 16> NewVL(VL.begin(), VL.end());
+  if (AllInstrsDependOr) {
+    IRBuilder<> B(Star->getNextNode());
+    auto *Zero  = ConstantInt::get(Star->getType(), 0);
+    auto *NewOr = BinaryOperator::CreateOr(Star, Zero,
+                                      Star->getName() + ".trival_or0");
+    NewOr->insertAfter(Star);
+    NewOr->copyIRFlags(Star);
+    NewOr->setDebugLoc(Star->getDebugLoc());
+
+    SmallPtrSet<const Instruction*, 16> VLSet;
+    for (Value *V : VL)
+      if (auto *I = dyn_cast<Instruction>(V))
+        VLSet.insert(I);
+
+    for (Use &U : llvm::make_early_inc_range(Star->uses())) {
+        User *Usr = U.getUser();
+        auto *UsrI = dyn_cast<Instruction>(Usr);
+        if (!UsrI)                 continue;           // 常量/metadata 用户，跳过
+        if (UsrI == NewOr)         continue;           // 避免把 NewOr 的操作数也替掉
+        if (VLSet.contains(UsrI))  continue;           // 在同一 bundle 内的用户，跳过
+        // if (UsrI->getParent() != BB) continue;         // 只修改当前基本块
+        // if (auto *USD = BS.getScheduleData(UsrI))      // TODO：只修改通调度域的Bundle
+        //   if (!isInSchedulingRegion(USD)) continue;
+
+        U.set(NewOr);
+    }
+    NewOr->getParent()->getParent()->dump();
+    NewVL[0] = NewOr;
+
+    UserTreeIdx.UserTE->getOperand(UserTreeIdx.EdgeIdx).clear();
+    UserTreeIdx.UserTE->setOperand(UserTreeIdx.EdgeIdx, NewVL);
+  }
+  ArrayRef<Value*> VL(NewVL);
 
   SmallVector<int> ReuseShuffleIndices;
   SmallVector<Value *> UniqueValues;
@@ -8683,7 +8734,7 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
       break;
   }
   llvm_unreachable("Unexpected vectorization of the instructions.");
-}
+}}
 
 unsigned BoUpSLP::canMapToVector(Type *T) const {
   unsigned N = 1;
