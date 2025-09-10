@@ -6283,7 +6283,7 @@ static bool hasMaskOp(unsigned Opcode) {
   if (Opcode >= RISCVISD::STRICT_FADD_VL &&
       Opcode <= RISCVISD::STRICT_VFROUND_NOEXCEPT_VL)
     return true;
-  if (Opcode == RISCVISD::FEXP_VL || Opcode == RISCVISD::FSIN_VL || RISCVISD::FRSQRT_VL)
+  if (Opcode == RISCVISD::FEXP_VL || Opcode == RISCVISD::FSIN_VL ||  Opcode == RISCVISD::FRSQRT_VL)
     return true;
   return false;
 }
