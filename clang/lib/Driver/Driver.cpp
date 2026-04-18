@@ -793,7 +793,7 @@ static llvm::Triple computeTargetTriple(const Driver &D,
 
   // If target is RISC-V adjust the target triple according to
   // provided architecture name
-  if (Target.isRISCV()) {
+  if (Target.isRISCV() && !Target.isYSX64()) {
     if (Args.hasArg(options::OPT_march_EQ) ||
         Args.hasArg(options::OPT_mcpu_EQ)) {
       std::string ArchName = tools::riscv::getRISCVArch(Args, Target);

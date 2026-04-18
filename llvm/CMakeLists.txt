@@ -544,6 +544,7 @@ set(LLVM_ALL_EXPERIMENTAL_TARGETS
   DirectX
   M68k
   Xtensa
+  YSX
 )
 
 # List of targets with JIT support:
@@ -1082,6 +1083,9 @@ set(LLVM_ENUM_TARGETMCAS "")
 set(LLVM_ENUM_EXEGESIS "")
 foreach(t ${LLVM_TARGETS_TO_BUILD})
   set( td ${LLVM_MAIN_SRC_DIR}/lib/Target/${t} )
+  if(t STREQUAL "YSX")
+    set(td ${LLVM_MAIN_SRC_DIR}/lib/Target/YuShuXin)
+  endif()
 
   # Make sure that any experimental targets were passed via
   # LLVM_EXPERIMENTAL_TARGETS_TO_BUILD, not LLVM_TARGETS_TO_BUILD.

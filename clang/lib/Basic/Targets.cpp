@@ -477,6 +477,41 @@ std::unique_ptr<TargetInfo> AllocateTarget(const llvm::Triple &Triple,
       return std::make_unique<RISCV64TargetInfo>(Triple, Opts);
     }
 
+  case llvm::Triple::ysx64:
+    switch (os) {
+    case llvm::Triple::FreeBSD:
+      return std::make_unique<FreeBSDTargetInfo<RISCV64TargetInfo>>(Triple,
+                                                                    Opts);
+    case llvm::Triple::NetBSD:
+      return std::make_unique<NetBSDTargetInfo<RISCV64TargetInfo>>(Triple,
+                                                                   Opts);
+    case llvm::Triple::OpenBSD:
+      return std::make_unique<OpenBSDTargetInfo<RISCV64TargetInfo>>(Triple,
+                                                                    Opts);
+    case llvm::Triple::Fuchsia:
+      return std::make_unique<FuchsiaTargetInfo<RISCV64TargetInfo>>(Triple,
+                                                                    Opts);
+    case llvm::Triple::Haiku:
+      return std::make_unique<HaikuTargetInfo<RISCV64TargetInfo>>(Triple,
+                                                                  Opts);
+    case llvm::Triple::Linux:
+      switch (Triple.getEnvironment()) {
+      default:
+        return std::make_unique<LinuxTargetInfo<RISCV64TargetInfo>>(Triple,
+                                                                    Opts);
+      case llvm::Triple::OpenHOS:
+        return std::make_unique<OHOSTargetInfo<RISCV64TargetInfo>>(Triple,
+                                                                   Opts);
+      }
+    case llvm::Triple::Managarm:
+      return std::make_unique<ManagarmTargetInfo<RISCV64TargetInfo>>(Triple,
+                                                                     Opts);
+    case llvm::Triple::Hurd:
+      return std::make_unique<HurdTargetInfo<RISCV64TargetInfo>>(Triple, Opts);
+    default:
+      return std::make_unique<RISCV64TargetInfo>(Triple, Opts);
+    }
+
   case llvm::Triple::sparc:
     switch (os) {
     case llvm::Triple::Linux:

@@ -33,7 +33,11 @@ endif()
 
 foreach(t ${LLVM_TARGETS_TO_BUILD})
   message(STATUS "Targeting ${t}")
-  add_subdirectory(${t})
+  if(t STREQUAL "YSX")
+    add_subdirectory(YuShuXin)
+  else()
+    add_subdirectory(${t})
+  endif()
 endforeach()
 
 # Currently we do not allow libraries from lib to reference targets directly.

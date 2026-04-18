@@ -1218,6 +1218,7 @@ static bool isSignedCharDefault(const llvm::Triple &Triple) {
   case llvm::Triple::ppc64le:
   case llvm::Triple::riscv32:
   case llvm::Triple::riscv64:
+  case llvm::Triple::ysx64:
   case llvm::Triple::systemz:
   case llvm::Triple::xcore:
   case llvm::Triple::xtensa:
@@ -1564,6 +1565,7 @@ void Clang::RenderTargetOptions(const llvm::Triple &EffectiveTriple,
 
   case llvm::Triple::riscv32:
   case llvm::Triple::riscv64:
+  case llvm::Triple::ysx64:
     AddRISCVTargetArgs(Args, CmdArgs);
     break;
 
@@ -2010,6 +2012,15 @@ void Clang::AddRISCVTargetArgs(const ArgList &Args,
                                ArgStringList &CmdArgs) const {
   const llvm::Triple &Triple = getToolChain().getTriple();
   StringRef ABIName = riscv::getRISCVABI(Args, Triple);
+  const auto &D = getToolChain().getDriver();
+
+  if (Triple.isYSX64()) {
+    if (const Arg *A = Args.getLastArg(options::OPT_mabi_EQ);
+        A && StringRef(A->getValue()) != "lp64")
+      D.Diag(diag::err_drv_unsupported_option_argument)
+          << A->getSpelling() << A->getValue();
+    ABIName = "lp64";
+  }
 
   CmdArgs.push_back("-target-abi");
   CmdArgs.push_back(ABIName.data());
@@ -8599,6 +8610,15 @@ void ClangAs::AddRISCVTargetArgs(const ArgList &Args,
                                ArgStringList &CmdArgs) const {
   const llvm::Triple &Triple = getToolChain().getTriple();
   StringRef ABIName = riscv::getRISCVABI(Args, Triple);
+  const auto &D = getToolChain().getDriver();
+
+  if (Triple.isYSX64()) {
+    if (const Arg *A = Args.getLastArg(options::OPT_mabi_EQ);
+        A && StringRef(A->getValue()) != "lp64")
+      D.Diag(diag::err_drv_unsupported_option_argument)
+          << A->getSpelling() << A->getValue();
+    ABIName = "lp64";
+  }
 
   CmdArgs.push_back("-target-abi");
   CmdArgs.push_back(ABIName.data());
@@ -8606,7 +8626,8 @@ void ClangAs::AddRISCVTargetArgs(const ArgList &Args,
   if (Args.hasFlag(options::OPT_mdefault_build_attributes,
                    options::OPT_mno_default_build_attributes, true)) {
       CmdArgs.push_back("-mllvm");
-      CmdArgs.push_back("-riscv-add-build-attributes");
+      CmdArgs.push_back(Triple.isYSX64() ? "-ysx-add-build-attributes"
+                                         : "-riscv-add-build-attributes");
   }
 }
 
@@ -8829,6 +8850,7 @@ void ClangAs::ConstructJob(Compilation &C, const JobAction &JA,
 
   case llvm::Triple::riscv32:
   case llvm::Triple::riscv64:
+  case llvm::Triple::ysx64:
     AddRISCVTargetArgs(Args, CmdArgs);
     break;
 

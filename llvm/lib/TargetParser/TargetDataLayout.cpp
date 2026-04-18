@@ -593,6 +593,7 @@ std::string Triple::computeDataLayout(StringRef ABIName) const {
   case Triple::riscv64:
   case Triple::riscv32be:
   case Triple::riscv64be:
+  case Triple::ysx64:
     return computeRISCVDataLayout(*this, ABIName);
   case Triple::sparc:
   case Triple::sparcv9:

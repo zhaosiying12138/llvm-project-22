@@ -79,6 +79,7 @@ public:
     riscv64,     // RISC-V (64-bit, little endian): riscv64
     riscv32be,   // RISC-V (32-bit, big endian): riscv32be
     riscv64be,   // RISC-V (64-bit, big endian): riscv64be
+    ysx64,       // YuShuXin (64-bit, little endian): ysx64
     sparc,       // Sparc: sparc
     sparcv9,     // Sparcv9: Sparcv9
     sparcel,     // Sparc: (endianness = little). NB: 'Sparcle' is a CPU variant
@@ -110,7 +111,7 @@ public:
     renderscript32, // 32-bit RenderScript
     renderscript64, // 64-bit RenderScript
     ve,             // NEC SX-Aurora Vector Engine
-    LastArchType = ve
+    LastArchType = ysx64
   };
   enum SubArchType {
     NoSubArch,
@@ -1111,11 +1112,18 @@ public:
 
   /// Tests whether the target is 64-bit RISC-V.
   bool isRISCV64() const {
-    return getArch() == Triple::riscv64 || getArch() == Triple::riscv64be;
+    return getArch() == Triple::riscv64 || getArch() == Triple::riscv64be ||
+           getArch() == Triple::ysx64;
   }
 
   /// Tests whether the target is RISC-V (32- and 64-bit).
   bool isRISCV() const { return isRISCV32() || isRISCV64(); }
+
+  /// Tests whether the target is 64-bit YuShuXin.
+  bool isYSX64() const { return getArch() == Triple::ysx64; }
+
+  /// Tests whether the target is YuShuXin.
+  bool isYSX() const { return isYSX64(); }
 
   /// Tests whether the target is 32-bit SPARC (little and big endian).
   bool isSPARC32() const {

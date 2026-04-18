@@ -70,6 +70,12 @@ void riscv::getRISCVTargetFeatures(const Driver &D, const llvm::Triple &Triple,
                                    std::vector<StringRef> &Features) {
   std::string MArch = getRISCVArch(Args, Triple);
 
+  if (Triple.isYSX64() && MArch != "rv64ima") {
+    D.Diag(diag::err_drv_invalid_riscv_arch_name)
+        << MArch << "YuShuXin only supports -march=rv64ima";
+    return;
+  }
+
   if (!getArchFeatures(D, MArch, Features, Args))
     return;
 
@@ -82,6 +88,12 @@ void riscv::getRISCVTargetFeatures(const Driver &D, const llvm::Triple &Triple,
     StringRef CPU = A->getValue();
     if (CPU == "native")
       CPU = llvm::sys::getHostCPUName();
+
+    if (Triple.isYSX64() && CPU != "generic" && CPU != "generic-rv64") {
+      D.Diag(clang::diag::err_drv_unsupported_option_argument)
+          << A->getSpelling() << CPU;
+      return;
+    }
 
     if (!isValidRISCVCPU(D, A, Triple, CPU))
       return;
@@ -178,6 +190,9 @@ void riscv::getRISCVTargetFeatures(const Driver &D, const llvm::Triple &Triple,
 StringRef riscv::getRISCVABI(const ArgList &Args, const llvm::Triple &Triple) {
   assert(Triple.isRISCV() && "Unexpected triple");
 
+  if (Triple.isYSX64())
+    return "lp64";
+
   // GCC's logic around choosing a default `-mabi=` is complex. If GCC is not
   // configured using `--with-abi=`, then the logic for the default choice is
   // defined in config.gcc. This function is based on the logic in GCC 9.2.0.
@@ -239,6 +254,12 @@ StringRef riscv::getRISCVABI(const ArgList &Args, const llvm::Triple &Triple) {
 std::string riscv::getRISCVArch(const llvm::opt::ArgList &Args,
                                 const llvm::Triple &Triple) {
   assert(Triple.isRISCV() && "Unexpected triple");
+
+  if (Triple.isYSX64()) {
+    if (const Arg *A = Args.getLastArg(options::OPT_march_EQ))
+      return A->getValue();
+    return "rv64ima";
+  }
 
   // GCC's logic around choosing a default `-march=` is complex. If GCC is not
   // configured using `--with-arch=`, then the logic for the default choice is
@@ -346,6 +367,9 @@ std::string riscv::getRISCVArch(const llvm::opt::ArgList &Args,
 
 std::string riscv::getRISCVTargetCPU(const llvm::opt::ArgList &Args,
                                      const llvm::Triple &Triple) {
+  if (Triple.isYSX64())
+    return "generic-rv64";
+
   std::string CPU;
   // If we have -mcpu, use that.
   if (const Arg *A = Args.getLastArg(options::OPT_mcpu_EQ))
