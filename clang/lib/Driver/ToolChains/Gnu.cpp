@@ -1795,7 +1795,7 @@ static void findRISCVMultilibs(const Driver &D,
           .FilterOut(NonExistent);
 
   Multilib::flags_list Flags;
-  bool IsRV64 = TargetTriple.getArch() == llvm::Triple::riscv64;
+  bool IsRV64 = TargetTriple.isRISCV64();
   StringRef ABIName = tools::riscv::getRISCVABI(Args, TargetTriple);
 
   addMultilibFlag(!IsRV64, "-m32", Flags);

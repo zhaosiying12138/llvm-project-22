@@ -60,7 +60,7 @@ for deterministic verification.
 ## MUTABLE SECTION
 <!-- Update each round with justification for changes -->
 
-### Plan Version: 61 (Updated: Round 30)
+### Plan Version: 62 (Updated: Round 32)
 
 #### Plan Evolution Log
 <!-- Document any changes to the plan with justification -->
@@ -130,6 +130,7 @@ for deterministic verification.
 | 29 review | Verified Round-29 clobber/register-name cleanup and final goal alignment | Direct review probes confirm YSX rejects removed FP/vector/CSR Clang clobber names while accepting retained GPR names, the backend IR guard rejects removed clobbers that bypass Clang, stale active clobbers are gone from YSX CodeGen tests except intentional negative coverage, YSX-only and combined target-registration probes work from existing build products, retained rv64ima MC/codegen smoke tests pass, unsupported FP/vector/Zbb MC probes reject, removed-surface scans are clean for reviewed blockers, `git diff --check HEAD^..HEAD` passes, and RISCV source/test diff is zero. Full lit could not be independently rerun in this sandbox because Clang lit writes under read-only external build roots, but direct probes and the LLVM negative lit test validate the changed behavior. | AC-1, AC-2, AC-3, and AC-4 are met against `docs/plan.md`; no deferred items remain. |
 | 30 | Fixed review-phase reserve-register and arch-enumeration blockers | Retained valid `reserve-x1` through `reserve-x31` YSX features in CodeGen and MC feature filters, restored `Triple::LastArchType` to `ve`, and added positive `-ffixed-x5` / `+reserve-x5` test coverage. Current YSX backend line count is 26,059 versus RISCV's 136,068, and YSX focused tests are 48,129 lines. | AC-1 and AC-2 preserved for YSX-only and combined builds; AC-4 expanded to 134 focused YSX tests; RISCV source/test diff remains zero pending Codex review. |
 | 31 | Fixed YSX Linux linker and RVV vector-bits driver blockers | Added `ysx64` Linux multiarch/dynamic-linker handling using the RISC-V-compatible `/lib/ld-linux-riscv64-lp64.so.1` loader, added `ysx64` GNU toolchain coverage, rejected YSX `-mrvv-vector-bits=`, and added YSX driver tests. Current YSX backend line count is 26,059 versus RISCV's 136,068, and YSX focused tests are 48,142 lines. | AC-1 and AC-2 preserved in both YSX-only and combined YSX+RISCV builds; AC-4 focused 134-test YSX lit passes in both builds; RISCV source/test diff remains zero pending Codex review. |
+| 32 | Fixed experimental-target test guards and YSX multilib selection | Added `ysx-registered-target` local lit guards to all YSX-owned LLVM/Clang test directories, changed GNU RISC-V multilib selection to use `TargetTriple.isRISCV64()` so `ysx64` selects `lib64/lp64`, and added YSX driver coverage for the Linux multilib path. Current YSX backend line count is 26,059 versus RISCV's 136,068, and YSX focused tests are 48,145 lines. | AC-1, AC-2, and AC-4 preserved in both YSX-only and combined YSX+RISCV builds; focused 134-test YSX lit passes in both builds; RISCV source/test diff remains zero pending Codex review. |
 
 #### Active Tasks
 <!-- Mainline tasks only: each task must directly advance the current round objective and carry routing metadata -->

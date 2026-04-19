@@ -5,6 +5,7 @@
 // RUN: %clang --target=ysx64 -ffixed-x5 -### -c %s 2>&1 | FileCheck %s --check-prefix=FIXED
 // RUN: %clang --target=ysx64-unknown-elf -ffixed-x5 -c %s -o %t-fixed-x5.o
 // RUN: %clang --target=ysx64-linux-gnu -### %s 2>&1 | FileCheck %s --check-prefix=LINUX
+// RUN: %clang -### %s --target=ysx64-unknown-linux-gnu --rtlib=platform --unwindlib=platform -fuse-ld= -no-pie --gcc-toolchain=%S/../Inputs/multilib_riscv_linux_sdk --sysroot=%S/../Inputs/multilib_riscv_linux_sdk/sysroot 2>&1 | FileCheck %s --check-prefix=LINUX-MULTI
 // RUN: not %clang --target=ysx64 -march=rv64gc -c %s 2>&1 | FileCheck %s --check-prefix=ERR
 // RUN: not %clang --target=ysx64 -march=rv64imaf -c %s 2>&1 | FileCheck %s --check-prefix=ERR
 // RUN: not %clang --target=ysx64 -march=rv64imac -c %s 2>&1 | FileCheck %s --check-prefix=ERR
@@ -59,6 +60,8 @@
 // ABIERR: unsupported argument 'lp64d' to option '-mabi='
 // RVVBITS: error: unsupported option '-mrvv-vector-bits=' for target 'ysx64'
 // LINUX: "-dynamic-linker" "/lib/ld-linux-riscv64-lp64.so.1"
+// LINUX-MULTI: "{{.*}}Inputs/multilib_riscv_linux_sdk/lib/gcc/riscv64-unknown-linux-gnu/7.2.0/lib64/lp64/crtbegin.o"
+// LINUX-MULTI: "-L{{.*}}Inputs/multilib_riscv_linux_sdk/lib/gcc/riscv64-unknown-linux-gnu/7.2.0/lib64/lp64"
 // VTYPE: error: unknown type name '__rvv_int8m1_t'
 // VBUILTIN: error: use of unknown builtin '__builtin_rvv_vsetvli'
 // ATTRIR: "target-features"="+64bit,+a,+i,+m,+relax,+zaamo,+zalrsc,+zmmul"
