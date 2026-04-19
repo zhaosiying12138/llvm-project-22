@@ -251,7 +251,7 @@ public:
   static bool isSymbolDiff(const MCExpr *Expr);
 
   YSXAsmParser(const MCSubtargetInfo &STI, MCAsmParser &Parser,
-                 const MCInstrInfo &MII, const MCTargetOptions &Options)
+               const MCInstrInfo &MII, const MCTargetOptions &Options)
       : MCTargetAsmParser(Options, STI, MII) {
     MCAsmParserExtension::Initialize(Parser);
 
@@ -263,7 +263,7 @@ public:
 
     auto ABIName = StringRef(Options.ABIName);
     YSXABI::computeTargetABI(STI.getTargetTriple(), STI.getFeatureBits(),
-                               ABIName);
+                             ABIName);
 
     const MCObjectFileInfo *MOFI = Parser.getContext().getObjectFileInfo();
     ParserOptions.IsPicEnabled = MOFI->isPositionIndependent();
@@ -341,9 +341,7 @@ public:
   bool isToken() const override { return Kind == KindTy::Token; }
   bool isReg() const override { return Kind == KindTy::Register; }
   bool isExpr() const { return Kind == KindTy::Expression; }
-  bool isV0Reg() const {
-    return false;
-  }
+  bool isV0Reg() const { return false; }
   bool isAnyReg() const {
     return Kind == KindTy::Register &&
            YSXMCRegisterClasses[YSX::GPRRegClassID].contains(Reg.Reg);
@@ -373,8 +371,7 @@ public:
 
   bool isGPRPairNoX0() const {
     return Kind == KindTy::Register &&
-           YSXMCRegisterClasses[YSX::GPRPairNoX0RegClassID].contains(
-               Reg.Reg);
+           YSXMCRegisterClasses[YSX::GPRPairNoX0RegClassID].contains(Reg.Reg);
   }
 
   static bool evaluateConstantExpr(const MCExpr *Expr, int64_t &Imm) {
@@ -397,8 +394,7 @@ public:
       return isShiftedInt<N - 1, 1>(Imm);
 
     YSX::Specifier VK = YSX::S_None;
-    return YSXAsmParser::classifySymbolRef(getExpr(), VK) &&
-           VK == YSX::S_None;
+    return YSXAsmParser::classifySymbolRef(getExpr(), VK) && VK == YSX::S_None;
   }
 
   // True if operand is a symbol with no modifiers, or a constant with no
@@ -412,8 +408,7 @@ public:
       return isInt<N>(Imm);
 
     YSX::Specifier VK = YSX::S_None;
-    return YSXAsmParser::classifySymbolRef(getExpr(), VK) &&
-           VK == YSX::S_None;
+    return YSXAsmParser::classifySymbolRef(getExpr(), VK) && VK == YSX::S_None;
   }
 
   // Predicate methods for AsmOperands defined in YSXInstrInfo.td
@@ -425,8 +420,7 @@ public:
       return false;
 
     YSX::Specifier VK = YSX::S_None;
-    return YSXAsmParser::classifySymbolRef(getExpr(), VK) &&
-           VK == YSX::S_None;
+    return YSXAsmParser::classifySymbolRef(getExpr(), VK) && VK == YSX::S_None;
   }
 
   bool isCallSymbol() const {
@@ -522,17 +516,13 @@ public:
     return IsConstantImm && p(Imm);
   }
 
-  bool isUImmLog2XLen() const {
-    return isUImm<6>();
-  }
+  bool isUImmLog2XLen() const { return isUImm<6>(); }
 
   bool isUImmLog2XLenNonZero() const {
     return isUImmPred([](int64_t Imm) { return Imm != 0 && isUInt<6>(Imm); });
   }
 
-  bool isUImmLog2XLenHalf() const {
-    return isUImm<5>();
-  }
+  bool isUImmLog2XLenHalf() const { return isUImm<5>(); }
 
   bool isUImm1() const { return isUImm<1>(); }
   bool isUImm2() const { return isUImm<2>(); }
@@ -638,8 +628,8 @@ public:
 
     YSX::Specifier VK = YSX::S_None;
     return YSXAsmParser::classifySymbolRef(getExpr(), VK) &&
-           (VK == YSX::S_LO || VK == YSX::S_PCREL_LO ||
-            VK == YSX::S_TPREL_LO || VK == ELF::R_RISCV_TLSDESC_LOAD_LO12 ||
+           (VK == YSX::S_LO || VK == YSX::S_PCREL_LO || VK == YSX::S_TPREL_LO ||
+            VK == ELF::R_RISCV_TLSDESC_LOAD_LO12 ||
             VK == ELF::R_RISCV_TLSDESC_ADD_LO12);
   }
 
@@ -810,8 +800,8 @@ public:
     return Op;
   }
 
-  static std::unique_ptr<YSXOperand>
-  createReg(MCRegister Reg, SMLoc S, SMLoc E) {
+  static std::unique_ptr<YSXOperand> createReg(MCRegister Reg, SMLoc S,
+                                               SMLoc E) {
     auto Op = std::make_unique<YSXOperand>(KindTy::Register);
     Op->Reg.Reg = Reg;
     Op->StartLoc = S;
@@ -820,7 +810,7 @@ public:
   }
 
   static std::unique_ptr<YSXOperand> createExpr(const MCExpr *Val, SMLoc S,
-                                                  SMLoc E, bool IsRV64) {
+                                                SMLoc E, bool IsRV64) {
     auto Op = std::make_unique<YSXOperand>(KindTy::Expression);
     Op->Expr.Expr = Val;
     Op->Expr.IsRV64 = IsRV64;
@@ -895,7 +885,6 @@ public:
     Inst.addOperand(MCOperand::createReg(RegReg.BaseReg));
     Inst.addOperand(MCOperand::createReg(RegReg.OffsetReg));
   }
-
 };
 } // end anonymous namespace.
 
@@ -906,7 +895,7 @@ public:
 #include "YSXGenAsmMatcher.inc"
 
 unsigned YSXAsmParser::validateTargetOperandClass(MCParsedAsmOperand &AsmOp,
-                                                    unsigned Kind) {
+                                                  unsigned Kind) {
   YSXOperand &Op = static_cast<YSXOperand &>(AsmOp);
   if (!Op.isReg())
     return Match_InvalidOperand;
@@ -928,10 +917,9 @@ bool YSXAsmParser::generateImmOutOfRangeError(
 }
 
 bool YSXAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
-                                             OperandVector &Operands,
-                                             MCStreamer &Out,
-                                             uint64_t &ErrorInfo,
-                                             bool MatchingInlineAsm) {
+                                           OperandVector &Operands,
+                                           MCStreamer &Out, uint64_t &ErrorInfo,
+                                           bool MatchingInlineAsm) {
   MCInst Inst;
   FeatureBitset MissingFeatures;
 
@@ -959,8 +947,8 @@ bool YSXAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   }
   case Match_MnemonicFail: {
     FeatureBitset FBS = ComputeAvailableFeatures(getSTI().getFeatureBits());
-    std::string Suggestion = YSXMnemonicSpellCheck(
-        ((YSXOperand &)*Operands[0]).getToken(), FBS, 0);
+    std::string Suggestion =
+        YSXMnemonicSpellCheck(((YSXOperand &)*Operands[0]).getToken(), FBS, 0);
     return Error(IDLoc, "unrecognized instruction mnemonic" + Suggestion);
   }
   case Match_InvalidOperand: {
@@ -1083,14 +1071,14 @@ MCRegister YSXAsmParser::matchRegisterNameHelper(StringRef Name) const {
 }
 
 bool YSXAsmParser::parseRegister(MCRegister &Reg, SMLoc &StartLoc,
-                                   SMLoc &EndLoc) {
+                                 SMLoc &EndLoc) {
   if (!tryParseRegister(Reg, StartLoc, EndLoc).isSuccess())
     return Error(StartLoc, "invalid register name");
   return false;
 }
 
 ParseStatus YSXAsmParser::tryParseRegister(MCRegister &Reg, SMLoc &StartLoc,
-                                             SMLoc &EndLoc) {
+                                           SMLoc &EndLoc) {
   const AsmToken &Tok = getParser().getTok();
   StartLoc = Tok.getLoc();
   EndLoc = Tok.getEndLoc();
@@ -1105,7 +1093,7 @@ ParseStatus YSXAsmParser::tryParseRegister(MCRegister &Reg, SMLoc &StartLoc,
 }
 
 ParseStatus YSXAsmParser::parseRegister(OperandVector &Operands,
-                                          bool AllowParens) {
+                                        bool AllowParens) {
   SMLoc FirstS = getLoc();
   bool HadParens = false;
   AsmToken LParen;
@@ -1174,6 +1162,10 @@ static bool isRetainedInsnOpcode(int64_t Opcode) {
   }
 }
 
+static bool isRetainedRawInsnEncoding(int64_t Value) {
+  return isRetainedInsnOpcode(Value & 0x7f);
+}
+
 ParseStatus YSXAsmParser::parseInsnDirectiveOpcode(OperandVector &Operands) {
   SMLoc S = getLoc();
   SMLoc E;
@@ -1223,9 +1215,9 @@ ParseStatus YSXAsmParser::parseInsnDirectiveOpcode(OperandVector &Operands) {
     break;
   }
 
-  return generateImmOutOfRangeError(
-      S, 0, 127,
-      "opcode must be a retained rv64ima major opcode name or value in the range");
+  return generateImmOutOfRangeError(S, 0, 127,
+                                    "opcode must be a retained rv64ima major "
+                                    "opcode name or value in the range");
 }
 
 ParseStatus YSXAsmParser::parseExpression(OperandVector &Operands) {
@@ -1418,7 +1410,7 @@ ParseStatus YSXAsmParser::parseGPRPair(OperandVector &Operands) {
 }
 
 ParseStatus YSXAsmParser::parseGPRPair(OperandVector &Operands,
-                                         bool IsRV64Inst) {
+                                       bool IsRV64Inst) {
   // If this is not an RV64 GPRPair instruction, don't parse as a GPRPair on
   // RV64 as it will prevent matching the RV64 version of the same instruction
   // that doesn't use a GPRPair.
@@ -1448,8 +1440,7 @@ ParseStatus YSXAsmParser::parseGPRPair(OperandVector &Operands,
 
   const MCRegisterInfo *RI = getContext().getRegisterInfo();
   MCRegister Pair = RI->getMatchingSuperReg(
-      Reg, YSX::sub_gpr_even,
-      &YSXMCRegisterClasses[YSX::GPRPairRegClassID]);
+      Reg, YSX::sub_gpr_even, &YSXMCRegisterClasses[YSX::GPRPairRegClassID]);
   Operands.push_back(YSXOperand::createReg(Pair, S, E));
   return ParseStatus::Success;
 }
@@ -1565,7 +1556,7 @@ ParseStatus YSXAsmParser::parseZeroOffsetMemOp(OperandVector &Operands) {
     SMLoc ImmEnd = getLoc();
     OptionalImmOp =
         YSXOperand::createExpr(MCConstantExpr::create(ImmVal, getContext()),
-                                 ImmStart, ImmEnd, isRV64());
+                               ImmStart, ImmEnd, isRV64());
   }
 
   if (parseToken(AsmToken::LParen,
@@ -1609,8 +1600,7 @@ ParseStatus YSXAsmParser::parseRegReg(OperandVector &Operands) {
 
   StringRef BaseRegName = getLexer().getTok().getIdentifier();
   MCRegister BaseReg = matchRegisterNameHelper(BaseRegName);
-  if (!BaseReg ||
-      !YSXMCRegisterClasses[YSX::GPRRegClassID].contains(BaseReg))
+  if (!BaseReg || !YSXMCRegisterClasses[YSX::GPRRegClassID].contains(BaseReg))
     return Error(getLoc(), "expected GPR register");
   getLexer().Lex();
 
@@ -1652,9 +1642,8 @@ bool YSXAsmParser::parseOperand(OperandVector &Operands, StringRef Mnemonic) {
   return true;
 }
 
-bool YSXAsmParser::parseInstruction(ParseInstructionInfo &Info,
-                                      StringRef Name, SMLoc NameLoc,
-                                      OperandVector &Operands) {
+bool YSXAsmParser::parseInstruction(ParseInstructionInfo &Info, StringRef Name,
+                                    SMLoc NameLoc, OperandVector &Operands) {
   // Apply mnemonic aliases because the destination mnemonic may have require
   // custom operand parsing. The generic tblgen'erated code does this later, at
   // the start of MatchInstructionImpl(), but that's too late for custom
@@ -1689,8 +1678,7 @@ bool YSXAsmParser::parseInstruction(ParseInstructionInfo &Info,
   return false;
 }
 
-bool YSXAsmParser::classifySymbolRef(const MCExpr *Expr,
-                                       YSX::Specifier &Kind) {
+bool YSXAsmParser::classifySymbolRef(const MCExpr *Expr, YSX::Specifier &Kind) {
   Kind = YSX::S_None;
   if (const auto *RE = dyn_cast<MCSpecifierExpr>(Expr)) {
     Kind = RE->getSpecifier();
@@ -1725,8 +1713,7 @@ ParseStatus YSXAsmParser::parseDirective(AsmToken DirectiveID) {
   return ParseStatus::NoMatch;
 }
 
-bool YSXAsmParser::resetToArch(StringRef Arch, SMLoc Loc,
-                                 std::string &Result) {
+bool YSXAsmParser::resetToArch(StringRef Arch, SMLoc Loc, std::string &Result) {
   for (auto &Feature : YSXFeatureKV)
     if (llvm::YSXISAInfo::isSupportedExtensionFeature(Feature.Key))
       clearFeatureBits(Feature.Value, Feature.Key);
@@ -1812,9 +1799,10 @@ bool YSXAsmParser::parseDirectiveOption() {
 
         std::string Buffer;
         raw_string_ostream OutputErrMsg(Buffer);
-        handleAllErrors(ParseResult.takeError(), [&](llvm::StringError &ErrMsg) {
-          OutputErrMsg << ErrMsg.getMessage();
-        });
+        handleAllErrors(ParseResult.takeError(),
+                        [&](llvm::StringError &ErrMsg) {
+                          OutputErrMsg << ErrMsg.getMessage();
+                        });
 
         return Error(Loc, OutputErrMsg.str());
       }
@@ -2128,32 +2116,21 @@ bool YSXAsmParser::parseDirectiveInsn(SMLoc L) {
     if (EncodingDerivedLength == 2)
       return Error(ErrorLoc, "16-bit instruction encodings are not allowed");
 
+    if (Length && *Length != 4)
+      return Error(ErrorLoc,
+                   "YSX only supports 32-bit raw instruction encodings");
+
+    if (!isRetainedRawInsnEncoding(Value))
+      return Error(
+          ErrorLoc,
+          "raw instruction encoding must use a retained rv64ima major opcode");
+
     if (getParser().parseEOL("invalid operand for instruction")) {
       getParser().eatToEndOfStatement();
       return true;
     }
 
-    unsigned Opcode;
-    if (Length) {
-      switch (*Length) {
-      case 2:
-        return Error(ErrorLoc, "16-bit instruction encodings are not allowed");
-      case 4:
-        Opcode = YSX::Insn32;
-        break;
-      case 6:
-        Opcode = YSX::Insn48;
-        break;
-      case 8:
-        Opcode = YSX::Insn64;
-        break;
-      default:
-        llvm_unreachable("Error should have already been emitted");
-      }
-    } else
-      Opcode = YSX::Insn32;
-
-    emitToStreamer(getStreamer(), MCInstBuilder(Opcode).addImm(Value));
+    emitToStreamer(getStreamer(), MCInstBuilder(YSX::Insn32).addImm(Value));
     return false;
   }
 
@@ -2181,7 +2158,7 @@ void YSXAsmParser::emitToStreamer(MCStreamer &S, const MCInst &Inst) {
 }
 
 void YSXAsmParser::emitLoadImm(MCRegister DestReg, int64_t Value,
-                                 MCStreamer &Out) {
+                               MCStreamer &Out) {
   SmallVector<MCInst, 8> Seq;
   YSXMatInt::generateMCInstSeq(Value, getSTI(), DestReg, Seq);
 
@@ -2191,10 +2168,9 @@ void YSXAsmParser::emitLoadImm(MCRegister DestReg, int64_t Value,
 }
 
 void YSXAsmParser::emitAuipcInstPair(MCRegister DestReg, MCRegister TmpReg,
-                                       const MCExpr *Symbol,
-                                       YSX::Specifier VKHi,
-                                       unsigned SecondOpcode, SMLoc IDLoc,
-                                       MCStreamer &Out) {
+                                     const MCExpr *Symbol, YSX::Specifier VKHi,
+                                     unsigned SecondOpcode, SMLoc IDLoc,
+                                     MCStreamer &Out) {
   // A pair of instructions for PC-relative addressing; expands to
   //   TmpLabel: AUIPC TmpReg, VKHi(symbol)
   //             OP DestReg, TmpReg, %pcrel_lo(TmpLabel)
@@ -2217,7 +2193,7 @@ void YSXAsmParser::emitAuipcInstPair(MCRegister DestReg, MCRegister TmpReg,
 }
 
 void YSXAsmParser::emitLoadLocalAddress(MCInst &Inst, SMLoc IDLoc,
-                                          MCStreamer &Out) {
+                                        MCStreamer &Out) {
   // The load local address pseudo-instruction "lla" is used in PC-relative
   // addressing of local symbols:
   //   lla rdest, symbol
@@ -2231,7 +2207,7 @@ void YSXAsmParser::emitLoadLocalAddress(MCInst &Inst, SMLoc IDLoc,
 }
 
 void YSXAsmParser::emitLoadGlobalAddress(MCInst &Inst, SMLoc IDLoc,
-                                           MCStreamer &Out) {
+                                         MCStreamer &Out) {
   // The load global address pseudo-instruction "lga" is used in GOT-indirect
   // addressing of global symbols:
   //   lga rdest, symbol
@@ -2245,8 +2221,7 @@ void YSXAsmParser::emitLoadGlobalAddress(MCInst &Inst, SMLoc IDLoc,
                     SecondOpcode, IDLoc, Out);
 }
 
-void YSXAsmParser::emitLoadAddress(MCInst &Inst, SMLoc IDLoc,
-                                     MCStreamer &Out) {
+void YSXAsmParser::emitLoadAddress(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out) {
   // The load address pseudo-instruction "la" is used in PC-relative and
   // GOT-indirect addressing of global symbols:
   //   la rdest, symbol
@@ -2261,7 +2236,7 @@ void YSXAsmParser::emitLoadAddress(MCInst &Inst, SMLoc IDLoc,
 }
 
 void YSXAsmParser::emitLoadTLSIEAddress(MCInst &Inst, SMLoc IDLoc,
-                                          MCStreamer &Out) {
+                                        MCStreamer &Out) {
   // The load TLS IE address pseudo-instruction "la.tls.ie" is used in
   // initial-exec TLS model addressing of global symbols:
   //   la.tls.ie rdest, symbol
@@ -2276,7 +2251,7 @@ void YSXAsmParser::emitLoadTLSIEAddress(MCInst &Inst, SMLoc IDLoc,
 }
 
 void YSXAsmParser::emitLoadTLSGDAddress(MCInst &Inst, SMLoc IDLoc,
-                                          MCStreamer &Out) {
+                                        MCStreamer &Out) {
   // The load TLS GD address pseudo-instruction "la.tls.gd" is used in
   // global-dynamic TLS model addressing of global symbols:
   //   la.tls.gd rdest, symbol
@@ -2290,8 +2265,8 @@ void YSXAsmParser::emitLoadTLSGDAddress(MCInst &Inst, SMLoc IDLoc,
 }
 
 void YSXAsmParser::emitLoadStoreSymbol(MCInst &Inst, unsigned Opcode,
-                                         SMLoc IDLoc, MCStreamer &Out,
-                                         bool HasTmpReg) {
+                                       SMLoc IDLoc, MCStreamer &Out,
+                                       bool HasTmpReg) {
   // The load/store pseudo-instruction does a pc-relative load with
   // a symbol.
   //
@@ -2316,8 +2291,8 @@ void YSXAsmParser::emitLoadStoreSymbol(MCInst &Inst, unsigned Opcode,
 }
 
 void YSXAsmParser::emitPseudoExtend(MCInst &Inst, bool SignExtend,
-                                      int64_t Width, SMLoc IDLoc,
-                                      MCStreamer &Out) {
+                                    int64_t Width, SMLoc IDLoc,
+                                    MCStreamer &Out) {
   // The sign/zero extend pseudo-instruction does two shifts, with the shift
   // amounts dependent on the XLEN.
   //
@@ -2333,10 +2308,10 @@ void YSXAsmParser::emitPseudoExtend(MCInst &Inst, bool SignExtend,
 
   assert(ShAmt > 0 && "Shift amount must be non-zero.");
 
-  emitToStreamer(Out, MCInstBuilder(YSX::SLLI)
-                          .addOperand(DestReg)
-                          .addOperand(SourceReg)
-                          .addImm(ShAmt));
+  emitToStreamer(
+      Out,
+      MCInstBuilder(YSX::SLLI).addOperand(DestReg).addOperand(SourceReg).addImm(
+          ShAmt));
 
   emitToStreamer(Out, MCInstBuilder(SecondOpcode)
                           .addOperand(DestReg)
@@ -2345,7 +2320,7 @@ void YSXAsmParser::emitPseudoExtend(MCInst &Inst, bool SignExtend,
 }
 
 void YSXAsmParser::emitVMSGE(MCInst &Inst, unsigned Opcode, SMLoc IDLoc,
-                               MCStreamer &Out) {
+                             MCStreamer &Out) {
   (void)Inst;
   (void)Opcode;
   (void)IDLoc;
@@ -2353,8 +2328,7 @@ void YSXAsmParser::emitVMSGE(MCInst &Inst, unsigned Opcode, SMLoc IDLoc,
   return;
 }
 
-bool YSXAsmParser::checkPseudoAddTPRel(MCInst &Inst,
-                                         OperandVector &Operands) {
+bool YSXAsmParser::checkPseudoAddTPRel(MCInst &Inst, OperandVector &Operands) {
   assert(Inst.getOpcode() == YSX::PseudoAddTPRel && "Invalid instruction");
   assert(Inst.getOperand(2).isReg() && "Unexpected second operand kind");
   if (Inst.getOperand(2).getReg() != YSX::X4) {
@@ -2367,7 +2341,7 @@ bool YSXAsmParser::checkPseudoAddTPRel(MCInst &Inst,
 }
 
 bool YSXAsmParser::checkPseudoTLSDESCCall(MCInst &Inst,
-                                            OperandVector &Operands) {
+                                          OperandVector &Operands) {
   assert(Inst.getOpcode() == YSX::PseudoTLSDESCCall && "Invalid instruction");
   assert(Inst.getOperand(0).isReg() && "Unexpected operand kind");
   if (Inst.getOperand(0).getReg() != YSX::X5) {
@@ -2379,14 +2353,13 @@ bool YSXAsmParser::checkPseudoTLSDESCCall(MCInst &Inst,
   return false;
 }
 
-bool YSXAsmParser::validateInstruction(MCInst &Inst,
-                                         OperandVector &Operands) {
+bool YSXAsmParser::validateInstruction(MCInst &Inst, OperandVector &Operands) {
   return false;
 }
 
 bool YSXAsmParser::processInstruction(MCInst &Inst, SMLoc IDLoc,
-                                        OperandVector &Operands,
-                                        MCStreamer &Out) {
+                                      OperandVector &Operands,
+                                      MCStreamer &Out) {
   Inst.setLoc(IDLoc);
 
   switch (Inst.getOpcode()) {
@@ -2400,10 +2373,9 @@ bool YSXAsmParser::processInstruction(MCInst &Inst, SMLoc IDLoc,
     if (Op1.isExpr()) {
       // We must have li reg, %lo(sym) or li reg, %pcrel_lo(sym) or similar.
       // Just convert to an addi. This allows compatibility with gas.
-      emitToStreamer(Out, MCInstBuilder(YSX::ADDI)
-                              .addReg(Reg)
-                              .addReg(YSX::X0)
-                              .addExpr(Op1.getExpr()));
+      emitToStreamer(
+          Out, MCInstBuilder(YSX::ADDI).addReg(Reg).addReg(YSX::X0).addExpr(
+                   Op1.getExpr()));
       return false;
     }
     int64_t Imm = Inst.getOperand(1).getImm();
@@ -2484,8 +2456,7 @@ bool YSXAsmParser::processInstruction(MCInst &Inst, SMLoc IDLoc,
   return false;
 }
 
-extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
-LLVMInitializeYSXAsmParser() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeYSXAsmParser() {
   RegisterMCAsmParser<YSXAsmParser> Y(getTheYSX64Target());
 }
 

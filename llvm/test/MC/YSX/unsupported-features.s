@@ -44,6 +44,10 @@
 # RUN: printf "sfence.vma\n" | not llvm-mc -triple=ysx64 - 2>&1 | FileCheck %s --check-prefix=UNSUP-INST
 # RUN: printf "hfence.vvma\n" | not llvm-mc -triple=ysx64 - 2>&1 | FileCheck %s --check-prefix=UNSUP-INST
 # RUN: printf ".insn 0x2, 0x0001\n" | not llvm-mc -triple=ysx64 - 2>&1 | FileCheck %s --check-prefix=INSN16
+# RUN: printf ".insn 0x33\n.insn 4, 0x00000033\n" | llvm-mc -triple=ysx64 -filetype=obj -o /dev/null -
+# RUN: printf ".insn 0x53\n" | not llvm-mc -triple=ysx64 - 2>&1 | FileCheck %s --check-prefix=INSN-RAW-OPCODE
+# RUN: printf ".insn 4, 0x53\n" | not llvm-mc -triple=ysx64 - 2>&1 | FileCheck %s --check-prefix=INSN-RAW-OPCODE
+# RUN: printf ".insn 6, 0x1f\n" | not llvm-mc -triple=ysx64 - 2>&1 | FileCheck %s --check-prefix=INSN-RAW-LENGTH
 # RUN: printf ".insn r OP_FP, 0, 0, x1, x2, x3\n" | not llvm-mc -triple=ysx64 - 2>&1 | FileCheck %s --check-prefix=INSN-OPCODE
 # RUN: printf ".insn r OP_V, 0, 0, x1, x2, x3\n" | not llvm-mc -triple=ysx64 - 2>&1 | FileCheck %s --check-prefix=INSN-OPCODE
 # RUN: printf ".insn r MADD, 0, 0, x1, x2, x3\n" | not llvm-mc -triple=ysx64 - 2>&1 | FileCheck %s --check-prefix=INSN-OPCODE
@@ -69,6 +73,8 @@
 # FULLARCH: error: invalid arch name
 # UNSUP-INST: error: unrecognized instruction mnemonic
 # INSN16: error: 16-bit instruction encodings are not allowed
+# INSN-RAW-LENGTH: error: YSX only supports 32-bit raw instruction encodings
+# INSN-RAW-OPCODE: error: raw instruction encoding must use a retained rv64ima major opcode
 # INSN-OPCODE: error: opcode must be a retained rv64ima major opcode name or value in the range
 # INSN-FORMAT: error: invalid instruction format
 # RELOC: error: unknown relocation name

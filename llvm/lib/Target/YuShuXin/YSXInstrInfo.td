@@ -949,16 +949,6 @@ def Insn32 : RVInst<(outs), (ins uimm32:$value), "", "", [], InstFormatOther> {
   let Inst{31-0} = value;
   let AsmString = ".insn 0x4, $value";
 }
-def Insn48 : RVInst48<(outs), (ins uimm48:$value), "", "", [], InstFormatOther> {
-  bits<48> value;
-  let Inst{47-0} = value;
-  let AsmString = ".insn 0x6, $value";
-}
-def Insn64 : RVInst64<(outs), (ins uimm64:$value), "", "", [], InstFormatOther> {
-  bits<64> value;
-  let Inst{63-0} = value;
-  let AsmString = ".insn 0x8, $value";
-}
 } // isCodeGenOnly, hasSideEffects, mayLoad, mayStore, hasNoSchedulingInfo
 
 // isCodeGenOnly = 1 to hide them from the tablegened assembly parser.
