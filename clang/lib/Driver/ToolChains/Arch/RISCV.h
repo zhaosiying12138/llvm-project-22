@@ -22,6 +22,8 @@ namespace riscv {
 void getRISCVTargetFeatures(const Driver &D, const llvm::Triple &Triple,
                             const llvm::opt::ArgList &Args,
                             std::vector<llvm::StringRef> &Features);
+bool checkYSXABI(const Driver &D, const llvm::opt::ArgList &Args,
+                 const llvm::Triple &Triple);
 StringRef getRISCVABI(const llvm::opt::ArgList &Args,
                       const llvm::Triple &Triple);
 std::string getRISCVArch(const llvm::opt::ArgList &Args,

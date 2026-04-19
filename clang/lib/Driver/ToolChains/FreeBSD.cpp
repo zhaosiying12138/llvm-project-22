@@ -9,6 +9,7 @@
 #include "FreeBSD.h"
 #include "Arch/ARM.h"
 #include "Arch/Mips.h"
+#include "Arch/RISCV.h"
 #include "Arch/Sparc.h"
 #include "clang/Config/config.h"
 #include "clang/Driver/CommonArgs.h"
@@ -33,6 +34,8 @@ void freebsd::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
   const auto &D = getToolChain().getDriver();
   const llvm::Triple &Triple = ToolChain.getTriple();
   ArgStringList CmdArgs;
+
+  tools::riscv::checkYSXABI(D, Args, Triple);
 
   claimNoWarnArgs(Args);
 
@@ -209,6 +212,7 @@ void freebsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
       CmdArgs.push_back("elf64ltsmip_fbsd");
     break;
   case llvm::Triple::riscv64:
+  case llvm::Triple::ysx64:
     CmdArgs.push_back("-m");
     CmdArgs.push_back("elf64lriscv");
     break;

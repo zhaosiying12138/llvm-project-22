@@ -226,6 +226,21 @@ void riscv::getRISCVTargetFeatures(const Driver &D, const llvm::Triple &Triple,
                             options::OPT_m_riscv_Features_Group);
 }
 
+bool riscv::checkYSXABI(const Driver &D, const ArgList &Args,
+                        const llvm::Triple &Triple) {
+  if (!Triple.isYSX64())
+    return true;
+
+  if (const Arg *A = Args.getLastArg(options::OPT_mabi_EQ);
+      A && StringRef(A->getValue()) != "lp64") {
+    D.Diag(diag::err_drv_unsupported_option_argument)
+        << A->getSpelling() << A->getValue();
+    return false;
+  }
+
+  return true;
+}
+
 StringRef riscv::getRISCVABI(const ArgList &Args, const llvm::Triple &Triple) {
   assert(Triple.isRISCV() && "Unexpected triple");
 

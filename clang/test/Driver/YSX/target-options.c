@@ -4,9 +4,12 @@
 // RUN: %clang --target=ysx64-unknown-elf -march=rv64ima -c %s -o %t-rv64ima.o
 // RUN: %clang --target=ysx64-unknown-elf -mno-save-restore -c %s -o %t-no-save-restore.o
 // RUN: %clang --target=ysx64-unknown-elf -Xclang -target-feature -Xclang -v -c %s -o %t-disable-v.o
+// RUN: touch %t-link.o
 // RUN: %clang --target=ysx64 -ffixed-x5 -### -c %s 2>&1 | FileCheck %s --check-prefix=FIXED
 // RUN: %clang --target=ysx64-unknown-elf -ffixed-x5 -c %s -o %t-fixed-x5.o
 // RUN: %clang --target=ysx64-linux-gnu -### %s 2>&1 | FileCheck %s --check-prefix=LINUX
+// RUN: not %clang --target=ysx64-linux-gnu -mabi=lp64d -### %t-link.o 2>&1 | FileCheck %s --check-prefix=ABIERR
+// RUN: %clang --target=ysx64-unknown-freebsd -### %t-link.o 2>&1 | FileCheck %s --check-prefix=FREEBSD
 // RUN: %clang --target=ysx64-unknown-managarm-mlibc -### %s 2>&1 | FileCheck %s --check-prefix=MANAGARM
 // RUN: %clang --target=ysx64-pc-hurd-gnu -### %s 2>&1 | FileCheck %s --check-prefix=HURD
 // RUN: %clang -### %s --target=ysx64-unknown-linux-gnu --rtlib=platform --unwindlib=platform -fuse-ld= -no-pie --gcc-toolchain=%S/../Inputs/multilib_riscv_linux_sdk --sysroot=%S/../Inputs/multilib_riscv_linux_sdk/sysroot 2>&1 | FileCheck %s --check-prefix=LINUX-MULTI
@@ -72,6 +75,7 @@
 // ABIERR: unsupported argument 'lp64d' to option '-mabi='
 // RVVBITS: error: unsupported option '-mrvv-vector-bits=' for target 'ysx64'
 // LINUX: "-dynamic-linker" "/lib/ld-linux-riscv64-lp64.so.1"
+// FREEBSD: "-m" "elf64lriscv"
 // MANAGARM: "-dynamic-linker" "/lib/riscv64-managarm/ld-riscv64-lp64.so"
 // HURD: "-dynamic-linker" "/lib/ld-riscv64-lp64.so.1"
 // LINUX-MULTI: "{{.*}}Inputs/multilib_riscv_linux_sdk/lib/gcc/riscv64-unknown-linux-gnu/7.2.0/lib64/lp64/crtbegin.o"

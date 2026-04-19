@@ -2011,14 +2011,11 @@ void Clang::AddPPCTargetArgs(const ArgList &Args,
 void Clang::AddRISCVTargetArgs(const ArgList &Args,
                                ArgStringList &CmdArgs) const {
   const llvm::Triple &Triple = getToolChain().getTriple();
+  const Driver &D = getToolChain().getDriver();
   StringRef ABIName = riscv::getRISCVABI(Args, Triple);
-  const auto &D = getToolChain().getDriver();
 
   if (Triple.isYSX64()) {
-    if (const Arg *A = Args.getLastArg(options::OPT_mabi_EQ);
-        A && StringRef(A->getValue()) != "lp64")
-      D.Diag(diag::err_drv_unsupported_option_argument)
-          << A->getSpelling() << A->getValue();
+    riscv::checkYSXABI(D, Args, Triple);
     ABIName = "lp64";
   }
 
@@ -8615,13 +8612,9 @@ void ClangAs::AddRISCVTargetArgs(const ArgList &Args,
                                ArgStringList &CmdArgs) const {
   const llvm::Triple &Triple = getToolChain().getTriple();
   StringRef ABIName = riscv::getRISCVABI(Args, Triple);
-  const auto &D = getToolChain().getDriver();
 
   if (Triple.isYSX64()) {
-    if (const Arg *A = Args.getLastArg(options::OPT_mabi_EQ);
-        A && StringRef(A->getValue()) != "lp64")
-      D.Diag(diag::err_drv_unsupported_option_argument)
-          << A->getSpelling() << A->getValue();
+    riscv::checkYSXABI(getToolChain().getDriver(), Args, Triple);
     ABIName = "lp64";
   }
 

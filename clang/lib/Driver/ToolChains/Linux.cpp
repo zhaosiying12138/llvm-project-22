@@ -701,9 +701,9 @@ std::string Linux::getDynamicLinker(const ArgList &Args) const {
     StringRef ArchName = Arch == llvm::Triple::ysx64
                              ? StringRef("riscv64")
                              : llvm::Triple::getArchTypeName(Arch);
-    StringRef ABIName = Arch == llvm::Triple::ysx64
-                            ? StringRef("lp64")
-                            : tools::riscv::getRISCVABI(Args, Triple);
+    if (Arch == llvm::Triple::ysx64)
+      tools::riscv::checkYSXABI(getDriver(), Args, Triple);
+    StringRef ABIName = tools::riscv::getRISCVABI(Args, Triple);
     LibDir = "lib";
     Loader = ("ld-linux-" + ArchName + "-" + ABIName + ".so.1").str();
     break;

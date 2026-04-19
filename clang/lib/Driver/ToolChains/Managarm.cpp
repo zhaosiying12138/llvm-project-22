@@ -123,6 +123,8 @@ std::string Managarm::getDynamicLinker(const ArgList &Args) const {
     return "/lib/aarch64-managarm/ld.so";
   case llvm::Triple::riscv64:
   case llvm::Triple::ysx64: {
+    if (getTriple().isYSX64())
+      tools::riscv::checkYSXABI(getDriver(), Args, getTriple());
     StringRef ABIName = tools::riscv::getRISCVABI(Args, getTriple());
     return ("/lib/riscv64-managarm/ld-riscv64-" + ABIName + ".so").str();
   }
