@@ -13,6 +13,7 @@
 // RUN: %clang --target=ysx64-unknown-freebsd -### %t-link.o 2>&1 | FileCheck %s --check-prefix=FREEBSD
 // RUN: %clang --target=ysx64-unknown-managarm-mlibc -### %s 2>&1 | FileCheck %s --check-prefix=MANAGARM
 // RUN: %clang --target=ysx64-pc-hurd-gnu -### %s 2>&1 | FileCheck %s --check-prefix=HURD
+// RUN: %clang -### %t-link.o --target=ysx64-pc-hurd-gnu --gcc-toolchain=%S/../Inputs/basic_cross_hurd_tree/usr -fuse-ld=ld 2>&1 | FileCheck %s --check-prefix=HURD-GCC
 // RUN: %clang -### %s --target=ysx64-unknown-linux-gnu --rtlib=platform --unwindlib=platform -fuse-ld= -no-pie --gcc-toolchain=%S/../Inputs/multilib_riscv_linux_sdk --sysroot=%S/../Inputs/multilib_riscv_linux_sdk/sysroot 2>&1 | FileCheck %s --check-prefix=LINUX-MULTI
 // RUN: %clang -### %s --target=ysx64-unknown-elf 2>&1 | FileCheck %s --check-prefix=BAREMETAL --implicit-check-not="rv64imac" --implicit-check-not="rv64imafdc"
 // RUN: %clang --target=ysx64 --print-supported-extensions 2>&1 | FileCheck %s --check-prefix=EXTS --implicit-check-not="RISC-V" --implicit-check-not="{{^}}    f " --implicit-check-not="{{^}}    d " --implicit-check-not="{{^}}    c " --implicit-check-not="{{^}}    v "
@@ -91,6 +92,8 @@
 // FREEBSD: "-m" "elf64lriscv"
 // MANAGARM: "-dynamic-linker" "/lib/riscv64-managarm/ld-riscv64-lp64.so"
 // HURD: "-dynamic-linker" "/lib/ld-riscv64-lp64.so.1"
+// HURD-GCC: "{{.*}}/Inputs/basic_cross_hurd_tree/usr/lib/gcc/riscv64-gnu/10/crtbegin.o"
+// HURD-GCC: "-L{{.*}}/Inputs/basic_cross_hurd_tree/usr/lib/gcc/riscv64-gnu/10/../../../../riscv64-gnu/lib"
 // LINUX-MULTI: "{{.*}}Inputs/multilib_riscv_linux_sdk/lib/gcc/riscv64-unknown-linux-gnu/7.2.0/lib64/lp64/crtbegin.o"
 // LINUX-MULTI: "-L{{.*}}Inputs/multilib_riscv_linux_sdk/lib/gcc/riscv64-unknown-linux-gnu/7.2.0/lib64/lp64"
 // BAREMETAL: "-triple" "ysx64-unknown-unknown-elf"
