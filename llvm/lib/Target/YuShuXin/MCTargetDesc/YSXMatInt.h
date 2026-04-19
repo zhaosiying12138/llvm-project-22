@@ -20,10 +20,10 @@ class APInt;
 namespace YSXMatInt {
 
 enum OpndKind {
-  RegImm, // ADDI/ADDIW/XORI/SLLI/SRLI/SLLI_UW/RORI/BSETI/BCLRI/TH_SRRI
-  Imm,    // LUI/QC_LI/QC_E_LI/PLI_B/PLI_H/PLI_W
-  RegReg, // SH1ADD/SH2ADD/SH3ADD/PACK
-  RegX0,  // ADD_UW
+  RegImm, // ADDI/ADDIW/XORI/SLLI/SRLI
+  Imm,    // LUI
+  RegReg,
+  RegX0,
 };
 
 class Inst {

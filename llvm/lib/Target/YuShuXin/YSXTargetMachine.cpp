@@ -24,7 +24,6 @@
 #include "llvm/CodeGen/MachineScheduler.h"
 #include "llvm/CodeGen/MacroFusion.h"
 #include "llvm/CodeGen/Passes.h"
-#include "llvm/CodeGen/RegAllocRegistry.h"
 #include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/InitializePasses.h"
@@ -52,20 +51,6 @@ static cl::opt<bool>
                           cl::desc("Enable the machine combiner pass"),
                           cl::init(true), cl::Hidden);
 
-static cl::opt<unsigned> RVVVectorBitsMaxOpt(
-    "ysx-v-vector-bits-max",
-    cl::desc("Assume V extension vector registers are at most this big, "
-             "with zero meaning no maximum size is assumed."),
-    cl::init(0), cl::Hidden);
-
-static cl::opt<int> RVVVectorBitsMinOpt(
-    "ysx-v-vector-bits-min",
-    cl::desc("Assume V extension vector registers are at least this big, "
-             "with zero meaning no minimum size is assumed. A value of -1 "
-             "means use Zvl*b extension. This is primarily used to enable "
-             "autovectorization with fixed width vectors."),
-    cl::init(-1), cl::Hidden);
-
 static cl::opt<bool> EnableYSXCopyPropagation(
     "ysx-enable-copy-propagation",
     cl::desc("Enable the copy propagation with RISC-V copy instr"),
@@ -88,11 +73,6 @@ static cl::opt<bool>
                            cl::desc("Enable the loop data prefetch pass"),
                            cl::init(true));
 
-static cl::opt<bool> DisableVectorMaskMutation(
-    "ysx-disable-vector-mask-mutation",
-    cl::desc("Disable the vector mask scheduling mutation"), cl::init(false),
-    cl::Hidden);
-
 static cl::opt<bool>
     EnableMachinePipeliner("ysx-enable-pipeliner",
                            cl::desc("Enable Machine Pipeliner for RISC-V"),
@@ -111,18 +91,11 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeYSXTarget() {
   initializeYSXLateBranchOptPass(*PR);
   initializeYSXCodeGenPrepareLegacyPassPass(*PR);
   initializeYSXPostRAExpandPseudoPass(*PR);
-  initializeYSXMergeBaseOffsetOptPass(*PR);
-  initializeYSXOptWInstrsPass(*PR);
-  initializeYSXFoldMemOffsetPass(*PR);
   initializeYSXPreRAExpandPseudoPass(*PR);
   initializeYSXExpandPseudoPass(*PR);
   initializeYSXInsertReadWriteCSRPass(*PR);
   initializeYSXDAGToDAGISelLegacyPass(*PR);
-  initializeYSXMoveMergePass(*PR);
-  initializeYSXPushPopOptPass(*PR);
-  initializeYSXLoadStoreOptPass(*PR);
   initializeYSXExpandAtomicPseudoPass(*PR);
-  initializeYSXRedundantCopyEliminationPass(*PR);
   initializeYSXAsmPrinterPass(*PR);
   initializeYSXPromoteConstantPass(*PR);
 }
@@ -181,53 +154,8 @@ YSXTargetMachine::getSubtargetImpl(const Function &F) const {
   std::string FS =
       FSAttr.isValid() ? FSAttr.getValueAsString().str() : TargetFS;
 
-  unsigned RVVBitsMin = RVVVectorBitsMinOpt;
-  unsigned RVVBitsMax = RVVVectorBitsMaxOpt;
-
-  if (TargetTriple.isYSX64()) {
-    RVVBitsMin = 0;
-    RVVBitsMax = 0;
-  } else {
-    Attribute VScaleRangeAttr = F.getFnAttribute(Attribute::VScaleRange);
-    if (VScaleRangeAttr.isValid()) {
-      if (!RVVVectorBitsMinOpt.getNumOccurrences())
-        RVVBitsMin = VScaleRangeAttr.getVScaleRangeMin() * YSX::RVVBitsPerBlock;
-      std::optional<unsigned> VScaleMax = VScaleRangeAttr.getVScaleRangeMax();
-      if (VScaleMax.has_value() && !RVVVectorBitsMaxOpt.getNumOccurrences())
-        RVVBitsMax = *VScaleMax * YSX::RVVBitsPerBlock;
-    }
-  }
-
-  if (RVVBitsMin != -1U) {
-    // FIXME: Change to >= 32 when VLEN = 32 is supported.
-    assert((RVVBitsMin == 0 || (RVVBitsMin >= 64 && RVVBitsMin <= 65536 &&
-                                isPowerOf2_32(RVVBitsMin))) &&
-           "V or Zve* extension requires vector length to be in the range of "
-           "64 to 65536 and a power 2!");
-    assert((RVVBitsMax >= RVVBitsMin || RVVBitsMax == 0) &&
-           "Minimum V extension vector length should not be larger than its "
-           "maximum!");
-  }
-  assert((RVVBitsMax == 0 || (RVVBitsMax >= 64 && RVVBitsMax <= 65536 &&
-                              isPowerOf2_32(RVVBitsMax))) &&
-         "V or Zve* extension requires vector length to be in the range of "
-         "64 to 65536 and a power 2!");
-
-  if (RVVBitsMin != -1U) {
-    if (RVVBitsMax != 0) {
-      RVVBitsMin = std::min(RVVBitsMin, RVVBitsMax);
-      RVVBitsMax = std::max(RVVBitsMin, RVVBitsMax);
-    }
-
-    RVVBitsMin = llvm::bit_floor(
-        (RVVBitsMin < 64 || RVVBitsMin > 65536) ? 0 : RVVBitsMin);
-  }
-  RVVBitsMax =
-      llvm::bit_floor((RVVBitsMax < 64 || RVVBitsMax > 65536) ? 0 : RVVBitsMax);
-
   SmallString<512> Key;
-  raw_svector_ostream(Key) << "RVVMin" << RVVBitsMin << "RVVMax" << RVVBitsMax
-                           << CPU << TuneCPU << FS;
+  raw_svector_ostream(Key) << CPU << TuneCPU << FS;
   auto &I = SubtargetMap[Key];
   if (!I) {
     // This needs to be done before we create a new subtarget since any
@@ -245,7 +173,7 @@ YSXTargetMachine::getSubtargetImpl(const Function &F) const {
       ABIName = ModuleTargetABI->getString();
     }
     I = std::make_unique<YSXSubtarget>(
-        TargetTriple, CPU, TuneCPU, FS, ABIName, RVVBitsMin, RVVBitsMax, *this);
+        TargetTriple, CPU, TuneCPU, FS, ABIName, *this);
   }
   return I.get();
 }
@@ -304,64 +232,6 @@ YSXTargetMachine::createPostMachineScheduler(MachineSchedContext *C) const {
 }
 
 namespace {
-
-class RVVRegisterRegAlloc : public RegisterRegAllocBase<RVVRegisterRegAlloc> {
-public:
-  RVVRegisterRegAlloc(const char *N, const char *D, FunctionPassCtor C)
-      : RegisterRegAllocBase(N, D, C) {}
-};
-
-static bool onlyAllocateRVVReg(const TargetRegisterInfo &TRI,
-                               const MachineRegisterInfo &MRI,
-                               const Register Reg) {
-  const TargetRegisterClass *RC = MRI.getRegClass(Reg);
-  return YSXRegisterInfo::isRVVRegClass(RC);
-}
-
-static FunctionPass *useDefaultRegisterAllocator() { return nullptr; }
-
-static llvm::once_flag InitializeDefaultRVVRegisterAllocatorFlag;
-
-/// -ysx-rvv-regalloc=<fast|basic|greedy> command line option.
-/// This option could designate the rvv register allocator only.
-/// For example: -ysx-rvv-regalloc=basic
-static cl::opt<RVVRegisterRegAlloc::FunctionPassCtor, false,
-               RegisterPassParser<RVVRegisterRegAlloc>>
-    RVVRegAlloc("ysx-rvv-regalloc", cl::Hidden,
-                cl::init(&useDefaultRegisterAllocator),
-                cl::desc("Register allocator to use for RVV register."));
-
-static void initializeDefaultRVVRegisterAllocatorOnce() {
-  RegisterRegAlloc::FunctionPassCtor Ctor = RVVRegisterRegAlloc::getDefault();
-
-  if (!Ctor) {
-    Ctor = RVVRegAlloc;
-    RVVRegisterRegAlloc::setDefault(RVVRegAlloc);
-  }
-}
-
-static FunctionPass *createBasicRVVRegisterAllocator() {
-  return createBasicRegisterAllocator(onlyAllocateRVVReg);
-}
-
-static FunctionPass *createGreedyRVVRegisterAllocator() {
-  return createGreedyRegisterAllocator(onlyAllocateRVVReg);
-}
-
-static FunctionPass *createFastRVVRegisterAllocator() {
-  return createFastRegisterAllocator(onlyAllocateRVVReg, false);
-}
-
-static RVVRegisterRegAlloc basicRegAllocRVVReg("basic",
-                                               "basic register allocator",
-                                               createBasicRVVRegisterAllocator);
-static RVVRegisterRegAlloc
-    greedyRegAllocRVVReg("greedy", "greedy register allocator",
-                         createGreedyRVVRegisterAllocator);
-
-static RVVRegisterRegAlloc fastRegAllocRVVReg("fast", "fast register allocator",
-                                              createFastRVVRegisterAllocator);
-
 class YSXPassConfig : public TargetPassConfig {
 public:
   YSXPassConfig(YSXTargetMachine &TM, PassManagerBase &PM)
@@ -384,7 +254,6 @@ public:
   void addPreEmitPass2() override;
   void addPreSched2() override;
   void addMachineSSAOptimization() override;
-  FunctionPass *createRVVRegAllocPass(bool Optimized);
   bool addRegAssignAndRewriteFast() override;
   bool addRegAssignAndRewriteOptimized() override;
   void addPreRegAlloc() override;
@@ -402,21 +271,6 @@ TargetPassConfig *YSXTargetMachine::createPassConfig(PassManagerBase &PM) {
 
 std::unique_ptr<CSEConfigBase> YSXPassConfig::getCSEConfig() const {
   return getStandardCSEConfigForOpt(TM->getOptLevel());
-}
-
-FunctionPass *YSXPassConfig::createRVVRegAllocPass(bool Optimized) {
-  // Initialize the global default.
-  llvm::call_once(InitializeDefaultRVVRegisterAllocatorFlag,
-                  initializeDefaultRVVRegisterAllocatorOnce);
-
-  RegisterRegAlloc::FunctionPassCtor Ctor = RVVRegisterRegAlloc::getDefault();
-  if (Ctor != useDefaultRegisterAllocator)
-    return Ctor();
-
-  if (Optimized)
-    return createGreedyRVVRegisterAllocator();
-
-  return createFastRVVRegisterAllocator();
 }
 
 bool YSXPassConfig::addRegAssignAndRewriteFast() {
@@ -490,8 +344,6 @@ void YSXPassConfig::addPreSched2() {
 
   // Emit KCFI checks for indirect calls.
   addPass(createKCFIPass());
-  if (TM->getOptLevel() != CodeGenOptLevel::None)
-    addPass(createYSXLoadStoreOptPass());
 }
 
 void YSXPassConfig::addPreEmitPass() {
@@ -509,12 +361,6 @@ void YSXPassConfig::addPreEmitPass() {
 }
 
 void YSXPassConfig::addPreEmitPass2() {
-  if (TM->getOptLevel() != CodeGenOptLevel::None) {
-    addPass(createYSXMoveMergePass());
-    // Schedule PushPop Optimization before expansion of Pseudo instruction,
-    // ensuring return instruction is detected correctly.
-    addPass(createYSXPushPopOptimizationPass());
-  }
   addPass(createYSXExpandPseudoPass());
 
   // Schedule the expansion of AMOs at the last possible moment, avoiding the
@@ -532,20 +378,11 @@ void YSXPassConfig::addPreEmitPass2() {
 }
 
 void YSXPassConfig::addMachineSSAOptimization() {
-  addPass(createYSXFoldMemOffsetPass());
-
   TargetPassConfig::addMachineSSAOptimization();
-
-  if (TM->getTargetTriple().isYSX64()) {
-    addPass(createYSXOptWInstrsPass());
-  }
 }
 
 void YSXPassConfig::addPreRegAlloc() {
   addPass(createYSXPreRAExpandPseudoPass());
-  if (TM->getOptLevel() != CodeGenOptLevel::None) {
-    addPass(createYSXMergeBaseOffsetOptPass());
-  }
 
   addPass(createYSXInsertReadWriteCSRPass());
   addPass(createYSXLandingPadSetupPass());
@@ -561,9 +398,6 @@ void YSXPassConfig::addFastRegAlloc() {
 
 
 void YSXPassConfig::addPostRegAlloc() {
-  if (TM->getOptLevel() != CodeGenOptLevel::None &&
-      EnableRedundantCopyElimination)
-    addPass(createYSXRedundantCopyEliminationPass());
 }
 
 bool YSXPassConfig::addILPOpts() {

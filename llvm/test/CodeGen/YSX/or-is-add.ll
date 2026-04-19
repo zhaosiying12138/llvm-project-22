@@ -10,7 +10,7 @@ define signext i32 @test1(i32 signext %x) {
 ;
 ; RV64-LABEL: test1:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    slli a0, a0, 1
+; RV64-NEXT:    slliw a0, a0, 1
 ; RV64-NEXT:    addiw a0, a0, 1
 ; RV64-NEXT:    ret
   %a = shl i32 %x, 1
@@ -44,7 +44,7 @@ define signext i32 @test3(i32 signext %x) {
 ;
 ; RV64-LABEL: test3:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    slli a0, a0, 3
+; RV64-NEXT:    slliw a0, a0, 3
 ; RV64-NEXT:    addiw a0, a0, 6
 ; RV64-NEXT:    ret
   %a = shl i32 %x, 3
@@ -163,18 +163,22 @@ define void @pr128468(ptr %0, i32 signext %1, i32 signext %2) {
 ; RV64-NEXT:    slli a3, a2, 2
 ; RV64-NEXT:    add a3, a0, a3
 ; RV64-NEXT:    lw a4, 4(a3)
-; RV64-NEXT:    bgez a4, .LBB7_6
+; RV64-NEXT:    bgez a4, .LBB7_7
 ; RV64-NEXT:  # %bb.1:
 ; RV64-NEXT:    addiw a2, a2, 1
-; RV64-NEXT:    beq a2, a1, .LBB7_6
+; RV64-NEXT:    beq a2, a1, .LBB7_7
 ; RV64-NEXT:  # %bb.2: # %.preheader
 ; RV64-NEXT:    addi a3, a3, 4
-; RV64-NEXT:    j .LBB7_4
-; RV64-NEXT:  .LBB7_3: # in Loop: Header=BB7_4 Depth=1
+; RV64-NEXT:    j .LBB7_5
+; RV64-NEXT:  .LBB7_3: # in Loop: Header=BB7_5 Depth=1
 ; RV64-NEXT:    mv a2, a1
+; RV64-NEXT:  .LBB7_4: # in Loop: Header=BB7_5 Depth=1
+; RV64-NEXT:    sext.w a4, a1
+; RV64-NEXT:    sext.w a5, a2
 ; RV64-NEXT:    addi a3, a3, 4
-; RV64-NEXT:    beq a1, a1, .LBB7_6
-; RV64-NEXT:  .LBB7_4: # =>This Inner Loop Header: Depth=1
+; RV64-NEXT:    beq a5, a4, .LBB7_7
+; RV64-NEXT:  .LBB7_5: # =>This Inner Loop Header: Depth=1
+; RV64-NEXT:    sext.w a1, a1
 ; RV64-NEXT:    slli a1, a1, 2
 ; RV64-NEXT:    add a1, a0, a1
 ; RV64-NEXT:    lw a4, 0(a1)
@@ -185,11 +189,10 @@ define void @pr128468(ptr %0, i32 signext %1, i32 signext %2) {
 ; RV64-NEXT:    add a3, a0, a3
 ; RV64-NEXT:    lw a4, 4(a3)
 ; RV64-NEXT:    bgez a4, .LBB7_3
-; RV64-NEXT:  # %bb.5: # in Loop: Header=BB7_4 Depth=1
+; RV64-NEXT:  # %bb.6: # in Loop: Header=BB7_5 Depth=1
 ; RV64-NEXT:    addiw a2, a2, 1
-; RV64-NEXT:    addi a3, a3, 4
-; RV64-NEXT:    bne a2, a1, .LBB7_4
-; RV64-NEXT:  .LBB7_6:
+; RV64-NEXT:    j .LBB7_4
+; RV64-NEXT:  .LBB7_7:
 ; RV64-NEXT:    ret
   %4 = shl nsw i32 %1, 1
   %5 = or disjoint i32 %4, 1

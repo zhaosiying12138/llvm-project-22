@@ -14,7 +14,6 @@ define i8 @f0() #0 nounwind {
 ; RV64I-NEXT:    lbu a0, 0(sp)
 ; RV64I-NEXT:    addi sp, sp, 64
 ; RV64I-NEXT:    ret
-;
 ; RV32I-LABEL: f0:
 ; RV32I:       # %bb.0: # %entry
 ; RV32I-NEXT:    addi sp, sp, -64
@@ -45,7 +44,6 @@ define i8 @f1() #0 nounwind {
 ; RV64I-NEXT:    addi a1, a1, 16
 ; RV64I-NEXT:    add sp, sp, a1
 ; RV64I-NEXT:    ret
-;
 ; RV32I-LABEL: f1:
 ; RV32I:       # %bb.0: # %entry
 ; RV32I-NEXT:    lui a0, 1
@@ -87,7 +85,6 @@ define i8 @f2() #0 nounwind {
 ; RV64I-NEXT:    addi a1, a1, 16
 ; RV64I-NEXT:    add sp, sp, a1
 ; RV64I-NEXT:    ret
-;
 ; RV32I-LABEL: f2:
 ; RV32I:       # %bb.0: # %entry
 ; RV32I-NEXT:    lui a0, 16
@@ -132,7 +129,6 @@ define i8 @f3() #0 "stack-probe-size"="32768" nounwind {
 ; RV64I-NEXT:    addi a1, a1, 16
 ; RV64I-NEXT:    add sp, sp, a1
 ; RV64I-NEXT:    ret
-;
 ; RV32I-LABEL: f3:
 ; RV32I:       # %bb.0: # %entry
 ; RV32I-NEXT:    lui a0, 8
@@ -171,7 +167,6 @@ define i8 @f4() nounwind {
 ; RV64I-NEXT:    addi a1, a1, 16
 ; RV64I-NEXT:    add sp, sp, a1
 ; RV64I-NEXT:    ret
-;
 ; RV32I-LABEL: f4:
 ; RV32I:       # %bb.0: # %entry
 ; RV32I-NEXT:    lui a0, 16
@@ -212,7 +207,6 @@ define i8 @f5() #0 "stack-probe-size"="65536" nounwind {
 ; RV64I-NEXT:    addi a1, a1, 16
 ; RV64I-NEXT:    add sp, sp, a1
 ; RV64I-NEXT:    ret
-;
 ; RV32I-LABEL: f5:
 ; RV32I:       # %bb.0: # %entry
 ; RV32I-NEXT:    lui a0, 256
@@ -260,7 +254,6 @@ define i8 @f6() #0 nounwind {
 ; RV64I-NEXT:    addi a1, a1, 16
 ; RV64I-NEXT:    add sp, sp, a1
 ; RV64I-NEXT:    ret
-;
 ; RV32I-LABEL: f6:
 ; RV32I:       # %bb.0: # %entry
 ; RV32I-NEXT:    lui a0, 262144
@@ -310,7 +303,6 @@ define i8 @f7() #0 "stack-probe-size"="65536" nounwind {
 ; RV64I-NEXT:    addi a1, a1, -1520
 ; RV64I-NEXT:    add sp, sp, a1
 ; RV64I-NEXT:    ret
-;
 ; RV32I-LABEL: f7:
 ; RV32I:       # %bb.0: # %entry
 ; RV32I-NEXT:    lui a0, 244128

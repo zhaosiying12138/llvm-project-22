@@ -101,9 +101,6 @@ private:
 
   unsigned XSfmmTE = 0;
   unsigned ZvlLen = 0;
-  unsigned RVVVectorBitsMin;
-  unsigned RVVVectorBitsMax;
-  uint8_t MaxInterleaveFactor = 2;
   YSXABI::ABI TargetABI = YSXABI::ABI_Unknown;
   std::bitset<YSX::NUM_TARGET_REGS> UserReservedRegister;
   const YSXTuneInfoTable::YSXTuneInfo *TuneInfo;
@@ -123,8 +120,7 @@ private:
 public:
   // Initializes the data members to match that of the specified triple.
   YSXSubtarget(const Triple &TT, StringRef CPU, StringRef TuneCPU,
-                 StringRef FS, StringRef ABIName, unsigned RVVVectorBitsMin,
-                 unsigned RVVVectorLMULMax, const TargetMachine &TM);
+                 StringRef FS, StringRef ABIName, const TargetMachine &TM);
 
   ~YSXSubtarget() override;
 
@@ -168,39 +164,38 @@ public:
 
   LLVM_DEPRECATED("Now Equivalent to hasStdExtZca", "hasStdExtZca")
   bool hasStdExtCOrZca() const { return HasStdExtZca; }
-  bool hasStdExtCOrZcd() const { return HasStdExtC || HasStdExtZcd; }
+  bool hasStdExtCOrZcd() const { return false; }
   bool hasStdExtCOrZcfOrZce() const {
-    return HasStdExtC || HasStdExtZcf || HasStdExtZce;
+    return false;
   }
-  bool hasStdExtZvl() const { return ZvlLen != 0; }
-  bool hasStdExtFOrZfinx() const { return HasStdExtF || HasStdExtZfinx; }
-  bool hasStdExtDOrZdinx() const { return HasStdExtD || HasStdExtZdinx; }
-  bool hasStdExtZfhOrZhinx() const { return HasStdExtZfh || HasStdExtZhinx; }
+  bool hasStdExtZvl() const { return false; }
+  bool hasStdExtFOrZfinx() const { return false; }
+  bool hasStdExtDOrZdinx() const { return false; }
+  bool hasStdExtZfhOrZhinx() const { return false; }
   bool hasStdExtZfhminOrZhinxmin() const {
-    return HasStdExtZfhmin || HasStdExtZhinxmin;
+    return false;
   }
   bool hasHalfFPLoadStoreMove() const {
-    return HasStdExtZfhmin || HasStdExtZfbfmin;
+    return false;
   }
 
   bool hasCLZLike() const {
-    return HasStdExtZbb || HasVendorXTHeadBb ||
-           (HasVendorXCVbitmanip && !IsRV64);
+    return false;
   }
   bool hasCTZLike() const {
-    return HasStdExtZbb || (HasVendorXCVbitmanip && !IsRV64);
+    return false;
   }
   bool hasCPOPLike() const {
-    return HasStdExtZbb || (HasVendorXCVbitmanip && !IsRV64);
+    return false;
   }
   bool hasREV8Like() const {
-    return HasStdExtZbb || HasStdExtZbkb || HasVendorXTHeadBb;
+    return false;
   }
 
-  bool hasBEXTILike() const { return HasStdExtZbs || HasVendorXTHeadBs; }
+  bool hasBEXTILike() const { return false; }
 
   bool hasCZEROLike() const {
-    return HasStdExtZicond || HasVendorXVentanaCondOps;
+    return false;
   }
 
   bool hasConditionalMoveFusion() const {
@@ -210,11 +205,7 @@ public:
   }
 
   bool hasShlAdd(int64_t ShAmt) const {
-    if (ShAmt <= 0)
-      return false;
-    if (ShAmt <= 3)
-      return HasStdExtZba || HasVendorXAndesPerf || HasVendorXTHeadBa;
-    return ShAmt <= 31 && HasVendorXqciac;
+    return false;
   }
 
   bool is64Bit() const { return IsRV64; }
@@ -228,12 +219,6 @@ public:
   bool useMIPSLoadStorePairs() const;
   bool useMIPSCCMovInsn() const;
   unsigned getFLen() const {
-    if (HasStdExtD)
-      return 64;
-
-    if (HasStdExtF)
-      return 32;
-
     return 0;
   }
 
@@ -244,20 +229,19 @@ public:
   }
 
   unsigned getELen() const {
-    assert(hasVInstructions() && "Expected V extension");
-    return hasVInstructionsI64() ? 64 : 32;
+    return 0;
   }
   unsigned getRealMinVLen() const {
-    unsigned VLen = getMinRVVVectorSizeInBits();
-    return VLen == 0 ? ZvlLen : VLen;
+    return 0;
   }
   unsigned getRealMaxVLen() const {
-    unsigned VLen = getMaxRVVVectorSizeInBits();
-    return VLen == 0 ? 65536 : VLen;
+    return 0;
   }
   // If we know the exact VLEN, return it.  Otherwise, return std::nullopt.
   std::optional<unsigned> getRealVLen() const {
     unsigned Min = getRealMinVLen();
+    if (Min == 0)
+      return std::nullopt;
     if (Min != getRealMaxVLen())
       return std::nullopt;
     return Min;
@@ -286,45 +270,25 @@ public:
   }
 
   // XRay support - require D and C extensions.
-  bool isXRaySupported() const override { return hasStdExtD() && hasStdExtC(); }
+  bool isXRaySupported() const override { return false; }
 
-  // Vector codegen related methods.
-  bool hasVInstructions() const { return HasStdExtZve32x; }
-  bool hasVInstructionsI64() const { return HasStdExtZve64x; }
-  bool hasVInstructionsF16Minimal() const { return HasStdExtZvfhmin; }
-  bool hasVInstructionsF16() const { return HasStdExtZvfh; }
-  bool hasVInstructionsBF16Minimal() const {
-    return HasStdExtZvfbfmin || HasStdExtZvfbfa;
-  }
-  bool hasVInstructionsF32() const { return HasStdExtZve32f; }
-  bool hasVInstructionsF64() const { return HasStdExtZve64d; }
-  bool hasVInstructionsBF16() const { return HasStdExtZvfbfa; }
-  // F16 and F64 both require F32.
-  bool hasVInstructionsAnyF() const { return hasVInstructionsF32(); }
-  bool hasVInstructionsFullMultiply() const { return HasStdExtV; }
+  // YSX intentionally has no RVV surface.
+  bool hasVInstructions() const { return false; }
+  bool hasVInstructionsI64() const { return false; }
+  bool hasVInstructionsF16Minimal() const { return false; }
+  bool hasVInstructionsF16() const { return false; }
+  bool hasVInstructionsBF16Minimal() const { return false; }
+  bool hasVInstructionsF32() const { return false; }
+  bool hasVInstructionsF64() const { return false; }
+  bool hasVInstructionsBF16() const { return false; }
+  bool hasVInstructionsAnyF() const { return false; }
+  bool hasVInstructionsFullMultiply() const { return false; }
   unsigned getMaxInterleaveFactor() const {
-    return hasVInstructions() ? MaxInterleaveFactor : 1;
+    return 1;
   }
 
   bool hasOptimizedSegmentLoadStore(unsigned NF) const {
-    switch (NF) {
-    case 2:
-      return hasOptimizedNF2SegmentLoadStore();
-    case 3:
-      return hasOptimizedNF3SegmentLoadStore();
-    case 4:
-      return hasOptimizedNF4SegmentLoadStore();
-    case 5:
-      return hasOptimizedNF5SegmentLoadStore();
-    case 6:
-      return hasOptimizedNF6SegmentLoadStore();
-    case 7:
-      return hasOptimizedNF7SegmentLoadStore();
-    case 8:
-      return hasOptimizedNF8SegmentLoadStore();
-    default:
-      llvm_unreachable("Unexpected NF");
-    }
+    return false;
   }
 
   bool enablePExtSIMDCodeGen() const;
@@ -341,10 +305,8 @@ protected:
   // SelectionDAGISel related APIs.
   std::unique_ptr<const SelectionDAGTargetInfo> TSInfo;
 
-  // Return the known range for the bit length of RVV data registers as set
-  // at the command line. A value of 0 means nothing is known about that particular
-  // limit beyond what's implied by the architecture.
-  // NOTE: Please use getRealMinVLen and getRealMaxVLen instead!
+  // Vector queries are retained only for copied helper code that now always
+  // sees RVV as unavailable.
   unsigned getMaxRVVVectorSizeInBits() const;
   unsigned getMinRVVVectorSizeInBits() const;
 

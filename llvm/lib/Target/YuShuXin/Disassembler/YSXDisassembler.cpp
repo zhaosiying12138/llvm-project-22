@@ -616,95 +616,13 @@ namespace {
 
 struct DecoderListEntry {
   const uint8_t *Table;
-  FeatureBitset ContainedFeatures;
   const char *Desc;
-
-  bool haveContainedFeatures(const FeatureBitset &ActiveFeatures) const {
-    return ContainedFeatures.none() ||
-           (ContainedFeatures & ActiveFeatures).any();
-  }
 };
 
 } // end anonymous namespace
 
-static constexpr FeatureBitset XCVFeatureGroup = {
-    YSX::FeatureVendorXCVbitmanip, YSX::FeatureVendorXCVelw,
-    YSX::FeatureVendorXCVmac,      YSX::FeatureVendorXCVmem,
-    YSX::FeatureVendorXCValu,      YSX::FeatureVendorXCVsimd,
-    YSX::FeatureVendorXCVbi};
-
-static constexpr FeatureBitset XRivosFeatureGroup = {
-    YSX::FeatureVendorXRivosVisni,
-    YSX::FeatureVendorXRivosVizip,
-};
-
-static constexpr FeatureBitset XqciFeatureGroup = {
-    YSX::FeatureVendorXqcia,   YSX::FeatureVendorXqciac,
-    YSX::FeatureVendorXqcibi,  YSX::FeatureVendorXqcibm,
-    YSX::FeatureVendorXqcicli, YSX::FeatureVendorXqcicm,
-    YSX::FeatureVendorXqcics,  YSX::FeatureVendorXqcicsr,
-    YSX::FeatureVendorXqciint, YSX::FeatureVendorXqciio,
-    YSX::FeatureVendorXqcilb,  YSX::FeatureVendorXqcili,
-    YSX::FeatureVendorXqcilia, YSX::FeatureVendorXqcilo,
-    YSX::FeatureVendorXqcilsm, YSX::FeatureVendorXqcisim,
-    YSX::FeatureVendorXqcisls, YSX::FeatureVendorXqcisync,
-};
-
-static constexpr FeatureBitset XSfVectorGroup = {
-    YSX::FeatureVendorXSfvcp,          YSX::FeatureVendorXSfvqmaccdod,
-    YSX::FeatureVendorXSfvqmaccqoq,    YSX::FeatureVendorXSfvfwmaccqqq,
-    YSX::FeatureVendorXSfvfnrclipxfqf, YSX::FeatureVendorXSfmmbase,
-    YSX::FeatureVendorXSfvfexpa,       YSX::FeatureVendorXSfvfexpa64e,
-    YSX::FeatureVendorXSfvfbfexp16e,   YSX::FeatureVendorXSfvfexp16e,
-    YSX::FeatureVendorXSfvfexp32e};
-static constexpr FeatureBitset XSfSystemGroup = {
-    YSX::FeatureVendorXSiFivecdiscarddlone,
-    YSX::FeatureVendorXSiFivecflushdlone,
-};
-
-static constexpr FeatureBitset XMIPSGroup = {
-    YSX::FeatureVendorXMIPSLSP,
-    YSX::FeatureVendorXMIPSCMov,
-    YSX::FeatureVendorXMIPSCBOP,
-    YSX::FeatureVendorXMIPSEXECTL,
-};
-
-static constexpr FeatureBitset XTHeadGroup = {
-    YSX::FeatureVendorXTHeadBa,      YSX::FeatureVendorXTHeadBb,
-    YSX::FeatureVendorXTHeadBs,      YSX::FeatureVendorXTHeadCondMov,
-    YSX::FeatureVendorXTHeadCmo,     YSX::FeatureVendorXTHeadFMemIdx,
-    YSX::FeatureVendorXTHeadMac,     YSX::FeatureVendorXTHeadMemIdx,
-    YSX::FeatureVendorXTHeadMemPair, YSX::FeatureVendorXTHeadSync,
-    YSX::FeatureVendorXTHeadVdot};
-
-static constexpr FeatureBitset XAndesGroup = {
-    YSX::FeatureVendorXAndesPerf,      YSX::FeatureVendorXAndesBFHCvt,
-    YSX::FeatureVendorXAndesVBFHCvt,   YSX::FeatureVendorXAndesVSIntH,
-    YSX::FeatureVendorXAndesVSIntLoad, YSX::FeatureVendorXAndesVPackFPH,
-    YSX::FeatureVendorXAndesVDot};
-
-static constexpr FeatureBitset XSMTGroup = {YSX::FeatureVendorXSMTVDot};
-
 static constexpr DecoderListEntry DecoderList32[]{
-    // Vendor Extensions
-    {DecoderTableXCV32, XCVFeatureGroup, "CORE-V extensions"},
-    {DecoderTableXRivos32, XRivosFeatureGroup, "Rivos"},
-    {DecoderTableXqci32, XqciFeatureGroup, "Qualcomm uC Extensions"},
-    {DecoderTableXVentana32,
-     {YSX::FeatureVendorXVentanaCondOps},
-     "XVentanaCondOps"},
-    {DecoderTableXTHead32, XTHeadGroup, "T-Head extensions"},
-    {DecoderTableXSfvector32, XSfVectorGroup, "SiFive vector extensions"},
-    {DecoderTableXSfsystem32, XSfSystemGroup, "SiFive system extensions"},
-    {DecoderTableXSfcease32, {YSX::FeatureVendorXSfcease}, "SiFive sf.cease"},
-    {DecoderTableXMIPS32, XMIPSGroup, "Mips extensions"},
-    {DecoderTableXAndes32, XAndesGroup, "Andes extensions"},
-    {DecoderTableXSMT32, XSMTGroup, "SpacemiT extensions"},
-    // Standard Extensions
-    {DecoderTable32, {}, "standard 32-bit instructions"},
-    {DecoderTableRV32Only32, {}, "RV32-only standard 32-bit instructions"},
-    {DecoderTableZfinx32, {}, "Zfinx (Float in Integer)"},
-    {DecoderTableZdinxRV32Only32, {}, "RV32-only Zdinx (Double in Integer)"},
+    {DecoderTable32, "standard 32-bit instructions"},
 };
 
 namespace {
@@ -728,9 +646,6 @@ DecodeStatus YSXDisassembler::getInstruction32(MCInst &MI, uint64_t &Size,
   uint32_t Insn = support::endian::read32le(Bytes.data());
 
   for (const DecoderListEntry &Entry : DecoderList32) {
-    if (!Entry.haveContainedFeatures(STI.getFeatureBits()))
-      continue;
-
     LLVM_DEBUG(dbgs() << "Trying " << Entry.Desc << " table:\n");
     DecodeStatus Result =
         decodeInstruction(Entry.Table, MI, Insn, Address, this, STI);
@@ -742,82 +657,20 @@ DecodeStatus YSXDisassembler::getInstruction32(MCInst &MI, uint64_t &Size,
 
   return MCDisassembler::Fail;
 }
-
-static constexpr DecoderListEntry DecoderList16[]{
-    // Vendor Extensions
-    {DecoderTableXqci16, XqciFeatureGroup, "Qualcomm uC 16-bit"},
-    {DecoderTableXqccmp16,
-     {YSX::FeatureVendorXqccmp},
-     "Xqccmp (Qualcomm 16-bit Push/Pop & Double Move Instructions)"},
-    {DecoderTableXwchc16, {YSX::FeatureVendorXwchc}, "WCH QingKe XW"},
-    // Standard Extensions
-    // DecoderTableZicfiss16 must be checked before DecoderTable16.
-    {DecoderTableZicfiss16, {}, "Zicfiss (Shadow Stack 16-bit)"},
-    {DecoderTable16, {}, "standard 16-bit instructions"},
-    {DecoderTableRV32Only16, {}, "RV32-only 16-bit instructions"},
-    // Zc* instructions incompatible with Zcf or Zcd
-    {DecoderTableZcOverlap16,
-     {},
-     "ZcOverlap (16-bit Instructions overlapping with Zcf/Zcd)"},
-};
 
 DecodeStatus YSXDisassembler::getInstruction16(MCInst &MI, uint64_t &Size,
                                                  ArrayRef<uint8_t> Bytes,
                                                  uint64_t Address,
                                                  raw_ostream &CS) const {
-  if (Bytes.size() < 2) {
-    Size = 0;
-    return MCDisassembler::Fail;
-  }
-  Size = 2;
-
-  uint16_t Insn = support::endian::read16le(Bytes.data());
-
-  for (const DecoderListEntry &Entry : DecoderList16) {
-    if (!Entry.haveContainedFeatures(STI.getFeatureBits()))
-      continue;
-
-    LLVM_DEBUG(dbgs() << "Trying " << Entry.Desc << " table:\n");
-    DecodeStatus Result =
-        decodeInstruction(Entry.Table, MI, Insn, Address, this, STI);
-    if (Result != MCDisassembler::Fail)
-      return Result;
-  }
-
+  Size = Bytes.size() >= 2 ? 2 : 0;
   return MCDisassembler::Fail;
 }
-
-static constexpr DecoderListEntry DecoderList48[]{
-    {DecoderTableXqci48, XqciFeatureGroup, "Qualcomm uC 48bit"},
-};
 
 DecodeStatus YSXDisassembler::getInstruction48(MCInst &MI, uint64_t &Size,
                                                  ArrayRef<uint8_t> Bytes,
                                                  uint64_t Address,
                                                  raw_ostream &CS) const {
-  if (Bytes.size() < 6) {
-    Size = 0;
-    return MCDisassembler::Fail;
-  }
-  Size = 6;
-
-  uint64_t Insn = 0;
-  for (size_t i = Size; i-- != 0;)
-    Insn += (static_cast<uint64_t>(Bytes[i]) << 8 * i);
-
-  for (const DecoderListEntry &Entry : DecoderList48) {
-    if (!Entry.haveContainedFeatures(STI.getFeatureBits()))
-      continue;
-
-    LLVM_DEBUG(dbgs() << "Trying " << Entry.Desc << " table:\n");
-    DecodeStatus Result =
-        decodeInstruction(Entry.Table, MI, Insn, Address, this, STI);
-    if (Result == MCDisassembler::Fail)
-      continue;
-
-    return Result;
-  }
-
+  Size = Bytes.size() >= 6 ? 6 : 0;
   return MCDisassembler::Fail;
 }
 

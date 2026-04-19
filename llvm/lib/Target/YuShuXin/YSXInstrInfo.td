@@ -1228,10 +1228,6 @@ def : MnemonicAlias<"sbreak", "ebreak">;
 
 def : InstAlias<"zext.b $rd, $rs", (ANDI GPR:$rd, GPR:$rs, 0xFF)>;
 
-let Predicates = [HasStdExtZicfilp] in {
-def : InstAlias<"lpad $imm20", (AUIPC X0, uimm20:$imm20)>;
-}
-
 //===----------------------------------------------------------------------===//
 // .insn directive instructions
 //===----------------------------------------------------------------------===//
@@ -1674,18 +1670,7 @@ multiclass SelectCC_GPR_rrirr<DAGOperand valty, ValueType vt,
 let Predicates = [NoConditionalMoveFusion] in
 defm Select_GPR : SelectCC_GPR_rrirr<GPR, XLenVT>;
 
-class SelectCompressOpt<CondCode Cond>
-    : Pat<(ysx_selectcc_frag:$select (XLenVT GPR:$lhs), simm12_no6:$Constant, Cond,
-                                       (XLenVT GPR:$truev), GPR:$falsev),
-    (Select_GPR_Using_CC_GPR (XLenVT (ADDI GPR:$lhs, (NegImm simm12_lo:$Constant))), (XLenVT X0),
-                          (IntCCtoYSXCC $select), GPR:$truev, GPR:$falsev)>;
-
 def OptForMinSize : Predicate<"MF ? MF->getFunction().hasMinSize() : false">;
-
-let Predicates = [HasStdExtC, OptForMinSize] in {
-  def : SelectCompressOpt<SETEQ>;
-  def : SelectCompressOpt<SETNE>;
-}
 
 multiclass SelectCC_GPR_riirr<DAGOperand valty, DAGOperand imm> {
   let usesCustomInserter = 1 in
@@ -1714,22 +1699,12 @@ multiclass BccPat<CondCode Cond, RVInstB Inst> {
             (Inst GPR:$rs1, (XLenVT X0), bare_simm13_lsb0_bb:$imm12)>;
 }
 
-class BrccCompressOpt<CondCode Cond, RVInstB Inst>
-    : Pat<(ysx_brcc GPR:$lhs, simm12_no6:$Constant, Cond, bb:$place),
-          (Inst (XLenVT (ADDI GPR:$lhs, (NegImm simm12_lo:$Constant))),
-                (XLenVT X0), bb:$place)>;
-
 defm : BccPat<SETEQ, BEQ>;
 defm : BccPat<SETNE, BNE>;
 defm : BccPat<SETLT, BLT>;
 defm : BccPat<SETGE, BGE>;
 defm : BccPat<SETULT, BLTU>;
 defm : BccPat<SETUGE, BGEU>;
-
-let Predicates = [HasStdExtZca, OptForMinSize] in {
-  def : BrccCompressOpt<SETEQ, BEQ>;
-  def : BrccCompressOpt<SETNE, BNE>;
-}
 
 class LongBccPseudo : Pseudo<(outs),
                              (ins GPR:$rs1, GPR:$rs2, simm21_lsb0_jal:$imm20),
@@ -2321,14 +2296,6 @@ def : Pat<(i64 (add GPR:$rs1, negImm:$rs2)), (SUB GPR:$rs1, negImm:$rs2)>;
 }
 
 //===----------------------------------------------------------------------===//
-// Zihintpause
-//===----------------------------------------------------------------------===//
-
-// Zihintpause
-let Predicates = [HasStdExtZihintpause] in
-def : Pat<(int_riscv_pause), (FENCE 0x1, 0x0)>;
-
-//===----------------------------------------------------------------------===//
 // Standard extensions
 //===----------------------------------------------------------------------===//
 
@@ -2337,62 +2304,3 @@ include "YSXInstrInfoM.td"
 
 // Atomic
 include "YSXInstrInfoA.td"
-include "YSXInstrInfoZa.td"
-include "YSXInstrInfoZalasr.td"
-
-// Integer
-include "YSXInstrInfoZimop.td"
-include "YSXInstrInfoZicbo.td"
-include "YSXInstrInfoZicond.td"
-include "YSXInstrInfoZilsd.td"
-include "YSXInstrInfoZibi.td"
-
-// Scalar FP
-include "YSXInstrInfoF.td"
-include "YSXInstrInfoD.td"
-include "YSXInstrInfoQ.td"
-include "YSXInstrInfoZfh.td"
-include "YSXInstrInfoZfbfmin.td"
-include "YSXInstrInfoZfa.td"
-
-// Scalar bitmanip and cryptography
-include "YSXInstrInfoZb.td"
-include "YSXInstrInfoZk.td"
-
-// Vector
-include "YSXInstrInfoV.td"
-include "YSXInstrInfoZvk.td"
-include "YSXInstrInfoZvqdotq.td"
-include "YSXInstrInfoZvfofp8min.td"
-
-// Packed SIMD
-include "YSXInstrInfoP.td"
-
-// Compressed
-include "YSXInstrInfoC.td"
-include "YSXInstrInfoZc.td"
-include "YSXInstrInfoZcmop.td"
-include "YSXInstrInfoZclsd.td"
-
-// Control Flow Integriy, this requires Zimop/Zcmop
-include "YSXInstrInfoZicfiss.td"
-
-// Short Forward Branch
-include "YSXInstrInfoSFB.td"
-
-//===----------------------------------------------------------------------===//
-// Vendor extensions
-//===----------------------------------------------------------------------===//
-
-include "YSXInstrInfoXVentana.td"
-include "YSXInstrInfoXTHead.td"
-include "YSXInstrInfoXSf.td"
-include "YSXInstrInfoXSfmm.td"
-include "YSXInstrInfoXCV.td"
-include "YSXInstrInfoXwch.td"
-include "YSXInstrInfoXqci.td"
-include "YSXInstrInfoXqccmp.td"
-include "YSXInstrInfoXMips.td"
-include "YSXInstrInfoXRivos.td"
-include "YSXInstrInfoXAndes.td"
-include "YSXInstrInfoXSpacemiT.td"

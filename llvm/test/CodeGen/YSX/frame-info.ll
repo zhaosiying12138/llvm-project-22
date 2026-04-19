@@ -18,25 +18,6 @@ define void @trivial() {
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    ret
 ;
-; RV32-WITHFP-LABEL: trivial:
-; RV32-WITHFP:       # %bb.0:
-; RV32-WITHFP-NEXT:    addi sp, sp, -16
-; RV32-WITHFP-NEXT:    .cfi_def_cfa_offset 16
-; RV32-WITHFP-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32-WITHFP-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
-; RV32-WITHFP-NEXT:    .cfi_offset ra, -4
-; RV32-WITHFP-NEXT:    .cfi_offset s0, -8
-; RV32-WITHFP-NEXT:    addi s0, sp, 16
-; RV32-WITHFP-NEXT:    .cfi_def_cfa s0, 0
-; RV32-WITHFP-NEXT:    .cfi_def_cfa sp, 16
-; RV32-WITHFP-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; RV32-WITHFP-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
-; RV32-WITHFP-NEXT:    .cfi_restore ra
-; RV32-WITHFP-NEXT:    .cfi_restore s0
-; RV32-WITHFP-NEXT:    addi sp, sp, 16
-; RV32-WITHFP-NEXT:    .cfi_def_cfa_offset 0
-; RV32-WITHFP-NEXT:    ret
-;
 ; RV64-WITHFP-LABEL: trivial:
 ; RV64-WITHFP:       # %bb.0:
 ; RV64-WITHFP-NEXT:    addi sp, sp, -16
@@ -56,32 +37,9 @@ define void @trivial() {
 ; RV64-WITHFP-NEXT:    .cfi_def_cfa_offset 0
 ; RV64-WITHFP-NEXT:    ret
 ;
-; RV32-DISABLESW-LABEL: trivial:
-; RV32-DISABLESW:       # %bb.0:
-; RV32-DISABLESW-NEXT:    ret
-;
 ; RV64-DISABLESW-LABEL: trivial:
 ; RV64-DISABLESW:       # %bb.0:
 ; RV64-DISABLESW-NEXT:    ret
-;
-; RV32-WITHFP-DISABLESW-LABEL: trivial:
-; RV32-WITHFP-DISABLESW:       # %bb.0:
-; RV32-WITHFP-DISABLESW-NEXT:    addi sp, sp, -16
-; RV32-WITHFP-DISABLESW-NEXT:    .cfi_def_cfa_offset 16
-; RV32-WITHFP-DISABLESW-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32-WITHFP-DISABLESW-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
-; RV32-WITHFP-DISABLESW-NEXT:    .cfi_offset ra, -4
-; RV32-WITHFP-DISABLESW-NEXT:    .cfi_offset s0, -8
-; RV32-WITHFP-DISABLESW-NEXT:    addi s0, sp, 16
-; RV32-WITHFP-DISABLESW-NEXT:    .cfi_def_cfa s0, 0
-; RV32-WITHFP-DISABLESW-NEXT:    .cfi_def_cfa sp, 16
-; RV32-WITHFP-DISABLESW-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; RV32-WITHFP-DISABLESW-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
-; RV32-WITHFP-DISABLESW-NEXT:    .cfi_restore ra
-; RV32-WITHFP-DISABLESW-NEXT:    .cfi_restore s0
-; RV32-WITHFP-DISABLESW-NEXT:    addi sp, sp, 16
-; RV32-WITHFP-DISABLESW-NEXT:    .cfi_def_cfa_offset 0
-; RV32-WITHFP-DISABLESW-NEXT:    ret
 ;
 ; RV64-WITHFP-DISABLESW-LABEL: trivial:
 ; RV64-WITHFP-DISABLESW:       # %bb.0:
@@ -101,6 +59,45 @@ define void @trivial() {
 ; RV64-WITHFP-DISABLESW-NEXT:    addi sp, sp, 16
 ; RV64-WITHFP-DISABLESW-NEXT:    .cfi_def_cfa_offset 0
 ; RV64-WITHFP-DISABLESW-NEXT:    ret
+; RV32-WITHFP-LABEL: trivial:
+; RV32-WITHFP:       # %bb.0:
+; RV32-WITHFP-NEXT:    addi sp, sp, -16
+; RV32-WITHFP-NEXT:    .cfi_def_cfa_offset 16
+; RV32-WITHFP-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32-WITHFP-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
+; RV32-WITHFP-NEXT:    .cfi_offset ra, -4
+; RV32-WITHFP-NEXT:    .cfi_offset s0, -8
+; RV32-WITHFP-NEXT:    addi s0, sp, 16
+; RV32-WITHFP-NEXT:    .cfi_def_cfa s0, 0
+; RV32-WITHFP-NEXT:    .cfi_def_cfa sp, 16
+; RV32-WITHFP-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32-WITHFP-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
+; RV32-WITHFP-NEXT:    .cfi_restore ra
+; RV32-WITHFP-NEXT:    .cfi_restore s0
+; RV32-WITHFP-NEXT:    addi sp, sp, 16
+; RV32-WITHFP-NEXT:    .cfi_def_cfa_offset 0
+; RV32-WITHFP-NEXT:    ret
+; RV32-DISABLESW-LABEL: trivial:
+; RV32-DISABLESW:       # %bb.0:
+; RV32-DISABLESW-NEXT:    ret
+; RV32-WITHFP-DISABLESW-LABEL: trivial:
+; RV32-WITHFP-DISABLESW:       # %bb.0:
+; RV32-WITHFP-DISABLESW-NEXT:    addi sp, sp, -16
+; RV32-WITHFP-DISABLESW-NEXT:    .cfi_def_cfa_offset 16
+; RV32-WITHFP-DISABLESW-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32-WITHFP-DISABLESW-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
+; RV32-WITHFP-DISABLESW-NEXT:    .cfi_offset ra, -4
+; RV32-WITHFP-DISABLESW-NEXT:    .cfi_offset s0, -8
+; RV32-WITHFP-DISABLESW-NEXT:    addi s0, sp, 16
+; RV32-WITHFP-DISABLESW-NEXT:    .cfi_def_cfa s0, 0
+; RV32-WITHFP-DISABLESW-NEXT:    .cfi_def_cfa sp, 16
+; RV32-WITHFP-DISABLESW-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32-WITHFP-DISABLESW-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
+; RV32-WITHFP-DISABLESW-NEXT:    .cfi_restore ra
+; RV32-WITHFP-DISABLESW-NEXT:    .cfi_restore s0
+; RV32-WITHFP-DISABLESW-NEXT:    addi sp, sp, 16
+; RV32-WITHFP-DISABLESW-NEXT:    .cfi_def_cfa_offset 0
+; RV32-WITHFP-DISABLESW-NEXT:    ret
   ret void
 }
 
@@ -157,31 +154,6 @@ define void @stack_alloc(i32 signext %size) {
 ; RV64-NEXT:    .cfi_def_cfa_offset 0
 ; RV64-NEXT:    ret
 ;
-; RV32-WITHFP-LABEL: stack_alloc:
-; RV32-WITHFP:       # %bb.0: # %entry
-; RV32-WITHFP-NEXT:    addi sp, sp, -16
-; RV32-WITHFP-NEXT:    .cfi_def_cfa_offset 16
-; RV32-WITHFP-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32-WITHFP-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
-; RV32-WITHFP-NEXT:    .cfi_offset ra, -4
-; RV32-WITHFP-NEXT:    .cfi_offset s0, -8
-; RV32-WITHFP-NEXT:    addi s0, sp, 16
-; RV32-WITHFP-NEXT:    .cfi_def_cfa s0, 0
-; RV32-WITHFP-NEXT:    addi a0, a0, 15
-; RV32-WITHFP-NEXT:    andi a0, a0, -16
-; RV32-WITHFP-NEXT:    sub a0, sp, a0
-; RV32-WITHFP-NEXT:    mv sp, a0
-; RV32-WITHFP-NEXT:    call callee_with_args
-; RV32-WITHFP-NEXT:    addi sp, s0, -16
-; RV32-WITHFP-NEXT:    .cfi_def_cfa sp, 16
-; RV32-WITHFP-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; RV32-WITHFP-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
-; RV32-WITHFP-NEXT:    .cfi_restore ra
-; RV32-WITHFP-NEXT:    .cfi_restore s0
-; RV32-WITHFP-NEXT:    addi sp, sp, 16
-; RV32-WITHFP-NEXT:    .cfi_def_cfa_offset 0
-; RV32-WITHFP-NEXT:    ret
-;
 ; RV64-WITHFP-LABEL: stack_alloc:
 ; RV64-WITHFP:       # %bb.0: # %entry
 ; RV64-WITHFP-NEXT:    addi sp, sp, -16
@@ -208,31 +180,6 @@ define void @stack_alloc(i32 signext %size) {
 ; RV64-WITHFP-NEXT:    addi sp, sp, 16
 ; RV64-WITHFP-NEXT:    .cfi_def_cfa_offset 0
 ; RV64-WITHFP-NEXT:    ret
-;
-; RV32-DISABLESW-LABEL: stack_alloc:
-; RV32-DISABLESW:       # %bb.0: # %entry
-; RV32-DISABLESW-NEXT:    addi sp, sp, -16
-; RV32-DISABLESW-NEXT:    .cfi_def_cfa_offset 16
-; RV32-DISABLESW-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32-DISABLESW-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
-; RV32-DISABLESW-NEXT:    .cfi_offset ra, -4
-; RV32-DISABLESW-NEXT:    .cfi_offset s0, -8
-; RV32-DISABLESW-NEXT:    addi s0, sp, 16
-; RV32-DISABLESW-NEXT:    .cfi_def_cfa s0, 0
-; RV32-DISABLESW-NEXT:    addi a0, a0, 15
-; RV32-DISABLESW-NEXT:    andi a0, a0, -16
-; RV32-DISABLESW-NEXT:    sub a0, sp, a0
-; RV32-DISABLESW-NEXT:    mv sp, a0
-; RV32-DISABLESW-NEXT:    call callee_with_args
-; RV32-DISABLESW-NEXT:    addi sp, s0, -16
-; RV32-DISABLESW-NEXT:    .cfi_def_cfa sp, 16
-; RV32-DISABLESW-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; RV32-DISABLESW-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
-; RV32-DISABLESW-NEXT:    .cfi_restore ra
-; RV32-DISABLESW-NEXT:    .cfi_restore s0
-; RV32-DISABLESW-NEXT:    addi sp, sp, 16
-; RV32-DISABLESW-NEXT:    .cfi_def_cfa_offset 0
-; RV32-DISABLESW-NEXT:    ret
 ;
 ; RV64-DISABLESW-LABEL: stack_alloc:
 ; RV64-DISABLESW:       # %bb.0: # %entry
@@ -261,31 +208,6 @@ define void @stack_alloc(i32 signext %size) {
 ; RV64-DISABLESW-NEXT:    .cfi_def_cfa_offset 0
 ; RV64-DISABLESW-NEXT:    ret
 ;
-; RV32-WITHFP-DISABLESW-LABEL: stack_alloc:
-; RV32-WITHFP-DISABLESW:       # %bb.0: # %entry
-; RV32-WITHFP-DISABLESW-NEXT:    addi sp, sp, -16
-; RV32-WITHFP-DISABLESW-NEXT:    .cfi_def_cfa_offset 16
-; RV32-WITHFP-DISABLESW-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32-WITHFP-DISABLESW-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
-; RV32-WITHFP-DISABLESW-NEXT:    .cfi_offset ra, -4
-; RV32-WITHFP-DISABLESW-NEXT:    .cfi_offset s0, -8
-; RV32-WITHFP-DISABLESW-NEXT:    addi s0, sp, 16
-; RV32-WITHFP-DISABLESW-NEXT:    .cfi_def_cfa s0, 0
-; RV32-WITHFP-DISABLESW-NEXT:    addi a0, a0, 15
-; RV32-WITHFP-DISABLESW-NEXT:    andi a0, a0, -16
-; RV32-WITHFP-DISABLESW-NEXT:    sub a0, sp, a0
-; RV32-WITHFP-DISABLESW-NEXT:    mv sp, a0
-; RV32-WITHFP-DISABLESW-NEXT:    call callee_with_args
-; RV32-WITHFP-DISABLESW-NEXT:    addi sp, s0, -16
-; RV32-WITHFP-DISABLESW-NEXT:    .cfi_def_cfa sp, 16
-; RV32-WITHFP-DISABLESW-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; RV32-WITHFP-DISABLESW-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
-; RV32-WITHFP-DISABLESW-NEXT:    .cfi_restore ra
-; RV32-WITHFP-DISABLESW-NEXT:    .cfi_restore s0
-; RV32-WITHFP-DISABLESW-NEXT:    addi sp, sp, 16
-; RV32-WITHFP-DISABLESW-NEXT:    .cfi_def_cfa_offset 0
-; RV32-WITHFP-DISABLESW-NEXT:    ret
-;
 ; RV64-WITHFP-DISABLESW-LABEL: stack_alloc:
 ; RV64-WITHFP-DISABLESW:       # %bb.0: # %entry
 ; RV64-WITHFP-DISABLESW-NEXT:    addi sp, sp, -16
@@ -312,6 +234,78 @@ define void @stack_alloc(i32 signext %size) {
 ; RV64-WITHFP-DISABLESW-NEXT:    addi sp, sp, 16
 ; RV64-WITHFP-DISABLESW-NEXT:    .cfi_def_cfa_offset 0
 ; RV64-WITHFP-DISABLESW-NEXT:    ret
+; RV32-WITHFP-LABEL: stack_alloc:
+; RV32-WITHFP:       # %bb.0: # %entry
+; RV32-WITHFP-NEXT:    addi sp, sp, -16
+; RV32-WITHFP-NEXT:    .cfi_def_cfa_offset 16
+; RV32-WITHFP-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32-WITHFP-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
+; RV32-WITHFP-NEXT:    .cfi_offset ra, -4
+; RV32-WITHFP-NEXT:    .cfi_offset s0, -8
+; RV32-WITHFP-NEXT:    addi s0, sp, 16
+; RV32-WITHFP-NEXT:    .cfi_def_cfa s0, 0
+; RV32-WITHFP-NEXT:    addi a0, a0, 15
+; RV32-WITHFP-NEXT:    andi a0, a0, -16
+; RV32-WITHFP-NEXT:    sub a0, sp, a0
+; RV32-WITHFP-NEXT:    mv sp, a0
+; RV32-WITHFP-NEXT:    call callee_with_args
+; RV32-WITHFP-NEXT:    addi sp, s0, -16
+; RV32-WITHFP-NEXT:    .cfi_def_cfa sp, 16
+; RV32-WITHFP-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32-WITHFP-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
+; RV32-WITHFP-NEXT:    .cfi_restore ra
+; RV32-WITHFP-NEXT:    .cfi_restore s0
+; RV32-WITHFP-NEXT:    addi sp, sp, 16
+; RV32-WITHFP-NEXT:    .cfi_def_cfa_offset 0
+; RV32-WITHFP-NEXT:    ret
+; RV32-DISABLESW-LABEL: stack_alloc:
+; RV32-DISABLESW:       # %bb.0: # %entry
+; RV32-DISABLESW-NEXT:    addi sp, sp, -16
+; RV32-DISABLESW-NEXT:    .cfi_def_cfa_offset 16
+; RV32-DISABLESW-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32-DISABLESW-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
+; RV32-DISABLESW-NEXT:    .cfi_offset ra, -4
+; RV32-DISABLESW-NEXT:    .cfi_offset s0, -8
+; RV32-DISABLESW-NEXT:    addi s0, sp, 16
+; RV32-DISABLESW-NEXT:    .cfi_def_cfa s0, 0
+; RV32-DISABLESW-NEXT:    addi a0, a0, 15
+; RV32-DISABLESW-NEXT:    andi a0, a0, -16
+; RV32-DISABLESW-NEXT:    sub a0, sp, a0
+; RV32-DISABLESW-NEXT:    mv sp, a0
+; RV32-DISABLESW-NEXT:    call callee_with_args
+; RV32-DISABLESW-NEXT:    addi sp, s0, -16
+; RV32-DISABLESW-NEXT:    .cfi_def_cfa sp, 16
+; RV32-DISABLESW-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32-DISABLESW-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
+; RV32-DISABLESW-NEXT:    .cfi_restore ra
+; RV32-DISABLESW-NEXT:    .cfi_restore s0
+; RV32-DISABLESW-NEXT:    addi sp, sp, 16
+; RV32-DISABLESW-NEXT:    .cfi_def_cfa_offset 0
+; RV32-DISABLESW-NEXT:    ret
+; RV32-WITHFP-DISABLESW-LABEL: stack_alloc:
+; RV32-WITHFP-DISABLESW:       # %bb.0: # %entry
+; RV32-WITHFP-DISABLESW-NEXT:    addi sp, sp, -16
+; RV32-WITHFP-DISABLESW-NEXT:    .cfi_def_cfa_offset 16
+; RV32-WITHFP-DISABLESW-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32-WITHFP-DISABLESW-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
+; RV32-WITHFP-DISABLESW-NEXT:    .cfi_offset ra, -4
+; RV32-WITHFP-DISABLESW-NEXT:    .cfi_offset s0, -8
+; RV32-WITHFP-DISABLESW-NEXT:    addi s0, sp, 16
+; RV32-WITHFP-DISABLESW-NEXT:    .cfi_def_cfa s0, 0
+; RV32-WITHFP-DISABLESW-NEXT:    addi a0, a0, 15
+; RV32-WITHFP-DISABLESW-NEXT:    andi a0, a0, -16
+; RV32-WITHFP-DISABLESW-NEXT:    sub a0, sp, a0
+; RV32-WITHFP-DISABLESW-NEXT:    mv sp, a0
+; RV32-WITHFP-DISABLESW-NEXT:    call callee_with_args
+; RV32-WITHFP-DISABLESW-NEXT:    addi sp, s0, -16
+; RV32-WITHFP-DISABLESW-NEXT:    .cfi_def_cfa sp, 16
+; RV32-WITHFP-DISABLESW-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32-WITHFP-DISABLESW-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
+; RV32-WITHFP-DISABLESW-NEXT:    .cfi_restore ra
+; RV32-WITHFP-DISABLESW-NEXT:    .cfi_restore s0
+; RV32-WITHFP-DISABLESW-NEXT:    addi sp, sp, 16
+; RV32-WITHFP-DISABLESW-NEXT:    .cfi_def_cfa_offset 0
+; RV32-WITHFP-DISABLESW-NEXT:    ret
 entry:
   %0 = alloca i8, i32 %size, align 16
   call void @callee_with_args(ptr nonnull %0)
@@ -355,31 +349,6 @@ define void @branch_and_tail_call(i1 %a) {
 ; RV64-NEXT:    .cfi_def_cfa_offset 0
 ; RV64-NEXT:    ret
 ;
-; RV32-WITHFP-LABEL: branch_and_tail_call:
-; RV32-WITHFP:       # %bb.0:
-; RV32-WITHFP-NEXT:    andi a0, a0, 1
-; RV32-WITHFP-NEXT:    beqz a0, .LBB2_2
-; RV32-WITHFP-NEXT:  # %bb.1: # %blue_pill
-; RV32-WITHFP-NEXT:    tail callee1
-; RV32-WITHFP-NEXT:  .LBB2_2: # %red_pill
-; RV32-WITHFP-NEXT:    addi sp, sp, -16
-; RV32-WITHFP-NEXT:    .cfi_def_cfa_offset 16
-; RV32-WITHFP-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32-WITHFP-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
-; RV32-WITHFP-NEXT:    .cfi_offset ra, -4
-; RV32-WITHFP-NEXT:    .cfi_offset s0, -8
-; RV32-WITHFP-NEXT:    addi s0, sp, 16
-; RV32-WITHFP-NEXT:    .cfi_def_cfa s0, 0
-; RV32-WITHFP-NEXT:    call callee2
-; RV32-WITHFP-NEXT:    .cfi_def_cfa sp, 16
-; RV32-WITHFP-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; RV32-WITHFP-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
-; RV32-WITHFP-NEXT:    .cfi_restore ra
-; RV32-WITHFP-NEXT:    .cfi_restore s0
-; RV32-WITHFP-NEXT:    addi sp, sp, 16
-; RV32-WITHFP-NEXT:    .cfi_def_cfa_offset 0
-; RV32-WITHFP-NEXT:    ret
-;
 ; RV64-WITHFP-LABEL: branch_and_tail_call:
 ; RV64-WITHFP:       # %bb.0:
 ; RV64-WITHFP-NEXT:    andi a0, a0, 1
@@ -405,30 +374,6 @@ define void @branch_and_tail_call(i1 %a) {
 ; RV64-WITHFP-NEXT:    .cfi_def_cfa_offset 0
 ; RV64-WITHFP-NEXT:    ret
 ;
-; RV32-DISABLESW-LABEL: branch_and_tail_call:
-; RV32-DISABLESW:       # %bb.0:
-; RV32-DISABLESW-NEXT:    addi sp, sp, -16
-; RV32-DISABLESW-NEXT:    .cfi_def_cfa_offset 16
-; RV32-DISABLESW-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32-DISABLESW-NEXT:    .cfi_offset ra, -4
-; RV32-DISABLESW-NEXT:    .cfi_remember_state
-; RV32-DISABLESW-NEXT:    andi a0, a0, 1
-; RV32-DISABLESW-NEXT:    beqz a0, .LBB2_2
-; RV32-DISABLESW-NEXT:  # %bb.1: # %blue_pill
-; RV32-DISABLESW-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; RV32-DISABLESW-NEXT:    .cfi_restore ra
-; RV32-DISABLESW-NEXT:    addi sp, sp, 16
-; RV32-DISABLESW-NEXT:    .cfi_def_cfa_offset 0
-; RV32-DISABLESW-NEXT:    tail callee1
-; RV32-DISABLESW-NEXT:  .LBB2_2: # %red_pill
-; RV32-DISABLESW-NEXT:    .cfi_restore_state
-; RV32-DISABLESW-NEXT:    call callee2
-; RV32-DISABLESW-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; RV32-DISABLESW-NEXT:    .cfi_restore ra
-; RV32-DISABLESW-NEXT:    addi sp, sp, 16
-; RV32-DISABLESW-NEXT:    .cfi_def_cfa_offset 0
-; RV32-DISABLESW-NEXT:    ret
-;
 ; RV64-DISABLESW-LABEL: branch_and_tail_call:
 ; RV64-DISABLESW:       # %bb.0:
 ; RV64-DISABLESW-NEXT:    addi sp, sp, -16
@@ -452,40 +397,6 @@ define void @branch_and_tail_call(i1 %a) {
 ; RV64-DISABLESW-NEXT:    addi sp, sp, 16
 ; RV64-DISABLESW-NEXT:    .cfi_def_cfa_offset 0
 ; RV64-DISABLESW-NEXT:    ret
-;
-; RV32-WITHFP-DISABLESW-LABEL: branch_and_tail_call:
-; RV32-WITHFP-DISABLESW:       # %bb.0:
-; RV32-WITHFP-DISABLESW-NEXT:    addi sp, sp, -16
-; RV32-WITHFP-DISABLESW-NEXT:    .cfi_def_cfa_offset 16
-; RV32-WITHFP-DISABLESW-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32-WITHFP-DISABLESW-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
-; RV32-WITHFP-DISABLESW-NEXT:    .cfi_offset ra, -4
-; RV32-WITHFP-DISABLESW-NEXT:    .cfi_offset s0, -8
-; RV32-WITHFP-DISABLESW-NEXT:    addi s0, sp, 16
-; RV32-WITHFP-DISABLESW-NEXT:    .cfi_def_cfa s0, 0
-; RV32-WITHFP-DISABLESW-NEXT:    .cfi_remember_state
-; RV32-WITHFP-DISABLESW-NEXT:    andi a0, a0, 1
-; RV32-WITHFP-DISABLESW-NEXT:    beqz a0, .LBB2_2
-; RV32-WITHFP-DISABLESW-NEXT:  # %bb.1: # %blue_pill
-; RV32-WITHFP-DISABLESW-NEXT:    .cfi_def_cfa sp, 16
-; RV32-WITHFP-DISABLESW-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; RV32-WITHFP-DISABLESW-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
-; RV32-WITHFP-DISABLESW-NEXT:    .cfi_restore ra
-; RV32-WITHFP-DISABLESW-NEXT:    .cfi_restore s0
-; RV32-WITHFP-DISABLESW-NEXT:    addi sp, sp, 16
-; RV32-WITHFP-DISABLESW-NEXT:    .cfi_def_cfa_offset 0
-; RV32-WITHFP-DISABLESW-NEXT:    tail callee1
-; RV32-WITHFP-DISABLESW-NEXT:  .LBB2_2: # %red_pill
-; RV32-WITHFP-DISABLESW-NEXT:    .cfi_restore_state
-; RV32-WITHFP-DISABLESW-NEXT:    call callee2
-; RV32-WITHFP-DISABLESW-NEXT:    .cfi_def_cfa sp, 16
-; RV32-WITHFP-DISABLESW-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; RV32-WITHFP-DISABLESW-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
-; RV32-WITHFP-DISABLESW-NEXT:    .cfi_restore ra
-; RV32-WITHFP-DISABLESW-NEXT:    .cfi_restore s0
-; RV32-WITHFP-DISABLESW-NEXT:    addi sp, sp, 16
-; RV32-WITHFP-DISABLESW-NEXT:    .cfi_def_cfa_offset 0
-; RV32-WITHFP-DISABLESW-NEXT:    ret
 ;
 ; RV64-WITHFP-DISABLESW-LABEL: branch_and_tail_call:
 ; RV64-WITHFP-DISABLESW:       # %bb.0:
@@ -520,6 +431,86 @@ define void @branch_and_tail_call(i1 %a) {
 ; RV64-WITHFP-DISABLESW-NEXT:    addi sp, sp, 16
 ; RV64-WITHFP-DISABLESW-NEXT:    .cfi_def_cfa_offset 0
 ; RV64-WITHFP-DISABLESW-NEXT:    ret
+; RV32-WITHFP-LABEL: branch_and_tail_call:
+; RV32-WITHFP:       # %bb.0:
+; RV32-WITHFP-NEXT:    andi a0, a0, 1
+; RV32-WITHFP-NEXT:    beqz a0, .LBB2_2
+; RV32-WITHFP-NEXT:  # %bb.1: # %blue_pill
+; RV32-WITHFP-NEXT:    tail callee1
+; RV32-WITHFP-NEXT:  .LBB2_2: # %red_pill
+; RV32-WITHFP-NEXT:    addi sp, sp, -16
+; RV32-WITHFP-NEXT:    .cfi_def_cfa_offset 16
+; RV32-WITHFP-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32-WITHFP-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
+; RV32-WITHFP-NEXT:    .cfi_offset ra, -4
+; RV32-WITHFP-NEXT:    .cfi_offset s0, -8
+; RV32-WITHFP-NEXT:    addi s0, sp, 16
+; RV32-WITHFP-NEXT:    .cfi_def_cfa s0, 0
+; RV32-WITHFP-NEXT:    call callee2
+; RV32-WITHFP-NEXT:    .cfi_def_cfa sp, 16
+; RV32-WITHFP-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32-WITHFP-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
+; RV32-WITHFP-NEXT:    .cfi_restore ra
+; RV32-WITHFP-NEXT:    .cfi_restore s0
+; RV32-WITHFP-NEXT:    addi sp, sp, 16
+; RV32-WITHFP-NEXT:    .cfi_def_cfa_offset 0
+; RV32-WITHFP-NEXT:    ret
+; RV32-DISABLESW-LABEL: branch_and_tail_call:
+; RV32-DISABLESW:       # %bb.0:
+; RV32-DISABLESW-NEXT:    addi sp, sp, -16
+; RV32-DISABLESW-NEXT:    .cfi_def_cfa_offset 16
+; RV32-DISABLESW-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32-DISABLESW-NEXT:    .cfi_offset ra, -4
+; RV32-DISABLESW-NEXT:    .cfi_remember_state
+; RV32-DISABLESW-NEXT:    andi a0, a0, 1
+; RV32-DISABLESW-NEXT:    beqz a0, .LBB2_2
+; RV32-DISABLESW-NEXT:  # %bb.1: # %blue_pill
+; RV32-DISABLESW-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32-DISABLESW-NEXT:    .cfi_restore ra
+; RV32-DISABLESW-NEXT:    addi sp, sp, 16
+; RV32-DISABLESW-NEXT:    .cfi_def_cfa_offset 0
+; RV32-DISABLESW-NEXT:    tail callee1
+; RV32-DISABLESW-NEXT:  .LBB2_2: # %red_pill
+; RV32-DISABLESW-NEXT:    .cfi_restore_state
+; RV32-DISABLESW-NEXT:    call callee2
+; RV32-DISABLESW-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32-DISABLESW-NEXT:    .cfi_restore ra
+; RV32-DISABLESW-NEXT:    addi sp, sp, 16
+; RV32-DISABLESW-NEXT:    .cfi_def_cfa_offset 0
+; RV32-DISABLESW-NEXT:    ret
+; RV32-WITHFP-DISABLESW-LABEL: branch_and_tail_call:
+; RV32-WITHFP-DISABLESW:       # %bb.0:
+; RV32-WITHFP-DISABLESW-NEXT:    addi sp, sp, -16
+; RV32-WITHFP-DISABLESW-NEXT:    .cfi_def_cfa_offset 16
+; RV32-WITHFP-DISABLESW-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32-WITHFP-DISABLESW-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
+; RV32-WITHFP-DISABLESW-NEXT:    .cfi_offset ra, -4
+; RV32-WITHFP-DISABLESW-NEXT:    .cfi_offset s0, -8
+; RV32-WITHFP-DISABLESW-NEXT:    addi s0, sp, 16
+; RV32-WITHFP-DISABLESW-NEXT:    .cfi_def_cfa s0, 0
+; RV32-WITHFP-DISABLESW-NEXT:    .cfi_remember_state
+; RV32-WITHFP-DISABLESW-NEXT:    andi a0, a0, 1
+; RV32-WITHFP-DISABLESW-NEXT:    beqz a0, .LBB2_2
+; RV32-WITHFP-DISABLESW-NEXT:  # %bb.1: # %blue_pill
+; RV32-WITHFP-DISABLESW-NEXT:    .cfi_def_cfa sp, 16
+; RV32-WITHFP-DISABLESW-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32-WITHFP-DISABLESW-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
+; RV32-WITHFP-DISABLESW-NEXT:    .cfi_restore ra
+; RV32-WITHFP-DISABLESW-NEXT:    .cfi_restore s0
+; RV32-WITHFP-DISABLESW-NEXT:    addi sp, sp, 16
+; RV32-WITHFP-DISABLESW-NEXT:    .cfi_def_cfa_offset 0
+; RV32-WITHFP-DISABLESW-NEXT:    tail callee1
+; RV32-WITHFP-DISABLESW-NEXT:  .LBB2_2: # %red_pill
+; RV32-WITHFP-DISABLESW-NEXT:    .cfi_restore_state
+; RV32-WITHFP-DISABLESW-NEXT:    call callee2
+; RV32-WITHFP-DISABLESW-NEXT:    .cfi_def_cfa sp, 16
+; RV32-WITHFP-DISABLESW-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32-WITHFP-DISABLESW-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
+; RV32-WITHFP-DISABLESW-NEXT:    .cfi_restore ra
+; RV32-WITHFP-DISABLESW-NEXT:    .cfi_restore s0
+; RV32-WITHFP-DISABLESW-NEXT:    addi sp, sp, 16
+; RV32-WITHFP-DISABLESW-NEXT:    .cfi_def_cfa_offset 0
+; RV32-WITHFP-DISABLESW-NEXT:    ret
   br i1 %a, label %blue_pill, label %red_pill
 blue_pill:
   tail call void @callee1()

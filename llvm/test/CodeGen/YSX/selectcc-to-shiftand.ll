@@ -10,11 +10,11 @@ define i32 @neg_sel_constants(i32 signext %a) {
 ; RV32-NEXT:    andi a0, a0, 5
 ; RV32-NEXT:    ret
 ;
-; RV64-LABEL: neg_sel_constants:
-; RV64:       # %bb.0:
-; RV64-NEXT:    srai a0, a0, 63
-; RV64-NEXT:    andi a0, a0, 5
-; RV64-NEXT:    ret
+; CHECK-LABEL: neg_sel_constants:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    srai a0, a0, 63
+; CHECK-NEXT:    andi a0, a0, 5
+; CHECK-NEXT:    ret
   %tmp.1 = icmp slt i32 %a, 0
   %retval = select i1 %tmp.1, i32 5, i32 0
   ret i32 %retval
@@ -29,11 +29,11 @@ define i32 @neg_sel_special_constant(i32 signext %a) {
 ; RV32-NEXT:    slli a0, a0, 9
 ; RV32-NEXT:    ret
 ;
-; RV64-LABEL: neg_sel_special_constant:
-; RV64:       # %bb.0:
-; RV64-NEXT:    srliw a0, a0, 31
-; RV64-NEXT:    slli a0, a0, 9
-; RV64-NEXT:    ret
+; CHECK-LABEL: neg_sel_special_constant:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    srliw a0, a0, 31
+; CHECK-NEXT:    slli a0, a0, 9
+; CHECK-NEXT:    ret
   %tmp.1 = icmp slt i32 %a, 0
   %retval = select i1 %tmp.1, i32 512, i32 0
   ret i32 %retval
@@ -77,12 +77,12 @@ define i32 @pos_sel_constants(i32 signext %a) {
 ; RV32-NEXT:    andi a0, a0, 5
 ; RV32-NEXT:    ret
 ;
-; RV64-LABEL: pos_sel_constants:
-; RV64:       # %bb.0:
-; RV64-NEXT:    srli a0, a0, 63
-; RV64-NEXT:    addi a0, a0, -1
-; RV64-NEXT:    andi a0, a0, 5
-; RV64-NEXT:    ret
+; CHECK-LABEL: pos_sel_constants:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    srli a0, a0, 63
+; CHECK-NEXT:    addiw a0, a0, -1
+; CHECK-NEXT:    andi a0, a0, 5
+; CHECK-NEXT:    ret
   %tmp.1 = icmp sgt i32 %a, -1
   %retval = select i1 %tmp.1, i32 5, i32 0
   ret i32 %retval
@@ -100,12 +100,12 @@ define i32 @pos_sel_special_constant(i32 signext %a) {
 ; RV32-NEXT:    slli a0, a0, 9
 ; RV32-NEXT:    ret
 ;
-; RV64-LABEL: pos_sel_special_constant:
-; RV64:       # %bb.0:
-; RV64-NEXT:    srli a0, a0, 63
-; RV64-NEXT:    xori a0, a0, 1
-; RV64-NEXT:    slli a0, a0, 9
-; RV64-NEXT:    ret
+; CHECK-LABEL: pos_sel_special_constant:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    srli a0, a0, 63
+; CHECK-NEXT:    xori a0, a0, 1
+; CHECK-NEXT:    slli a0, a0, 9
+; CHECK-NEXT:    ret
   %tmp.1 = icmp sgt i32 %a, -1
   %retval = select i1 %tmp.1, i32 512, i32 0
   ret i32 %retval
@@ -120,19 +120,17 @@ define i32 @pos_sel_variable_and_zero(i32 signext %a, i32 signext %b) {
 ; RV32I-NEXT:    and a0, a0, a1
 ; RV32I-NEXT:    ret
 ;
-; RV64I-LABEL: pos_sel_variable_and_zero:
-; RV64I:       # %bb.0:
-; RV64I-NEXT:    srli a0, a0, 63
-; RV64I-NEXT:    addi a0, a0, -1
-; RV64I-NEXT:    and a0, a0, a1
-; RV64I-NEXT:    ret
-;
+; CHECK-LABEL: pos_sel_variable_and_zero:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    srli a0, a0, 63
+; CHECK-NEXT:    addi a0, a0, -1
+; CHECK-NEXT:    and a0, a0, a1
+; CHECK-NEXT:    ret
 ; RV32ZBB-LABEL: pos_sel_variable_and_zero:
 ; RV32ZBB:       # %bb.0:
 ; RV32ZBB-NEXT:    srai a0, a0, 31
 ; RV32ZBB-NEXT:    andn a0, a1, a0
 ; RV32ZBB-NEXT:    ret
-;
 ; RV64ZBB-LABEL: pos_sel_variable_and_zero:
 ; RV64ZBB:       # %bb.0:
 ; RV64ZBB-NEXT:    srai a0, a0, 31
@@ -153,18 +151,16 @@ define i32 @not_neg_sel_same_variable(i32 signext %a) {
 ; RV32I-NEXT:    and a0, a1, a0
 ; RV32I-NEXT:    ret
 ;
-; RV64I-LABEL: not_neg_sel_same_variable:
-; RV64I:       # %bb.0:
-; RV64I-NEXT:    sgtz a1, a0
-; RV64I-NEXT:    neg a1, a1
-; RV64I-NEXT:    and a0, a1, a0
-; RV64I-NEXT:    ret
-;
+; CHECK-LABEL: not_neg_sel_same_variable:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    sgtz a1, a0
+; CHECK-NEXT:    neg a1, a1
+; CHECK-NEXT:    and a0, a1, a0
+; CHECK-NEXT:    ret
 ; RV32ZBB-LABEL: not_neg_sel_same_variable:
 ; RV32ZBB:       # %bb.0:
 ; RV32ZBB-NEXT:    max a0, a0, zero
 ; RV32ZBB-NEXT:    ret
-;
 ; RV64ZBB-LABEL: not_neg_sel_same_variable:
 ; RV64ZBB:       # %bb.0:
 ; RV64ZBB-NEXT:    max a0, a0, zero
@@ -184,20 +180,18 @@ define i32 @sub_clamp_zero(i32 signext %x, i32 signext %y) {
 ; RV32I-NEXT:    and a0, a1, a0
 ; RV32I-NEXT:    ret
 ;
-; RV64I-LABEL: sub_clamp_zero:
-; RV64I:       # %bb.0:
-; RV64I-NEXT:    subw a0, a0, a1
-; RV64I-NEXT:    sgtz a1, a0
-; RV64I-NEXT:    neg a1, a1
-; RV64I-NEXT:    and a0, a1, a0
-; RV64I-NEXT:    ret
-;
+; CHECK-LABEL: sub_clamp_zero:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    subw a0, a0, a1
+; CHECK-NEXT:    sgtz a1, a0
+; CHECK-NEXT:    neg a1, a1
+; CHECK-NEXT:    and a0, a1, a0
+; CHECK-NEXT:    ret
 ; RV32ZBB-LABEL: sub_clamp_zero:
 ; RV32ZBB:       # %bb.0:
 ; RV32ZBB-NEXT:    sub a0, a0, a1
 ; RV32ZBB-NEXT:    max a0, a0, zero
 ; RV32ZBB-NEXT:    ret
-;
 ; RV64ZBB-LABEL: sub_clamp_zero:
 ; RV64ZBB:       # %bb.0:
 ; RV64ZBB-NEXT:    subw a0, a0, a1
@@ -217,12 +211,12 @@ define i8 @sel_shift_bool_i8(i1 %t) {
 ; RV32-NEXT:    andi a0, a0, -128
 ; RV32-NEXT:    ret
 ;
-; RV64-LABEL: sel_shift_bool_i8:
-; RV64:       # %bb.0:
-; RV64-NEXT:    slli a0, a0, 63
-; RV64-NEXT:    srai a0, a0, 63
-; RV64-NEXT:    andi a0, a0, -128
-; RV64-NEXT:    ret
+; CHECK-LABEL: sel_shift_bool_i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    slli a0, a0, 63
+; CHECK-NEXT:    srai a0, a0, 63
+; CHECK-NEXT:    andi a0, a0, -128
+; CHECK-NEXT:    ret
   %shl = select i1 %t, i8 128, i8 0
   ret i8 %shl
 }
@@ -255,11 +249,11 @@ define i64 @sel_shift_bool_i64(i1 %t) {
 ; RV32-NEXT:    li a1, 0
 ; RV32-NEXT:    ret
 ;
-; RV64-LABEL: sel_shift_bool_i64:
-; RV64:       # %bb.0:
-; RV64-NEXT:    andi a0, a0, 1
-; RV64-NEXT:    slli a0, a0, 16
-; RV64-NEXT:    ret
+; CHECK-LABEL: sel_shift_bool_i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    andi a0, a0, 1
+; CHECK-NEXT:    slli a0, a0, 16
+; CHECK-NEXT:    ret
   %shl = select i1 %t, i64 65536, i64 0
   ret i64 %shl
 }
@@ -273,15 +267,18 @@ define i64 @sraiw_andi(i32 signext %0, i32 signext %1) nounwind {
 ; RV32-NEXT:    li a1, 0
 ; RV32-NEXT:    ret
 ;
-; RV64-LABEL: sraiw_andi:
-; RV64:       # %bb.0: # %entry
-; RV64-NEXT:    add a0, a0, a1
-; RV64-NEXT:    sraiw a0, a0, 31
-; RV64-NEXT:    andi a0, a0, 7
-; RV64-NEXT:    ret
+; CHECK-LABEL: sraiw_andi:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addw a0, a0, a1
+; CHECK-NEXT:    sraiw a0, a0, 31
+; CHECK-NEXT:    andi a0, a0, 7
+; CHECK-NEXT:    ret
 entry:
   %3 = add i32 %0, %1
   %4 = icmp sgt i32 %3, -1
   %5 = select i1 %4, i64 0, i64 7
   ret i64 %5
 }
+;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
+; RV64: {{.*}}
+; RV64I: {{.*}}

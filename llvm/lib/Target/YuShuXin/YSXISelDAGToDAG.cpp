@@ -819,6 +819,8 @@ bool YSXDAGToDAGISel::tryUnsignedBitfieldInsertInZero(SDNode *Node,
 }
 
 bool YSXDAGToDAGISel::tryIndexedLoad(SDNode *Node) {
+  return false;
+#if 0
   // Target does not support indexed loads.
   if (!Subtarget->hasVendorXTHeadMemIdx())
     return false;
@@ -885,14 +887,12 @@ bool YSXDAGToDAGISel::tryIndexedLoad(SDNode *Node) {
   ReplaceNode(Node, New);
 
   return true;
-}
-
-static Register getTileReg(uint64_t TileNum) {
-  assert(TileNum <= 15 && "Invalid tile number");
-  return YSX::T0 + TileNum;
+#endif
 }
 
 void YSXDAGToDAGISel::selectSF_VC_X_SE(SDNode *Node) {
+  return;
+#if 0
   if (!Subtarget->hasVInstructions())
     return;
 
@@ -949,48 +949,7 @@ void YSXDAGToDAGISel::selectSF_VC_X_SE(SDNode *Node) {
 
   ReplaceNode(Node, CurDAG->getMachineNode(
                         Opcode, DL, Node->getSimpleValueType(0), Operands));
-}
-
-static unsigned getSegInstNF(unsigned Intrinsic) {
-#define INST_NF_CASE(NAME, NF)                                                 \
-  case Intrinsic::riscv_##NAME##NF:                                            \
-    return NF;
-#define INST_NF_CASE_MASK(NAME, NF)                                            \
-  case Intrinsic::riscv_##NAME##NF##_mask:                                     \
-    return NF;
-#define INST_NF_CASE_FF(NAME, NF)                                              \
-  case Intrinsic::riscv_##NAME##NF##ff:                                        \
-    return NF;
-#define INST_NF_CASE_FF_MASK(NAME, NF)                                         \
-  case Intrinsic::riscv_##NAME##NF##ff_mask:                                   \
-    return NF;
-#define INST_ALL_NF_CASE_BASE(MACRO_NAME, NAME)                                \
-  MACRO_NAME(NAME, 2)                                                          \
-  MACRO_NAME(NAME, 3)                                                          \
-  MACRO_NAME(NAME, 4)                                                          \
-  MACRO_NAME(NAME, 5)                                                          \
-  MACRO_NAME(NAME, 6)                                                          \
-  MACRO_NAME(NAME, 7)                                                          \
-  MACRO_NAME(NAME, 8)
-#define INST_ALL_NF_CASE(NAME)                                                 \
-  INST_ALL_NF_CASE_BASE(INST_NF_CASE, NAME)                                    \
-  INST_ALL_NF_CASE_BASE(INST_NF_CASE_MASK, NAME)
-#define INST_ALL_NF_CASE_WITH_FF(NAME)                                         \
-  INST_ALL_NF_CASE(NAME)                                                       \
-  INST_ALL_NF_CASE_BASE(INST_NF_CASE_FF, NAME)                                 \
-  INST_ALL_NF_CASE_BASE(INST_NF_CASE_FF_MASK, NAME)
-  switch (Intrinsic) {
-  default:
-    llvm_unreachable("Unexpected segment load/store intrinsic");
-    INST_ALL_NF_CASE_WITH_FF(vlseg)
-    INST_ALL_NF_CASE(vlsseg)
-    INST_ALL_NF_CASE(vloxseg)
-    INST_ALL_NF_CASE(vluxseg)
-    INST_ALL_NF_CASE(vsseg)
-    INST_ALL_NF_CASE(vssseg)
-    INST_ALL_NF_CASE(vsoxseg)
-    INST_ALL_NF_CASE(vsuxseg)
-  }
+#endif
 }
 
 static bool isApplicableToPLI(int Val) {
@@ -1761,7 +1720,8 @@ void YSXDAGToDAGISel::Select(SDNode *Node) {
     if (tryIndexedLoad(Node))
       return;
 
-    if (Subtarget->hasVendorXCVmem() && !Subtarget->is64Bit()) {
+    if (false && Subtarget->hasVendorXCVmem() && !Subtarget->is64Bit()) {
+#if 0
       // We match post-incrementing load here
       LoadSDNode *Load = cast<LoadSDNode>(Node);
       if (Load->getAddressingMode() != ISD::POST_INC)
@@ -1820,6 +1780,7 @@ void YSXDAGToDAGISel::Select(SDNode *Node) {
                                                Chain.getSimpleValueType(), Base,
                                                Offset, Chain));
       return;
+#endif
     }
     break;
   }
@@ -1877,6 +1838,8 @@ void YSXDAGToDAGISel::Select(SDNode *Node) {
     return;
   }
   case YSXISD::PPACK_DH: {
+    llvm_unreachable("YSX does not support packed-SIMD selection");
+#if 0
     assert(Subtarget->enablePExtSIMDCodeGen() && Subtarget->isRV32());
 
     SDValue Val0 = Node->getOperand(0);
@@ -1912,6 +1875,7 @@ void YSXDAGToDAGISel::Select(SDNode *Node) {
     ReplaceUses(SDValue(Node, 1), Hi);
     CurDAG->RemoveDeadNode(Node);
     return;
+#endif
   }
   case ISD::INTRINSIC_WO_CHAIN: {
     unsigned IntNo = Node->getConstantOperandVal(0);
@@ -1919,6 +1883,7 @@ void YSXDAGToDAGISel::Select(SDNode *Node) {
       // By default we do not custom select any intrinsic.
     default:
       break;
+#if 0
     case Intrinsic::riscv_vmsgeu:
     case Intrinsic::riscv_vmsge: {
       SDValue Src1 = Node->getOperand(1);
@@ -2150,10 +2115,13 @@ void YSXDAGToDAGISel::Select(SDNode *Node) {
     case Intrinsic::riscv_sf_vsettm:
     case Intrinsic::riscv_sf_vsettk:
       return selectXSfmmVSET(Node);
+#endif
     }
     break;
   }
   case ISD::INTRINSIC_W_CHAIN: {
+    break;
+#if 0
     unsigned IntNo = Node->getConstantOperandVal(1);
     switch (IntNo) {
       // By default we do not custom select any intrinsic.
@@ -2409,8 +2377,11 @@ void YSXDAGToDAGISel::Select(SDNode *Node) {
     }
     }
     break;
+#endif
   }
   case ISD::INTRINSIC_VOID: {
+    break;
+#if 0
     unsigned IntNo = Node->getConstantOperandVal(1);
     switch (IntNo) {
     case Intrinsic::riscv_vsseg2:
@@ -2711,6 +2682,7 @@ void YSXDAGToDAGISel::Select(SDNode *Node) {
     }
     }
     break;
+#endif
   }
   case ISD::BITCAST: {
     MVT SrcVT = Node->getOperand(0).getSimpleValueType();
@@ -4504,6 +4476,7 @@ bool YSXDAGToDAGISel::doPeepholeSExtW(SDNode *N) {
 }
 
 static bool usesAllOnesMask(SDValue MaskOp) {
+#if 0
   const auto IsVMSet = [](unsigned Opc) {
     return Opc == YSX::PseudoVMSET_M_B1 || Opc == YSX::PseudoVMSET_M_B16 ||
            Opc == YSX::PseudoVMSET_M_B2 || Opc == YSX::PseudoVMSET_M_B32 ||
@@ -4515,6 +4488,8 @@ static bool usesAllOnesMask(SDValue MaskOp) {
   // undefined behaviour if it's the wrong bitwidth, so we could choose to
   // assume that it's all-ones? Same applies to its VL.
   return MaskOp->isMachineOpcode() && IsVMSet(MaskOp.getMachineOpcode());
+#endif
+  return false;
 }
 
 static bool isImplicitDef(SDValue V) {

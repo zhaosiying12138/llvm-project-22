@@ -1346,24 +1346,6 @@ unsigned YSXAsmParser::validateTargetOperandClass(MCParsedAsmOperand &AsmOp,
     Op.Reg.Reg = convertFPR64ToFPR16(Reg);
     return Match_Success;
   }
-  if (Kind == MCK_GPRAsFPR16 && Op.isGPRAsFPR()) {
-    Op.Reg.Reg = Reg - YSX::X0 + YSX::X0_H;
-    return Match_Success;
-  }
-  if (Kind == MCK_GPRAsFPR32 && Op.isGPRAsFPR()) {
-    Op.Reg.Reg = Reg - YSX::X0 + YSX::X0_W;
-    return Match_Success;
-  }
-
-  // There are some GPRF64AsFPR instructions that have no RV32 equivalent. We
-  // reject them at parsing thinking we should match as GPRPairAsFPR for RV32.
-  // So we explicitly accept them here for RV32 to allow the generic code to
-  // report that the instruction requires RV64.
-  if (YSXMCRegisterClasses[YSX::GPRRegClassID].contains(Reg) &&
-      Kind == MCK_GPRF64AsFPR && STI->hasFeature(YSX::FeatureStdExtZdinx) &&
-      !isRV64())
-    return Match_Success;
-
   // As the parser couldn't differentiate an VRM2/VRM4/VRM8 from an VR, coerce
   // the register from VR to VRM2/VRM4/VRM8 if necessary.
   if (IsRegVR && (Kind == MCK_VRM2 || Kind == MCK_VRM4 || Kind == MCK_VRM8)) {
@@ -1473,127 +1455,22 @@ bool YSXAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
     if (isRV64())
       return generateImmOutOfRangeError(Operands, ErrorInfo, 0, (1 << 6) - 1);
     return generateImmOutOfRangeError(Operands, ErrorInfo, 0, (1 << 5) - 1);
-  case Match_InvalidUImmLog2XLenNonZero:
-    if (isRV64())
-      return generateImmOutOfRangeError(Operands, ErrorInfo, 1, (1 << 6) - 1);
-    return generateImmOutOfRangeError(Operands, ErrorInfo, 1, (1 << 5) - 1);
   case Match_InvalidUImm1:
     return generateImmOutOfRangeError(Operands, ErrorInfo, 0, (1 << 1) - 1);
   case Match_InvalidUImm2:
     return generateImmOutOfRangeError(Operands, ErrorInfo, 0, (1 << 2) - 1);
-  case Match_InvalidUImm2Lsb0:
-    return generateImmOutOfRangeError(Operands, ErrorInfo, 0, 2,
-                                      "immediate must be one of");
   case Match_InvalidUImm3:
     return generateImmOutOfRangeError(Operands, ErrorInfo, 0, (1 << 3) - 1);
   case Match_InvalidUImm4:
     return generateImmOutOfRangeError(Operands, ErrorInfo, 0, (1 << 4) - 1);
   case Match_InvalidUImm5:
     return generateImmOutOfRangeError(Operands, ErrorInfo, 0, (1 << 5) - 1);
-  case Match_InvalidUImm5NonZero:
-    return generateImmOutOfRangeError(Operands, ErrorInfo, 1, (1 << 5) - 1);
-  case Match_InvalidUImm5GT3:
-    return generateImmOutOfRangeError(Operands, ErrorInfo, 4, (1 << 5) - 1);
-  case Match_InvalidUImm5Plus1:
-    return generateImmOutOfRangeError(Operands, ErrorInfo, 1, (1 << 5));
-  case Match_InvalidUImm5GE6Plus1:
-    return generateImmOutOfRangeError(Operands, ErrorInfo, 6, (1 << 5));
-  case Match_InvalidUImm5Slist: {
-    SMLoc ErrorLoc = ((YSXOperand &)*Operands[ErrorInfo]).getStartLoc();
-    return Error(ErrorLoc,
-                 "immediate must be one of: 0, 1, 2, 4, 8, 15, 16, 31");
-  }
   case Match_InvalidUImm6:
     return generateImmOutOfRangeError(Operands, ErrorInfo, 0, (1 << 6) - 1);
   case Match_InvalidUImm7:
     return generateImmOutOfRangeError(Operands, ErrorInfo, 0, (1 << 7) - 1);
   case Match_InvalidUImm8:
     return generateImmOutOfRangeError(Operands, ErrorInfo, 0, (1 << 8) - 1);
-  case Match_InvalidUImm8GE32:
-    return generateImmOutOfRangeError(Operands, ErrorInfo, 32, (1 << 8) - 1);
-  case Match_InvalidSImm5:
-    return generateImmOutOfRangeError(Operands, ErrorInfo, -(1 << 4),
-                                      (1 << 4) - 1);
-  case Match_InvalidSImm5NonZero:
-    return generateImmOutOfRangeError(
-        Operands, ErrorInfo, -(1 << 4), (1 << 4) - 1,
-        "immediate must be non-zero in the range");
-  case Match_InvalidSImm6:
-    return generateImmOutOfRangeError(Operands, ErrorInfo, -(1 << 5),
-                                      (1 << 5) - 1);
-  case Match_InvalidSImm6NonZero:
-    return generateImmOutOfRangeError(
-        Operands, ErrorInfo, -(1 << 5), (1 << 5) - 1,
-        "immediate must be non-zero in the range");
-  case Match_InvalidCLUIImm:
-    return generateImmOutOfRangeError(
-        Operands, ErrorInfo, 1, (1 << 5) - 1,
-        "immediate must be in [0xfffe0, 0xfffff] or");
-  case Match_InvalidUImm5Lsb0:
-    return generateImmOutOfRangeError(
-        Operands, ErrorInfo, 0, (1 << 5) - 2,
-        "immediate must be a multiple of 2 bytes in the range");
-  case Match_InvalidUImm6Lsb0:
-    return generateImmOutOfRangeError(
-        Operands, ErrorInfo, 0, (1 << 6) - 2,
-        "immediate must be a multiple of 2 bytes in the range");
-  case Match_InvalidUImm7Lsb00:
-    return generateImmOutOfRangeError(
-        Operands, ErrorInfo, 0, (1 << 7) - 4,
-        "immediate must be a multiple of 4 bytes in the range");
-  case Match_InvalidUImm8Lsb00:
-    return generateImmOutOfRangeError(
-        Operands, ErrorInfo, 0, (1 << 8) - 4,
-        "immediate must be a multiple of 4 bytes in the range");
-  case Match_InvalidUImm8Lsb000:
-    return generateImmOutOfRangeError(
-        Operands, ErrorInfo, 0, (1 << 8) - 8,
-        "immediate must be a multiple of 8 bytes in the range");
-  case Match_InvalidUImm9:
-    return generateImmOutOfRangeError(Operands, ErrorInfo, 0, (1 << 9) - 1,
-                                      "immediate offset must be in the range");
-  case Match_InvalidBareSImm9Lsb0:
-    return generateImmOutOfRangeError(
-        Operands, ErrorInfo, -(1 << 8), (1 << 8) - 2,
-        "immediate must be a multiple of 2 bytes in the range");
-  case Match_InvalidUImm9Lsb000:
-    return generateImmOutOfRangeError(
-        Operands, ErrorInfo, 0, (1 << 9) - 8,
-        "immediate must be a multiple of 8 bytes in the range");
-  case Match_InvalidSImm8Unsigned:
-    return generateImmOutOfRangeError(Operands, ErrorInfo, -(1 << 7),
-                                      (1 << 8) - 1);
-  case Match_InvalidSImm10:
-    return generateImmOutOfRangeError(Operands, ErrorInfo, -(1 << 9),
-                                      (1 << 9) - 1);
-  case Match_InvalidSImm10Unsigned:
-    return generateImmOutOfRangeError(Operands, ErrorInfo, -(1 << 9),
-                                      (1 << 10) - 1);
-  case Match_InvalidUImm10Lsb00NonZero:
-    return generateImmOutOfRangeError(
-        Operands, ErrorInfo, 4, (1 << 10) - 4,
-        "immediate must be a multiple of 4 bytes in the range");
-  case Match_InvalidSImm10Lsb0000NonZero:
-    return generateImmOutOfRangeError(
-        Operands, ErrorInfo, -(1 << 9), (1 << 9) - 16,
-        "immediate must be a multiple of 16 bytes and non-zero in the range");
-  case Match_InvalidSImm11:
-    return generateImmOutOfRangeError(Operands, ErrorInfo, -(1 << 10),
-                                      (1 << 10) - 1);
-  case Match_InvalidBareSImm11Lsb0:
-    return generateImmOutOfRangeError(
-        Operands, ErrorInfo, -(1 << 10), (1 << 10) - 2,
-        "immediate must be a multiple of 2 bytes in the range");
-  case Match_InvalidUImm10:
-    return generateImmOutOfRangeError(Operands, ErrorInfo, 0, (1 << 10) - 1);
-  case Match_InvalidUImm11:
-    return generateImmOutOfRangeError(Operands, ErrorInfo, 0, (1 << 11) - 1);
-  case Match_InvalidUImm14Lsb00:
-    return generateImmOutOfRangeError(
-        Operands, ErrorInfo, 0, (1 << 14) - 4,
-        "immediate must be a multiple of 4 bytes in the range");
-  case Match_InvalidUImm16NonZero:
-    return generateImmOutOfRangeError(Operands, ErrorInfo, 1, (1 << 16) - 1);
   case Match_InvalidSImm12:
     return generateImmOutOfRangeError(Operands, ErrorInfo, -(1 << 11),
                                       (1 << 11) - 1);
@@ -1602,30 +1479,10 @@ bool YSXAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
         Operands, ErrorInfo, -(1 << 11), (1 << 11) - 1,
         "operand must be a symbol with %lo/%pcrel_lo/%tprel_lo specifier or an "
         "integer in the range");
-  case Match_InvalidBareSImm12Lsb0:
-    return generateImmOutOfRangeError(
-        Operands, ErrorInfo, -(1 << 11), (1 << 11) - 2,
-        "immediate must be a multiple of 2 bytes in the range");
-  case Match_InvalidSImm12Lsb00000:
-    return generateImmOutOfRangeError(
-        Operands, ErrorInfo, -(1 << 11), (1 << 11) - 32,
-        "immediate must be a multiple of 32 bytes in the range");
   case Match_InvalidBareSImm13Lsb0:
     return generateImmOutOfRangeError(
         Operands, ErrorInfo, -(1 << 12), (1 << 12) - 2,
         "immediate must be a multiple of 2 bytes in the range");
-  case Match_InvalidSImm16:
-    return generateImmOutOfRangeError(Operands, ErrorInfo, -(1 << 15),
-                                      (1 << 15) - 1);
-  case Match_InvalidSImm16NonZero:
-    return generateImmOutOfRangeError(
-        Operands, ErrorInfo, -(1 << 15), (1 << 15) - 1,
-        "immediate must be non-zero in the range");
-  case Match_InvalidSImm20LI:
-    return generateImmOutOfRangeError(
-        Operands, ErrorInfo, -(1 << 19), (1 << 19) - 1,
-        "operand must be a symbol with a %qc.abs20 specifier or an integer "
-        " in the range");
   case Match_InvalidUImm20LUI:
     return generateImmOutOfRangeError(
         Operands, ErrorInfo, 0, (1 << 20) - 1,
@@ -1649,59 +1506,6 @@ bool YSXAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
     return generateImmOutOfRangeError(Operands, ErrorInfo, 0, (1 << 12) - 1,
                                       "operand must be a valid system register "
                                       "name or an integer in the range");
-  }
-  case Match_InvalidImm5Zibi:
-    return generateImmOutOfRangeError(
-        Operands, ErrorInfo, -1, (1 << 5) - 1,
-        "immediate must be non-zero in the range");
-  case Match_InvalidVTypeI: {
-    SMLoc ErrorLoc = ((YSXOperand &)*Operands[ErrorInfo]).getStartLoc();
-    return generateVTypeError(ErrorLoc);
-  }
-  case Match_InvalidSImm5Plus1: {
-    return generateImmOutOfRangeError(Operands, ErrorInfo, -(1 << 4) + 1,
-                                      (1 << 4),
-                                      "immediate must be in the range");
-  }
-  case Match_InvalidSImm18:
-    return generateImmOutOfRangeError(Operands, ErrorInfo, -(1 << 17),
-                                      (1 << 17) - 1);
-  case Match_InvalidSImm18Lsb0:
-    return generateImmOutOfRangeError(
-        Operands, ErrorInfo, -(1 << 17), (1 << 17) - 2,
-        "immediate must be a multiple of 2 bytes in the range");
-  case Match_InvalidSImm19Lsb00:
-    return generateImmOutOfRangeError(
-        Operands, ErrorInfo, -(1 << 18), (1 << 18) - 4,
-        "immediate must be a multiple of 4 bytes in the range");
-  case Match_InvalidSImm20Lsb000:
-    return generateImmOutOfRangeError(
-        Operands, ErrorInfo, -(1 << 19), (1 << 19) - 8,
-        "immediate must be a multiple of 8 bytes in the range");
-  case Match_InvalidSImm26:
-    return generateImmOutOfRangeError(Operands, ErrorInfo, -(1 << 25),
-                                      (1 << 25) - 1);
-  // HACK: See comment before `BareSymbolQC_E_LI` in YSXInstrInfoXqci.td.
-  case Match_InvalidBareSymbolQC_E_LI:
-    [[fallthrough]];
-  // END HACK
-  case Match_InvalidBareSImm32:
-    return generateImmOutOfRangeError(Operands, ErrorInfo,
-                                      std::numeric_limits<int32_t>::min(),
-                                      std::numeric_limits<uint32_t>::max());
-  case Match_InvalidBareSImm32Lsb0:
-    return generateImmOutOfRangeError(
-        Operands, ErrorInfo, std::numeric_limits<int32_t>::min(),
-        std::numeric_limits<int32_t>::max() - 1,
-        "operand must be a multiple of 2 bytes in the range");
-  case Match_InvalidRnumArg: {
-    return generateImmOutOfRangeError(Operands, ErrorInfo, 0, 10);
-  }
-  case Match_InvalidStackAdj: {
-    SMLoc ErrorLoc = ((YSXOperand &)*Operands[ErrorInfo]).getStartLoc();
-    return Error(
-        ErrorLoc,
-        "stack adjustment is invalid for this instruction and register list");
   }
   }
 
@@ -3652,6 +3456,8 @@ void YSXAsmParser::emitPseudoExtend(MCInst &Inst, bool SignExtend,
 
 void YSXAsmParser::emitVMSGE(MCInst &Inst, unsigned Opcode, SMLoc IDLoc,
                                MCStreamer &Out) {
+  return;
+#if 0
   if (Inst.getNumOperands() == 3) {
     // unmasked va >= x
     //
@@ -3737,6 +3543,7 @@ void YSXAsmParser::emitVMSGE(MCInst &Inst, unsigned Opcode, SMLoc IDLoc,
                             .addOperand(Inst.getOperand(0))
                             .setLoc(IDLoc));
   }
+#endif
 }
 
 bool YSXAsmParser::checkPseudoAddTPRel(MCInst &Inst,
@@ -3783,29 +3590,6 @@ bool YSXAsmParser::validateInstruction(MCInst &Inst,
                                          OperandVector &Operands) {
   unsigned Opcode = Inst.getOpcode();
 
-  if (Opcode == YSX::PseudoVMSGEU_VX_M_T ||
-      Opcode == YSX::PseudoVMSGE_VX_M_T) {
-    MCRegister DestReg = Inst.getOperand(0).getReg();
-    MCRegister TempReg = Inst.getOperand(1).getReg();
-    if (DestReg == TempReg) {
-      SMLoc Loc = Operands.back()->getStartLoc();
-      return Error(Loc, "the temporary vector register cannot be the same as "
-                        "the destination register");
-    }
-  }
-
-  if (Opcode == YSX::TH_LDD || Opcode == YSX::TH_LWUD ||
-      Opcode == YSX::TH_LWD) {
-    MCRegister Rd1 = Inst.getOperand(0).getReg();
-    MCRegister Rd2 = Inst.getOperand(1).getReg();
-    MCRegister Rs1 = Inst.getOperand(2).getReg();
-    // The encoding with rd1 == rd2 == rs1 is reserved for XTHead load pair.
-    if (Rs1 == Rd1 || Rs1 == Rd2 || Rd1 == Rd2) {
-      SMLoc Loc = Operands[1]->getStartLoc();
-      return Error(Loc, "rs1, rd1, and rd2 cannot overlap");
-    }
-  }
-
   if (Opcode == YSX::CM_MVSA01 || Opcode == YSX::QC_CM_MVSA01) {
     MCRegister Rd1 = Inst.getOperand(0).getReg();
     MCRegister Rd2 = Inst.getOperand(1).getReg();
@@ -3818,26 +3602,6 @@ bool YSXAsmParser::validateInstruction(MCInst &Inst,
   const MCInstrDesc &MCID = MII.get(Opcode);
   if (!(MCID.TSFlags & YSXII::ConstraintMask))
     return false;
-
-  if (Opcode == YSX::SF_VC_V_XVW || Opcode == YSX::SF_VC_V_IVW ||
-      Opcode == YSX::SF_VC_V_FVW || Opcode == YSX::SF_VC_V_VVW) {
-    // Operands Opcode, Dst, uimm, Dst, Rs2, Rs1 for SF_VC_V_XVW.
-    MCRegister VCIXDst = Inst.getOperand(0).getReg();
-    SMLoc VCIXDstLoc = Operands[2]->getStartLoc();
-    if (MCID.TSFlags & YSXII::VS1Constraint) {
-      MCRegister VCIXRs1 = Inst.getOperand(Inst.getNumOperands() - 1).getReg();
-      if (VCIXDst == VCIXRs1)
-        return Error(VCIXDstLoc, "the destination vector register group cannot"
-                                 " overlap the source vector register group");
-    }
-    if (MCID.TSFlags & YSXII::VS2Constraint) {
-      MCRegister VCIXRs2 = Inst.getOperand(Inst.getNumOperands() - 2).getReg();
-      if (VCIXDst == VCIXRs2)
-        return Error(VCIXDstLoc, "the destination vector register group cannot"
-                                 " overlap the source vector register group");
-    }
-    return false;
-  }
 
   MCRegister DestReg = Inst.getOperand(0).getReg();
   unsigned Offset = 0;
@@ -3862,12 +3626,7 @@ bool YSXAsmParser::validateInstruction(MCInst &Inst,
   if ((MCID.TSFlags & YSXII::VMConstraint) && (DestReg == YSX::V0)) {
     // vadc, vsbc are special cases. These instructions have no mask register.
     // The destination register could not be V0.
-    if (Opcode == YSX::VADC_VVM || Opcode == YSX::VADC_VXM ||
-        Opcode == YSX::VADC_VIM || Opcode == YSX::VSBC_VVM ||
-        Opcode == YSX::VSBC_VXM || Opcode == YSX::VFMERGE_VFM ||
-        Opcode == YSX::VMERGE_VIM || Opcode == YSX::VMERGE_VVM ||
-        Opcode == YSX::VMERGE_VXM)
-      return Error(Loc, "the destination vector register group cannot be V0");
+    return Error(Loc, "the destination vector register group cannot be V0");
 
     // Regardless masked or unmasked version, the number of operands is the
     // same. For example, "viota.m v0, v2" is "viota.m v0, v2, NoRegister"
@@ -3892,14 +3651,6 @@ bool YSXAsmParser::processInstruction(MCInst &Inst, SMLoc IDLoc,
   switch (Inst.getOpcode()) {
   default:
     break;
-  case YSX::PseudoC_ADDI_NOP: {
-    if (Inst.getOperand(2).getImm() == 0)
-      emitToStreamer(Out, MCInstBuilder(YSX::C_NOP));
-    else
-      emitToStreamer(
-          Out, MCInstBuilder(YSX::C_NOP_HINT).addOperand(Inst.getOperand(2)));
-    return false;
-  }
   case YSX::PseudoLLAImm:
   case YSX::PseudoLAImm:
   case YSX::PseudoLI: {
@@ -3939,23 +3690,18 @@ bool YSXAsmParser::processInstruction(MCInst &Inst, SMLoc IDLoc,
     emitLoadTLSGDAddress(Inst, IDLoc, Out);
     return false;
   case YSX::PseudoLB:
-  case YSX::PseudoQC_E_LB:
     emitLoadStoreSymbol(Inst, YSX::LB, IDLoc, Out, /*HasTmpReg=*/false);
     return false;
   case YSX::PseudoLBU:
-  case YSX::PseudoQC_E_LBU:
     emitLoadStoreSymbol(Inst, YSX::LBU, IDLoc, Out, /*HasTmpReg=*/false);
     return false;
   case YSX::PseudoLH:
-  case YSX::PseudoQC_E_LH:
     emitLoadStoreSymbol(Inst, YSX::LH, IDLoc, Out, /*HasTmpReg=*/false);
     return false;
   case YSX::PseudoLHU:
-  case YSX::PseudoQC_E_LHU:
     emitLoadStoreSymbol(Inst, YSX::LHU, IDLoc, Out, /*HasTmpReg=*/false);
     return false;
   case YSX::PseudoLW:
-  case YSX::PseudoQC_E_LW:
     emitLoadStoreSymbol(Inst, YSX::LW, IDLoc, Out, /*HasTmpReg=*/false);
     return false;
   case YSX::PseudoLWU:
@@ -3964,50 +3710,17 @@ bool YSXAsmParser::processInstruction(MCInst &Inst, SMLoc IDLoc,
   case YSX::PseudoLD:
     emitLoadStoreSymbol(Inst, YSX::LD, IDLoc, Out, /*HasTmpReg=*/false);
     return false;
-  case YSX::PseudoLD_RV32:
-    emitLoadStoreSymbol(Inst, YSX::LD_RV32, IDLoc, Out, /*HasTmpReg=*/false);
-    return false;
-  case YSX::PseudoFLH:
-    emitLoadStoreSymbol(Inst, YSX::FLH, IDLoc, Out, /*HasTmpReg=*/true);
-    return false;
-  case YSX::PseudoFLW:
-    emitLoadStoreSymbol(Inst, YSX::FLW, IDLoc, Out, /*HasTmpReg=*/true);
-    return false;
-  case YSX::PseudoFLD:
-    emitLoadStoreSymbol(Inst, YSX::FLD, IDLoc, Out, /*HasTmpReg=*/true);
-    return false;
-  case YSX::PseudoFLQ:
-    emitLoadStoreSymbol(Inst, YSX::FLQ, IDLoc, Out, /*HasTmpReg=*/true);
-    return false;
   case YSX::PseudoSB:
-  case YSX::PseudoQC_E_SB:
     emitLoadStoreSymbol(Inst, YSX::SB, IDLoc, Out, /*HasTmpReg=*/true);
     return false;
   case YSX::PseudoSH:
-  case YSX::PseudoQC_E_SH:
     emitLoadStoreSymbol(Inst, YSX::SH, IDLoc, Out, /*HasTmpReg=*/true);
     return false;
   case YSX::PseudoSW:
-  case YSX::PseudoQC_E_SW:
     emitLoadStoreSymbol(Inst, YSX::SW, IDLoc, Out, /*HasTmpReg=*/true);
     return false;
   case YSX::PseudoSD:
     emitLoadStoreSymbol(Inst, YSX::SD, IDLoc, Out, /*HasTmpReg=*/true);
-    return false;
-  case YSX::PseudoSD_RV32:
-    emitLoadStoreSymbol(Inst, YSX::SD_RV32, IDLoc, Out, /*HasTmpReg=*/true);
-    return false;
-  case YSX::PseudoFSH:
-    emitLoadStoreSymbol(Inst, YSX::FSH, IDLoc, Out, /*HasTmpReg=*/true);
-    return false;
-  case YSX::PseudoFSW:
-    emitLoadStoreSymbol(Inst, YSX::FSW, IDLoc, Out, /*HasTmpReg=*/true);
-    return false;
-  case YSX::PseudoFSD:
-    emitLoadStoreSymbol(Inst, YSX::FSD, IDLoc, Out, /*HasTmpReg=*/true);
-    return false;
-  case YSX::PseudoFSQ:
-    emitLoadStoreSymbol(Inst, YSX::FSQ, IDLoc, Out, /*HasTmpReg=*/true);
     return false;
   case YSX::PseudoAddTPRel:
     if (checkPseudoAddTPRel(Inst, Operands))
@@ -4029,6 +3742,7 @@ bool YSXAsmParser::processInstruction(MCInst &Inst, SMLoc IDLoc,
   case YSX::PseudoZEXT_W:
     emitPseudoExtend(Inst, /*SignExtend=*/false, /*Width=*/32, IDLoc, Out);
     return false;
+#if 0
   case YSX::PseudoVMSGEU_VX:
   case YSX::PseudoVMSGEU_VX_M:
   case YSX::PseudoVMSGEU_VX_M_T:
@@ -4089,6 +3803,7 @@ bool YSXAsmParser::processInstruction(MCInst &Inst, SMLoc IDLoc,
   case YSX::PseudoCV_ELW:
     emitLoadStoreSymbol(Inst, YSX::CV_ELW, IDLoc, Out, /*HasTmpReg=*/false);
     return false;
+#endif
   }
 
   emitToStreamer(Out, Inst);

@@ -59,52 +59,51 @@ falsebb:
 
 ; Make sure we emit an lb for the stack reload in 'truebb' with Zbb.
 define i64 @test_sext_b(i64 %x, i8 %y) nounwind {
-; RV64I-LABEL: test_sext_b:
-; RV64I:       # %bb.0:
-; RV64I-NEXT:    addi sp, sp, -128
-; RV64I-NEXT:    sd ra, 120(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    sd s0, 112(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    sd s1, 104(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    sd s2, 96(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    sd s3, 88(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    sd s4, 80(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    sd s5, 72(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    sd s6, 64(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    sd s7, 56(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    sd s8, 48(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    sd s9, 40(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    sd s10, 32(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    sd s11, 24(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    sd a1, 8(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    sd a0, 16(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    #APP
-; RV64I-NEXT:    #NO_APP
-; RV64I-NEXT:    ld a0, 16(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    beqz a0, .LBB1_2
-; RV64I-NEXT:  # %bb.1: # %falsebb
-; RV64I-NEXT:    li a0, 0
-; RV64I-NEXT:    j .LBB1_3
-; RV64I-NEXT:  .LBB1_2: # %truebb
-; RV64I-NEXT:    ld a0, 8(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    slli a0, a0, 56
-; RV64I-NEXT:    srai a0, a0, 56
-; RV64I-NEXT:  .LBB1_3: # %falsebb
-; RV64I-NEXT:    ld ra, 120(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s0, 112(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s1, 104(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s2, 96(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s3, 88(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s4, 80(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s5, 72(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s6, 64(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s7, 56(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s8, 48(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s9, 40(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s10, 32(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s11, 24(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    addi sp, sp, 128
-; RV64I-NEXT:    ret
-;
+; CHECK-LABEL: test_sext_b:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi sp, sp, -128
+; CHECK-NEXT:    sd ra, 120(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s0, 112(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s1, 104(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s2, 96(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s3, 88(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s4, 80(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s5, 72(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s6, 64(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s7, 56(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s8, 48(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s9, 40(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s10, 32(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s11, 24(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd a1, 8(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd a0, 16(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    #APP
+; CHECK-NEXT:    #NO_APP
+; CHECK-NEXT:    ld a0, 16(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    beqz a0, .LBB1_2
+; CHECK-NEXT:  # %bb.1: # %falsebb
+; CHECK-NEXT:    li a0, 0
+; CHECK-NEXT:    j .LBB1_3
+; CHECK-NEXT:  .LBB1_2: # %truebb
+; CHECK-NEXT:    ld a0, 8(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    slli a0, a0, 56
+; CHECK-NEXT:    srai a0, a0, 56
+; CHECK-NEXT:  .LBB1_3: # %falsebb
+; CHECK-NEXT:    ld ra, 120(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s0, 112(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s1, 104(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s2, 96(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s3, 88(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s4, 80(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s5, 72(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s6, 64(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s7, 56(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s8, 48(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s9, 40(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s10, 32(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s11, 24(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    addi sp, sp, 128
+; CHECK-NEXT:    ret
 ; RV64ZB-LABEL: test_sext_b:
 ; RV64ZB:       # %bb.0:
 ; RV64ZB-NEXT:    addi sp, sp, -128
@@ -160,52 +159,51 @@ falsebb:
 
 ; Make sure we emit an lh for the stack reload in 'truebb' with Zbb.
 define i64 @test_sext_h(i64 %x, i16 %y) nounwind {
-; RV64I-LABEL: test_sext_h:
-; RV64I:       # %bb.0:
-; RV64I-NEXT:    addi sp, sp, -128
-; RV64I-NEXT:    sd ra, 120(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    sd s0, 112(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    sd s1, 104(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    sd s2, 96(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    sd s3, 88(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    sd s4, 80(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    sd s5, 72(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    sd s6, 64(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    sd s7, 56(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    sd s8, 48(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    sd s9, 40(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    sd s10, 32(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    sd s11, 24(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    sd a1, 8(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    sd a0, 16(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    #APP
-; RV64I-NEXT:    #NO_APP
-; RV64I-NEXT:    ld a0, 16(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    beqz a0, .LBB2_2
-; RV64I-NEXT:  # %bb.1: # %falsebb
-; RV64I-NEXT:    li a0, 0
-; RV64I-NEXT:    j .LBB2_3
-; RV64I-NEXT:  .LBB2_2: # %truebb
-; RV64I-NEXT:    ld a0, 8(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    slli a0, a0, 48
-; RV64I-NEXT:    srai a0, a0, 48
-; RV64I-NEXT:  .LBB2_3: # %falsebb
-; RV64I-NEXT:    ld ra, 120(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s0, 112(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s1, 104(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s2, 96(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s3, 88(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s4, 80(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s5, 72(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s6, 64(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s7, 56(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s8, 48(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s9, 40(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s10, 32(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s11, 24(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    addi sp, sp, 128
-; RV64I-NEXT:    ret
-;
+; CHECK-LABEL: test_sext_h:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi sp, sp, -128
+; CHECK-NEXT:    sd ra, 120(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s0, 112(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s1, 104(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s2, 96(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s3, 88(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s4, 80(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s5, 72(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s6, 64(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s7, 56(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s8, 48(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s9, 40(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s10, 32(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s11, 24(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd a1, 8(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd a0, 16(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    #APP
+; CHECK-NEXT:    #NO_APP
+; CHECK-NEXT:    ld a0, 16(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    beqz a0, .LBB2_2
+; CHECK-NEXT:  # %bb.1: # %falsebb
+; CHECK-NEXT:    li a0, 0
+; CHECK-NEXT:    j .LBB2_3
+; CHECK-NEXT:  .LBB2_2: # %truebb
+; CHECK-NEXT:    ld a0, 8(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    slli a0, a0, 48
+; CHECK-NEXT:    srai a0, a0, 48
+; CHECK-NEXT:  .LBB2_3: # %falsebb
+; CHECK-NEXT:    ld ra, 120(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s0, 112(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s1, 104(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s2, 96(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s3, 88(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s4, 80(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s5, 72(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s6, 64(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s7, 56(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s8, 48(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s9, 40(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s10, 32(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s11, 24(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    addi sp, sp, 128
+; CHECK-NEXT:    ret
 ; RV64ZB-LABEL: test_sext_h:
 ; RV64ZB:       # %bb.0:
 ; RV64ZB-NEXT:    addi sp, sp, -128
@@ -316,52 +314,51 @@ falsebb:
 
 ; Make sure we emit an lhu for the stack reload in 'truebb' with Zbb.
 define i64 @test_zext_h(i64 %x, i16 %y) nounwind {
-; RV64I-LABEL: test_zext_h:
-; RV64I:       # %bb.0:
-; RV64I-NEXT:    addi sp, sp, -128
-; RV64I-NEXT:    sd ra, 120(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    sd s0, 112(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    sd s1, 104(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    sd s2, 96(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    sd s3, 88(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    sd s4, 80(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    sd s5, 72(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    sd s6, 64(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    sd s7, 56(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    sd s8, 48(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    sd s9, 40(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    sd s10, 32(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    sd s11, 24(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    sd a1, 8(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    sd a0, 16(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    #APP
-; RV64I-NEXT:    #NO_APP
-; RV64I-NEXT:    ld a0, 16(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    beqz a0, .LBB4_2
-; RV64I-NEXT:  # %bb.1: # %falsebb
-; RV64I-NEXT:    li a0, 0
-; RV64I-NEXT:    j .LBB4_3
-; RV64I-NEXT:  .LBB4_2: # %truebb
-; RV64I-NEXT:    ld a0, 8(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    slli a0, a0, 48
-; RV64I-NEXT:    srli a0, a0, 48
-; RV64I-NEXT:  .LBB4_3: # %falsebb
-; RV64I-NEXT:    ld ra, 120(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s0, 112(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s1, 104(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s2, 96(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s3, 88(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s4, 80(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s5, 72(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s6, 64(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s7, 56(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s8, 48(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s9, 40(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s10, 32(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s11, 24(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    addi sp, sp, 128
-; RV64I-NEXT:    ret
-;
+; CHECK-LABEL: test_zext_h:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi sp, sp, -128
+; CHECK-NEXT:    sd ra, 120(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s0, 112(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s1, 104(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s2, 96(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s3, 88(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s4, 80(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s5, 72(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s6, 64(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s7, 56(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s8, 48(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s9, 40(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s10, 32(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s11, 24(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd a1, 8(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd a0, 16(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    #APP
+; CHECK-NEXT:    #NO_APP
+; CHECK-NEXT:    ld a0, 16(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    beqz a0, .LBB4_2
+; CHECK-NEXT:  # %bb.1: # %falsebb
+; CHECK-NEXT:    li a0, 0
+; CHECK-NEXT:    j .LBB4_3
+; CHECK-NEXT:  .LBB4_2: # %truebb
+; CHECK-NEXT:    ld a0, 8(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    slli a0, a0, 48
+; CHECK-NEXT:    srli a0, a0, 48
+; CHECK-NEXT:  .LBB4_3: # %falsebb
+; CHECK-NEXT:    ld ra, 120(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s0, 112(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s1, 104(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s2, 96(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s3, 88(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s4, 80(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s5, 72(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s6, 64(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s7, 56(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s8, 48(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s9, 40(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s10, 32(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s11, 24(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    addi sp, sp, 128
+; CHECK-NEXT:    ret
 ; RV64ZB-LABEL: test_zext_h:
 ; RV64ZB:       # %bb.0:
 ; RV64ZB-NEXT:    addi sp, sp, -128
@@ -417,52 +414,51 @@ falsebb:
 
 ; Make sure we emit an lwu for the stack reload in 'truebb' with Zbb.
 define i64 @test_zext_w(i64 %x, i32 %y) nounwind {
-; RV64I-LABEL: test_zext_w:
-; RV64I:       # %bb.0:
-; RV64I-NEXT:    addi sp, sp, -128
-; RV64I-NEXT:    sd ra, 120(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    sd s0, 112(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    sd s1, 104(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    sd s2, 96(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    sd s3, 88(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    sd s4, 80(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    sd s5, 72(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    sd s6, 64(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    sd s7, 56(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    sd s8, 48(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    sd s9, 40(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    sd s10, 32(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    sd s11, 24(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    sd a1, 8(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    sd a0, 16(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    #APP
-; RV64I-NEXT:    #NO_APP
-; RV64I-NEXT:    ld a0, 16(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    beqz a0, .LBB5_2
-; RV64I-NEXT:  # %bb.1: # %falsebb
-; RV64I-NEXT:    li a0, 0
-; RV64I-NEXT:    j .LBB5_3
-; RV64I-NEXT:  .LBB5_2: # %truebb
-; RV64I-NEXT:    ld a0, 8(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    slli a0, a0, 32
-; RV64I-NEXT:    srli a0, a0, 32
-; RV64I-NEXT:  .LBB5_3: # %falsebb
-; RV64I-NEXT:    ld ra, 120(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s0, 112(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s1, 104(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s2, 96(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s3, 88(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s4, 80(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s5, 72(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s6, 64(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s7, 56(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s8, 48(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s9, 40(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s10, 32(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s11, 24(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    addi sp, sp, 128
-; RV64I-NEXT:    ret
-;
+; CHECK-LABEL: test_zext_w:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi sp, sp, -128
+; CHECK-NEXT:    sd ra, 120(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s0, 112(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s1, 104(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s2, 96(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s3, 88(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s4, 80(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s5, 72(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s6, 64(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s7, 56(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s8, 48(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s9, 40(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s10, 32(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s11, 24(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd a1, 8(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd a0, 16(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    #APP
+; CHECK-NEXT:    #NO_APP
+; CHECK-NEXT:    ld a0, 16(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    beqz a0, .LBB5_2
+; CHECK-NEXT:  # %bb.1: # %falsebb
+; CHECK-NEXT:    li a0, 0
+; CHECK-NEXT:    j .LBB5_3
+; CHECK-NEXT:  .LBB5_2: # %truebb
+; CHECK-NEXT:    ld a0, 8(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    slli a0, a0, 32
+; CHECK-NEXT:    srli a0, a0, 32
+; CHECK-NEXT:  .LBB5_3: # %falsebb
+; CHECK-NEXT:    ld ra, 120(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s0, 112(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s1, 104(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s2, 96(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s3, 88(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s4, 80(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s5, 72(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s6, 64(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s7, 56(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s8, 48(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s9, 40(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s10, 32(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s11, 24(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    addi sp, sp, 128
+; CHECK-NEXT:    ret
 ; RV64ZB-LABEL: test_zext_w:
 ; RV64ZB:       # %bb.0:
 ; RV64ZB-NEXT:    addi sp, sp, -128
@@ -515,3 +511,5 @@ truebb:
 falsebb:
   ret i64 0
 }
+;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
+; RV64I: {{.*}}

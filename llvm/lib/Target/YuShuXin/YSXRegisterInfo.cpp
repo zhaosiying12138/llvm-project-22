@@ -543,18 +543,6 @@ bool YSXRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
                (Lo12 & 0b11111) != 0) {
       // Prefetch instructions require the offset to be 32 byte aligned.
       MI.getOperand(FIOperandNum + 1).ChangeToImmediate(0);
-    } else if (Opc == YSX::MIPS_PREF && !isUInt<9>(Val)) {
-      // MIPS Prefetch instructions require the offset to be 9 bits encoded.
-      MI.getOperand(FIOperandNum + 1).ChangeToImmediate(0);
-    } else if ((Opc == YSX::PseudoRV32ZdinxLD ||
-                Opc == YSX::PseudoRV32ZdinxSD ||
-                Opc == YSX::PseudoLD_RV32_OPT ||
-                Opc == YSX::PseudoSD_RV32_OPT) &&
-               Lo12 >= 2044) {
-      // This instruction will/might be split into 2 instructions. The second
-      // instruction will add 4 to the immediate. If that would overflow 12
-      // bits, we can't fold the offset.
-      MI.getOperand(FIOperandNum + 1).ChangeToImmediate(0);
     } else {
       // We can encode an add with 12 bit signed immediate in the immediate
       // operand of our user instruction.  As a result, the remaining
@@ -587,37 +575,6 @@ bool YSXRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
       MI.getOperand(0).getReg() == MI.getOperand(1).getReg() &&
       MI.getOperand(2).getImm() == 0) {
     MI.eraseFromParent();
-    return true;
-  }
-
-  // Handle spill/fill of synthetic register classes for segment operations to
-  // ensure correctness in the edge case one gets spilled.
-  switch (MI.getOpcode()) {
-  case YSX::PseudoVSPILL2_M1:
-  case YSX::PseudoVSPILL2_M2:
-  case YSX::PseudoVSPILL2_M4:
-  case YSX::PseudoVSPILL3_M1:
-  case YSX::PseudoVSPILL3_M2:
-  case YSX::PseudoVSPILL4_M1:
-  case YSX::PseudoVSPILL4_M2:
-  case YSX::PseudoVSPILL5_M1:
-  case YSX::PseudoVSPILL6_M1:
-  case YSX::PseudoVSPILL7_M1:
-  case YSX::PseudoVSPILL8_M1:
-    lowerSegmentSpillReload(II, /*IsSpill=*/true);
-    return true;
-  case YSX::PseudoVRELOAD2_M1:
-  case YSX::PseudoVRELOAD2_M2:
-  case YSX::PseudoVRELOAD2_M4:
-  case YSX::PseudoVRELOAD3_M1:
-  case YSX::PseudoVRELOAD3_M2:
-  case YSX::PseudoVRELOAD4_M1:
-  case YSX::PseudoVRELOAD4_M2:
-  case YSX::PseudoVRELOAD5_M1:
-  case YSX::PseudoVRELOAD6_M1:
-  case YSX::PseudoVRELOAD7_M1:
-  case YSX::PseudoVRELOAD8_M1:
-    lowerSegmentSpillReload(II, /*IsSpill=*/false);
     return true;
   }
 
@@ -864,7 +821,6 @@ bool YSXRegisterInfo::getRegAllocationHints(
     SmallVectorImpl<MCPhysReg> &Hints, const MachineFunction &MF,
     const VirtRegMap *VRM, const LiveRegMatrix *Matrix) const {
   const MachineRegisterInfo *MRI = &MF.getRegInfo();
-  auto &Subtarget = MF.getSubtarget<YSXSubtarget>();
 
   // Handle RegPairEven/RegPairOdd hints for Zilsd register pairs
   std::pair<unsigned, Register> Hint = MRI->getRegAllocationHint(VirtReg);
@@ -931,8 +887,10 @@ bool YSXRegisterInfo::getRegAllocationHints(
 
   // This is all of the compressible binary instructions. If an instruction
   // needs GPRC register class operands \p NeedGPRC will be set to true.
-  auto isCompressible = [&Subtarget](const MachineInstr &MI, bool &NeedGPRC) {
+  auto isCompressible = [](const MachineInstr &MI, bool &NeedGPRC) {
     NeedGPRC = false;
+    return false;
+#if 0
     switch (MI.getOpcode()) {
     default:
       return false;
@@ -990,6 +948,7 @@ bool YSXRegisterInfo::getRegAllocationHints(
       NeedGPRC = true;
       return Subtarget.hasVendorXqcibm() && MI.getOperand(2).getImm() != 0;
     }
+#endif
   };
 
   // Returns true if this operand is compressible. For non-registers it always

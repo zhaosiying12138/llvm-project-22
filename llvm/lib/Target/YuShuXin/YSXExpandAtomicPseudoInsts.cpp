@@ -373,26 +373,6 @@ static void doAtomicBinOpExpansion(const YSXInstrInfo *TII, MachineInstr &MI,
         .addReg(ScratchReg)
         .addImm(-1);
     break;
-  case AtomicRMWInst::Max:
-    BuildMI(LoopMBB, DL, TII->get(YSX::MAX), ScratchReg)
-        .addReg(DestReg)
-        .addReg(IncrReg);
-    break;
-  case AtomicRMWInst::Min:
-    BuildMI(LoopMBB, DL, TII->get(YSX::MIN), ScratchReg)
-        .addReg(DestReg)
-        .addReg(IncrReg);
-    break;
-  case AtomicRMWInst::UMax:
-    BuildMI(LoopMBB, DL, TII->get(YSX::MAXU), ScratchReg)
-        .addReg(DestReg)
-        .addReg(IncrReg);
-    break;
-  case AtomicRMWInst::UMin:
-    BuildMI(LoopMBB, DL, TII->get(YSX::MINU), ScratchReg)
-        .addReg(DestReg)
-        .addReg(IncrReg);
-    break;
   }
   BuildMI(LoopMBB, DL, TII->get(getSCForRMW(Ordering, Width, STI)), ScratchReg)
       .addReg(ScratchReg)

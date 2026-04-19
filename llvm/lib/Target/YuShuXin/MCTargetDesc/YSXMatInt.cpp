@@ -22,10 +22,6 @@ static int getInstSeqCost(YSXMatInt::InstSeq &Res, bool HasRVC) {
     // Assume instructions that aren't listed aren't compressible.
     bool Compressed = false;
     switch (Instr.getOpcode()) {
-    case YSX::QC_E_LI:
-      // One 48-bit instruction takes the space of 1.5 regular instructions.
-      Cost += 150;
-      continue;
     case YSX::SLLI:
     case YSX::SRLI:
       Compressed = true;
@@ -53,57 +49,6 @@ static int getInstSeqCost(YSXMatInt::InstSeq &Res, bool HasRVC) {
 static void generateInstSeqImpl(int64_t Val, const MCSubtargetInfo &STI,
                                 YSXMatInt::InstSeq &Res) {
   bool IsRV64 = STI.hasFeature(YSX::Feature64Bit);
-
-  // Use BSETI for a single bit that can't be expressed by a single LUI or ADDI.
-  if (STI.hasFeature(YSX::FeatureStdExtZbs) && isPowerOf2_64(Val) &&
-      (!isInt<32>(Val) || Val == 0x800)) {
-    Res.emplace_back(YSX::BSETI, Log2_64(Val));
-    return;
-  }
-
-  if (!IsRV64 && STI.hasFeature(YSX::FeatureVendorXqcili)) {
-    bool FitsOneStandardInst = ((Val & 0xFFF) == 0) || isInt<12>(Val);
-
-    // 20-bit signed immediates that don't fit into `ADDI` or `LUI` should use
-    // `QC.LI` (a single 32-bit instruction).
-    if (!FitsOneStandardInst && isInt<20>(Val)) {
-      Res.emplace_back(YSX::QC_LI, Val);
-      return;
-    }
-
-    // 32-bit signed immediates that don't fit into `ADDI`, `LUI` or `QC.LI`
-    // should use `QC.E.LI` (a single 48-bit instruction).
-    if (!FitsOneStandardInst && isInt<32>(Val)) {
-      Res.emplace_back(YSX::QC_E_LI, Val);
-      return;
-    }
-  }
-
-  if (STI.hasFeature(YSX::FeatureStdExtP) && !isInt<12>(Val)) {
-    // Check if the immediate is packed i8 or i10
-    int32_t Bit63To32 = Val >> 32;
-    int32_t Bit31To0 = Val;
-    int16_t Bit31To16 = Bit31To0 >> 16;
-    int16_t Bit15To0 = Bit31To0;
-    int8_t Bit15To8 = Bit15To0 >> 8;
-    int8_t Bit7To0 = Bit15To0;
-    if (!IsRV64 || Bit63To32 == Bit31To0) {
-      if (IsRV64 && isInt<10>(Bit63To32)) {
-        Res.emplace_back(YSX::PLI_W, Bit63To32);
-        return;
-      }
-      if (Bit31To16 == Bit15To0) {
-        if (isInt<10>(Bit31To16)) {
-          Res.emplace_back(YSX::PLI_H, Bit31To16);
-          return;
-        }
-        if (Bit15To8 == Bit7To0) {
-          Res.emplace_back(YSX::PLI_B, Bit15To8);
-          return;
-        }
-      }
-    }
-  }
 
   if (isInt<32>(Val)) {
     // Depending on the active bits in the immediate Value v, the following
@@ -179,23 +124,7 @@ static void generateInstSeqImpl(int64_t Val, const MCSubtargetInfo &STI,
         // LUI.
         ShiftAmount -= 12;
         Val = (uint64_t)Val << 12;
-      } else if (isUInt<32>((uint64_t)Val << 12) &&
-                 STI.hasFeature(YSX::FeatureStdExtZba)) {
-        // Reduce the shift amount and add zeros to the LSBs so it will match
-        // LUI, then shift left with SLLI.UW to clear the upper 32 set bits.
-        ShiftAmount -= 12;
-        Val = SignExtend64<32>((uint64_t)Val << 12);
-        Unsigned = true;
       }
-    }
-
-    // Try to use SLLI_UW for Val when it is uint32 but not int32.
-    if (isUInt<32>(Val) && !isInt<32>(Val) &&
-        STI.hasFeature(YSX::FeatureStdExtZba)) {
-      // Use LUI+ADDI or LUI to compose, then clear the upper 32 bits with
-      // SLLI_UW.
-      Val = SignExtend64<32>((uint64_t)Val);
-      Unsigned = true;
     }
   }
 
@@ -203,30 +132,11 @@ static void generateInstSeqImpl(int64_t Val, const MCSubtargetInfo &STI,
 
   // Skip shift if we were able to use LUI directly.
   if (ShiftAmount) {
-    unsigned Opc = Unsigned ? YSX::SLLI_UW : YSX::SLLI;
-    Res.emplace_back(Opc, ShiftAmount);
+    Res.emplace_back(YSX::SLLI, ShiftAmount);
   }
 
   if (Lo12)
     Res.emplace_back(YSX::ADDI, Lo12);
-}
-
-static unsigned extractRotateInfo(int64_t Val) {
-  // for case: 0b111..1..xxxxxx1..1..
-  unsigned LeadingOnes = llvm::countl_one((uint64_t)Val);
-  unsigned TrailingOnes = llvm::countr_one((uint64_t)Val);
-  if (TrailingOnes > 0 && TrailingOnes < 64 &&
-      (LeadingOnes + TrailingOnes) > (64 - 12))
-    return 64 - TrailingOnes;
-
-  // for case: 0bxxx1..1..1...xxx
-  unsigned UpperTrailingOnes = llvm::countr_one(Hi_32(Val));
-  unsigned LowerLeadingOnes = llvm::countl_one(Lo_32(Val));
-  if (UpperTrailingOnes < 32 &&
-      (UpperTrailingOnes + LowerLeadingOnes) > (64 - 12))
-    return 32 - UpperTrailingOnes;
-
-  return 0;
 }
 
 static void generateInstSeqLeadingZeros(int64_t Val, const MCSubtargetInfo &STI,
@@ -260,22 +170,6 @@ static void generateInstSeqLeadingZeros(int64_t Val, const MCSubtargetInfo &STI,
       (Res.empty() && TmpSeq.size() < 8)) {
     TmpSeq.emplace_back(YSX::SRLI, LeadingZeros);
     Res = TmpSeq;
-  }
-
-  // If we have exactly 32 leading zeros and Zba, we can try using zext.w at
-  // the end of the sequence.
-  if (LeadingZeros == 32 && STI.hasFeature(YSX::FeatureStdExtZba)) {
-    // Bit 31 is set, so sign extend to fill the upper bits with 1s.
-    uint64_t LeadingOnesVal = SignExtend64<32>(Val);
-    TmpSeq.clear();
-    generateInstSeqImpl(LeadingOnesVal, STI, TmpSeq);
-
-    // Keep the new sequence if it is an improvement.
-    if ((TmpSeq.size() + 1) < Res.size() ||
-        (Res.empty() && TmpSeq.size() < 8)) {
-      TmpSeq.emplace_back(YSX::ADD_UW, 0);
-      Res = TmpSeq;
-    }
   }
 }
 
@@ -352,144 +246,6 @@ InstSeq generateInstSeq(int64_t Val, const MCSubtargetInfo &STI) {
     }
   }
 
-  // If the Low and High halves are the same, use pack. The pack instruction
-  // packs the XLEN/2-bit lower halves of rs1 and rs2 into rd, with rs1 in the
-  // lower half and rs2 in the upper half.
-  if (Res.size() > 2 && (STI.hasFeature(YSX::FeatureStdExtZbkb) ||
-                         STI.hasFeature(YSX::FeatureStdExtP))) {
-    int64_t LoVal = SignExtend64<32>(Val);
-    int64_t HiVal = SignExtend64<32>(Val >> 32);
-    if (LoVal == HiVal) {
-      YSXMatInt::InstSeq TmpSeq;
-      generateInstSeqImpl(LoVal, STI, TmpSeq);
-      if ((TmpSeq.size() + 1) < Res.size()) {
-        TmpSeq.emplace_back(YSX::PACK, 0);
-        Res = TmpSeq;
-      }
-    }
-  }
-
-  // Perform optimization with BSETI in the Zbs extension.
-  if (Res.size() > 2 && STI.hasFeature(YSX::FeatureStdExtZbs)) {
-    // Create a simm32 value for LUI+ADDI(W) by forcing the upper 33 bits to
-    // zero. Xor that with original value to get which bits should be set by
-    // BSETI.
-    uint64_t Lo = Val & 0x7fffffff;
-    uint64_t Hi = Val ^ Lo;
-    assert(Hi != 0);
-    YSXMatInt::InstSeq TmpSeq;
-
-    if (Lo != 0)
-      generateInstSeqImpl(Lo, STI, TmpSeq);
-
-    if (TmpSeq.size() + llvm::popcount(Hi) < Res.size()) {
-      do {
-        TmpSeq.emplace_back(YSX::BSETI, llvm::countr_zero(Hi));
-        Hi &= (Hi - 1); // Clear lowest set bit.
-      } while (Hi != 0);
-      Res = TmpSeq;
-    }
-
-    // Fold LI 1 + SLLI into BSETI.
-    if (Res[0].getOpcode() == YSX::ADDI && Res[0].getImm() == 1 &&
-        Res[1].getOpcode() == YSX::SLLI) {
-      Res.erase(Res.begin());                                 // Remove ADDI.
-      Res.front() = Inst(YSX::BSETI, Res.front().getImm()); // Patch SLLI.
-    }
-  }
-
-  // Perform optimization with BCLRI in the Zbs extension.
-  if (Res.size() > 2 && STI.hasFeature(YSX::FeatureStdExtZbs)) {
-    // Create a simm32 value for LUI+ADDI(W) by forcing the upper 33 bits to
-    // one. Xor that with original value to get which bits should be cleared by
-    // BCLRI.
-    uint64_t Lo = Val | 0xffffffff80000000;
-    uint64_t Hi = Val ^ Lo;
-    assert(Hi != 0);
-
-    YSXMatInt::InstSeq TmpSeq;
-    generateInstSeqImpl(Lo, STI, TmpSeq);
-
-    if (TmpSeq.size() + llvm::popcount(Hi) < Res.size()) {
-      do {
-        TmpSeq.emplace_back(YSX::BCLRI, llvm::countr_zero(Hi));
-        Hi &= (Hi - 1); // Clear lowest set bit.
-      } while (Hi != 0);
-      Res = TmpSeq;
-    }
-  }
-
-  // Perform optimization with SH*ADD in the Zba extension.
-  if (Res.size() > 2 && STI.hasFeature(YSX::FeatureStdExtZba)) {
-    int64_t Div = 0;
-    unsigned Opc = 0;
-    YSXMatInt::InstSeq TmpSeq;
-    // Select the opcode and divisor.
-    if ((Val % 3) == 0 && isInt<32>(Val / 3)) {
-      Div = 3;
-      Opc = YSX::SH1ADD;
-    } else if ((Val % 5) == 0 && isInt<32>(Val / 5)) {
-      Div = 5;
-      Opc = YSX::SH2ADD;
-    } else if ((Val % 9) == 0 && isInt<32>(Val / 9)) {
-      Div = 9;
-      Opc = YSX::SH3ADD;
-    }
-    // Build the new instruction sequence.
-    if (Div > 0) {
-      generateInstSeqImpl(Val / Div, STI, TmpSeq);
-      if ((TmpSeq.size() + 1) < Res.size()) {
-        TmpSeq.emplace_back(Opc, 0);
-        Res = TmpSeq;
-      }
-    } else {
-      // Try to use LUI+SH*ADD+ADDI.
-      int64_t Hi52 = ((uint64_t)Val + 0x800ull) & ~0xfffull;
-      int64_t Lo12 = SignExtend64<12>(Val);
-      Div = 0;
-      if (isInt<32>(Hi52 / 3) && (Hi52 % 3) == 0) {
-        Div = 3;
-        Opc = YSX::SH1ADD;
-      } else if (isInt<32>(Hi52 / 5) && (Hi52 % 5) == 0) {
-        Div = 5;
-        Opc = YSX::SH2ADD;
-      } else if (isInt<32>(Hi52 / 9) && (Hi52 % 9) == 0) {
-        Div = 9;
-        Opc = YSX::SH3ADD;
-      }
-      // Build the new instruction sequence.
-      if (Div > 0) {
-        // For Val that has zero Lo12 (implies Val equals to Hi52) should has
-        // already been processed to LUI+SH*ADD by previous optimization.
-        assert(Lo12 != 0 &&
-               "unexpected instruction sequence for immediate materialisation");
-        assert(TmpSeq.empty() && "Expected empty TmpSeq");
-        generateInstSeqImpl(Hi52 / Div, STI, TmpSeq);
-        if ((TmpSeq.size() + 2) < Res.size()) {
-          TmpSeq.emplace_back(Opc, 0);
-          TmpSeq.emplace_back(YSX::ADDI, Lo12);
-          Res = TmpSeq;
-        }
-      }
-    }
-  }
-
-  // Perform optimization with rori in the Zbb and th.srri in the XTheadBb
-  // extension.
-  if (Res.size() > 2 && (STI.hasFeature(YSX::FeatureStdExtZbb) ||
-                         STI.hasFeature(YSX::FeatureVendorXTHeadBb))) {
-    if (unsigned Rotate = extractRotateInfo(Val)) {
-      YSXMatInt::InstSeq TmpSeq;
-      uint64_t NegImm12 = llvm::rotl<uint64_t>(Val, Rotate);
-      assert(isInt<12>(NegImm12));
-      TmpSeq.emplace_back(YSX::ADDI, NegImm12);
-      TmpSeq.emplace_back(STI.hasFeature(YSX::FeatureStdExtZbb)
-                              ? YSX::RORI
-                              : YSX::TH_SRRI,
-                          Rotate);
-      Res = TmpSeq;
-    }
-  }
   return Res;
 }
 
@@ -553,13 +309,6 @@ InstSeq generateTwoRegInstSeq(int64_t Val, const MCSubtargetInfo &STI,
   if (Tmp == ((uint64_t)LoVal << ShiftAmt))
     return YSXMatInt::generateInstSeq(LoVal, STI);
 
-  // If we have Zba, we can use (ADD_UW X, (SLLI X, 32)).
-  if (STI.hasFeature(YSX::FeatureStdExtZba) && Lo_32(Val) == Hi_32(Val)) {
-    ShiftAmt = 32;
-    AddOpc = YSX::ADD_UW;
-    return YSXMatInt::generateInstSeq(LoVal, STI);
-  }
-
   return YSXMatInt::InstSeq();
 }
 
@@ -587,29 +336,12 @@ OpndKind Inst::getOpndKind() const {
   default:
     llvm_unreachable("Unexpected opcode!");
   case YSX::LUI:
-  case YSX::QC_LI:
-  case YSX::QC_E_LI:
-  case YSX::PLI_B:
-  case YSX::PLI_H:
-  case YSX::PLI_W:
     return YSXMatInt::Imm;
-  case YSX::ADD_UW:
-    return YSXMatInt::RegX0;
-  case YSX::SH1ADD:
-  case YSX::SH2ADD:
-  case YSX::SH3ADD:
-  case YSX::PACK:
-    return YSXMatInt::RegReg;
   case YSX::ADDI:
   case YSX::ADDIW:
   case YSX::XORI:
   case YSX::SLLI:
   case YSX::SRLI:
-  case YSX::SLLI_UW:
-  case YSX::RORI:
-  case YSX::BSETI:
-  case YSX::BCLRI:
-  case YSX::TH_SRRI:
     return YSXMatInt::RegImm;
   }
 }

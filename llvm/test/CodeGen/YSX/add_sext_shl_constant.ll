@@ -2,17 +2,16 @@
 ; RUN: llc -mtriple=ysx64 < %s | FileCheck -check-prefixes=RV64,NO-ZBA %s
 
 define void @add_sext_shl_moreOneUse_add(ptr %array1, i32 %a, i32 %b) {
-; NO-ZBA-LABEL: add_sext_shl_moreOneUse_add:
-; NO-ZBA:       # %bb.0: # %entry
-; NO-ZBA-NEXT:    addi a3, a1, 5
-; NO-ZBA-NEXT:    sext.w a1, a1
-; NO-ZBA-NEXT:    slli a1, a1, 2
-; NO-ZBA-NEXT:    add a0, a1, a0
-; NO-ZBA-NEXT:    sw a2, 20(a0)
-; NO-ZBA-NEXT:    sw a2, 24(a0)
-; NO-ZBA-NEXT:    sw a3, 140(a0)
-; NO-ZBA-NEXT:    ret
-;
+; RV64-LABEL: add_sext_shl_moreOneUse_add:
+; RV64:       # %bb.0: # %entry
+; RV64-NEXT:    addiw a3, a1, 5
+; RV64-NEXT:    sext.w a1, a1
+; RV64-NEXT:    slli a1, a1, 2
+; RV64-NEXT:    add a0, a1, a0
+; RV64-NEXT:    sw a2, 20(a0)
+; RV64-NEXT:    sw a2, 24(a0)
+; RV64-NEXT:    sw a3, 140(a0)
+; RV64-NEXT:    ret
 ; ZBA-LABEL: add_sext_shl_moreOneUse_add:
 ; ZBA:       # %bb.0: # %entry
 ; ZBA-NEXT:    addi a3, a1, 5
@@ -22,7 +21,6 @@ define void @add_sext_shl_moreOneUse_add(ptr %array1, i32 %a, i32 %b) {
 ; ZBA-NEXT:    sw a2, 24(a0)
 ; ZBA-NEXT:    sw a3, 140(a0)
 ; ZBA-NEXT:    ret
-;
 ; XANDESPERF-LABEL: add_sext_shl_moreOneUse_add:
 ; XANDESPERF:       # %bb.0: # %entry
 ; XANDESPERF-NEXT:    addi a3, a1, 5
@@ -49,20 +47,19 @@ entry:
 }
 
 define void @add_sext_shl_moreOneUse_addexceedsign12(ptr %array1, i32 %a, i32 %b) {
-; NO-ZBA-LABEL: add_sext_shl_moreOneUse_addexceedsign12:
-; NO-ZBA:       # %bb.0: # %entry
-; NO-ZBA-NEXT:    addi a3, a1, 2047
-; NO-ZBA-NEXT:    lui a4, 2
-; NO-ZBA-NEXT:    sext.w a1, a1
-; NO-ZBA-NEXT:    addi a3, a3, 1
-; NO-ZBA-NEXT:    slli a1, a1, 2
-; NO-ZBA-NEXT:    add a0, a0, a4
-; NO-ZBA-NEXT:    add a0, a0, a1
-; NO-ZBA-NEXT:    sw a2, 0(a0)
-; NO-ZBA-NEXT:    sw a3, 4(a0)
-; NO-ZBA-NEXT:    sw a2, 120(a0)
-; NO-ZBA-NEXT:    ret
-;
+; RV64-LABEL: add_sext_shl_moreOneUse_addexceedsign12:
+; RV64:       # %bb.0: # %entry
+; RV64-NEXT:    addiw a3, a1, 2047
+; RV64-NEXT:    lui a4, 2
+; RV64-NEXT:    sext.w a1, a1
+; RV64-NEXT:    addiw a3, a3, 1
+; RV64-NEXT:    slli a1, a1, 2
+; RV64-NEXT:    add a0, a0, a4
+; RV64-NEXT:    add a0, a0, a1
+; RV64-NEXT:    sw a2, 0(a0)
+; RV64-NEXT:    sw a3, 4(a0)
+; RV64-NEXT:    sw a2, 120(a0)
+; RV64-NEXT:    ret
 ; ZBA-LABEL: add_sext_shl_moreOneUse_addexceedsign12:
 ; ZBA:       # %bb.0: # %entry
 ; ZBA-NEXT:    addi a3, a1, 2047
@@ -75,7 +72,6 @@ define void @add_sext_shl_moreOneUse_addexceedsign12(ptr %array1, i32 %a, i32 %b
 ; ZBA-NEXT:    sw a3, 4(a0)
 ; ZBA-NEXT:    sw a2, 120(a0)
 ; ZBA-NEXT:    ret
-;
 ; XANDESPERF-LABEL: add_sext_shl_moreOneUse_addexceedsign12:
 ; XANDESPERF:       # %bb.0: # %entry
 ; XANDESPERF-NEXT:    addi a3, a1, 2047
@@ -103,17 +99,18 @@ entry:
 }
 
 define void @add_sext_shl_moreOneUse_sext(ptr %array1, i32 %a, i32 %b) {
-; NO-ZBA-LABEL: add_sext_shl_moreOneUse_sext:
-; NO-ZBA:       # %bb.0: # %entry
-; NO-ZBA-NEXT:    sext.w a1, a1
-; NO-ZBA-NEXT:    addi a3, a1, 5
-; NO-ZBA-NEXT:    slli a1, a1, 2
-; NO-ZBA-NEXT:    add a0, a1, a0
-; NO-ZBA-NEXT:    sw a2, 20(a0)
-; NO-ZBA-NEXT:    sw a2, 24(a0)
-; NO-ZBA-NEXT:    sd a3, 140(a0)
-; NO-ZBA-NEXT:    ret
-;
+; RV64-LABEL: add_sext_shl_moreOneUse_sext:
+; RV64:       # %bb.0: # %entry
+; RV64-NEXT:    addiw a3, a1, 5
+; RV64-NEXT:    sext.w a1, a1
+; RV64-NEXT:    slli a4, a3, 2
+; RV64-NEXT:    slli a1, a1, 2
+; RV64-NEXT:    add a4, a0, a4
+; RV64-NEXT:    add a0, a1, a0
+; RV64-NEXT:    sw a2, 0(a4)
+; RV64-NEXT:    sw a2, 24(a0)
+; RV64-NEXT:    sd a3, 140(a0)
+; RV64-NEXT:    ret
 ; ZBA-LABEL: add_sext_shl_moreOneUse_sext:
 ; ZBA:       # %bb.0: # %entry
 ; ZBA-NEXT:    sext.w a1, a1
@@ -123,7 +120,6 @@ define void @add_sext_shl_moreOneUse_sext(ptr %array1, i32 %a, i32 %b) {
 ; ZBA-NEXT:    sw a2, 24(a0)
 ; ZBA-NEXT:    sd a3, 140(a0)
 ; ZBA-NEXT:    ret
-;
 ; XANDESPERF-LABEL: add_sext_shl_moreOneUse_sext:
 ; XANDESPERF:       # %bb.0: # %entry
 ; XANDESPERF-NEXT:    sext.w a1, a1
@@ -151,21 +147,20 @@ entry:
 
 ; test of jumpping, find add's operand has one more use can simplified
 define void @add_sext_shl_moreOneUse_add_inSelect(ptr %array1, i32 signext  %a, i32 %b, i32 signext %x) {
-; NO-ZBA-LABEL: add_sext_shl_moreOneUse_add_inSelect:
-; NO-ZBA:       # %bb.0: # %entry
-; NO-ZBA-NEXT:    addi a4, a1, 5
-; NO-ZBA-NEXT:    mv a5, a4
-; NO-ZBA-NEXT:    bgtz a3, .LBB3_2
-; NO-ZBA-NEXT:  # %bb.1: # %entry
-; NO-ZBA-NEXT:    mv a5, a2
-; NO-ZBA-NEXT:  .LBB3_2: # %entry
-; NO-ZBA-NEXT:    slli a1, a1, 2
-; NO-ZBA-NEXT:    add a0, a1, a0
-; NO-ZBA-NEXT:    sw a5, 20(a0)
-; NO-ZBA-NEXT:    sw a5, 24(a0)
-; NO-ZBA-NEXT:    sw a4, 140(a0)
-; NO-ZBA-NEXT:    ret
-;
+; RV64-LABEL: add_sext_shl_moreOneUse_add_inSelect:
+; RV64:       # %bb.0: # %entry
+; RV64-NEXT:    addiw a4, a1, 5
+; RV64-NEXT:    mv a5, a4
+; RV64-NEXT:    bgtz a3, .LBB3_2
+; RV64-NEXT:  # %bb.1: # %entry
+; RV64-NEXT:    mv a5, a2
+; RV64-NEXT:  .LBB3_2: # %entry
+; RV64-NEXT:    slli a1, a1, 2
+; RV64-NEXT:    add a0, a1, a0
+; RV64-NEXT:    sw a5, 20(a0)
+; RV64-NEXT:    sw a5, 24(a0)
+; RV64-NEXT:    sw a4, 140(a0)
+; RV64-NEXT:    ret
 ; ZBA-LABEL: add_sext_shl_moreOneUse_add_inSelect:
 ; ZBA:       # %bb.0: # %entry
 ; ZBA-NEXT:    addi a4, a1, 5
@@ -179,7 +174,6 @@ define void @add_sext_shl_moreOneUse_add_inSelect(ptr %array1, i32 signext  %a, 
 ; ZBA-NEXT:    sw a5, 24(a0)
 ; ZBA-NEXT:    sw a4, 140(a0)
 ; ZBA-NEXT:    ret
-;
 ; XANDESPERF-LABEL: add_sext_shl_moreOneUse_add_inSelect:
 ; XANDESPERF:       # %bb.0: # %entry
 ; XANDESPERF-NEXT:    addi a4, a1, 5
@@ -212,24 +206,23 @@ entry:
 }
 
 define void @add_sext_shl_moreOneUse_add_inSelect_addexceedsign12(ptr %array1, i32 signext  %a, i32 %b, i32 signext %x) {
-; NO-ZBA-LABEL: add_sext_shl_moreOneUse_add_inSelect_addexceedsign12:
-; NO-ZBA:       # %bb.0: # %entry
-; NO-ZBA-NEXT:    addi a4, a1, 2047
-; NO-ZBA-NEXT:    lui a5, 2
-; NO-ZBA-NEXT:    slli a6, a1, 2
-; NO-ZBA-NEXT:    addi a1, a4, 1
-; NO-ZBA-NEXT:    add a0, a0, a6
-; NO-ZBA-NEXT:    add a0, a0, a5
-; NO-ZBA-NEXT:    mv a4, a1
-; NO-ZBA-NEXT:    bgtz a3, .LBB4_2
-; NO-ZBA-NEXT:  # %bb.1: # %entry
-; NO-ZBA-NEXT:    mv a4, a2
-; NO-ZBA-NEXT:  .LBB4_2: # %entry
-; NO-ZBA-NEXT:    sw a4, 0(a0)
-; NO-ZBA-NEXT:    sw a4, 4(a0)
-; NO-ZBA-NEXT:    sw a1, 120(a0)
-; NO-ZBA-NEXT:    ret
-;
+; RV64-LABEL: add_sext_shl_moreOneUse_add_inSelect_addexceedsign12:
+; RV64:       # %bb.0: # %entry
+; RV64-NEXT:    addiw a4, a1, 2047
+; RV64-NEXT:    lui a5, 2
+; RV64-NEXT:    slli a6, a1, 2
+; RV64-NEXT:    addiw a1, a4, 1
+; RV64-NEXT:    add a0, a0, a6
+; RV64-NEXT:    add a0, a0, a5
+; RV64-NEXT:    mv a4, a1
+; RV64-NEXT:    bgtz a3, .LBB4_2
+; RV64-NEXT:  # %bb.1: # %entry
+; RV64-NEXT:    mv a4, a2
+; RV64-NEXT:  .LBB4_2: # %entry
+; RV64-NEXT:    sw a4, 0(a0)
+; RV64-NEXT:    sw a4, 4(a0)
+; RV64-NEXT:    sw a1, 120(a0)
+; RV64-NEXT:    ret
 ; ZBA-LABEL: add_sext_shl_moreOneUse_add_inSelect_addexceedsign12:
 ; ZBA:       # %bb.0: # %entry
 ; ZBA-NEXT:    addi a4, a1, 2047
@@ -246,7 +239,6 @@ define void @add_sext_shl_moreOneUse_add_inSelect_addexceedsign12(ptr %array1, i
 ; ZBA-NEXT:    sw a1, 4(a0)
 ; ZBA-NEXT:    sw a4, 120(a0)
 ; ZBA-NEXT:    ret
-;
 ; XANDESPERF-LABEL: add_sext_shl_moreOneUse_add_inSelect_addexceedsign12:
 ; XANDESPERF:       # %bb.0: # %entry
 ; XANDESPERF-NEXT:    addi a4, a1, 2047
@@ -280,21 +272,20 @@ entry:
 }
 
 define void @add_shl_moreOneUse_inSelect(ptr %array1, i64 %a, i64 %b, i64 %x) {
-; NO-ZBA-LABEL: add_shl_moreOneUse_inSelect:
-; NO-ZBA:       # %bb.0: # %entry
-; NO-ZBA-NEXT:    addi a4, a1, 5
-; NO-ZBA-NEXT:    mv a5, a4
-; NO-ZBA-NEXT:    bgtz a3, .LBB5_2
-; NO-ZBA-NEXT:  # %bb.1: # %entry
-; NO-ZBA-NEXT:    mv a5, a2
-; NO-ZBA-NEXT:  .LBB5_2: # %entry
-; NO-ZBA-NEXT:    slli a1, a1, 3
-; NO-ZBA-NEXT:    add a0, a1, a0
-; NO-ZBA-NEXT:    sd a5, 40(a0)
-; NO-ZBA-NEXT:    sd a5, 48(a0)
-; NO-ZBA-NEXT:    sd a4, 280(a0)
-; NO-ZBA-NEXT:    ret
-;
+; RV64-LABEL: add_shl_moreOneUse_inSelect:
+; RV64:       # %bb.0: # %entry
+; RV64-NEXT:    addi a4, a1, 5
+; RV64-NEXT:    mv a5, a4
+; RV64-NEXT:    bgtz a3, .LBB5_2
+; RV64-NEXT:  # %bb.1: # %entry
+; RV64-NEXT:    mv a5, a2
+; RV64-NEXT:  .LBB5_2: # %entry
+; RV64-NEXT:    slli a1, a1, 3
+; RV64-NEXT:    add a0, a1, a0
+; RV64-NEXT:    sd a5, 40(a0)
+; RV64-NEXT:    sd a5, 48(a0)
+; RV64-NEXT:    sd a4, 280(a0)
+; RV64-NEXT:    ret
 ; ZBA-LABEL: add_shl_moreOneUse_inSelect:
 ; ZBA:       # %bb.0: # %entry
 ; ZBA-NEXT:    addi a4, a1, 5
@@ -308,7 +299,6 @@ define void @add_shl_moreOneUse_inSelect(ptr %array1, i64 %a, i64 %b, i64 %x) {
 ; ZBA-NEXT:    sd a5, 48(a0)
 ; ZBA-NEXT:    sd a4, 280(a0)
 ; ZBA-NEXT:    ret
-;
 ; XANDESPERF-LABEL: add_shl_moreOneUse_inSelect:
 ; XANDESPERF:       # %bb.0: # %entry
 ; XANDESPERF-NEXT:    addi a4, a1, 5
@@ -338,20 +328,18 @@ entry:
 }
 
 define i64 @add_shl_moreOneUse_sh1add(i64 %x) {
-; NO-ZBA-LABEL: add_shl_moreOneUse_sh1add:
-; NO-ZBA:       # %bb.0:
-; NO-ZBA-NEXT:    ori a1, a0, 1
-; NO-ZBA-NEXT:    slli a0, a0, 1
-; NO-ZBA-NEXT:    ori a0, a0, 2
-; NO-ZBA-NEXT:    add a0, a0, a1
-; NO-ZBA-NEXT:    ret
-;
+; RV64-LABEL: add_shl_moreOneUse_sh1add:
+; RV64:       # %bb.0:
+; RV64-NEXT:    ori a1, a0, 1
+; RV64-NEXT:    slli a0, a0, 1
+; RV64-NEXT:    ori a0, a0, 2
+; RV64-NEXT:    add a0, a0, a1
+; RV64-NEXT:    ret
 ; ZBA-LABEL: add_shl_moreOneUse_sh1add:
 ; ZBA:       # %bb.0:
 ; ZBA-NEXT:    ori a0, a0, 1
 ; ZBA-NEXT:    sh1add a0, a0, a0
 ; ZBA-NEXT:    ret
-;
 ; XANDESPERF-LABEL: add_shl_moreOneUse_sh1add:
 ; XANDESPERF:       # %bb.0:
 ; XANDESPERF-NEXT:    ori a0, a0, 1
@@ -364,20 +352,18 @@ define i64 @add_shl_moreOneUse_sh1add(i64 %x) {
 }
 
 define i64 @add_shl_moreOneUse_sh2add(i64 %x) {
-; NO-ZBA-LABEL: add_shl_moreOneUse_sh2add:
-; NO-ZBA:       # %bb.0:
-; NO-ZBA-NEXT:    ori a1, a0, 1
-; NO-ZBA-NEXT:    slli a0, a0, 2
-; NO-ZBA-NEXT:    ori a0, a0, 4
-; NO-ZBA-NEXT:    add a0, a0, a1
-; NO-ZBA-NEXT:    ret
-;
+; RV64-LABEL: add_shl_moreOneUse_sh2add:
+; RV64:       # %bb.0:
+; RV64-NEXT:    ori a1, a0, 1
+; RV64-NEXT:    slli a0, a0, 2
+; RV64-NEXT:    ori a0, a0, 4
+; RV64-NEXT:    add a0, a0, a1
+; RV64-NEXT:    ret
 ; ZBA-LABEL: add_shl_moreOneUse_sh2add:
 ; ZBA:       # %bb.0:
 ; ZBA-NEXT:    ori a0, a0, 1
 ; ZBA-NEXT:    sh2add a0, a0, a0
 ; ZBA-NEXT:    ret
-;
 ; XANDESPERF-LABEL: add_shl_moreOneUse_sh2add:
 ; XANDESPERF:       # %bb.0:
 ; XANDESPERF-NEXT:    ori a0, a0, 1
@@ -390,20 +376,18 @@ define i64 @add_shl_moreOneUse_sh2add(i64 %x) {
 }
 
 define i64 @add_shl_moreOneUse_sh3add(i64 %x) {
-; NO-ZBA-LABEL: add_shl_moreOneUse_sh3add:
-; NO-ZBA:       # %bb.0:
-; NO-ZBA-NEXT:    ori a1, a0, 1
-; NO-ZBA-NEXT:    slli a0, a0, 3
-; NO-ZBA-NEXT:    ori a0, a0, 8
-; NO-ZBA-NEXT:    add a0, a0, a1
-; NO-ZBA-NEXT:    ret
-;
+; RV64-LABEL: add_shl_moreOneUse_sh3add:
+; RV64:       # %bb.0:
+; RV64-NEXT:    ori a1, a0, 1
+; RV64-NEXT:    slli a0, a0, 3
+; RV64-NEXT:    ori a0, a0, 8
+; RV64-NEXT:    add a0, a0, a1
+; RV64-NEXT:    ret
 ; ZBA-LABEL: add_shl_moreOneUse_sh3add:
 ; ZBA:       # %bb.0:
 ; ZBA-NEXT:    ori a0, a0, 1
 ; ZBA-NEXT:    sh3add a0, a0, a0
 ; ZBA-NEXT:    ret
-;
 ; XANDESPERF-LABEL: add_shl_moreOneUse_sh3add:
 ; XANDESPERF:       # %bb.0:
 ; XANDESPERF-NEXT:    ori a0, a0, 1
@@ -419,7 +403,7 @@ define i64 @add_shl_moreOneUse_sh3add(i64 %x) {
 define i64 @add_shl_sext(i32 %1) {
 ; RV64-LABEL: add_shl_sext:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    addi a1, a0, 3
+; RV64-NEXT:    addiw a1, a0, 3
 ; RV64-NEXT:    sllw a0, a1, a0
 ; RV64-NEXT:    ret
   %3 = add i32 %1, 3
@@ -454,3 +438,5 @@ define i64 @add_shl_rhs_constant(i64 %x, i64 %y) {
   %d = add i64 %c, -8
   ret i64 %d
 }
+;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
+; NO-ZBA: {{.*}}

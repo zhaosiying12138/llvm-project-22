@@ -35,12 +35,6 @@ namespace llvm::YSXTuneInfoTable {
 #include "YSXGenSearchableTables.inc"
 } // namespace llvm::YSXTuneInfoTable
 
-static cl::opt<unsigned> RVVVectorLMULMax(
-    "ysx-v-fixed-length-vector-lmul-max",
-    cl::desc("The maximum LMUL value to use for fixed length vectors. "
-             "Fractional LMUL values are not supported."),
-    cl::init(8), cl::Hidden);
-
 static cl::opt<bool> YSXDisableUsingConstantPoolForLargeInts(
     "ysx-disable-using-constant-pool-for-large-ints",
     cl::desc("Disable using constant pool for large integers."),
@@ -57,21 +51,6 @@ static cl::opt<bool> UseAA("ysx-use-aa", cl::init(true),
 static cl::opt<unsigned> YSXMinimumJumpTableEntries(
     "ysx-min-jump-table-entries", cl::Hidden,
     cl::desc("Set minimum number of entries to use a jump table on YSX"));
-
-static cl::opt<bool> UseMIPSLoadStorePairsOpt(
-    "use-ysx-mips-load-store-pairs",
-    cl::desc("Enable the load/store pair optimization pass"), cl::init(false),
-    cl::Hidden);
-
-static cl::opt<bool> UseMIPSCCMovInsn("use-ysx-mips-ccmov",
-                                      cl::desc("Use 'mips.ccmov' instruction"),
-                                      cl::init(true), cl::Hidden);
-
-static cl::opt<bool> EnablePExtSIMDCodeGen(
-    "ysx-enable-p-ext-simd-codegen",
-    cl::desc("Turn on P Extension SIMD codegen(This is a temporary switch "
-             "where only partial codegen is currently supported)"),
-    cl::init(false), cl::Hidden);
 
 void YSXSubtarget::anchor() {}
 
@@ -112,12 +91,9 @@ YSXSubtarget::initializeSubtargetDependencies(const Triple &TT, StringRef CPU,
 
 YSXSubtarget::YSXSubtarget(const Triple &TT, StringRef CPU,
                                StringRef TuneCPU, StringRef FS,
-                               StringRef ABIName, unsigned RVVVectorBitsMin,
-                               unsigned RVVVectorBitsMax,
-                               const TargetMachine &TM)
+                               StringRef ABIName, const TargetMachine &TM)
     : YSXGenSubtargetInfo(TT, CPU, TuneCPU, FS),
-      IsLittleEndian(TT.isLittleEndian()), RVVVectorBitsMin(RVVVectorBitsMin),
-      RVVVectorBitsMax(RVVVectorBitsMax),
+      IsLittleEndian(TT.isLittleEndian()),
       FrameLowering(
           initializeSubtargetDependencies(TT, CPU, TuneCPU, FS, ABIName)),
       InstrInfo(*this), TLInfo(TM, *this) {
@@ -135,7 +111,7 @@ bool YSXSubtarget::useConstantPoolForLargeInts() const {
 }
 
 bool YSXSubtarget::enablePExtSIMDCodeGen() const {
-  return HasStdExtP && EnablePExtSIMDCodeGen;
+  return false;
 }
 
 unsigned YSXSubtarget::getMaxBuildIntsCost() const {
@@ -150,46 +126,19 @@ unsigned YSXSubtarget::getMaxBuildIntsCost() const {
 }
 
 unsigned YSXSubtarget::getMaxRVVVectorSizeInBits() const {
-  assert(hasVInstructions() &&
-         "Tried to get vector length without Zve or V extension support!");
-
-  // ZvlLen specifies the minimum required vlen. The upper bound provided by
-  // ysx-v-vector-bits-max should be no less than it.
-  if (RVVVectorBitsMax != 0 && RVVVectorBitsMax < ZvlLen)
-    report_fatal_error("ysx-v-vector-bits-max specified is lower "
-                       "than the Zvl*b limitation");
-
-  return RVVVectorBitsMax;
+  return 0;
 }
 
 unsigned YSXSubtarget::getMinRVVVectorSizeInBits() const {
-  assert(hasVInstructions() &&
-         "Tried to get vector length without Zve or V extension support!");
-
-  if (RVVVectorBitsMin == -1U)
-    return ZvlLen;
-
-  // ZvlLen specifies the minimum required vlen. The lower bound provided by
-  // ysx-v-vector-bits-min should be no less than it.
-  if (RVVVectorBitsMin != 0 && RVVVectorBitsMin < ZvlLen)
-    report_fatal_error("ysx-v-vector-bits-min specified is lower "
-                       "than the Zvl*b limitation");
-
-  return RVVVectorBitsMin;
+  return 0;
 }
 
 unsigned YSXSubtarget::getMaxLMULForFixedLengthVectors() const {
-  assert(hasVInstructions() &&
-         "Tried to get vector length without Zve or V extension support!");
-  assert(RVVVectorLMULMax <= 8 &&
-         llvm::has_single_bit<uint32_t>(RVVVectorLMULMax) &&
-         "V extension requires a LMUL to be at most 8 and a power of 2!");
-  return llvm::bit_floor(std::clamp<unsigned>(RVVVectorLMULMax, 1, 8));
+  return 1;
 }
 
 bool YSXSubtarget::useRVVForFixedLengthVectors() const {
-  return hasVInstructions() &&
-         getMinRVVVectorSizeInBits() >= YSX::RVVBitsPerBlock;
+  return false;
 }
 
 bool YSXSubtarget::enableSubRegLiveness() const { return true; }
@@ -240,9 +189,9 @@ void YSXSubtarget::overridePostRASchedPolicy(
 }
 
 bool YSXSubtarget::useMIPSLoadStorePairs() const {
-  return UseMIPSLoadStorePairsOpt && HasVendorXMIPSLSP;
+  return false;
 }
 
 bool YSXSubtarget::useMIPSCCMovInsn() const {
-  return UseMIPSCCMovInsn && HasVendorXMIPSCMov;
+  return false;
 }

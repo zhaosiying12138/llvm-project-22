@@ -13,7 +13,7 @@ define i32 @sdiv32_pow2_2(i32 %a) {
 ; RV64I-LABEL: sdiv32_pow2_2:
 ; RV64I:       # %bb.0: # %entry
 ; RV64I-NEXT:    srliw a1, a0, 31
-; RV64I-NEXT:    add a0, a0, a1
+; RV64I-NEXT:    addw a0, a0, a1
 ; RV64I-NEXT:    sraiw a0, a0, 1
 ; RV64I-NEXT:    ret
 entry:
@@ -33,7 +33,7 @@ define i32 @sdiv32_pow2_negative_2(i32 %a) {
 ; RV64I-LABEL: sdiv32_pow2_negative_2:
 ; RV64I:       # %bb.0: # %entry
 ; RV64I-NEXT:    srliw a1, a0, 31
-; RV64I-NEXT:    add a0, a0, a1
+; RV64I-NEXT:    addw a0, a0, a1
 ; RV64I-NEXT:    sraiw a0, a0, 1
 ; RV64I-NEXT:    neg a0, a0
 ; RV64I-NEXT:    ret
@@ -55,7 +55,7 @@ define i32 @sdiv32_pow2_2048(i32 %a) {
 ; RV64I:       # %bb.0: # %entry
 ; RV64I-NEXT:    sraiw a1, a0, 31
 ; RV64I-NEXT:    srliw a1, a1, 21
-; RV64I-NEXT:    add a0, a0, a1
+; RV64I-NEXT:    addw a0, a0, a1
 ; RV64I-NEXT:    sraiw a0, a0, 11
 ; RV64I-NEXT:    ret
 entry:
@@ -77,7 +77,7 @@ define i32 @sdiv32_pow2_negative_2048(i32 %a) {
 ; RV64I:       # %bb.0: # %entry
 ; RV64I-NEXT:    sraiw a1, a0, 31
 ; RV64I-NEXT:    srliw a1, a1, 21
-; RV64I-NEXT:    add a0, a0, a1
+; RV64I-NEXT:    addw a0, a0, a1
 ; RV64I-NEXT:    sraiw a0, a0, 11
 ; RV64I-NEXT:    neg a0, a0
 ; RV64I-NEXT:    ret
@@ -99,7 +99,7 @@ define i32 @sdiv32_pow2_4096(i32 %a) {
 ; RV64I:       # %bb.0: # %entry
 ; RV64I-NEXT:    sraiw a1, a0, 31
 ; RV64I-NEXT:    srliw a1, a1, 20
-; RV64I-NEXT:    add a0, a0, a1
+; RV64I-NEXT:    addw a0, a0, a1
 ; RV64I-NEXT:    sraiw a0, a0, 12
 ; RV64I-NEXT:    ret
 entry:
@@ -121,7 +121,7 @@ define i32 @sdiv32_pow2_negative_4096(i32 %a) {
 ; RV64I:       # %bb.0: # %entry
 ; RV64I-NEXT:    sraiw a1, a0, 31
 ; RV64I-NEXT:    srliw a1, a1, 20
-; RV64I-NEXT:    add a0, a0, a1
+; RV64I-NEXT:    addw a0, a0, a1
 ; RV64I-NEXT:    sraiw a0, a0, 12
 ; RV64I-NEXT:    neg a0, a0
 ; RV64I-NEXT:    ret
@@ -143,7 +143,7 @@ define i32 @sdiv32_pow2_65536(i32 %a) {
 ; RV64I:       # %bb.0: # %entry
 ; RV64I-NEXT:    sraiw a1, a0, 31
 ; RV64I-NEXT:    srliw a1, a1, 16
-; RV64I-NEXT:    add a0, a0, a1
+; RV64I-NEXT:    addw a0, a0, a1
 ; RV64I-NEXT:    sraiw a0, a0, 16
 ; RV64I-NEXT:    ret
 entry:
@@ -165,7 +165,7 @@ define i32 @sdiv32_pow2_negative_65536(i32 %a) {
 ; RV64I:       # %bb.0: # %entry
 ; RV64I-NEXT:    sraiw a1, a0, 31
 ; RV64I-NEXT:    srliw a1, a1, 16
-; RV64I-NEXT:    add a0, a0, a1
+; RV64I-NEXT:    addw a0, a0, a1
 ; RV64I-NEXT:    sraiw a0, a0, 16
 ; RV64I-NEXT:    neg a0, a0
 ; RV64I-NEXT:    ret

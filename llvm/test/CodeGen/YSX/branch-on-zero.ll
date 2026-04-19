@@ -84,7 +84,7 @@ define i32 @test_lshr(i32 %v) {
 ; RV64-LABEL: test_lshr:
 ; RV64:       # %bb.0: # %entry
 ; RV64-NEXT:    sext.w a1, a0
-; RV64-NEXT:    beqz a1, .LBB2_3
+; RV64-NEXT:    beqz a1, .LBB2_4
 ; RV64-NEXT:  # %bb.1: # %for.body.preheader
 ; RV64-NEXT:    li a1, 0
 ; RV64-NEXT:  .LBB2_2: # %for.body
@@ -93,8 +93,11 @@ define i32 @test_lshr(i32 %v) {
 ; RV64-NEXT:    srliw a0, a0, 1
 ; RV64-NEXT:    addw a1, a1, a2
 ; RV64-NEXT:    bnez a0, .LBB2_2
-; RV64-NEXT:  .LBB2_3: # %for.end
+; RV64-NEXT:  # %bb.3: # %for.end
 ; RV64-NEXT:    mv a0, a1
+; RV64-NEXT:    ret
+; RV64-NEXT:  .LBB2_4:
+; RV64-NEXT:    li a0, 0
 ; RV64-NEXT:    ret
 entry:
   %tobool.not4 = icmp eq i32 %v, 0
@@ -141,7 +144,7 @@ define i32 @test_lshr2(ptr nocapture %x, ptr nocapture readonly %y, i32 %n) {
 ; RV64-NEXT:    srliw a2, a2, 2
 ; RV64-NEXT:    beqz a2, .LBB3_3
 ; RV64-NEXT:  # %bb.1: # %while.body.preheader
-; RV64-NEXT:    addi a2, a2, -1
+; RV64-NEXT:    addiw a2, a2, -1
 ; RV64-NEXT:    slli a2, a2, 32
 ; RV64-NEXT:    srli a2, a2, 30
 ; RV64-NEXT:    add a2, a2, a1
@@ -150,10 +153,10 @@ define i32 @test_lshr2(ptr nocapture %x, ptr nocapture readonly %y, i32 %n) {
 ; RV64-NEXT:    # =>This Inner Loop Header: Depth=1
 ; RV64-NEXT:    lw a3, 0(a1)
 ; RV64-NEXT:    addi a4, a1, 4
-; RV64-NEXT:    slli a3, a3, 1
-; RV64-NEXT:    addi a1, a0, 4
-; RV64-NEXT:    sw a3, 0(a0)
-; RV64-NEXT:    mv a0, a1
+; RV64-NEXT:    slliw a1, a3, 1
+; RV64-NEXT:    addi a3, a0, 4
+; RV64-NEXT:    sw a1, 0(a0)
+; RV64-NEXT:    mv a0, a3
 ; RV64-NEXT:    mv a1, a4
 ; RV64-NEXT:    bne a4, a2, .LBB3_2
 ; RV64-NEXT:  .LBB3_3: # %while.end

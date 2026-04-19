@@ -1,5 +1,5 @@
 ---
-current_round: 0
+current_round: 1
 max_iterations: 42
 codex_model: gpt-5.4
 codex_effort: high
@@ -20,7 +20,7 @@ bitlesson_required: true
 bitlesson_file: .humanize/bitlesson.md
 bitlesson_allow_empty_none: true
 mainline_stall_count: 0
-last_mainline_verdict: unknown
+last_mainline_verdict: advanced
 drift_status: normal
 started_at: 2026-04-18T15:54:33Z
 ---

@@ -176,13 +176,12 @@ define signext i32 @sext_addw_zext_zext(i32 zeroext %a, i32 zeroext %b) nounwind
 ; is required.
 
 define zeroext i32 @zext_addw_aext_aext(i32 %a, i32 %b) nounwind {
-; RV64I-LABEL: zext_addw_aext_aext:
-; RV64I:       # %bb.0:
-; RV64I-NEXT:    add a0, a0, a1
-; RV64I-NEXT:    slli a0, a0, 32
-; RV64I-NEXT:    srli a0, a0, 32
-; RV64I-NEXT:    ret
-;
+; RV64-LABEL: zext_addw_aext_aext:
+; RV64:       # %bb.0:
+; RV64-NEXT:    addw a0, a0, a1
+; RV64-NEXT:    slli a0, a0, 32
+; RV64-NEXT:    srli a0, a0, 32
+; RV64-NEXT:    ret
 ; RV64ZBA-LABEL: zext_addw_aext_aext:
 ; RV64ZBA:       # %bb.0:
 ; RV64ZBA-NEXT:    add a0, a0, a1
@@ -193,13 +192,12 @@ define zeroext i32 @zext_addw_aext_aext(i32 %a, i32 %b) nounwind {
 }
 
 define zeroext i32 @zext_addw_aext_sext(i32 %a, i32 signext %b) nounwind {
-; RV64I-LABEL: zext_addw_aext_sext:
-; RV64I:       # %bb.0:
-; RV64I-NEXT:    add a0, a0, a1
-; RV64I-NEXT:    slli a0, a0, 32
-; RV64I-NEXT:    srli a0, a0, 32
-; RV64I-NEXT:    ret
-;
+; RV64-LABEL: zext_addw_aext_sext:
+; RV64:       # %bb.0:
+; RV64-NEXT:    addw a0, a0, a1
+; RV64-NEXT:    slli a0, a0, 32
+; RV64-NEXT:    srli a0, a0, 32
+; RV64-NEXT:    ret
 ; RV64ZBA-LABEL: zext_addw_aext_sext:
 ; RV64ZBA:       # %bb.0:
 ; RV64ZBA-NEXT:    add a0, a0, a1
@@ -210,13 +208,12 @@ define zeroext i32 @zext_addw_aext_sext(i32 %a, i32 signext %b) nounwind {
 }
 
 define zeroext i32 @zext_addw_aext_zext(i32 %a, i32 zeroext %b) nounwind {
-; RV64I-LABEL: zext_addw_aext_zext:
-; RV64I:       # %bb.0:
-; RV64I-NEXT:    add a0, a0, a1
-; RV64I-NEXT:    slli a0, a0, 32
-; RV64I-NEXT:    srli a0, a0, 32
-; RV64I-NEXT:    ret
-;
+; RV64-LABEL: zext_addw_aext_zext:
+; RV64:       # %bb.0:
+; RV64-NEXT:    addw a0, a0, a1
+; RV64-NEXT:    slli a0, a0, 32
+; RV64-NEXT:    srli a0, a0, 32
+; RV64-NEXT:    ret
 ; RV64ZBA-LABEL: zext_addw_aext_zext:
 ; RV64ZBA:       # %bb.0:
 ; RV64ZBA-NEXT:    add a0, a0, a1
@@ -227,13 +224,12 @@ define zeroext i32 @zext_addw_aext_zext(i32 %a, i32 zeroext %b) nounwind {
 }
 
 define zeroext i32 @zext_addw_sext_aext(i32 signext %a, i32 %b) nounwind {
-; RV64I-LABEL: zext_addw_sext_aext:
-; RV64I:       # %bb.0:
-; RV64I-NEXT:    add a0, a0, a1
-; RV64I-NEXT:    slli a0, a0, 32
-; RV64I-NEXT:    srli a0, a0, 32
-; RV64I-NEXT:    ret
-;
+; RV64-LABEL: zext_addw_sext_aext:
+; RV64:       # %bb.0:
+; RV64-NEXT:    addw a0, a0, a1
+; RV64-NEXT:    slli a0, a0, 32
+; RV64-NEXT:    srli a0, a0, 32
+; RV64-NEXT:    ret
 ; RV64ZBA-LABEL: zext_addw_sext_aext:
 ; RV64ZBA:       # %bb.0:
 ; RV64ZBA-NEXT:    add a0, a0, a1
@@ -244,13 +240,12 @@ define zeroext i32 @zext_addw_sext_aext(i32 signext %a, i32 %b) nounwind {
 }
 
 define zeroext i32 @zext_addw_sext_sext(i32 signext %a, i32 signext %b) nounwind {
-; RV64I-LABEL: zext_addw_sext_sext:
-; RV64I:       # %bb.0:
-; RV64I-NEXT:    add a0, a0, a1
-; RV64I-NEXT:    slli a0, a0, 32
-; RV64I-NEXT:    srli a0, a0, 32
-; RV64I-NEXT:    ret
-;
+; RV64-LABEL: zext_addw_sext_sext:
+; RV64:       # %bb.0:
+; RV64-NEXT:    addw a0, a0, a1
+; RV64-NEXT:    slli a0, a0, 32
+; RV64-NEXT:    srli a0, a0, 32
+; RV64-NEXT:    ret
 ; RV64ZBA-LABEL: zext_addw_sext_sext:
 ; RV64ZBA:       # %bb.0:
 ; RV64ZBA-NEXT:    add a0, a0, a1
@@ -261,13 +256,12 @@ define zeroext i32 @zext_addw_sext_sext(i32 signext %a, i32 signext %b) nounwind
 }
 
 define zeroext i32 @zext_addw_sext_zext(i32 signext %a, i32 zeroext %b) nounwind {
-; RV64I-LABEL: zext_addw_sext_zext:
-; RV64I:       # %bb.0:
-; RV64I-NEXT:    add a0, a0, a1
-; RV64I-NEXT:    slli a0, a0, 32
-; RV64I-NEXT:    srli a0, a0, 32
-; RV64I-NEXT:    ret
-;
+; RV64-LABEL: zext_addw_sext_zext:
+; RV64:       # %bb.0:
+; RV64-NEXT:    addw a0, a0, a1
+; RV64-NEXT:    slli a0, a0, 32
+; RV64-NEXT:    srli a0, a0, 32
+; RV64-NEXT:    ret
 ; RV64ZBA-LABEL: zext_addw_sext_zext:
 ; RV64ZBA:       # %bb.0:
 ; RV64ZBA-NEXT:    add a0, a0, a1
@@ -278,13 +272,12 @@ define zeroext i32 @zext_addw_sext_zext(i32 signext %a, i32 zeroext %b) nounwind
 }
 
 define zeroext i32 @zext_addw_zext_aext(i32 zeroext %a, i32 %b) nounwind {
-; RV64I-LABEL: zext_addw_zext_aext:
-; RV64I:       # %bb.0:
-; RV64I-NEXT:    add a0, a0, a1
-; RV64I-NEXT:    slli a0, a0, 32
-; RV64I-NEXT:    srli a0, a0, 32
-; RV64I-NEXT:    ret
-;
+; RV64-LABEL: zext_addw_zext_aext:
+; RV64:       # %bb.0:
+; RV64-NEXT:    addw a0, a0, a1
+; RV64-NEXT:    slli a0, a0, 32
+; RV64-NEXT:    srli a0, a0, 32
+; RV64-NEXT:    ret
 ; RV64ZBA-LABEL: zext_addw_zext_aext:
 ; RV64ZBA:       # %bb.0:
 ; RV64ZBA-NEXT:    add a0, a0, a1
@@ -295,13 +288,12 @@ define zeroext i32 @zext_addw_zext_aext(i32 zeroext %a, i32 %b) nounwind {
 }
 
 define zeroext i32 @zext_addw_zext_sext(i32 zeroext %a, i32 signext %b) nounwind {
-; RV64I-LABEL: zext_addw_zext_sext:
-; RV64I:       # %bb.0:
-; RV64I-NEXT:    add a0, a0, a1
-; RV64I-NEXT:    slli a0, a0, 32
-; RV64I-NEXT:    srli a0, a0, 32
-; RV64I-NEXT:    ret
-;
+; RV64-LABEL: zext_addw_zext_sext:
+; RV64:       # %bb.0:
+; RV64-NEXT:    addw a0, a0, a1
+; RV64-NEXT:    slli a0, a0, 32
+; RV64-NEXT:    srli a0, a0, 32
+; RV64-NEXT:    ret
 ; RV64ZBA-LABEL: zext_addw_zext_sext:
 ; RV64ZBA:       # %bb.0:
 ; RV64ZBA-NEXT:    add a0, a0, a1
@@ -312,13 +304,12 @@ define zeroext i32 @zext_addw_zext_sext(i32 zeroext %a, i32 signext %b) nounwind
 }
 
 define zeroext i32 @zext_addw_zext_zext(i32 zeroext %a, i32 zeroext %b) nounwind {
-; RV64I-LABEL: zext_addw_zext_zext:
-; RV64I:       # %bb.0:
-; RV64I-NEXT:    add a0, a0, a1
-; RV64I-NEXT:    slli a0, a0, 32
-; RV64I-NEXT:    srli a0, a0, 32
-; RV64I-NEXT:    ret
-;
+; RV64-LABEL: zext_addw_zext_zext:
+; RV64:       # %bb.0:
+; RV64-NEXT:    addw a0, a0, a1
+; RV64-NEXT:    slli a0, a0, 32
+; RV64-NEXT:    srli a0, a0, 32
+; RV64-NEXT:    ret
 ; RV64ZBA-LABEL: zext_addw_zext_zext:
 ; RV64ZBA:       # %bb.0:
 ; RV64ZBA-NEXT:    add a0, a0, a1
@@ -497,13 +488,12 @@ define signext i32 @sext_subw_zext_zext(i32 zeroext %a, i32 zeroext %b) nounwind
 ; 64-bit sub followed by zero-extension is safe for a zeroext result.
 
 define zeroext i32 @zext_subw_aext_aext(i32 %a, i32 %b) nounwind {
-; RV64I-LABEL: zext_subw_aext_aext:
-; RV64I:       # %bb.0:
-; RV64I-NEXT:    sub a0, a0, a1
-; RV64I-NEXT:    slli a0, a0, 32
-; RV64I-NEXT:    srli a0, a0, 32
-; RV64I-NEXT:    ret
-;
+; RV64-LABEL: zext_subw_aext_aext:
+; RV64:       # %bb.0:
+; RV64-NEXT:    subw a0, a0, a1
+; RV64-NEXT:    slli a0, a0, 32
+; RV64-NEXT:    srli a0, a0, 32
+; RV64-NEXT:    ret
 ; RV64ZBA-LABEL: zext_subw_aext_aext:
 ; RV64ZBA:       # %bb.0:
 ; RV64ZBA-NEXT:    sub a0, a0, a1
@@ -514,13 +504,12 @@ define zeroext i32 @zext_subw_aext_aext(i32 %a, i32 %b) nounwind {
 }
 
 define zeroext i32 @zext_subw_aext_sext(i32 %a, i32 signext %b) nounwind {
-; RV64I-LABEL: zext_subw_aext_sext:
-; RV64I:       # %bb.0:
-; RV64I-NEXT:    sub a0, a0, a1
-; RV64I-NEXT:    slli a0, a0, 32
-; RV64I-NEXT:    srli a0, a0, 32
-; RV64I-NEXT:    ret
-;
+; RV64-LABEL: zext_subw_aext_sext:
+; RV64:       # %bb.0:
+; RV64-NEXT:    subw a0, a0, a1
+; RV64-NEXT:    slli a0, a0, 32
+; RV64-NEXT:    srli a0, a0, 32
+; RV64-NEXT:    ret
 ; RV64ZBA-LABEL: zext_subw_aext_sext:
 ; RV64ZBA:       # %bb.0:
 ; RV64ZBA-NEXT:    sub a0, a0, a1
@@ -531,13 +520,12 @@ define zeroext i32 @zext_subw_aext_sext(i32 %a, i32 signext %b) nounwind {
 }
 
 define zeroext i32 @zext_subw_aext_zext(i32 %a, i32 zeroext %b) nounwind {
-; RV64I-LABEL: zext_subw_aext_zext:
-; RV64I:       # %bb.0:
-; RV64I-NEXT:    sub a0, a0, a1
-; RV64I-NEXT:    slli a0, a0, 32
-; RV64I-NEXT:    srli a0, a0, 32
-; RV64I-NEXT:    ret
-;
+; RV64-LABEL: zext_subw_aext_zext:
+; RV64:       # %bb.0:
+; RV64-NEXT:    subw a0, a0, a1
+; RV64-NEXT:    slli a0, a0, 32
+; RV64-NEXT:    srli a0, a0, 32
+; RV64-NEXT:    ret
 ; RV64ZBA-LABEL: zext_subw_aext_zext:
 ; RV64ZBA:       # %bb.0:
 ; RV64ZBA-NEXT:    sub a0, a0, a1
@@ -548,13 +536,12 @@ define zeroext i32 @zext_subw_aext_zext(i32 %a, i32 zeroext %b) nounwind {
 }
 
 define zeroext i32 @zext_subw_sext_aext(i32 signext %a, i32 %b) nounwind {
-; RV64I-LABEL: zext_subw_sext_aext:
-; RV64I:       # %bb.0:
-; RV64I-NEXT:    sub a0, a0, a1
-; RV64I-NEXT:    slli a0, a0, 32
-; RV64I-NEXT:    srli a0, a0, 32
-; RV64I-NEXT:    ret
-;
+; RV64-LABEL: zext_subw_sext_aext:
+; RV64:       # %bb.0:
+; RV64-NEXT:    subw a0, a0, a1
+; RV64-NEXT:    slli a0, a0, 32
+; RV64-NEXT:    srli a0, a0, 32
+; RV64-NEXT:    ret
 ; RV64ZBA-LABEL: zext_subw_sext_aext:
 ; RV64ZBA:       # %bb.0:
 ; RV64ZBA-NEXT:    sub a0, a0, a1
@@ -565,13 +552,12 @@ define zeroext i32 @zext_subw_sext_aext(i32 signext %a, i32 %b) nounwind {
 }
 
 define zeroext i32 @zext_subw_sext_sext(i32 signext %a, i32 signext %b) nounwind {
-; RV64I-LABEL: zext_subw_sext_sext:
-; RV64I:       # %bb.0:
-; RV64I-NEXT:    sub a0, a0, a1
-; RV64I-NEXT:    slli a0, a0, 32
-; RV64I-NEXT:    srli a0, a0, 32
-; RV64I-NEXT:    ret
-;
+; RV64-LABEL: zext_subw_sext_sext:
+; RV64:       # %bb.0:
+; RV64-NEXT:    subw a0, a0, a1
+; RV64-NEXT:    slli a0, a0, 32
+; RV64-NEXT:    srli a0, a0, 32
+; RV64-NEXT:    ret
 ; RV64ZBA-LABEL: zext_subw_sext_sext:
 ; RV64ZBA:       # %bb.0:
 ; RV64ZBA-NEXT:    sub a0, a0, a1
@@ -582,13 +568,12 @@ define zeroext i32 @zext_subw_sext_sext(i32 signext %a, i32 signext %b) nounwind
 }
 
 define zeroext i32 @zext_subw_sext_zext(i32 signext %a, i32 zeroext %b) nounwind {
-; RV64I-LABEL: zext_subw_sext_zext:
-; RV64I:       # %bb.0:
-; RV64I-NEXT:    sub a0, a0, a1
-; RV64I-NEXT:    slli a0, a0, 32
-; RV64I-NEXT:    srli a0, a0, 32
-; RV64I-NEXT:    ret
-;
+; RV64-LABEL: zext_subw_sext_zext:
+; RV64:       # %bb.0:
+; RV64-NEXT:    subw a0, a0, a1
+; RV64-NEXT:    slli a0, a0, 32
+; RV64-NEXT:    srli a0, a0, 32
+; RV64-NEXT:    ret
 ; RV64ZBA-LABEL: zext_subw_sext_zext:
 ; RV64ZBA:       # %bb.0:
 ; RV64ZBA-NEXT:    sub a0, a0, a1
@@ -599,13 +584,12 @@ define zeroext i32 @zext_subw_sext_zext(i32 signext %a, i32 zeroext %b) nounwind
 }
 
 define zeroext i32 @zext_subw_zext_aext(i32 zeroext %a, i32 %b) nounwind {
-; RV64I-LABEL: zext_subw_zext_aext:
-; RV64I:       # %bb.0:
-; RV64I-NEXT:    sub a0, a0, a1
-; RV64I-NEXT:    slli a0, a0, 32
-; RV64I-NEXT:    srli a0, a0, 32
-; RV64I-NEXT:    ret
-;
+; RV64-LABEL: zext_subw_zext_aext:
+; RV64:       # %bb.0:
+; RV64-NEXT:    subw a0, a0, a1
+; RV64-NEXT:    slli a0, a0, 32
+; RV64-NEXT:    srli a0, a0, 32
+; RV64-NEXT:    ret
 ; RV64ZBA-LABEL: zext_subw_zext_aext:
 ; RV64ZBA:       # %bb.0:
 ; RV64ZBA-NEXT:    sub a0, a0, a1
@@ -616,13 +600,12 @@ define zeroext i32 @zext_subw_zext_aext(i32 zeroext %a, i32 %b) nounwind {
 }
 
 define zeroext i32 @zext_subw_zext_sext(i32 zeroext %a, i32 signext %b) nounwind {
-; RV64I-LABEL: zext_subw_zext_sext:
-; RV64I:       # %bb.0:
-; RV64I-NEXT:    sub a0, a0, a1
-; RV64I-NEXT:    slli a0, a0, 32
-; RV64I-NEXT:    srli a0, a0, 32
-; RV64I-NEXT:    ret
-;
+; RV64-LABEL: zext_subw_zext_sext:
+; RV64:       # %bb.0:
+; RV64-NEXT:    subw a0, a0, a1
+; RV64-NEXT:    slli a0, a0, 32
+; RV64-NEXT:    srli a0, a0, 32
+; RV64-NEXT:    ret
 ; RV64ZBA-LABEL: zext_subw_zext_sext:
 ; RV64ZBA:       # %bb.0:
 ; RV64ZBA-NEXT:    sub a0, a0, a1
@@ -633,13 +616,12 @@ define zeroext i32 @zext_subw_zext_sext(i32 zeroext %a, i32 signext %b) nounwind
 }
 
 define zeroext i32 @zext_subw_zext_zext(i32 zeroext %a, i32 zeroext %b) nounwind {
-; RV64I-LABEL: zext_subw_zext_zext:
-; RV64I:       # %bb.0:
-; RV64I-NEXT:    sub a0, a0, a1
-; RV64I-NEXT:    slli a0, a0, 32
-; RV64I-NEXT:    srli a0, a0, 32
-; RV64I-NEXT:    ret
-;
+; RV64-LABEL: zext_subw_zext_zext:
+; RV64:       # %bb.0:
+; RV64-NEXT:    subw a0, a0, a1
+; RV64-NEXT:    slli a0, a0, 32
+; RV64-NEXT:    srli a0, a0, 32
+; RV64-NEXT:    ret
 ; RV64ZBA-LABEL: zext_subw_zext_zext:
 ; RV64ZBA:       # %bb.0:
 ; RV64ZBA-NEXT:    sub a0, a0, a1
@@ -816,13 +798,12 @@ define signext i32 @sext_sllw_zext_zext(i32 zeroext %a, i32 zeroext %b) nounwind
 ; 64-bit sll followed by zero-extension for a zeroext result.
 
 define zeroext i32 @zext_sllw_aext_aext(i32 %a, i32 %b) nounwind {
-; RV64I-LABEL: zext_sllw_aext_aext:
-; RV64I:       # %bb.0:
-; RV64I-NEXT:    sllw a0, a0, a1
-; RV64I-NEXT:    slli a0, a0, 32
-; RV64I-NEXT:    srli a0, a0, 32
-; RV64I-NEXT:    ret
-;
+; RV64-LABEL: zext_sllw_aext_aext:
+; RV64:       # %bb.0:
+; RV64-NEXT:    sllw a0, a0, a1
+; RV64-NEXT:    slli a0, a0, 32
+; RV64-NEXT:    srli a0, a0, 32
+; RV64-NEXT:    ret
 ; RV64ZBA-LABEL: zext_sllw_aext_aext:
 ; RV64ZBA:       # %bb.0:
 ; RV64ZBA-NEXT:    sllw a0, a0, a1
@@ -833,13 +814,12 @@ define zeroext i32 @zext_sllw_aext_aext(i32 %a, i32 %b) nounwind {
 }
 
 define zeroext i32 @zext_sllw_aext_sext(i32 %a, i32 signext %b) nounwind {
-; RV64I-LABEL: zext_sllw_aext_sext:
-; RV64I:       # %bb.0:
-; RV64I-NEXT:    sllw a0, a0, a1
-; RV64I-NEXT:    slli a0, a0, 32
-; RV64I-NEXT:    srli a0, a0, 32
-; RV64I-NEXT:    ret
-;
+; RV64-LABEL: zext_sllw_aext_sext:
+; RV64:       # %bb.0:
+; RV64-NEXT:    sllw a0, a0, a1
+; RV64-NEXT:    slli a0, a0, 32
+; RV64-NEXT:    srli a0, a0, 32
+; RV64-NEXT:    ret
 ; RV64ZBA-LABEL: zext_sllw_aext_sext:
 ; RV64ZBA:       # %bb.0:
 ; RV64ZBA-NEXT:    sllw a0, a0, a1
@@ -850,13 +830,12 @@ define zeroext i32 @zext_sllw_aext_sext(i32 %a, i32 signext %b) nounwind {
 }
 
 define zeroext i32 @zext_sllw_aext_zext(i32 %a, i32 zeroext %b) nounwind {
-; RV64I-LABEL: zext_sllw_aext_zext:
-; RV64I:       # %bb.0:
-; RV64I-NEXT:    sllw a0, a0, a1
-; RV64I-NEXT:    slli a0, a0, 32
-; RV64I-NEXT:    srli a0, a0, 32
-; RV64I-NEXT:    ret
-;
+; RV64-LABEL: zext_sllw_aext_zext:
+; RV64:       # %bb.0:
+; RV64-NEXT:    sllw a0, a0, a1
+; RV64-NEXT:    slli a0, a0, 32
+; RV64-NEXT:    srli a0, a0, 32
+; RV64-NEXT:    ret
 ; RV64ZBA-LABEL: zext_sllw_aext_zext:
 ; RV64ZBA:       # %bb.0:
 ; RV64ZBA-NEXT:    sllw a0, a0, a1
@@ -867,13 +846,12 @@ define zeroext i32 @zext_sllw_aext_zext(i32 %a, i32 zeroext %b) nounwind {
 }
 
 define zeroext i32 @zext_sllw_sext_aext(i32 signext %a, i32 %b) nounwind {
-; RV64I-LABEL: zext_sllw_sext_aext:
-; RV64I:       # %bb.0:
-; RV64I-NEXT:    sllw a0, a0, a1
-; RV64I-NEXT:    slli a0, a0, 32
-; RV64I-NEXT:    srli a0, a0, 32
-; RV64I-NEXT:    ret
-;
+; RV64-LABEL: zext_sllw_sext_aext:
+; RV64:       # %bb.0:
+; RV64-NEXT:    sllw a0, a0, a1
+; RV64-NEXT:    slli a0, a0, 32
+; RV64-NEXT:    srli a0, a0, 32
+; RV64-NEXT:    ret
 ; RV64ZBA-LABEL: zext_sllw_sext_aext:
 ; RV64ZBA:       # %bb.0:
 ; RV64ZBA-NEXT:    sllw a0, a0, a1
@@ -884,13 +862,12 @@ define zeroext i32 @zext_sllw_sext_aext(i32 signext %a, i32 %b) nounwind {
 }
 
 define zeroext i32 @zext_sllw_sext_sext(i32 signext %a, i32 signext %b) nounwind {
-; RV64I-LABEL: zext_sllw_sext_sext:
-; RV64I:       # %bb.0:
-; RV64I-NEXT:    sllw a0, a0, a1
-; RV64I-NEXT:    slli a0, a0, 32
-; RV64I-NEXT:    srli a0, a0, 32
-; RV64I-NEXT:    ret
-;
+; RV64-LABEL: zext_sllw_sext_sext:
+; RV64:       # %bb.0:
+; RV64-NEXT:    sllw a0, a0, a1
+; RV64-NEXT:    slli a0, a0, 32
+; RV64-NEXT:    srli a0, a0, 32
+; RV64-NEXT:    ret
 ; RV64ZBA-LABEL: zext_sllw_sext_sext:
 ; RV64ZBA:       # %bb.0:
 ; RV64ZBA-NEXT:    sllw a0, a0, a1
@@ -901,13 +878,12 @@ define zeroext i32 @zext_sllw_sext_sext(i32 signext %a, i32 signext %b) nounwind
 }
 
 define zeroext i32 @zext_sllw_sext_zext(i32 signext %a, i32 zeroext %b) nounwind {
-; RV64I-LABEL: zext_sllw_sext_zext:
-; RV64I:       # %bb.0:
-; RV64I-NEXT:    sllw a0, a0, a1
-; RV64I-NEXT:    slli a0, a0, 32
-; RV64I-NEXT:    srli a0, a0, 32
-; RV64I-NEXT:    ret
-;
+; RV64-LABEL: zext_sllw_sext_zext:
+; RV64:       # %bb.0:
+; RV64-NEXT:    sllw a0, a0, a1
+; RV64-NEXT:    slli a0, a0, 32
+; RV64-NEXT:    srli a0, a0, 32
+; RV64-NEXT:    ret
 ; RV64ZBA-LABEL: zext_sllw_sext_zext:
 ; RV64ZBA:       # %bb.0:
 ; RV64ZBA-NEXT:    sllw a0, a0, a1
@@ -918,13 +894,12 @@ define zeroext i32 @zext_sllw_sext_zext(i32 signext %a, i32 zeroext %b) nounwind
 }
 
 define zeroext i32 @zext_sllw_zext_aext(i32 zeroext %a, i32 %b) nounwind {
-; RV64I-LABEL: zext_sllw_zext_aext:
-; RV64I:       # %bb.0:
-; RV64I-NEXT:    sllw a0, a0, a1
-; RV64I-NEXT:    slli a0, a0, 32
-; RV64I-NEXT:    srli a0, a0, 32
-; RV64I-NEXT:    ret
-;
+; RV64-LABEL: zext_sllw_zext_aext:
+; RV64:       # %bb.0:
+; RV64-NEXT:    sllw a0, a0, a1
+; RV64-NEXT:    slli a0, a0, 32
+; RV64-NEXT:    srli a0, a0, 32
+; RV64-NEXT:    ret
 ; RV64ZBA-LABEL: zext_sllw_zext_aext:
 ; RV64ZBA:       # %bb.0:
 ; RV64ZBA-NEXT:    sllw a0, a0, a1
@@ -935,13 +910,12 @@ define zeroext i32 @zext_sllw_zext_aext(i32 zeroext %a, i32 %b) nounwind {
 }
 
 define zeroext i32 @zext_sllw_zext_sext(i32 zeroext %a, i32 signext %b) nounwind {
-; RV64I-LABEL: zext_sllw_zext_sext:
-; RV64I:       # %bb.0:
-; RV64I-NEXT:    sllw a0, a0, a1
-; RV64I-NEXT:    slli a0, a0, 32
-; RV64I-NEXT:    srli a0, a0, 32
-; RV64I-NEXT:    ret
-;
+; RV64-LABEL: zext_sllw_zext_sext:
+; RV64:       # %bb.0:
+; RV64-NEXT:    sllw a0, a0, a1
+; RV64-NEXT:    slli a0, a0, 32
+; RV64-NEXT:    srli a0, a0, 32
+; RV64-NEXT:    ret
 ; RV64ZBA-LABEL: zext_sllw_zext_sext:
 ; RV64ZBA:       # %bb.0:
 ; RV64ZBA-NEXT:    sllw a0, a0, a1
@@ -952,13 +926,12 @@ define zeroext i32 @zext_sllw_zext_sext(i32 zeroext %a, i32 signext %b) nounwind
 }
 
 define zeroext i32 @zext_sllw_zext_zext(i32 zeroext %a, i32 zeroext %b) nounwind {
-; RV64I-LABEL: zext_sllw_zext_zext:
-; RV64I:       # %bb.0:
-; RV64I-NEXT:    sllw a0, a0, a1
-; RV64I-NEXT:    slli a0, a0, 32
-; RV64I-NEXT:    srli a0, a0, 32
-; RV64I-NEXT:    ret
-;
+; RV64-LABEL: zext_sllw_zext_zext:
+; RV64:       # %bb.0:
+; RV64-NEXT:    sllw a0, a0, a1
+; RV64-NEXT:    slli a0, a0, 32
+; RV64-NEXT:    srli a0, a0, 32
+; RV64-NEXT:    ret
 ; RV64ZBA-LABEL: zext_sllw_zext_zext:
 ; RV64ZBA:       # %bb.0:
 ; RV64ZBA-NEXT:    sllw a0, a0, a1
@@ -1131,13 +1104,12 @@ define signext i32 @sext_srlw_zext_zext(i32 zeroext %a, i32 zeroext %b) nounwind
 }
 
 define zeroext i32 @zext_srlw_aext_aext(i32 %a, i32 %b) nounwind {
-; RV64I-LABEL: zext_srlw_aext_aext:
-; RV64I:       # %bb.0:
-; RV64I-NEXT:    srlw a0, a0, a1
-; RV64I-NEXT:    slli a0, a0, 32
-; RV64I-NEXT:    srli a0, a0, 32
-; RV64I-NEXT:    ret
-;
+; RV64-LABEL: zext_srlw_aext_aext:
+; RV64:       # %bb.0:
+; RV64-NEXT:    srlw a0, a0, a1
+; RV64-NEXT:    slli a0, a0, 32
+; RV64-NEXT:    srli a0, a0, 32
+; RV64-NEXT:    ret
 ; RV64ZBA-LABEL: zext_srlw_aext_aext:
 ; RV64ZBA:       # %bb.0:
 ; RV64ZBA-NEXT:    srlw a0, a0, a1
@@ -1148,13 +1120,12 @@ define zeroext i32 @zext_srlw_aext_aext(i32 %a, i32 %b) nounwind {
 }
 
 define zeroext i32 @zext_srlw_aext_sext(i32 %a, i32 signext %b) nounwind {
-; RV64I-LABEL: zext_srlw_aext_sext:
-; RV64I:       # %bb.0:
-; RV64I-NEXT:    srlw a0, a0, a1
-; RV64I-NEXT:    slli a0, a0, 32
-; RV64I-NEXT:    srli a0, a0, 32
-; RV64I-NEXT:    ret
-;
+; RV64-LABEL: zext_srlw_aext_sext:
+; RV64:       # %bb.0:
+; RV64-NEXT:    srlw a0, a0, a1
+; RV64-NEXT:    slli a0, a0, 32
+; RV64-NEXT:    srli a0, a0, 32
+; RV64-NEXT:    ret
 ; RV64ZBA-LABEL: zext_srlw_aext_sext:
 ; RV64ZBA:       # %bb.0:
 ; RV64ZBA-NEXT:    srlw a0, a0, a1
@@ -1165,13 +1136,12 @@ define zeroext i32 @zext_srlw_aext_sext(i32 %a, i32 signext %b) nounwind {
 }
 
 define zeroext i32 @zext_srlw_aext_zext(i32 %a, i32 zeroext %b) nounwind {
-; RV64I-LABEL: zext_srlw_aext_zext:
-; RV64I:       # %bb.0:
-; RV64I-NEXT:    srlw a0, a0, a1
-; RV64I-NEXT:    slli a0, a0, 32
-; RV64I-NEXT:    srli a0, a0, 32
-; RV64I-NEXT:    ret
-;
+; RV64-LABEL: zext_srlw_aext_zext:
+; RV64:       # %bb.0:
+; RV64-NEXT:    srlw a0, a0, a1
+; RV64-NEXT:    slli a0, a0, 32
+; RV64-NEXT:    srli a0, a0, 32
+; RV64-NEXT:    ret
 ; RV64ZBA-LABEL: zext_srlw_aext_zext:
 ; RV64ZBA:       # %bb.0:
 ; RV64ZBA-NEXT:    srlw a0, a0, a1
@@ -1182,13 +1152,12 @@ define zeroext i32 @zext_srlw_aext_zext(i32 %a, i32 zeroext %b) nounwind {
 }
 
 define zeroext i32 @zext_srlw_sext_aext(i32 signext %a, i32 %b) nounwind {
-; RV64I-LABEL: zext_srlw_sext_aext:
-; RV64I:       # %bb.0:
-; RV64I-NEXT:    srlw a0, a0, a1
-; RV64I-NEXT:    slli a0, a0, 32
-; RV64I-NEXT:    srli a0, a0, 32
-; RV64I-NEXT:    ret
-;
+; RV64-LABEL: zext_srlw_sext_aext:
+; RV64:       # %bb.0:
+; RV64-NEXT:    srlw a0, a0, a1
+; RV64-NEXT:    slli a0, a0, 32
+; RV64-NEXT:    srli a0, a0, 32
+; RV64-NEXT:    ret
 ; RV64ZBA-LABEL: zext_srlw_sext_aext:
 ; RV64ZBA:       # %bb.0:
 ; RV64ZBA-NEXT:    srlw a0, a0, a1
@@ -1199,13 +1168,12 @@ define zeroext i32 @zext_srlw_sext_aext(i32 signext %a, i32 %b) nounwind {
 }
 
 define zeroext i32 @zext_srlw_sext_sext(i32 signext %a, i32 signext %b) nounwind {
-; RV64I-LABEL: zext_srlw_sext_sext:
-; RV64I:       # %bb.0:
-; RV64I-NEXT:    srlw a0, a0, a1
-; RV64I-NEXT:    slli a0, a0, 32
-; RV64I-NEXT:    srli a0, a0, 32
-; RV64I-NEXT:    ret
-;
+; RV64-LABEL: zext_srlw_sext_sext:
+; RV64:       # %bb.0:
+; RV64-NEXT:    srlw a0, a0, a1
+; RV64-NEXT:    slli a0, a0, 32
+; RV64-NEXT:    srli a0, a0, 32
+; RV64-NEXT:    ret
 ; RV64ZBA-LABEL: zext_srlw_sext_sext:
 ; RV64ZBA:       # %bb.0:
 ; RV64ZBA-NEXT:    srlw a0, a0, a1
@@ -1216,13 +1184,12 @@ define zeroext i32 @zext_srlw_sext_sext(i32 signext %a, i32 signext %b) nounwind
 }
 
 define zeroext i32 @zext_srlw_sext_zext(i32 signext %a, i32 zeroext %b) nounwind {
-; RV64I-LABEL: zext_srlw_sext_zext:
-; RV64I:       # %bb.0:
-; RV64I-NEXT:    srlw a0, a0, a1
-; RV64I-NEXT:    slli a0, a0, 32
-; RV64I-NEXT:    srli a0, a0, 32
-; RV64I-NEXT:    ret
-;
+; RV64-LABEL: zext_srlw_sext_zext:
+; RV64:       # %bb.0:
+; RV64-NEXT:    srlw a0, a0, a1
+; RV64-NEXT:    slli a0, a0, 32
+; RV64-NEXT:    srli a0, a0, 32
+; RV64-NEXT:    ret
 ; RV64ZBA-LABEL: zext_srlw_sext_zext:
 ; RV64ZBA:       # %bb.0:
 ; RV64ZBA-NEXT:    srlw a0, a0, a1
@@ -1233,13 +1200,12 @@ define zeroext i32 @zext_srlw_sext_zext(i32 signext %a, i32 zeroext %b) nounwind
 }
 
 define zeroext i32 @zext_srlw_zext_aext(i32 zeroext %a, i32 %b) nounwind {
-; RV64I-LABEL: zext_srlw_zext_aext:
-; RV64I:       # %bb.0:
-; RV64I-NEXT:    srlw a0, a0, a1
-; RV64I-NEXT:    slli a0, a0, 32
-; RV64I-NEXT:    srli a0, a0, 32
-; RV64I-NEXT:    ret
-;
+; RV64-LABEL: zext_srlw_zext_aext:
+; RV64:       # %bb.0:
+; RV64-NEXT:    srlw a0, a0, a1
+; RV64-NEXT:    slli a0, a0, 32
+; RV64-NEXT:    srli a0, a0, 32
+; RV64-NEXT:    ret
 ; RV64ZBA-LABEL: zext_srlw_zext_aext:
 ; RV64ZBA:       # %bb.0:
 ; RV64ZBA-NEXT:    srlw a0, a0, a1
@@ -1250,13 +1216,12 @@ define zeroext i32 @zext_srlw_zext_aext(i32 zeroext %a, i32 %b) nounwind {
 }
 
 define zeroext i32 @zext_srlw_zext_sext(i32 zeroext %a, i32 signext %b) nounwind {
-; RV64I-LABEL: zext_srlw_zext_sext:
-; RV64I:       # %bb.0:
-; RV64I-NEXT:    srlw a0, a0, a1
-; RV64I-NEXT:    slli a0, a0, 32
-; RV64I-NEXT:    srli a0, a0, 32
-; RV64I-NEXT:    ret
-;
+; RV64-LABEL: zext_srlw_zext_sext:
+; RV64:       # %bb.0:
+; RV64-NEXT:    srlw a0, a0, a1
+; RV64-NEXT:    slli a0, a0, 32
+; RV64-NEXT:    srli a0, a0, 32
+; RV64-NEXT:    ret
 ; RV64ZBA-LABEL: zext_srlw_zext_sext:
 ; RV64ZBA:       # %bb.0:
 ; RV64ZBA-NEXT:    srlw a0, a0, a1
@@ -1267,13 +1232,12 @@ define zeroext i32 @zext_srlw_zext_sext(i32 zeroext %a, i32 signext %b) nounwind
 }
 
 define zeroext i32 @zext_srlw_zext_zext(i32 zeroext %a, i32 zeroext %b) nounwind {
-; RV64I-LABEL: zext_srlw_zext_zext:
-; RV64I:       # %bb.0:
-; RV64I-NEXT:    srlw a0, a0, a1
-; RV64I-NEXT:    slli a0, a0, 32
-; RV64I-NEXT:    srli a0, a0, 32
-; RV64I-NEXT:    ret
-;
+; RV64-LABEL: zext_srlw_zext_zext:
+; RV64:       # %bb.0:
+; RV64-NEXT:    srlw a0, a0, a1
+; RV64-NEXT:    slli a0, a0, 32
+; RV64-NEXT:    srli a0, a0, 32
+; RV64-NEXT:    ret
 ; RV64ZBA-LABEL: zext_srlw_zext_zext:
 ; RV64ZBA:       # %bb.0:
 ; RV64ZBA-NEXT:    srlw a0, a0, a1
@@ -1446,13 +1410,12 @@ define signext i32 @sext_sraw_zext_zext(i32 zeroext %a, i32 zeroext %b) nounwind
 }
 
 define zeroext i32 @zext_sraw_aext_aext(i32 %a, i32 %b) nounwind {
-; RV64I-LABEL: zext_sraw_aext_aext:
-; RV64I:       # %bb.0:
-; RV64I-NEXT:    sraw a0, a0, a1
-; RV64I-NEXT:    slli a0, a0, 32
-; RV64I-NEXT:    srli a0, a0, 32
-; RV64I-NEXT:    ret
-;
+; RV64-LABEL: zext_sraw_aext_aext:
+; RV64:       # %bb.0:
+; RV64-NEXT:    sraw a0, a0, a1
+; RV64-NEXT:    slli a0, a0, 32
+; RV64-NEXT:    srli a0, a0, 32
+; RV64-NEXT:    ret
 ; RV64ZBA-LABEL: zext_sraw_aext_aext:
 ; RV64ZBA:       # %bb.0:
 ; RV64ZBA-NEXT:    sraw a0, a0, a1
@@ -1463,13 +1426,12 @@ define zeroext i32 @zext_sraw_aext_aext(i32 %a, i32 %b) nounwind {
 }
 
 define zeroext i32 @zext_sraw_aext_sext(i32 %a, i32 signext %b) nounwind {
-; RV64I-LABEL: zext_sraw_aext_sext:
-; RV64I:       # %bb.0:
-; RV64I-NEXT:    sraw a0, a0, a1
-; RV64I-NEXT:    slli a0, a0, 32
-; RV64I-NEXT:    srli a0, a0, 32
-; RV64I-NEXT:    ret
-;
+; RV64-LABEL: zext_sraw_aext_sext:
+; RV64:       # %bb.0:
+; RV64-NEXT:    sraw a0, a0, a1
+; RV64-NEXT:    slli a0, a0, 32
+; RV64-NEXT:    srli a0, a0, 32
+; RV64-NEXT:    ret
 ; RV64ZBA-LABEL: zext_sraw_aext_sext:
 ; RV64ZBA:       # %bb.0:
 ; RV64ZBA-NEXT:    sraw a0, a0, a1
@@ -1480,13 +1442,12 @@ define zeroext i32 @zext_sraw_aext_sext(i32 %a, i32 signext %b) nounwind {
 }
 
 define zeroext i32 @zext_sraw_aext_zext(i32 %a, i32 zeroext %b) nounwind {
-; RV64I-LABEL: zext_sraw_aext_zext:
-; RV64I:       # %bb.0:
-; RV64I-NEXT:    sraw a0, a0, a1
-; RV64I-NEXT:    slli a0, a0, 32
-; RV64I-NEXT:    srli a0, a0, 32
-; RV64I-NEXT:    ret
-;
+; RV64-LABEL: zext_sraw_aext_zext:
+; RV64:       # %bb.0:
+; RV64-NEXT:    sraw a0, a0, a1
+; RV64-NEXT:    slli a0, a0, 32
+; RV64-NEXT:    srli a0, a0, 32
+; RV64-NEXT:    ret
 ; RV64ZBA-LABEL: zext_sraw_aext_zext:
 ; RV64ZBA:       # %bb.0:
 ; RV64ZBA-NEXT:    sraw a0, a0, a1
@@ -1497,13 +1458,12 @@ define zeroext i32 @zext_sraw_aext_zext(i32 %a, i32 zeroext %b) nounwind {
 }
 
 define zeroext i32 @zext_sraw_sext_aext(i32 signext %a, i32 %b) nounwind {
-; RV64I-LABEL: zext_sraw_sext_aext:
-; RV64I:       # %bb.0:
-; RV64I-NEXT:    sraw a0, a0, a1
-; RV64I-NEXT:    slli a0, a0, 32
-; RV64I-NEXT:    srli a0, a0, 32
-; RV64I-NEXT:    ret
-;
+; RV64-LABEL: zext_sraw_sext_aext:
+; RV64:       # %bb.0:
+; RV64-NEXT:    sraw a0, a0, a1
+; RV64-NEXT:    slli a0, a0, 32
+; RV64-NEXT:    srli a0, a0, 32
+; RV64-NEXT:    ret
 ; RV64ZBA-LABEL: zext_sraw_sext_aext:
 ; RV64ZBA:       # %bb.0:
 ; RV64ZBA-NEXT:    sraw a0, a0, a1
@@ -1514,13 +1474,12 @@ define zeroext i32 @zext_sraw_sext_aext(i32 signext %a, i32 %b) nounwind {
 }
 
 define zeroext i32 @zext_sraw_sext_sext(i32 signext %a, i32 signext %b) nounwind {
-; RV64I-LABEL: zext_sraw_sext_sext:
-; RV64I:       # %bb.0:
-; RV64I-NEXT:    sraw a0, a0, a1
-; RV64I-NEXT:    slli a0, a0, 32
-; RV64I-NEXT:    srli a0, a0, 32
-; RV64I-NEXT:    ret
-;
+; RV64-LABEL: zext_sraw_sext_sext:
+; RV64:       # %bb.0:
+; RV64-NEXT:    sraw a0, a0, a1
+; RV64-NEXT:    slli a0, a0, 32
+; RV64-NEXT:    srli a0, a0, 32
+; RV64-NEXT:    ret
 ; RV64ZBA-LABEL: zext_sraw_sext_sext:
 ; RV64ZBA:       # %bb.0:
 ; RV64ZBA-NEXT:    sraw a0, a0, a1
@@ -1531,13 +1490,12 @@ define zeroext i32 @zext_sraw_sext_sext(i32 signext %a, i32 signext %b) nounwind
 }
 
 define zeroext i32 @zext_sraw_sext_zext(i32 signext %a, i32 zeroext %b) nounwind {
-; RV64I-LABEL: zext_sraw_sext_zext:
-; RV64I:       # %bb.0:
-; RV64I-NEXT:    sraw a0, a0, a1
-; RV64I-NEXT:    slli a0, a0, 32
-; RV64I-NEXT:    srli a0, a0, 32
-; RV64I-NEXT:    ret
-;
+; RV64-LABEL: zext_sraw_sext_zext:
+; RV64:       # %bb.0:
+; RV64-NEXT:    sraw a0, a0, a1
+; RV64-NEXT:    slli a0, a0, 32
+; RV64-NEXT:    srli a0, a0, 32
+; RV64-NEXT:    ret
 ; RV64ZBA-LABEL: zext_sraw_sext_zext:
 ; RV64ZBA:       # %bb.0:
 ; RV64ZBA-NEXT:    sraw a0, a0, a1
@@ -1548,13 +1506,12 @@ define zeroext i32 @zext_sraw_sext_zext(i32 signext %a, i32 zeroext %b) nounwind
 }
 
 define zeroext i32 @zext_sraw_zext_aext(i32 zeroext %a, i32 %b) nounwind {
-; RV64I-LABEL: zext_sraw_zext_aext:
-; RV64I:       # %bb.0:
-; RV64I-NEXT:    sraw a0, a0, a1
-; RV64I-NEXT:    slli a0, a0, 32
-; RV64I-NEXT:    srli a0, a0, 32
-; RV64I-NEXT:    ret
-;
+; RV64-LABEL: zext_sraw_zext_aext:
+; RV64:       # %bb.0:
+; RV64-NEXT:    sraw a0, a0, a1
+; RV64-NEXT:    slli a0, a0, 32
+; RV64-NEXT:    srli a0, a0, 32
+; RV64-NEXT:    ret
 ; RV64ZBA-LABEL: zext_sraw_zext_aext:
 ; RV64ZBA:       # %bb.0:
 ; RV64ZBA-NEXT:    sraw a0, a0, a1
@@ -1565,13 +1522,12 @@ define zeroext i32 @zext_sraw_zext_aext(i32 zeroext %a, i32 %b) nounwind {
 }
 
 define zeroext i32 @zext_sraw_zext_sext(i32 zeroext %a, i32 signext %b) nounwind {
-; RV64I-LABEL: zext_sraw_zext_sext:
-; RV64I:       # %bb.0:
-; RV64I-NEXT:    sraw a0, a0, a1
-; RV64I-NEXT:    slli a0, a0, 32
-; RV64I-NEXT:    srli a0, a0, 32
-; RV64I-NEXT:    ret
-;
+; RV64-LABEL: zext_sraw_zext_sext:
+; RV64:       # %bb.0:
+; RV64-NEXT:    sraw a0, a0, a1
+; RV64-NEXT:    slli a0, a0, 32
+; RV64-NEXT:    srli a0, a0, 32
+; RV64-NEXT:    ret
 ; RV64ZBA-LABEL: zext_sraw_zext_sext:
 ; RV64ZBA:       # %bb.0:
 ; RV64ZBA-NEXT:    sraw a0, a0, a1
@@ -1582,13 +1538,12 @@ define zeroext i32 @zext_sraw_zext_sext(i32 zeroext %a, i32 signext %b) nounwind
 }
 
 define zeroext i32 @zext_sraw_zext_zext(i32 zeroext %a, i32 zeroext %b) nounwind {
-; RV64I-LABEL: zext_sraw_zext_zext:
-; RV64I:       # %bb.0:
-; RV64I-NEXT:    sraw a0, a0, a1
-; RV64I-NEXT:    slli a0, a0, 32
-; RV64I-NEXT:    srli a0, a0, 32
-; RV64I-NEXT:    ret
-;
+; RV64-LABEL: zext_sraw_zext_zext:
+; RV64:       # %bb.0:
+; RV64-NEXT:    sraw a0, a0, a1
+; RV64-NEXT:    slli a0, a0, 32
+; RV64-NEXT:    srli a0, a0, 32
+; RV64-NEXT:    ret
 ; RV64ZBA-LABEL: zext_sraw_zext_zext:
 ; RV64ZBA:       # %bb.0:
 ; RV64ZBA-NEXT:    sraw a0, a0, a1
@@ -1655,13 +1610,12 @@ define signext i32 @sext_addiw_zext(i32 zeroext %a) nounwind {
 }
 
 define zeroext i32 @zext_addiw_aext(i32 %a) nounwind {
-; RV64I-LABEL: zext_addiw_aext:
-; RV64I:       # %bb.0:
-; RV64I-NEXT:    addi a0, a0, 7
-; RV64I-NEXT:    slli a0, a0, 32
-; RV64I-NEXT:    srli a0, a0, 32
-; RV64I-NEXT:    ret
-;
+; RV64-LABEL: zext_addiw_aext:
+; RV64:       # %bb.0:
+; RV64-NEXT:    addiw a0, a0, 7
+; RV64-NEXT:    slli a0, a0, 32
+; RV64-NEXT:    srli a0, a0, 32
+; RV64-NEXT:    ret
 ; RV64ZBA-LABEL: zext_addiw_aext:
 ; RV64ZBA:       # %bb.0:
 ; RV64ZBA-NEXT:    addi a0, a0, 7
@@ -1672,13 +1626,12 @@ define zeroext i32 @zext_addiw_aext(i32 %a) nounwind {
 }
 
 define zeroext i32 @zext_addiw_sext(i32 signext %a) nounwind {
-; RV64I-LABEL: zext_addiw_sext:
-; RV64I:       # %bb.0:
-; RV64I-NEXT:    addi a0, a0, 8
-; RV64I-NEXT:    slli a0, a0, 32
-; RV64I-NEXT:    srli a0, a0, 32
-; RV64I-NEXT:    ret
-;
+; RV64-LABEL: zext_addiw_sext:
+; RV64:       # %bb.0:
+; RV64-NEXT:    addiw a0, a0, 8
+; RV64-NEXT:    slli a0, a0, 32
+; RV64-NEXT:    srli a0, a0, 32
+; RV64-NEXT:    ret
 ; RV64ZBA-LABEL: zext_addiw_sext:
 ; RV64ZBA:       # %bb.0:
 ; RV64ZBA-NEXT:    addi a0, a0, 8
@@ -1689,13 +1642,12 @@ define zeroext i32 @zext_addiw_sext(i32 signext %a) nounwind {
 }
 
 define zeroext i32 @zext_addiw_zext(i32 zeroext %a) nounwind {
-; RV64I-LABEL: zext_addiw_zext:
-; RV64I:       # %bb.0:
-; RV64I-NEXT:    addi a0, a0, 9
-; RV64I-NEXT:    slli a0, a0, 32
-; RV64I-NEXT:    srli a0, a0, 32
-; RV64I-NEXT:    ret
-;
+; RV64-LABEL: zext_addiw_zext:
+; RV64:       # %bb.0:
+; RV64-NEXT:    addiw a0, a0, 9
+; RV64-NEXT:    slli a0, a0, 32
+; RV64-NEXT:    srli a0, a0, 32
+; RV64-NEXT:    ret
 ; RV64ZBA-LABEL: zext_addiw_zext:
 ; RV64ZBA:       # %bb.0:
 ; RV64ZBA-NEXT:    addi a0, a0, 9
@@ -1932,13 +1884,12 @@ define signext i32 @sext_sraiw_zext(i32 zeroext %a) nounwind {
 }
 
 define zeroext i32 @zext_sraiw_aext(i32 %a) nounwind {
-; RV64I-LABEL: zext_sraiw_aext:
-; RV64I:       # %bb.0:
-; RV64I-NEXT:    sext.w a0, a0
-; RV64I-NEXT:    slli a0, a0, 25
-; RV64I-NEXT:    srli a0, a0, 32
-; RV64I-NEXT:    ret
-;
+; RV64-LABEL: zext_sraiw_aext:
+; RV64:       # %bb.0:
+; RV64-NEXT:    sext.w a0, a0
+; RV64-NEXT:    slli a0, a0, 25
+; RV64-NEXT:    srli a0, a0, 32
+; RV64-NEXT:    ret
 ; RV64ZBA-LABEL: zext_sraiw_aext:
 ; RV64ZBA:       # %bb.0:
 ; RV64ZBA-NEXT:    sraiw a0, a0, 7
@@ -1959,13 +1910,12 @@ define zeroext i32 @zext_sraiw_sext(i32 signext %a) nounwind {
 }
 
 define zeroext i32 @zext_sraiw_zext(i32 zeroext %a) nounwind {
-; RV64I-LABEL: zext_sraiw_zext:
-; RV64I:       # %bb.0:
-; RV64I-NEXT:    sext.w a0, a0
-; RV64I-NEXT:    slli a0, a0, 23
-; RV64I-NEXT:    srli a0, a0, 32
-; RV64I-NEXT:    ret
-;
+; RV64-LABEL: zext_sraiw_zext:
+; RV64:       # %bb.0:
+; RV64-NEXT:    sext.w a0, a0
+; RV64-NEXT:    slli a0, a0, 23
+; RV64-NEXT:    srli a0, a0, 32
+; RV64-NEXT:    ret
 ; RV64ZBA-LABEL: zext_sraiw_zext:
 ; RV64ZBA:       # %bb.0:
 ; RV64ZBA-NEXT:    sraiw a0, a0, 9
@@ -1974,3 +1924,5 @@ define zeroext i32 @zext_sraiw_zext(i32 zeroext %a) nounwind {
   %1 = ashr i32 %a, 9
   ret i32 %1
 }
+;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
+; RV64I: {{.*}}

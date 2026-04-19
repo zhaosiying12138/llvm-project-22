@@ -23,11 +23,21 @@ define void @constraint_o_with_multi_operands() nounwind {
 ; RV64I-LABEL: constraint_o_with_multi_operands:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    lui a0, %hi(eg)
+; RV64I-NEXT:    addi a0, a0, %lo(eg)
 ; RV64I-NEXT:    #APP
-; RV64I-NEXT:    sw zero, %lo(eg)(a0) \n sw zero, %lo(eg)(a0)
+; RV64I-NEXT:    sw zero, 0(a0) \n sw zero, 0(a0)
 ; RV64I-NEXT:    #NO_APP
 ; RV64I-NEXT:    ret
 ;
+; RV64I-MEDIUM-LABEL: constraint_o_with_multi_operands:
+; RV64I-MEDIUM:       # %bb.0:
+; RV64I-MEDIUM-NEXT:  .Lpcrel_hi0:
+; RV64I-MEDIUM-NEXT:    auipc a0, %pcrel_hi(eg)
+; RV64I-MEDIUM-NEXT:    addi a0, a0, %pcrel_lo(.Lpcrel_hi0)
+; RV64I-MEDIUM-NEXT:    #APP
+; RV64I-MEDIUM-NEXT:    sw zero, 0(a0) \n sw zero, 0(a0)
+; RV64I-MEDIUM-NEXT:    #NO_APP
+; RV64I-MEDIUM-NEXT:    ret
 ; RV32I-MEDIUM-LABEL: constraint_o_with_multi_operands:
 ; RV32I-MEDIUM:       # %bb.0:
 ; RV32I-MEDIUM-NEXT:  .Lpcrel_hi0:
@@ -36,15 +46,6 @@ define void @constraint_o_with_multi_operands() nounwind {
 ; RV32I-MEDIUM-NEXT:    sw zero, %pcrel_lo(.Lpcrel_hi0)(a0) \n sw zero, %pcrel_lo(.Lpcrel_hi0)(a0)
 ; RV32I-MEDIUM-NEXT:    #NO_APP
 ; RV32I-MEDIUM-NEXT:    ret
-;
-; RV64I-MEDIUM-LABEL: constraint_o_with_multi_operands:
-; RV64I-MEDIUM:       # %bb.0:
-; RV64I-MEDIUM-NEXT:  .Lpcrel_hi0:
-; RV64I-MEDIUM-NEXT:    auipc a0, %pcrel_hi(eg)
-; RV64I-MEDIUM-NEXT:    #APP
-; RV64I-MEDIUM-NEXT:    sw zero, %pcrel_lo(.Lpcrel_hi0)(a0) \n sw zero, %pcrel_lo(.Lpcrel_hi0)(a0)
-; RV64I-MEDIUM-NEXT:    #NO_APP
-; RV64I-MEDIUM-NEXT:    ret
   call void asm "sw zero, $0 \n sw zero, $1", "=*o,=*o"(ptr elementtype(i32) @eg, ptr elementtype(i32) @eg)
   ret void
 }
@@ -68,16 +69,6 @@ define void @constraint_A_with_multi_operands() nounwind {
 ; RV64I-NEXT:    #NO_APP
 ; RV64I-NEXT:    ret
 ;
-; RV32I-MEDIUM-LABEL: constraint_A_with_multi_operands:
-; RV32I-MEDIUM:       # %bb.0:
-; RV32I-MEDIUM-NEXT:  .Lpcrel_hi1:
-; RV32I-MEDIUM-NEXT:    auipc a0, %pcrel_hi(eg)
-; RV32I-MEDIUM-NEXT:    addi a0, a0, %pcrel_lo(.Lpcrel_hi1)
-; RV32I-MEDIUM-NEXT:    #APP
-; RV32I-MEDIUM-NEXT:    sw zero, 0(a0) \n sw zero, 0(a0)
-; RV32I-MEDIUM-NEXT:    #NO_APP
-; RV32I-MEDIUM-NEXT:    ret
-;
 ; RV64I-MEDIUM-LABEL: constraint_A_with_multi_operands:
 ; RV64I-MEDIUM:       # %bb.0:
 ; RV64I-MEDIUM-NEXT:  .Lpcrel_hi1:
@@ -87,6 +78,15 @@ define void @constraint_A_with_multi_operands() nounwind {
 ; RV64I-MEDIUM-NEXT:    sw zero, 0(a0) \n sw zero, 0(a0)
 ; RV64I-MEDIUM-NEXT:    #NO_APP
 ; RV64I-MEDIUM-NEXT:    ret
+; RV32I-MEDIUM-LABEL: constraint_A_with_multi_operands:
+; RV32I-MEDIUM:       # %bb.0:
+; RV32I-MEDIUM-NEXT:  .Lpcrel_hi1:
+; RV32I-MEDIUM-NEXT:    auipc a0, %pcrel_hi(eg)
+; RV32I-MEDIUM-NEXT:    addi a0, a0, %pcrel_lo(.Lpcrel_hi1)
+; RV32I-MEDIUM-NEXT:    #APP
+; RV32I-MEDIUM-NEXT:    sw zero, 0(a0) \n sw zero, 0(a0)
+; RV32I-MEDIUM-NEXT:    #NO_APP
+; RV32I-MEDIUM-NEXT:    ret
   call void asm "sw zero, $0 \n sw zero, $1", "=*A,=*A"(ptr elementtype(i32) @eg, ptr elementtype(i32) @eg)
   ret void
 }

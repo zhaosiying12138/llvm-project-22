@@ -69,9 +69,7 @@ bool YSXDeadRegisterDefinitions::runOnMachineFunction(MachineFunction &MF) {
       // are reserved for HINT instructions.
       const MCInstrDesc &Desc = MI.getDesc();
       if (!Desc.mayLoad() && !Desc.mayStore() &&
-          !Desc.hasUnmodeledSideEffects() &&
-          MI.getOpcode() != YSX::PseudoVSETVLI &&
-          MI.getOpcode() != YSX::PseudoVSETIVLI)
+          !Desc.hasUnmodeledSideEffects())
         continue;
       for (int I = 0, E = Desc.getNumDefs(); I != E; ++I) {
         MachineOperand &MO = MI.getOperand(I);

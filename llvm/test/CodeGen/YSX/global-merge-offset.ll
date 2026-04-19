@@ -26,10 +26,11 @@ define void @f1(i32 %a) nounwind {
 ;
 ; CHECK-TOOBIG-LABEL: f1:
 ; CHECK-TOOBIG:       # %bb.0:
-; CHECK-TOOBIG-NEXT:    lui a1, %hi(ga1+1640)
+; CHECK-TOOBIG-NEXT:    lui a1, %hi(ga1)
+; CHECK-TOOBIG-NEXT:    addi a1, a1, %lo(ga1)
 ; CHECK-TOOBIG-NEXT:    lui a2, %hi(.L_MergedGlobals)
 ; CHECK-TOOBIG-NEXT:    addi a2, a2, %lo(.L_MergedGlobals)
-; CHECK-TOOBIG-NEXT:    sw a0, %lo(ga1+1640)(a1)
+; CHECK-TOOBIG-NEXT:    sw a0, 1640(a1)
 ; CHECK-TOOBIG-NEXT:    sw a0, 408(a2)
 ; CHECK-TOOBIG-NEXT:    sw a0, 0(a2)
 ; CHECK-TOOBIG-NEXT:    ret

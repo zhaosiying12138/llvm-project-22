@@ -23,7 +23,6 @@ define void @cmpxchg_and_branch1(ptr %ptr, i32 signext %cmp, i32 signext %val) n
 ; NOZACAS-NEXT:  # %bb.5: # %do_cmpxchg
 ; NOZACAS-NEXT:  # %bb.2: # %exit
 ; NOZACAS-NEXT:    ret
-;
 ; ZACAS-LABEL: cmpxchg_and_branch1:
 ; ZACAS:       # %bb.0: # %entry
 ; ZACAS-NEXT:  .LBB0_1: # %do_cmpxchg
@@ -64,7 +63,6 @@ define void @cmpxchg_and_branch2(ptr %ptr, i32 signext %cmp, i32 signext %val) n
 ; NOZACAS-NEXT:    beq a3, a1, .LBB1_1
 ; NOZACAS-NEXT:  # %bb.2: # %exit
 ; NOZACAS-NEXT:    ret
-;
 ; ZACAS-LABEL: cmpxchg_and_branch2:
 ; ZACAS:       # %bb.0: # %entry
 ; ZACAS-NEXT:  .LBB1_1: # %do_cmpxchg
@@ -146,36 +144,35 @@ define void @cmpxchg_masked_and_branch1(ptr %ptr, i8 signext %cmp, i8 signext %v
 ; RV32IA-ZACAS-NEXT:  # %bb.2: # %exit
 ; RV32IA-ZACAS-NEXT:    ret
 ;
-; RV64IA-LABEL: cmpxchg_masked_and_branch1:
-; RV64IA:       # %bb.0: # %entry
-; RV64IA-NEXT:    andi a3, a0, -4
-; RV64IA-NEXT:    slli a4, a0, 3
-; RV64IA-NEXT:    li a0, 255
-; RV64IA-NEXT:    zext.b a1, a1
-; RV64IA-NEXT:    zext.b a2, a2
-; RV64IA-NEXT:    sllw a0, a0, a4
-; RV64IA-NEXT:    sllw a1, a1, a4
-; RV64IA-NEXT:    sllw a2, a2, a4
-; RV64IA-NEXT:  .LBB2_1: # %do_cmpxchg
-; RV64IA-NEXT:    # =>This Loop Header: Depth=1
-; RV64IA-NEXT:    # Child Loop BB2_3 Depth 2
-; RV64IA-NEXT:  .LBB2_3: # %do_cmpxchg
-; RV64IA-NEXT:    # Parent Loop BB2_1 Depth=1
-; RV64IA-NEXT:    # => This Inner Loop Header: Depth=2
-; RV64IA-NEXT:    lr.w.aqrl a4, (a3)
-; RV64IA-NEXT:    and a5, a4, a0
-; RV64IA-NEXT:    bne a5, a1, .LBB2_1
-; RV64IA-NEXT:  # %bb.4: # %do_cmpxchg
-; RV64IA-NEXT:    # in Loop: Header=BB2_3 Depth=2
-; RV64IA-NEXT:    xor a5, a4, a2
-; RV64IA-NEXT:    and a5, a5, a0
-; RV64IA-NEXT:    xor a5, a4, a5
-; RV64IA-NEXT:    sc.w.rl a5, a5, (a3)
-; RV64IA-NEXT:    bnez a5, .LBB2_3
-; RV64IA-NEXT:  # %bb.5: # %do_cmpxchg
-; RV64IA-NEXT:  # %bb.2: # %exit
-; RV64IA-NEXT:    ret
-;
+; NOZACAS-LABEL: cmpxchg_masked_and_branch1:
+; NOZACAS:       # %bb.0: # %entry
+; NOZACAS-NEXT:    andi a3, a0, -4
+; NOZACAS-NEXT:    slliw a4, a0, 3
+; NOZACAS-NEXT:    li a0, 255
+; NOZACAS-NEXT:    zext.b a1, a1
+; NOZACAS-NEXT:    zext.b a2, a2
+; NOZACAS-NEXT:    sllw a0, a0, a4
+; NOZACAS-NEXT:    sllw a1, a1, a4
+; NOZACAS-NEXT:    sllw a2, a2, a4
+; NOZACAS-NEXT:  .LBB2_1: # %do_cmpxchg
+; NOZACAS-NEXT:    # =>This Loop Header: Depth=1
+; NOZACAS-NEXT:    # Child Loop BB2_3 Depth 2
+; NOZACAS-NEXT:  .LBB2_3: # %do_cmpxchg
+; NOZACAS-NEXT:    # Parent Loop BB2_1 Depth=1
+; NOZACAS-NEXT:    # => This Inner Loop Header: Depth=2
+; NOZACAS-NEXT:    lr.w.aqrl a4, (a3)
+; NOZACAS-NEXT:    and a5, a4, a0
+; NOZACAS-NEXT:    bne a5, a1, .LBB2_1
+; NOZACAS-NEXT:  # %bb.4: # %do_cmpxchg
+; NOZACAS-NEXT:    # in Loop: Header=BB2_3 Depth=2
+; NOZACAS-NEXT:    xor a5, a4, a2
+; NOZACAS-NEXT:    and a5, a5, a0
+; NOZACAS-NEXT:    xor a5, a4, a5
+; NOZACAS-NEXT:    sc.w.rl a5, a5, (a3)
+; NOZACAS-NEXT:    bnez a5, .LBB2_3
+; NOZACAS-NEXT:  # %bb.5: # %do_cmpxchg
+; NOZACAS-NEXT:  # %bb.2: # %exit
+; NOZACAS-NEXT:    ret
 ; RV64IA-ZACAS-LABEL: cmpxchg_masked_and_branch1:
 ; RV64IA-ZACAS:       # %bb.0: # %entry
 ; RV64IA-ZACAS-NEXT:    andi a3, a0, -4
@@ -205,7 +202,6 @@ define void @cmpxchg_masked_and_branch1(ptr %ptr, i8 signext %cmp, i8 signext %v
 ; RV64IA-ZACAS-NEXT:  # %bb.5: # %do_cmpxchg
 ; RV64IA-ZACAS-NEXT:  # %bb.2: # %exit
 ; RV64IA-ZACAS-NEXT:    ret
-;
 ; RV64IA-ZABHA-LABEL: cmpxchg_masked_and_branch1:
 ; RV64IA-ZABHA:       # %bb.0: # %entry
 ; RV64IA-ZABHA-NEXT:  .LBB2_1: # %do_cmpxchg
@@ -293,39 +289,38 @@ define void @cmpxchg_masked_and_branch2(ptr %ptr, i8 signext %cmp, i8 signext %v
 ; RV32IA-ZACAS-NEXT:  # %bb.2: # %exit
 ; RV32IA-ZACAS-NEXT:    ret
 ;
-; RV64IA-LABEL: cmpxchg_masked_and_branch2:
-; RV64IA:       # %bb.0: # %entry
-; RV64IA-NEXT:    andi a3, a0, -4
-; RV64IA-NEXT:    slli a4, a0, 3
-; RV64IA-NEXT:    li a0, 255
-; RV64IA-NEXT:    zext.b a1, a1
-; RV64IA-NEXT:    zext.b a2, a2
-; RV64IA-NEXT:    sllw a0, a0, a4
-; RV64IA-NEXT:    sllw a1, a1, a4
-; RV64IA-NEXT:    sllw a2, a2, a4
-; RV64IA-NEXT:  .LBB3_1: # %do_cmpxchg
-; RV64IA-NEXT:    # =>This Loop Header: Depth=1
-; RV64IA-NEXT:    # Child Loop BB3_3 Depth 2
-; RV64IA-NEXT:  .LBB3_3: # %do_cmpxchg
-; RV64IA-NEXT:    # Parent Loop BB3_1 Depth=1
-; RV64IA-NEXT:    # => This Inner Loop Header: Depth=2
-; RV64IA-NEXT:    lr.w.aqrl a4, (a3)
-; RV64IA-NEXT:    and a5, a4, a0
-; RV64IA-NEXT:    bne a5, a1, .LBB3_5
-; RV64IA-NEXT:  # %bb.4: # %do_cmpxchg
-; RV64IA-NEXT:    # in Loop: Header=BB3_3 Depth=2
-; RV64IA-NEXT:    xor a5, a4, a2
-; RV64IA-NEXT:    and a5, a5, a0
-; RV64IA-NEXT:    xor a5, a4, a5
-; RV64IA-NEXT:    sc.w.rl a5, a5, (a3)
-; RV64IA-NEXT:    bnez a5, .LBB3_3
-; RV64IA-NEXT:  .LBB3_5: # %do_cmpxchg
-; RV64IA-NEXT:    # in Loop: Header=BB3_1 Depth=1
-; RV64IA-NEXT:    and a4, a4, a0
-; RV64IA-NEXT:    beq a1, a4, .LBB3_1
-; RV64IA-NEXT:  # %bb.2: # %exit
-; RV64IA-NEXT:    ret
-;
+; NOZACAS-LABEL: cmpxchg_masked_and_branch2:
+; NOZACAS:       # %bb.0: # %entry
+; NOZACAS-NEXT:    andi a3, a0, -4
+; NOZACAS-NEXT:    slliw a4, a0, 3
+; NOZACAS-NEXT:    li a0, 255
+; NOZACAS-NEXT:    zext.b a1, a1
+; NOZACAS-NEXT:    zext.b a2, a2
+; NOZACAS-NEXT:    sllw a0, a0, a4
+; NOZACAS-NEXT:    sllw a1, a1, a4
+; NOZACAS-NEXT:    sllw a2, a2, a4
+; NOZACAS-NEXT:  .LBB3_1: # %do_cmpxchg
+; NOZACAS-NEXT:    # =>This Loop Header: Depth=1
+; NOZACAS-NEXT:    # Child Loop BB3_3 Depth 2
+; NOZACAS-NEXT:  .LBB3_3: # %do_cmpxchg
+; NOZACAS-NEXT:    # Parent Loop BB3_1 Depth=1
+; NOZACAS-NEXT:    # => This Inner Loop Header: Depth=2
+; NOZACAS-NEXT:    lr.w.aqrl a4, (a3)
+; NOZACAS-NEXT:    and a5, a4, a0
+; NOZACAS-NEXT:    bne a5, a1, .LBB3_5
+; NOZACAS-NEXT:  # %bb.4: # %do_cmpxchg
+; NOZACAS-NEXT:    # in Loop: Header=BB3_3 Depth=2
+; NOZACAS-NEXT:    xor a5, a4, a2
+; NOZACAS-NEXT:    and a5, a5, a0
+; NOZACAS-NEXT:    xor a5, a4, a5
+; NOZACAS-NEXT:    sc.w.rl a5, a5, (a3)
+; NOZACAS-NEXT:    bnez a5, .LBB3_3
+; NOZACAS-NEXT:  .LBB3_5: # %do_cmpxchg
+; NOZACAS-NEXT:    # in Loop: Header=BB3_1 Depth=1
+; NOZACAS-NEXT:    and a4, a4, a0
+; NOZACAS-NEXT:    beq a1, a4, .LBB3_1
+; NOZACAS-NEXT:  # %bb.2: # %exit
+; NOZACAS-NEXT:    ret
 ; RV64IA-ZACAS-LABEL: cmpxchg_masked_and_branch2:
 ; RV64IA-ZACAS:       # %bb.0: # %entry
 ; RV64IA-ZACAS-NEXT:    andi a3, a0, -4
@@ -358,7 +353,6 @@ define void @cmpxchg_masked_and_branch2(ptr %ptr, i8 signext %cmp, i8 signext %v
 ; RV64IA-ZACAS-NEXT:    beq a1, a4, .LBB3_1
 ; RV64IA-ZACAS-NEXT:  # %bb.2: # %exit
 ; RV64IA-ZACAS-NEXT:    ret
-;
 ; RV64IA-ZABHA-LABEL: cmpxchg_masked_and_branch2:
 ; RV64IA-ZABHA:       # %bb.0: # %entry
 ; RV64IA-ZABHA-NEXT:  .LBB3_1: # %do_cmpxchg
@@ -399,7 +393,6 @@ define void @cmpxchg_and_irrelevant_branch(ptr %ptr, i32 signext %cmp, i32 signe
 ; NOZACAS-NEXT:    beqz a3, .LBB4_1
 ; NOZACAS-NEXT:  # %bb.2: # %exit
 ; NOZACAS-NEXT:    ret
-;
 ; ZACAS-LABEL: cmpxchg_and_irrelevant_branch:
 ; ZACAS:       # %bb.0: # %entry
 ; ZACAS-NEXT:  .LBB4_1: # %do_cmpxchg
@@ -419,3 +412,5 @@ do_cmpxchg:
 exit:
   ret void
 }
+;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
+; RV64IA: {{.*}}

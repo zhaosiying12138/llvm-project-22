@@ -80,34 +80,33 @@ define void @test() {
 ; RV32ZBA-NEXT:    .cfi_def_cfa_offset 0
 ; RV32ZBA-NEXT:    ret
 ;
-; RV64I-LABEL: test:
-; RV64I:       # %bb.0:
-; RV64I-NEXT:    addi sp, sp, -2032
-; RV64I-NEXT:    .cfi_def_cfa_offset 2032
-; RV64I-NEXT:    sd ra, 2024(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    .cfi_offset ra, -8
-; RV64I-NEXT:    addi sp, sp, -2048
-; RV64I-NEXT:    addi sp, sp, -1120
-; RV64I-NEXT:    .cfi_def_cfa_offset 5200
-; RV64I-NEXT:    addi a0, sp, 8
-; RV64I-NEXT:    addi a1, sp, 2047
-; RV64I-NEXT:    addi a1, a1, 9
-; RV64I-NEXT:    lui a2, 1
-; RV64I-NEXT:    addi a2, a2, 8
-; RV64I-NEXT:    add a2, sp, a2
-; RV64I-NEXT:    lui a3, 1
-; RV64I-NEXT:    addi a3, a3, 1032
-; RV64I-NEXT:    add a3, sp, a3
-; RV64I-NEXT:    call inspect
-; RV64I-NEXT:    addi sp, sp, 2032
-; RV64I-NEXT:    addi sp, sp, 1136
-; RV64I-NEXT:    .cfi_def_cfa_offset 2032
-; RV64I-NEXT:    ld ra, 2024(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    .cfi_restore ra
-; RV64I-NEXT:    addi sp, sp, 2032
-; RV64I-NEXT:    .cfi_def_cfa_offset 0
-; RV64I-NEXT:    ret
-;
+; RV64-LABEL: test:
+; RV64:       # %bb.0:
+; RV64-NEXT:    addi sp, sp, -2032
+; RV64-NEXT:    .cfi_def_cfa_offset 2032
+; RV64-NEXT:    sd ra, 2024(sp) # 8-byte Folded Spill
+; RV64-NEXT:    .cfi_offset ra, -8
+; RV64-NEXT:    addi sp, sp, -2048
+; RV64-NEXT:    addi sp, sp, -1120
+; RV64-NEXT:    .cfi_def_cfa_offset 5200
+; RV64-NEXT:    addi a0, sp, 8
+; RV64-NEXT:    addi a1, sp, 2047
+; RV64-NEXT:    addi a1, a1, 9
+; RV64-NEXT:    lui a2, 1
+; RV64-NEXT:    addi a2, a2, 8
+; RV64-NEXT:    add a2, sp, a2
+; RV64-NEXT:    lui a3, 1
+; RV64-NEXT:    addi a3, a3, 1032
+; RV64-NEXT:    add a3, sp, a3
+; RV64-NEXT:    call inspect
+; RV64-NEXT:    addi sp, sp, 2032
+; RV64-NEXT:    addi sp, sp, 1136
+; RV64-NEXT:    .cfi_def_cfa_offset 2032
+; RV64-NEXT:    ld ra, 2024(sp) # 8-byte Folded Reload
+; RV64-NEXT:    .cfi_restore ra
+; RV64-NEXT:    addi sp, sp, 2032
+; RV64-NEXT:    .cfi_def_cfa_offset 0
+; RV64-NEXT:    ret
 ; RV64ZBA-LABEL: test:
 ; RV64ZBA:       # %bb.0:
 ; RV64ZBA-NEXT:    addi sp, sp, -2032
@@ -206,29 +205,28 @@ define void @align_8() {
 ; RV32ZBA-NEXT:    .cfi_def_cfa_offset 0
 ; RV32ZBA-NEXT:    ret
 ;
-; RV64I-LABEL: align_8:
-; RV64I:       # %bb.0:
-; RV64I-NEXT:    addi sp, sp, -2032
-; RV64I-NEXT:    .cfi_def_cfa_offset 2032
-; RV64I-NEXT:    sd ra, 2024(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    .cfi_offset ra, -8
-; RV64I-NEXT:    addi sp, sp, -2048
-; RV64I-NEXT:    addi sp, sp, -48
-; RV64I-NEXT:    .cfi_def_cfa_offset 4128
-; RV64I-NEXT:    addi a0, sp, 15
-; RV64I-NEXT:    lui a1, 1
-; RV64I-NEXT:    addi a1, a1, 16
-; RV64I-NEXT:    add a1, sp, a1
-; RV64I-NEXT:    call inspect
-; RV64I-NEXT:    addi sp, sp, 2032
-; RV64I-NEXT:    addi sp, sp, 64
-; RV64I-NEXT:    .cfi_def_cfa_offset 2032
-; RV64I-NEXT:    ld ra, 2024(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    .cfi_restore ra
-; RV64I-NEXT:    addi sp, sp, 2032
-; RV64I-NEXT:    .cfi_def_cfa_offset 0
-; RV64I-NEXT:    ret
-;
+; RV64-LABEL: align_8:
+; RV64:       # %bb.0:
+; RV64-NEXT:    addi sp, sp, -2032
+; RV64-NEXT:    .cfi_def_cfa_offset 2032
+; RV64-NEXT:    sd ra, 2024(sp) # 8-byte Folded Spill
+; RV64-NEXT:    .cfi_offset ra, -8
+; RV64-NEXT:    addi sp, sp, -2048
+; RV64-NEXT:    addi sp, sp, -48
+; RV64-NEXT:    .cfi_def_cfa_offset 4128
+; RV64-NEXT:    addi a0, sp, 15
+; RV64-NEXT:    lui a1, 1
+; RV64-NEXT:    addi a1, a1, 16
+; RV64-NEXT:    add a1, sp, a1
+; RV64-NEXT:    call inspect
+; RV64-NEXT:    addi sp, sp, 2032
+; RV64-NEXT:    addi sp, sp, 64
+; RV64-NEXT:    .cfi_def_cfa_offset 2032
+; RV64-NEXT:    ld ra, 2024(sp) # 8-byte Folded Reload
+; RV64-NEXT:    .cfi_restore ra
+; RV64-NEXT:    addi sp, sp, 2032
+; RV64-NEXT:    .cfi_def_cfa_offset 0
+; RV64-NEXT:    ret
 ; RV64ZBA-LABEL: align_8:
 ; RV64ZBA:       # %bb.0:
 ; RV64ZBA-NEXT:    addi sp, sp, -2032
@@ -321,29 +319,28 @@ define void @align_4() {
 ; RV32ZBA-NEXT:    .cfi_def_cfa_offset 0
 ; RV32ZBA-NEXT:    ret
 ;
-; RV64I-LABEL: align_4:
-; RV64I:       # %bb.0:
-; RV64I-NEXT:    addi sp, sp, -2032
-; RV64I-NEXT:    .cfi_def_cfa_offset 2032
-; RV64I-NEXT:    sd ra, 2024(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    .cfi_offset ra, -8
-; RV64I-NEXT:    addi sp, sp, -2048
-; RV64I-NEXT:    addi sp, sp, -48
-; RV64I-NEXT:    .cfi_def_cfa_offset 4128
-; RV64I-NEXT:    addi a0, sp, 19
-; RV64I-NEXT:    lui a1, 1
-; RV64I-NEXT:    addi a1, a1, 20
-; RV64I-NEXT:    add a1, sp, a1
-; RV64I-NEXT:    call inspect
-; RV64I-NEXT:    addi sp, sp, 2032
-; RV64I-NEXT:    addi sp, sp, 64
-; RV64I-NEXT:    .cfi_def_cfa_offset 2032
-; RV64I-NEXT:    ld ra, 2024(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    .cfi_restore ra
-; RV64I-NEXT:    addi sp, sp, 2032
-; RV64I-NEXT:    .cfi_def_cfa_offset 0
-; RV64I-NEXT:    ret
-;
+; RV64-LABEL: align_4:
+; RV64:       # %bb.0:
+; RV64-NEXT:    addi sp, sp, -2032
+; RV64-NEXT:    .cfi_def_cfa_offset 2032
+; RV64-NEXT:    sd ra, 2024(sp) # 8-byte Folded Spill
+; RV64-NEXT:    .cfi_offset ra, -8
+; RV64-NEXT:    addi sp, sp, -2048
+; RV64-NEXT:    addi sp, sp, -48
+; RV64-NEXT:    .cfi_def_cfa_offset 4128
+; RV64-NEXT:    addi a0, sp, 19
+; RV64-NEXT:    lui a1, 1
+; RV64-NEXT:    addi a1, a1, 20
+; RV64-NEXT:    add a1, sp, a1
+; RV64-NEXT:    call inspect
+; RV64-NEXT:    addi sp, sp, 2032
+; RV64-NEXT:    addi sp, sp, 64
+; RV64-NEXT:    .cfi_def_cfa_offset 2032
+; RV64-NEXT:    ld ra, 2024(sp) # 8-byte Folded Reload
+; RV64-NEXT:    .cfi_restore ra
+; RV64-NEXT:    addi sp, sp, 2032
+; RV64-NEXT:    .cfi_def_cfa_offset 0
+; RV64-NEXT:    ret
 ; RV64ZBA-LABEL: align_4:
 ; RV64ZBA:       # %bb.0:
 ; RV64ZBA-NEXT:    addi sp, sp, -2032
@@ -558,31 +555,30 @@ define void @align_1_lui() {
 ; RV32XQCILIA-NEXT:    .cfi_def_cfa_offset 0
 ; RV32XQCILIA-NEXT:    ret
 ;
-; RV64I-LABEL: align_1_lui:
-; RV64I:       # %bb.0:
-; RV64I-NEXT:    addi sp, sp, -2032
-; RV64I-NEXT:    .cfi_def_cfa_offset 2032
-; RV64I-NEXT:    sd ra, 2024(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    .cfi_offset ra, -8
-; RV64I-NEXT:    lui a0, 1
-; RV64I-NEXT:    addi a0, a0, 16
-; RV64I-NEXT:    sub sp, sp, a0
-; RV64I-NEXT:    .cfi_def_cfa_offset 6144
-; RV64I-NEXT:    addi a0, sp, 20
-; RV64I-NEXT:    lui a1, 1
-; RV64I-NEXT:    addi a1, a1, 2039
-; RV64I-NEXT:    add a1, sp, a1
-; RV64I-NEXT:    call inspect
-; RV64I-NEXT:    lui a0, 1
-; RV64I-NEXT:    addi a0, a0, 16
-; RV64I-NEXT:    add sp, sp, a0
-; RV64I-NEXT:    .cfi_def_cfa_offset 2032
-; RV64I-NEXT:    ld ra, 2024(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    .cfi_restore ra
-; RV64I-NEXT:    addi sp, sp, 2032
-; RV64I-NEXT:    .cfi_def_cfa_offset 0
-; RV64I-NEXT:    ret
-;
+; RV64-LABEL: align_1_lui:
+; RV64:       # %bb.0:
+; RV64-NEXT:    addi sp, sp, -2032
+; RV64-NEXT:    .cfi_def_cfa_offset 2032
+; RV64-NEXT:    sd ra, 2024(sp) # 8-byte Folded Spill
+; RV64-NEXT:    .cfi_offset ra, -8
+; RV64-NEXT:    lui a0, 1
+; RV64-NEXT:    addi a0, a0, 16
+; RV64-NEXT:    sub sp, sp, a0
+; RV64-NEXT:    .cfi_def_cfa_offset 6144
+; RV64-NEXT:    addi a0, sp, 20
+; RV64-NEXT:    lui a1, 1
+; RV64-NEXT:    addi a1, a1, 2039
+; RV64-NEXT:    add a1, sp, a1
+; RV64-NEXT:    call inspect
+; RV64-NEXT:    lui a0, 1
+; RV64-NEXT:    addi a0, a0, 16
+; RV64-NEXT:    add sp, sp, a0
+; RV64-NEXT:    .cfi_def_cfa_offset 2032
+; RV64-NEXT:    ld ra, 2024(sp) # 8-byte Folded Reload
+; RV64-NEXT:    .cfi_restore ra
+; RV64-NEXT:    addi sp, sp, 2032
+; RV64-NEXT:    .cfi_def_cfa_offset 0
+; RV64-NEXT:    ret
 ; RV64ZBA-LABEL: align_1_lui:
 ; RV64ZBA:       # %bb.0:
 ; RV64ZBA-NEXT:    addi sp, sp, -2032
@@ -610,3 +606,5 @@ define void @align_1_lui() {
   call void (...) @inspect(ptr %p1, ptr %p2)
   ret void
 }
+;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
+; RV64I: {{.*}}

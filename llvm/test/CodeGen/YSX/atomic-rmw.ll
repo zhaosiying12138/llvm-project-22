@@ -63,7 +63,7 @@ define i8 @atomicrmw_xchg_i8_monotonic(ptr %a, i8 %b) nounwind {
 ; RV64I-LABEL: atomicrmw_xchg_i8_monotonic:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    andi a2, a0, -4
-; RV64I-NEXT:    slli a0, a0, 3
+; RV64I-NEXT:    slliw a0, a0, 3
 ; RV64I-NEXT:    li a3, 255
 ; RV64I-NEXT:    zext.b a1, a1
 ; RV64I-NEXT:    sllw a3, a3, a0
@@ -83,7 +83,7 @@ define i8 @atomicrmw_xchg_i8_monotonic(ptr %a, i8 %b) nounwind {
 ; RV64I-ZALRSC-LABEL: atomicrmw_xchg_i8_monotonic:
 ; RV64I-ZALRSC:       # %bb.0:
 ; RV64I-ZALRSC-NEXT:    andi a2, a0, -4
-; RV64I-ZALRSC-NEXT:    slli a0, a0, 3
+; RV64I-ZALRSC-NEXT:    slliw a0, a0, 3
 ; RV64I-ZALRSC-NEXT:    li a3, 255
 ; RV64I-ZALRSC-NEXT:    zext.b a1, a1
 ; RV64I-ZALRSC-NEXT:    sllw a3, a3, a0
@@ -103,7 +103,7 @@ define i8 @atomicrmw_xchg_i8_monotonic(ptr %a, i8 %b) nounwind {
 ; RV64IA-LABEL: atomicrmw_xchg_i8_monotonic:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    andi a2, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
+; RV64IA-NEXT:    slliw a0, a0, 3
 ; RV64IA-NEXT:    li a3, 255
 ; RV64IA-NEXT:    zext.b a1, a1
 ; RV64IA-NEXT:    sllw a3, a3, a0
@@ -251,7 +251,7 @@ define i8 @atomicrmw_xchg_i8_acquire(ptr %a, i8 %b) nounwind {
 ; RV64I-LABEL: atomicrmw_xchg_i8_acquire:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    andi a2, a0, -4
-; RV64I-NEXT:    slli a0, a0, 3
+; RV64I-NEXT:    slliw a0, a0, 3
 ; RV64I-NEXT:    li a3, 255
 ; RV64I-NEXT:    zext.b a1, a1
 ; RV64I-NEXT:    sllw a3, a3, a0
@@ -271,7 +271,7 @@ define i8 @atomicrmw_xchg_i8_acquire(ptr %a, i8 %b) nounwind {
 ; RV64I-ZALRSC-LABEL: atomicrmw_xchg_i8_acquire:
 ; RV64I-ZALRSC:       # %bb.0:
 ; RV64I-ZALRSC-NEXT:    andi a2, a0, -4
-; RV64I-ZALRSC-NEXT:    slli a0, a0, 3
+; RV64I-ZALRSC-NEXT:    slliw a0, a0, 3
 ; RV64I-ZALRSC-NEXT:    li a3, 255
 ; RV64I-ZALRSC-NEXT:    zext.b a1, a1
 ; RV64I-ZALRSC-NEXT:    sllw a3, a3, a0
@@ -291,7 +291,7 @@ define i8 @atomicrmw_xchg_i8_acquire(ptr %a, i8 %b) nounwind {
 ; RV64IA-LABEL: atomicrmw_xchg_i8_acquire:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    andi a2, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
+; RV64IA-NEXT:    slliw a0, a0, 3
 ; RV64IA-NEXT:    li a3, 255
 ; RV64IA-NEXT:    zext.b a1, a1
 ; RV64IA-NEXT:    sllw a3, a3, a0
@@ -496,7 +496,7 @@ define i8 @atomicrmw_xchg_i8_release(ptr %a, i8 %b) nounwind {
 ; RV64I-LABEL: atomicrmw_xchg_i8_release:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    andi a2, a0, -4
-; RV64I-NEXT:    slli a0, a0, 3
+; RV64I-NEXT:    slliw a0, a0, 3
 ; RV64I-NEXT:    li a3, 255
 ; RV64I-NEXT:    zext.b a1, a1
 ; RV64I-NEXT:    sllw a3, a3, a0
@@ -516,7 +516,7 @@ define i8 @atomicrmw_xchg_i8_release(ptr %a, i8 %b) nounwind {
 ; RV64I-ZALRSC-LABEL: atomicrmw_xchg_i8_release:
 ; RV64I-ZALRSC:       # %bb.0:
 ; RV64I-ZALRSC-NEXT:    andi a2, a0, -4
-; RV64I-ZALRSC-NEXT:    slli a0, a0, 3
+; RV64I-ZALRSC-NEXT:    slliw a0, a0, 3
 ; RV64I-ZALRSC-NEXT:    li a3, 255
 ; RV64I-ZALRSC-NEXT:    zext.b a1, a1
 ; RV64I-ZALRSC-NEXT:    sllw a3, a3, a0
@@ -536,7 +536,7 @@ define i8 @atomicrmw_xchg_i8_release(ptr %a, i8 %b) nounwind {
 ; RV64IA-LABEL: atomicrmw_xchg_i8_release:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    andi a2, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
+; RV64IA-NEXT:    slliw a0, a0, 3
 ; RV64IA-NEXT:    li a3, 255
 ; RV64IA-NEXT:    zext.b a1, a1
 ; RV64IA-NEXT:    sllw a3, a3, a0
@@ -741,7 +741,7 @@ define i8 @atomicrmw_xchg_i8_acq_rel(ptr %a, i8 %b) nounwind {
 ; RV64I-LABEL: atomicrmw_xchg_i8_acq_rel:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    andi a2, a0, -4
-; RV64I-NEXT:    slli a0, a0, 3
+; RV64I-NEXT:    slliw a0, a0, 3
 ; RV64I-NEXT:    li a3, 255
 ; RV64I-NEXT:    zext.b a1, a1
 ; RV64I-NEXT:    sllw a3, a3, a0
@@ -761,7 +761,7 @@ define i8 @atomicrmw_xchg_i8_acq_rel(ptr %a, i8 %b) nounwind {
 ; RV64I-ZALRSC-LABEL: atomicrmw_xchg_i8_acq_rel:
 ; RV64I-ZALRSC:       # %bb.0:
 ; RV64I-ZALRSC-NEXT:    andi a2, a0, -4
-; RV64I-ZALRSC-NEXT:    slli a0, a0, 3
+; RV64I-ZALRSC-NEXT:    slliw a0, a0, 3
 ; RV64I-ZALRSC-NEXT:    li a3, 255
 ; RV64I-ZALRSC-NEXT:    zext.b a1, a1
 ; RV64I-ZALRSC-NEXT:    sllw a3, a3, a0
@@ -781,7 +781,7 @@ define i8 @atomicrmw_xchg_i8_acq_rel(ptr %a, i8 %b) nounwind {
 ; RV64IA-LABEL: atomicrmw_xchg_i8_acq_rel:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    andi a2, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
+; RV64IA-NEXT:    slliw a0, a0, 3
 ; RV64IA-NEXT:    li a3, 255
 ; RV64IA-NEXT:    zext.b a1, a1
 ; RV64IA-NEXT:    sllw a3, a3, a0
@@ -966,7 +966,7 @@ define i8 @atomicrmw_xchg_i8_seq_cst(ptr %a, i8 %b) nounwind {
 ; RV64I-LABEL: atomicrmw_xchg_i8_seq_cst:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    andi a2, a0, -4
-; RV64I-NEXT:    slli a0, a0, 3
+; RV64I-NEXT:    slliw a0, a0, 3
 ; RV64I-NEXT:    li a3, 255
 ; RV64I-NEXT:    zext.b a1, a1
 ; RV64I-NEXT:    sllw a3, a3, a0
@@ -986,7 +986,7 @@ define i8 @atomicrmw_xchg_i8_seq_cst(ptr %a, i8 %b) nounwind {
 ; RV64I-ZALRSC-LABEL: atomicrmw_xchg_i8_seq_cst:
 ; RV64I-ZALRSC:       # %bb.0:
 ; RV64I-ZALRSC-NEXT:    andi a2, a0, -4
-; RV64I-ZALRSC-NEXT:    slli a0, a0, 3
+; RV64I-ZALRSC-NEXT:    slliw a0, a0, 3
 ; RV64I-ZALRSC-NEXT:    li a3, 255
 ; RV64I-ZALRSC-NEXT:    zext.b a1, a1
 ; RV64I-ZALRSC-NEXT:    sllw a3, a3, a0
@@ -1006,7 +1006,7 @@ define i8 @atomicrmw_xchg_i8_seq_cst(ptr %a, i8 %b) nounwind {
 ; RV64IA-LABEL: atomicrmw_xchg_i8_seq_cst:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    andi a2, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
+; RV64IA-NEXT:    slliw a0, a0, 3
 ; RV64IA-NEXT:    li a3, 255
 ; RV64IA-NEXT:    zext.b a1, a1
 ; RV64IA-NEXT:    sllw a3, a3, a0
@@ -1125,7 +1125,7 @@ define i8 @atomicrmw_xchg_0_i8_monotonic(ptr %a) nounwind {
 ; RV64I-LABEL: atomicrmw_xchg_0_i8_monotonic:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    andi a1, a0, -4
-; RV64I-NEXT:    slli a0, a0, 3
+; RV64I-NEXT:    slliw a0, a0, 3
 ; RV64I-NEXT:    li a2, 255
 ; RV64I-NEXT:    sllw a2, a2, a0
 ; RV64I-NEXT:    not a2, a2
@@ -1136,7 +1136,7 @@ define i8 @atomicrmw_xchg_0_i8_monotonic(ptr %a) nounwind {
 ; RV64I-ZALRSC-LABEL: atomicrmw_xchg_0_i8_monotonic:
 ; RV64I-ZALRSC:       # %bb.0:
 ; RV64I-ZALRSC-NEXT:    andi a1, a0, -4
-; RV64I-ZALRSC-NEXT:    slli a0, a0, 3
+; RV64I-ZALRSC-NEXT:    slliw a0, a0, 3
 ; RV64I-ZALRSC-NEXT:    li a2, 255
 ; RV64I-ZALRSC-NEXT:    sllw a2, a2, a0
 ; RV64I-ZALRSC-NEXT:    not a2, a2
@@ -1147,7 +1147,7 @@ define i8 @atomicrmw_xchg_0_i8_monotonic(ptr %a) nounwind {
 ; RV64IA-LABEL: atomicrmw_xchg_0_i8_monotonic:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    andi a1, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
+; RV64IA-NEXT:    slliw a0, a0, 3
 ; RV64IA-NEXT:    li a2, 255
 ; RV64IA-NEXT:    sllw a2, a2, a0
 ; RV64IA-NEXT:    not a2, a2
@@ -1247,7 +1247,7 @@ define i8 @atomicrmw_xchg_0_i8_acquire(ptr %a) nounwind {
 ; RV64I-LABEL: atomicrmw_xchg_0_i8_acquire:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    andi a1, a0, -4
-; RV64I-NEXT:    slli a0, a0, 3
+; RV64I-NEXT:    slliw a0, a0, 3
 ; RV64I-NEXT:    li a2, 255
 ; RV64I-NEXT:    sllw a2, a2, a0
 ; RV64I-NEXT:    not a2, a2
@@ -1258,7 +1258,7 @@ define i8 @atomicrmw_xchg_0_i8_acquire(ptr %a) nounwind {
 ; RV64I-ZALRSC-LABEL: atomicrmw_xchg_0_i8_acquire:
 ; RV64I-ZALRSC:       # %bb.0:
 ; RV64I-ZALRSC-NEXT:    andi a1, a0, -4
-; RV64I-ZALRSC-NEXT:    slli a0, a0, 3
+; RV64I-ZALRSC-NEXT:    slliw a0, a0, 3
 ; RV64I-ZALRSC-NEXT:    li a2, 255
 ; RV64I-ZALRSC-NEXT:    sllw a2, a2, a0
 ; RV64I-ZALRSC-NEXT:    not a2, a2
@@ -1269,7 +1269,7 @@ define i8 @atomicrmw_xchg_0_i8_acquire(ptr %a) nounwind {
 ; RV64IA-LABEL: atomicrmw_xchg_0_i8_acquire:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    andi a1, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
+; RV64IA-NEXT:    slliw a0, a0, 3
 ; RV64IA-NEXT:    li a2, 255
 ; RV64IA-NEXT:    sllw a2, a2, a0
 ; RV64IA-NEXT:    not a2, a2
@@ -1399,7 +1399,7 @@ define i8 @atomicrmw_xchg_0_i8_release(ptr %a) nounwind {
 ; RV64I-LABEL: atomicrmw_xchg_0_i8_release:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    andi a1, a0, -4
-; RV64I-NEXT:    slli a0, a0, 3
+; RV64I-NEXT:    slliw a0, a0, 3
 ; RV64I-NEXT:    li a2, 255
 ; RV64I-NEXT:    sllw a2, a2, a0
 ; RV64I-NEXT:    not a2, a2
@@ -1410,7 +1410,7 @@ define i8 @atomicrmw_xchg_0_i8_release(ptr %a) nounwind {
 ; RV64I-ZALRSC-LABEL: atomicrmw_xchg_0_i8_release:
 ; RV64I-ZALRSC:       # %bb.0:
 ; RV64I-ZALRSC-NEXT:    andi a1, a0, -4
-; RV64I-ZALRSC-NEXT:    slli a0, a0, 3
+; RV64I-ZALRSC-NEXT:    slliw a0, a0, 3
 ; RV64I-ZALRSC-NEXT:    li a2, 255
 ; RV64I-ZALRSC-NEXT:    sllw a2, a2, a0
 ; RV64I-ZALRSC-NEXT:    not a2, a2
@@ -1421,7 +1421,7 @@ define i8 @atomicrmw_xchg_0_i8_release(ptr %a) nounwind {
 ; RV64IA-LABEL: atomicrmw_xchg_0_i8_release:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    andi a1, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
+; RV64IA-NEXT:    slliw a0, a0, 3
 ; RV64IA-NEXT:    li a2, 255
 ; RV64IA-NEXT:    sllw a2, a2, a0
 ; RV64IA-NEXT:    not a2, a2
@@ -1551,7 +1551,7 @@ define i8 @atomicrmw_xchg_0_i8_acq_rel(ptr %a) nounwind {
 ; RV64I-LABEL: atomicrmw_xchg_0_i8_acq_rel:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    andi a1, a0, -4
-; RV64I-NEXT:    slli a0, a0, 3
+; RV64I-NEXT:    slliw a0, a0, 3
 ; RV64I-NEXT:    li a2, 255
 ; RV64I-NEXT:    sllw a2, a2, a0
 ; RV64I-NEXT:    not a2, a2
@@ -1562,7 +1562,7 @@ define i8 @atomicrmw_xchg_0_i8_acq_rel(ptr %a) nounwind {
 ; RV64I-ZALRSC-LABEL: atomicrmw_xchg_0_i8_acq_rel:
 ; RV64I-ZALRSC:       # %bb.0:
 ; RV64I-ZALRSC-NEXT:    andi a1, a0, -4
-; RV64I-ZALRSC-NEXT:    slli a0, a0, 3
+; RV64I-ZALRSC-NEXT:    slliw a0, a0, 3
 ; RV64I-ZALRSC-NEXT:    li a2, 255
 ; RV64I-ZALRSC-NEXT:    sllw a2, a2, a0
 ; RV64I-ZALRSC-NEXT:    not a2, a2
@@ -1573,7 +1573,7 @@ define i8 @atomicrmw_xchg_0_i8_acq_rel(ptr %a) nounwind {
 ; RV64IA-LABEL: atomicrmw_xchg_0_i8_acq_rel:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    andi a1, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
+; RV64IA-NEXT:    slliw a0, a0, 3
 ; RV64IA-NEXT:    li a2, 255
 ; RV64IA-NEXT:    sllw a2, a2, a0
 ; RV64IA-NEXT:    not a2, a2
@@ -1703,7 +1703,7 @@ define i8 @atomicrmw_xchg_0_i8_seq_cst(ptr %a) nounwind {
 ; RV64I-LABEL: atomicrmw_xchg_0_i8_seq_cst:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    andi a1, a0, -4
-; RV64I-NEXT:    slli a0, a0, 3
+; RV64I-NEXT:    slliw a0, a0, 3
 ; RV64I-NEXT:    li a2, 255
 ; RV64I-NEXT:    sllw a2, a2, a0
 ; RV64I-NEXT:    not a2, a2
@@ -1714,7 +1714,7 @@ define i8 @atomicrmw_xchg_0_i8_seq_cst(ptr %a) nounwind {
 ; RV64I-ZALRSC-LABEL: atomicrmw_xchg_0_i8_seq_cst:
 ; RV64I-ZALRSC:       # %bb.0:
 ; RV64I-ZALRSC-NEXT:    andi a1, a0, -4
-; RV64I-ZALRSC-NEXT:    slli a0, a0, 3
+; RV64I-ZALRSC-NEXT:    slliw a0, a0, 3
 ; RV64I-ZALRSC-NEXT:    li a2, 255
 ; RV64I-ZALRSC-NEXT:    sllw a2, a2, a0
 ; RV64I-ZALRSC-NEXT:    not a2, a2
@@ -1725,7 +1725,7 @@ define i8 @atomicrmw_xchg_0_i8_seq_cst(ptr %a) nounwind {
 ; RV64IA-LABEL: atomicrmw_xchg_0_i8_seq_cst:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    andi a1, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
+; RV64IA-NEXT:    slliw a0, a0, 3
 ; RV64IA-NEXT:    li a2, 255
 ; RV64IA-NEXT:    sllw a2, a2, a0
 ; RV64IA-NEXT:    not a2, a2
@@ -1842,7 +1842,7 @@ define i8 @atomicrmw_xchg_minus_1_i8_monotonic(ptr %a) nounwind {
 ; RV64I-LABEL: atomicrmw_xchg_minus_1_i8_monotonic:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    andi a1, a0, -4
-; RV64I-NEXT:    slli a0, a0, 3
+; RV64I-NEXT:    slliw a0, a0, 3
 ; RV64I-NEXT:    li a2, 255
 ; RV64I-NEXT:    sllw a2, a2, a0
 ; RV64I-NEXT:    amoor.w a1, a2, (a1)
@@ -1852,7 +1852,7 @@ define i8 @atomicrmw_xchg_minus_1_i8_monotonic(ptr %a) nounwind {
 ; RV64I-ZALRSC-LABEL: atomicrmw_xchg_minus_1_i8_monotonic:
 ; RV64I-ZALRSC:       # %bb.0:
 ; RV64I-ZALRSC-NEXT:    andi a1, a0, -4
-; RV64I-ZALRSC-NEXT:    slli a0, a0, 3
+; RV64I-ZALRSC-NEXT:    slliw a0, a0, 3
 ; RV64I-ZALRSC-NEXT:    li a2, 255
 ; RV64I-ZALRSC-NEXT:    sllw a2, a2, a0
 ; RV64I-ZALRSC-NEXT:    amoor.w a1, a2, (a1)
@@ -1862,7 +1862,7 @@ define i8 @atomicrmw_xchg_minus_1_i8_monotonic(ptr %a) nounwind {
 ; RV64IA-LABEL: atomicrmw_xchg_minus_1_i8_monotonic:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    andi a1, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
+; RV64IA-NEXT:    slliw a0, a0, 3
 ; RV64IA-NEXT:    li a2, 255
 ; RV64IA-NEXT:    sllw a2, a2, a0
 ; RV64IA-NEXT:    amoor.w a1, a2, (a1)
@@ -1960,7 +1960,7 @@ define i8 @atomicrmw_xchg_minus_1_i8_acquire(ptr %a) nounwind {
 ; RV64I-LABEL: atomicrmw_xchg_minus_1_i8_acquire:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    andi a1, a0, -4
-; RV64I-NEXT:    slli a0, a0, 3
+; RV64I-NEXT:    slliw a0, a0, 3
 ; RV64I-NEXT:    li a2, 255
 ; RV64I-NEXT:    sllw a2, a2, a0
 ; RV64I-NEXT:    amoor.w.aq a1, a2, (a1)
@@ -1970,7 +1970,7 @@ define i8 @atomicrmw_xchg_minus_1_i8_acquire(ptr %a) nounwind {
 ; RV64I-ZALRSC-LABEL: atomicrmw_xchg_minus_1_i8_acquire:
 ; RV64I-ZALRSC:       # %bb.0:
 ; RV64I-ZALRSC-NEXT:    andi a1, a0, -4
-; RV64I-ZALRSC-NEXT:    slli a0, a0, 3
+; RV64I-ZALRSC-NEXT:    slliw a0, a0, 3
 ; RV64I-ZALRSC-NEXT:    li a2, 255
 ; RV64I-ZALRSC-NEXT:    sllw a2, a2, a0
 ; RV64I-ZALRSC-NEXT:    amoor.w.aq a1, a2, (a1)
@@ -1980,7 +1980,7 @@ define i8 @atomicrmw_xchg_minus_1_i8_acquire(ptr %a) nounwind {
 ; RV64IA-LABEL: atomicrmw_xchg_minus_1_i8_acquire:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    andi a1, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
+; RV64IA-NEXT:    slliw a0, a0, 3
 ; RV64IA-NEXT:    li a2, 255
 ; RV64IA-NEXT:    sllw a2, a2, a0
 ; RV64IA-NEXT:    amoor.w.aq a1, a2, (a1)
@@ -2105,7 +2105,7 @@ define i8 @atomicrmw_xchg_minus_1_i8_release(ptr %a) nounwind {
 ; RV64I-LABEL: atomicrmw_xchg_minus_1_i8_release:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    andi a1, a0, -4
-; RV64I-NEXT:    slli a0, a0, 3
+; RV64I-NEXT:    slliw a0, a0, 3
 ; RV64I-NEXT:    li a2, 255
 ; RV64I-NEXT:    sllw a2, a2, a0
 ; RV64I-NEXT:    amoor.w.rl a1, a2, (a1)
@@ -2115,7 +2115,7 @@ define i8 @atomicrmw_xchg_minus_1_i8_release(ptr %a) nounwind {
 ; RV64I-ZALRSC-LABEL: atomicrmw_xchg_minus_1_i8_release:
 ; RV64I-ZALRSC:       # %bb.0:
 ; RV64I-ZALRSC-NEXT:    andi a1, a0, -4
-; RV64I-ZALRSC-NEXT:    slli a0, a0, 3
+; RV64I-ZALRSC-NEXT:    slliw a0, a0, 3
 ; RV64I-ZALRSC-NEXT:    li a2, 255
 ; RV64I-ZALRSC-NEXT:    sllw a2, a2, a0
 ; RV64I-ZALRSC-NEXT:    amoor.w.rl a1, a2, (a1)
@@ -2125,7 +2125,7 @@ define i8 @atomicrmw_xchg_minus_1_i8_release(ptr %a) nounwind {
 ; RV64IA-LABEL: atomicrmw_xchg_minus_1_i8_release:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    andi a1, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
+; RV64IA-NEXT:    slliw a0, a0, 3
 ; RV64IA-NEXT:    li a2, 255
 ; RV64IA-NEXT:    sllw a2, a2, a0
 ; RV64IA-NEXT:    amoor.w.rl a1, a2, (a1)
@@ -2250,7 +2250,7 @@ define i8 @atomicrmw_xchg_minus_1_i8_acq_rel(ptr %a) nounwind {
 ; RV64I-LABEL: atomicrmw_xchg_minus_1_i8_acq_rel:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    andi a1, a0, -4
-; RV64I-NEXT:    slli a0, a0, 3
+; RV64I-NEXT:    slliw a0, a0, 3
 ; RV64I-NEXT:    li a2, 255
 ; RV64I-NEXT:    sllw a2, a2, a0
 ; RV64I-NEXT:    amoor.w.aqrl a1, a2, (a1)
@@ -2260,7 +2260,7 @@ define i8 @atomicrmw_xchg_minus_1_i8_acq_rel(ptr %a) nounwind {
 ; RV64I-ZALRSC-LABEL: atomicrmw_xchg_minus_1_i8_acq_rel:
 ; RV64I-ZALRSC:       # %bb.0:
 ; RV64I-ZALRSC-NEXT:    andi a1, a0, -4
-; RV64I-ZALRSC-NEXT:    slli a0, a0, 3
+; RV64I-ZALRSC-NEXT:    slliw a0, a0, 3
 ; RV64I-ZALRSC-NEXT:    li a2, 255
 ; RV64I-ZALRSC-NEXT:    sllw a2, a2, a0
 ; RV64I-ZALRSC-NEXT:    amoor.w.aqrl a1, a2, (a1)
@@ -2270,7 +2270,7 @@ define i8 @atomicrmw_xchg_minus_1_i8_acq_rel(ptr %a) nounwind {
 ; RV64IA-LABEL: atomicrmw_xchg_minus_1_i8_acq_rel:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    andi a1, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
+; RV64IA-NEXT:    slliw a0, a0, 3
 ; RV64IA-NEXT:    li a2, 255
 ; RV64IA-NEXT:    sllw a2, a2, a0
 ; RV64IA-NEXT:    amoor.w.aqrl a1, a2, (a1)
@@ -2395,7 +2395,7 @@ define i8 @atomicrmw_xchg_minus_1_i8_seq_cst(ptr %a) nounwind {
 ; RV64I-LABEL: atomicrmw_xchg_minus_1_i8_seq_cst:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    andi a1, a0, -4
-; RV64I-NEXT:    slli a0, a0, 3
+; RV64I-NEXT:    slliw a0, a0, 3
 ; RV64I-NEXT:    li a2, 255
 ; RV64I-NEXT:    sllw a2, a2, a0
 ; RV64I-NEXT:    amoor.w.aqrl a1, a2, (a1)
@@ -2405,7 +2405,7 @@ define i8 @atomicrmw_xchg_minus_1_i8_seq_cst(ptr %a) nounwind {
 ; RV64I-ZALRSC-LABEL: atomicrmw_xchg_minus_1_i8_seq_cst:
 ; RV64I-ZALRSC:       # %bb.0:
 ; RV64I-ZALRSC-NEXT:    andi a1, a0, -4
-; RV64I-ZALRSC-NEXT:    slli a0, a0, 3
+; RV64I-ZALRSC-NEXT:    slliw a0, a0, 3
 ; RV64I-ZALRSC-NEXT:    li a2, 255
 ; RV64I-ZALRSC-NEXT:    sllw a2, a2, a0
 ; RV64I-ZALRSC-NEXT:    amoor.w.aqrl a1, a2, (a1)
@@ -2415,7 +2415,7 @@ define i8 @atomicrmw_xchg_minus_1_i8_seq_cst(ptr %a) nounwind {
 ; RV64IA-LABEL: atomicrmw_xchg_minus_1_i8_seq_cst:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    andi a1, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
+; RV64IA-NEXT:    slliw a0, a0, 3
 ; RV64IA-NEXT:    li a2, 255
 ; RV64IA-NEXT:    sllw a2, a2, a0
 ; RV64IA-NEXT:    amoor.w.aqrl a1, a2, (a1)
@@ -2544,7 +2544,7 @@ define i8 @atomicrmw_add_i8_monotonic(ptr %a, i8 %b) nounwind {
 ; RV64I-LABEL: atomicrmw_add_i8_monotonic:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    andi a2, a0, -4
-; RV64I-NEXT:    slli a0, a0, 3
+; RV64I-NEXT:    slliw a0, a0, 3
 ; RV64I-NEXT:    li a3, 255
 ; RV64I-NEXT:    zext.b a1, a1
 ; RV64I-NEXT:    sllw a3, a3, a0
@@ -2564,7 +2564,7 @@ define i8 @atomicrmw_add_i8_monotonic(ptr %a, i8 %b) nounwind {
 ; RV64I-ZALRSC-LABEL: atomicrmw_add_i8_monotonic:
 ; RV64I-ZALRSC:       # %bb.0:
 ; RV64I-ZALRSC-NEXT:    andi a2, a0, -4
-; RV64I-ZALRSC-NEXT:    slli a0, a0, 3
+; RV64I-ZALRSC-NEXT:    slliw a0, a0, 3
 ; RV64I-ZALRSC-NEXT:    li a3, 255
 ; RV64I-ZALRSC-NEXT:    zext.b a1, a1
 ; RV64I-ZALRSC-NEXT:    sllw a3, a3, a0
@@ -2584,7 +2584,7 @@ define i8 @atomicrmw_add_i8_monotonic(ptr %a, i8 %b) nounwind {
 ; RV64IA-LABEL: atomicrmw_add_i8_monotonic:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    andi a2, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
+; RV64IA-NEXT:    slliw a0, a0, 3
 ; RV64IA-NEXT:    li a3, 255
 ; RV64IA-NEXT:    zext.b a1, a1
 ; RV64IA-NEXT:    sllw a3, a3, a0
@@ -2732,7 +2732,7 @@ define i8 @atomicrmw_add_i8_acquire(ptr %a, i8 %b) nounwind {
 ; RV64I-LABEL: atomicrmw_add_i8_acquire:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    andi a2, a0, -4
-; RV64I-NEXT:    slli a0, a0, 3
+; RV64I-NEXT:    slliw a0, a0, 3
 ; RV64I-NEXT:    li a3, 255
 ; RV64I-NEXT:    zext.b a1, a1
 ; RV64I-NEXT:    sllw a3, a3, a0
@@ -2752,7 +2752,7 @@ define i8 @atomicrmw_add_i8_acquire(ptr %a, i8 %b) nounwind {
 ; RV64I-ZALRSC-LABEL: atomicrmw_add_i8_acquire:
 ; RV64I-ZALRSC:       # %bb.0:
 ; RV64I-ZALRSC-NEXT:    andi a2, a0, -4
-; RV64I-ZALRSC-NEXT:    slli a0, a0, 3
+; RV64I-ZALRSC-NEXT:    slliw a0, a0, 3
 ; RV64I-ZALRSC-NEXT:    li a3, 255
 ; RV64I-ZALRSC-NEXT:    zext.b a1, a1
 ; RV64I-ZALRSC-NEXT:    sllw a3, a3, a0
@@ -2772,7 +2772,7 @@ define i8 @atomicrmw_add_i8_acquire(ptr %a, i8 %b) nounwind {
 ; RV64IA-LABEL: atomicrmw_add_i8_acquire:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    andi a2, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
+; RV64IA-NEXT:    slliw a0, a0, 3
 ; RV64IA-NEXT:    li a3, 255
 ; RV64IA-NEXT:    zext.b a1, a1
 ; RV64IA-NEXT:    sllw a3, a3, a0
@@ -2977,7 +2977,7 @@ define i8 @atomicrmw_add_i8_release(ptr %a, i8 %b) nounwind {
 ; RV64I-LABEL: atomicrmw_add_i8_release:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    andi a2, a0, -4
-; RV64I-NEXT:    slli a0, a0, 3
+; RV64I-NEXT:    slliw a0, a0, 3
 ; RV64I-NEXT:    li a3, 255
 ; RV64I-NEXT:    zext.b a1, a1
 ; RV64I-NEXT:    sllw a3, a3, a0
@@ -2997,7 +2997,7 @@ define i8 @atomicrmw_add_i8_release(ptr %a, i8 %b) nounwind {
 ; RV64I-ZALRSC-LABEL: atomicrmw_add_i8_release:
 ; RV64I-ZALRSC:       # %bb.0:
 ; RV64I-ZALRSC-NEXT:    andi a2, a0, -4
-; RV64I-ZALRSC-NEXT:    slli a0, a0, 3
+; RV64I-ZALRSC-NEXT:    slliw a0, a0, 3
 ; RV64I-ZALRSC-NEXT:    li a3, 255
 ; RV64I-ZALRSC-NEXT:    zext.b a1, a1
 ; RV64I-ZALRSC-NEXT:    sllw a3, a3, a0
@@ -3017,7 +3017,7 @@ define i8 @atomicrmw_add_i8_release(ptr %a, i8 %b) nounwind {
 ; RV64IA-LABEL: atomicrmw_add_i8_release:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    andi a2, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
+; RV64IA-NEXT:    slliw a0, a0, 3
 ; RV64IA-NEXT:    li a3, 255
 ; RV64IA-NEXT:    zext.b a1, a1
 ; RV64IA-NEXT:    sllw a3, a3, a0
@@ -3222,7 +3222,7 @@ define i8 @atomicrmw_add_i8_acq_rel(ptr %a, i8 %b) nounwind {
 ; RV64I-LABEL: atomicrmw_add_i8_acq_rel:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    andi a2, a0, -4
-; RV64I-NEXT:    slli a0, a0, 3
+; RV64I-NEXT:    slliw a0, a0, 3
 ; RV64I-NEXT:    li a3, 255
 ; RV64I-NEXT:    zext.b a1, a1
 ; RV64I-NEXT:    sllw a3, a3, a0
@@ -3242,7 +3242,7 @@ define i8 @atomicrmw_add_i8_acq_rel(ptr %a, i8 %b) nounwind {
 ; RV64I-ZALRSC-LABEL: atomicrmw_add_i8_acq_rel:
 ; RV64I-ZALRSC:       # %bb.0:
 ; RV64I-ZALRSC-NEXT:    andi a2, a0, -4
-; RV64I-ZALRSC-NEXT:    slli a0, a0, 3
+; RV64I-ZALRSC-NEXT:    slliw a0, a0, 3
 ; RV64I-ZALRSC-NEXT:    li a3, 255
 ; RV64I-ZALRSC-NEXT:    zext.b a1, a1
 ; RV64I-ZALRSC-NEXT:    sllw a3, a3, a0
@@ -3262,7 +3262,7 @@ define i8 @atomicrmw_add_i8_acq_rel(ptr %a, i8 %b) nounwind {
 ; RV64IA-LABEL: atomicrmw_add_i8_acq_rel:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    andi a2, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
+; RV64IA-NEXT:    slliw a0, a0, 3
 ; RV64IA-NEXT:    li a3, 255
 ; RV64IA-NEXT:    zext.b a1, a1
 ; RV64IA-NEXT:    sllw a3, a3, a0
@@ -3447,7 +3447,7 @@ define i8 @atomicrmw_add_i8_seq_cst(ptr %a, i8 %b) nounwind {
 ; RV64I-LABEL: atomicrmw_add_i8_seq_cst:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    andi a2, a0, -4
-; RV64I-NEXT:    slli a0, a0, 3
+; RV64I-NEXT:    slliw a0, a0, 3
 ; RV64I-NEXT:    li a3, 255
 ; RV64I-NEXT:    zext.b a1, a1
 ; RV64I-NEXT:    sllw a3, a3, a0
@@ -3467,7 +3467,7 @@ define i8 @atomicrmw_add_i8_seq_cst(ptr %a, i8 %b) nounwind {
 ; RV64I-ZALRSC-LABEL: atomicrmw_add_i8_seq_cst:
 ; RV64I-ZALRSC:       # %bb.0:
 ; RV64I-ZALRSC-NEXT:    andi a2, a0, -4
-; RV64I-ZALRSC-NEXT:    slli a0, a0, 3
+; RV64I-ZALRSC-NEXT:    slliw a0, a0, 3
 ; RV64I-ZALRSC-NEXT:    li a3, 255
 ; RV64I-ZALRSC-NEXT:    zext.b a1, a1
 ; RV64I-ZALRSC-NEXT:    sllw a3, a3, a0
@@ -3487,7 +3487,7 @@ define i8 @atomicrmw_add_i8_seq_cst(ptr %a, i8 %b) nounwind {
 ; RV64IA-LABEL: atomicrmw_add_i8_seq_cst:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    andi a2, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
+; RV64IA-NEXT:    slliw a0, a0, 3
 ; RV64IA-NEXT:    li a3, 255
 ; RV64IA-NEXT:    zext.b a1, a1
 ; RV64IA-NEXT:    sllw a3, a3, a0
@@ -3615,7 +3615,7 @@ define i8 @atomicrmw_sub_i8_monotonic(ptr %a, i8 %b) nounwind {
 ; RV64I-LABEL: atomicrmw_sub_i8_monotonic:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    andi a2, a0, -4
-; RV64I-NEXT:    slli a0, a0, 3
+; RV64I-NEXT:    slliw a0, a0, 3
 ; RV64I-NEXT:    li a3, 255
 ; RV64I-NEXT:    zext.b a1, a1
 ; RV64I-NEXT:    sllw a3, a3, a0
@@ -3635,7 +3635,7 @@ define i8 @atomicrmw_sub_i8_monotonic(ptr %a, i8 %b) nounwind {
 ; RV64I-ZALRSC-LABEL: atomicrmw_sub_i8_monotonic:
 ; RV64I-ZALRSC:       # %bb.0:
 ; RV64I-ZALRSC-NEXT:    andi a2, a0, -4
-; RV64I-ZALRSC-NEXT:    slli a0, a0, 3
+; RV64I-ZALRSC-NEXT:    slliw a0, a0, 3
 ; RV64I-ZALRSC-NEXT:    li a3, 255
 ; RV64I-ZALRSC-NEXT:    zext.b a1, a1
 ; RV64I-ZALRSC-NEXT:    sllw a3, a3, a0
@@ -3655,7 +3655,7 @@ define i8 @atomicrmw_sub_i8_monotonic(ptr %a, i8 %b) nounwind {
 ; RV64IA-LABEL: atomicrmw_sub_i8_monotonic:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    andi a2, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
+; RV64IA-NEXT:    slliw a0, a0, 3
 ; RV64IA-NEXT:    li a3, 255
 ; RV64IA-NEXT:    zext.b a1, a1
 ; RV64IA-NEXT:    sllw a3, a3, a0
@@ -3807,7 +3807,7 @@ define i8 @atomicrmw_sub_i8_acquire(ptr %a, i8 %b) nounwind {
 ; RV64I-LABEL: atomicrmw_sub_i8_acquire:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    andi a2, a0, -4
-; RV64I-NEXT:    slli a0, a0, 3
+; RV64I-NEXT:    slliw a0, a0, 3
 ; RV64I-NEXT:    li a3, 255
 ; RV64I-NEXT:    zext.b a1, a1
 ; RV64I-NEXT:    sllw a3, a3, a0
@@ -3827,7 +3827,7 @@ define i8 @atomicrmw_sub_i8_acquire(ptr %a, i8 %b) nounwind {
 ; RV64I-ZALRSC-LABEL: atomicrmw_sub_i8_acquire:
 ; RV64I-ZALRSC:       # %bb.0:
 ; RV64I-ZALRSC-NEXT:    andi a2, a0, -4
-; RV64I-ZALRSC-NEXT:    slli a0, a0, 3
+; RV64I-ZALRSC-NEXT:    slliw a0, a0, 3
 ; RV64I-ZALRSC-NEXT:    li a3, 255
 ; RV64I-ZALRSC-NEXT:    zext.b a1, a1
 ; RV64I-ZALRSC-NEXT:    sllw a3, a3, a0
@@ -3847,7 +3847,7 @@ define i8 @atomicrmw_sub_i8_acquire(ptr %a, i8 %b) nounwind {
 ; RV64IA-LABEL: atomicrmw_sub_i8_acquire:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    andi a2, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
+; RV64IA-NEXT:    slliw a0, a0, 3
 ; RV64IA-NEXT:    li a3, 255
 ; RV64IA-NEXT:    zext.b a1, a1
 ; RV64IA-NEXT:    sllw a3, a3, a0
@@ -4056,7 +4056,7 @@ define i8 @atomicrmw_sub_i8_release(ptr %a, i8 %b) nounwind {
 ; RV64I-LABEL: atomicrmw_sub_i8_release:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    andi a2, a0, -4
-; RV64I-NEXT:    slli a0, a0, 3
+; RV64I-NEXT:    slliw a0, a0, 3
 ; RV64I-NEXT:    li a3, 255
 ; RV64I-NEXT:    zext.b a1, a1
 ; RV64I-NEXT:    sllw a3, a3, a0
@@ -4076,7 +4076,7 @@ define i8 @atomicrmw_sub_i8_release(ptr %a, i8 %b) nounwind {
 ; RV64I-ZALRSC-LABEL: atomicrmw_sub_i8_release:
 ; RV64I-ZALRSC:       # %bb.0:
 ; RV64I-ZALRSC-NEXT:    andi a2, a0, -4
-; RV64I-ZALRSC-NEXT:    slli a0, a0, 3
+; RV64I-ZALRSC-NEXT:    slliw a0, a0, 3
 ; RV64I-ZALRSC-NEXT:    li a3, 255
 ; RV64I-ZALRSC-NEXT:    zext.b a1, a1
 ; RV64I-ZALRSC-NEXT:    sllw a3, a3, a0
@@ -4096,7 +4096,7 @@ define i8 @atomicrmw_sub_i8_release(ptr %a, i8 %b) nounwind {
 ; RV64IA-LABEL: atomicrmw_sub_i8_release:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    andi a2, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
+; RV64IA-NEXT:    slliw a0, a0, 3
 ; RV64IA-NEXT:    li a3, 255
 ; RV64IA-NEXT:    zext.b a1, a1
 ; RV64IA-NEXT:    sllw a3, a3, a0
@@ -4305,7 +4305,7 @@ define i8 @atomicrmw_sub_i8_acq_rel(ptr %a, i8 %b) nounwind {
 ; RV64I-LABEL: atomicrmw_sub_i8_acq_rel:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    andi a2, a0, -4
-; RV64I-NEXT:    slli a0, a0, 3
+; RV64I-NEXT:    slliw a0, a0, 3
 ; RV64I-NEXT:    li a3, 255
 ; RV64I-NEXT:    zext.b a1, a1
 ; RV64I-NEXT:    sllw a3, a3, a0
@@ -4325,7 +4325,7 @@ define i8 @atomicrmw_sub_i8_acq_rel(ptr %a, i8 %b) nounwind {
 ; RV64I-ZALRSC-LABEL: atomicrmw_sub_i8_acq_rel:
 ; RV64I-ZALRSC:       # %bb.0:
 ; RV64I-ZALRSC-NEXT:    andi a2, a0, -4
-; RV64I-ZALRSC-NEXT:    slli a0, a0, 3
+; RV64I-ZALRSC-NEXT:    slliw a0, a0, 3
 ; RV64I-ZALRSC-NEXT:    li a3, 255
 ; RV64I-ZALRSC-NEXT:    zext.b a1, a1
 ; RV64I-ZALRSC-NEXT:    sllw a3, a3, a0
@@ -4345,7 +4345,7 @@ define i8 @atomicrmw_sub_i8_acq_rel(ptr %a, i8 %b) nounwind {
 ; RV64IA-LABEL: atomicrmw_sub_i8_acq_rel:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    andi a2, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
+; RV64IA-NEXT:    slliw a0, a0, 3
 ; RV64IA-NEXT:    li a3, 255
 ; RV64IA-NEXT:    zext.b a1, a1
 ; RV64IA-NEXT:    sllw a3, a3, a0
@@ -4534,7 +4534,7 @@ define i8 @atomicrmw_sub_i8_seq_cst(ptr %a, i8 %b) nounwind {
 ; RV64I-LABEL: atomicrmw_sub_i8_seq_cst:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    andi a2, a0, -4
-; RV64I-NEXT:    slli a0, a0, 3
+; RV64I-NEXT:    slliw a0, a0, 3
 ; RV64I-NEXT:    li a3, 255
 ; RV64I-NEXT:    zext.b a1, a1
 ; RV64I-NEXT:    sllw a3, a3, a0
@@ -4554,7 +4554,7 @@ define i8 @atomicrmw_sub_i8_seq_cst(ptr %a, i8 %b) nounwind {
 ; RV64I-ZALRSC-LABEL: atomicrmw_sub_i8_seq_cst:
 ; RV64I-ZALRSC:       # %bb.0:
 ; RV64I-ZALRSC-NEXT:    andi a2, a0, -4
-; RV64I-ZALRSC-NEXT:    slli a0, a0, 3
+; RV64I-ZALRSC-NEXT:    slliw a0, a0, 3
 ; RV64I-ZALRSC-NEXT:    li a3, 255
 ; RV64I-ZALRSC-NEXT:    zext.b a1, a1
 ; RV64I-ZALRSC-NEXT:    sllw a3, a3, a0
@@ -4574,7 +4574,7 @@ define i8 @atomicrmw_sub_i8_seq_cst(ptr %a, i8 %b) nounwind {
 ; RV64IA-LABEL: atomicrmw_sub_i8_seq_cst:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    andi a2, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
+; RV64IA-NEXT:    slliw a0, a0, 3
 ; RV64IA-NEXT:    li a3, 255
 ; RV64IA-NEXT:    zext.b a1, a1
 ; RV64IA-NEXT:    sllw a3, a3, a0
@@ -4699,7 +4699,7 @@ define i8 @atomicrmw_and_i8_monotonic(ptr %a, i8 %b) nounwind {
 ; RV64I-LABEL: atomicrmw_and_i8_monotonic:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    andi a2, a0, -4
-; RV64I-NEXT:    slli a0, a0, 3
+; RV64I-NEXT:    slliw a0, a0, 3
 ; RV64I-NEXT:    li a3, 255
 ; RV64I-NEXT:    zext.b a1, a1
 ; RV64I-NEXT:    sllw a3, a3, a0
@@ -4713,7 +4713,7 @@ define i8 @atomicrmw_and_i8_monotonic(ptr %a, i8 %b) nounwind {
 ; RV64I-ZALRSC-LABEL: atomicrmw_and_i8_monotonic:
 ; RV64I-ZALRSC:       # %bb.0:
 ; RV64I-ZALRSC-NEXT:    andi a2, a0, -4
-; RV64I-ZALRSC-NEXT:    slli a0, a0, 3
+; RV64I-ZALRSC-NEXT:    slliw a0, a0, 3
 ; RV64I-ZALRSC-NEXT:    li a3, 255
 ; RV64I-ZALRSC-NEXT:    zext.b a1, a1
 ; RV64I-ZALRSC-NEXT:    sllw a3, a3, a0
@@ -4727,7 +4727,7 @@ define i8 @atomicrmw_and_i8_monotonic(ptr %a, i8 %b) nounwind {
 ; RV64IA-LABEL: atomicrmw_and_i8_monotonic:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    andi a2, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
+; RV64IA-NEXT:    slliw a0, a0, 3
 ; RV64IA-NEXT:    li a3, 255
 ; RV64IA-NEXT:    zext.b a1, a1
 ; RV64IA-NEXT:    sllw a3, a3, a0
@@ -4844,7 +4844,7 @@ define i8 @atomicrmw_and_i8_acquire(ptr %a, i8 %b) nounwind {
 ; RV64I-LABEL: atomicrmw_and_i8_acquire:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    andi a2, a0, -4
-; RV64I-NEXT:    slli a0, a0, 3
+; RV64I-NEXT:    slliw a0, a0, 3
 ; RV64I-NEXT:    li a3, 255
 ; RV64I-NEXT:    zext.b a1, a1
 ; RV64I-NEXT:    sllw a3, a3, a0
@@ -4858,7 +4858,7 @@ define i8 @atomicrmw_and_i8_acquire(ptr %a, i8 %b) nounwind {
 ; RV64I-ZALRSC-LABEL: atomicrmw_and_i8_acquire:
 ; RV64I-ZALRSC:       # %bb.0:
 ; RV64I-ZALRSC-NEXT:    andi a2, a0, -4
-; RV64I-ZALRSC-NEXT:    slli a0, a0, 3
+; RV64I-ZALRSC-NEXT:    slliw a0, a0, 3
 ; RV64I-ZALRSC-NEXT:    li a3, 255
 ; RV64I-ZALRSC-NEXT:    zext.b a1, a1
 ; RV64I-ZALRSC-NEXT:    sllw a3, a3, a0
@@ -4872,7 +4872,7 @@ define i8 @atomicrmw_and_i8_acquire(ptr %a, i8 %b) nounwind {
 ; RV64IA-LABEL: atomicrmw_and_i8_acquire:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    andi a2, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
+; RV64IA-NEXT:    slliw a0, a0, 3
 ; RV64IA-NEXT:    li a3, 255
 ; RV64IA-NEXT:    zext.b a1, a1
 ; RV64IA-NEXT:    sllw a3, a3, a0
@@ -5028,7 +5028,7 @@ define i8 @atomicrmw_and_i8_release(ptr %a, i8 %b) nounwind {
 ; RV64I-LABEL: atomicrmw_and_i8_release:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    andi a2, a0, -4
-; RV64I-NEXT:    slli a0, a0, 3
+; RV64I-NEXT:    slliw a0, a0, 3
 ; RV64I-NEXT:    li a3, 255
 ; RV64I-NEXT:    zext.b a1, a1
 ; RV64I-NEXT:    sllw a3, a3, a0
@@ -5042,7 +5042,7 @@ define i8 @atomicrmw_and_i8_release(ptr %a, i8 %b) nounwind {
 ; RV64I-ZALRSC-LABEL: atomicrmw_and_i8_release:
 ; RV64I-ZALRSC:       # %bb.0:
 ; RV64I-ZALRSC-NEXT:    andi a2, a0, -4
-; RV64I-ZALRSC-NEXT:    slli a0, a0, 3
+; RV64I-ZALRSC-NEXT:    slliw a0, a0, 3
 ; RV64I-ZALRSC-NEXT:    li a3, 255
 ; RV64I-ZALRSC-NEXT:    zext.b a1, a1
 ; RV64I-ZALRSC-NEXT:    sllw a3, a3, a0
@@ -5056,7 +5056,7 @@ define i8 @atomicrmw_and_i8_release(ptr %a, i8 %b) nounwind {
 ; RV64IA-LABEL: atomicrmw_and_i8_release:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    andi a2, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
+; RV64IA-NEXT:    slliw a0, a0, 3
 ; RV64IA-NEXT:    li a3, 255
 ; RV64IA-NEXT:    zext.b a1, a1
 ; RV64IA-NEXT:    sllw a3, a3, a0
@@ -5212,7 +5212,7 @@ define i8 @atomicrmw_and_i8_acq_rel(ptr %a, i8 %b) nounwind {
 ; RV64I-LABEL: atomicrmw_and_i8_acq_rel:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    andi a2, a0, -4
-; RV64I-NEXT:    slli a0, a0, 3
+; RV64I-NEXT:    slliw a0, a0, 3
 ; RV64I-NEXT:    li a3, 255
 ; RV64I-NEXT:    zext.b a1, a1
 ; RV64I-NEXT:    sllw a3, a3, a0
@@ -5226,7 +5226,7 @@ define i8 @atomicrmw_and_i8_acq_rel(ptr %a, i8 %b) nounwind {
 ; RV64I-ZALRSC-LABEL: atomicrmw_and_i8_acq_rel:
 ; RV64I-ZALRSC:       # %bb.0:
 ; RV64I-ZALRSC-NEXT:    andi a2, a0, -4
-; RV64I-ZALRSC-NEXT:    slli a0, a0, 3
+; RV64I-ZALRSC-NEXT:    slliw a0, a0, 3
 ; RV64I-ZALRSC-NEXT:    li a3, 255
 ; RV64I-ZALRSC-NEXT:    zext.b a1, a1
 ; RV64I-ZALRSC-NEXT:    sllw a3, a3, a0
@@ -5240,7 +5240,7 @@ define i8 @atomicrmw_and_i8_acq_rel(ptr %a, i8 %b) nounwind {
 ; RV64IA-LABEL: atomicrmw_and_i8_acq_rel:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    andi a2, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
+; RV64IA-NEXT:    slliw a0, a0, 3
 ; RV64IA-NEXT:    li a3, 255
 ; RV64IA-NEXT:    zext.b a1, a1
 ; RV64IA-NEXT:    sllw a3, a3, a0
@@ -5396,7 +5396,7 @@ define i8 @atomicrmw_and_i8_seq_cst(ptr %a, i8 %b) nounwind {
 ; RV64I-LABEL: atomicrmw_and_i8_seq_cst:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    andi a2, a0, -4
-; RV64I-NEXT:    slli a0, a0, 3
+; RV64I-NEXT:    slliw a0, a0, 3
 ; RV64I-NEXT:    li a3, 255
 ; RV64I-NEXT:    zext.b a1, a1
 ; RV64I-NEXT:    sllw a3, a3, a0
@@ -5410,7 +5410,7 @@ define i8 @atomicrmw_and_i8_seq_cst(ptr %a, i8 %b) nounwind {
 ; RV64I-ZALRSC-LABEL: atomicrmw_and_i8_seq_cst:
 ; RV64I-ZALRSC:       # %bb.0:
 ; RV64I-ZALRSC-NEXT:    andi a2, a0, -4
-; RV64I-ZALRSC-NEXT:    slli a0, a0, 3
+; RV64I-ZALRSC-NEXT:    slliw a0, a0, 3
 ; RV64I-ZALRSC-NEXT:    li a3, 255
 ; RV64I-ZALRSC-NEXT:    zext.b a1, a1
 ; RV64I-ZALRSC-NEXT:    sllw a3, a3, a0
@@ -5424,7 +5424,7 @@ define i8 @atomicrmw_and_i8_seq_cst(ptr %a, i8 %b) nounwind {
 ; RV64IA-LABEL: atomicrmw_and_i8_seq_cst:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    andi a2, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
+; RV64IA-NEXT:    slliw a0, a0, 3
 ; RV64IA-NEXT:    li a3, 255
 ; RV64IA-NEXT:    zext.b a1, a1
 ; RV64IA-NEXT:    sllw a3, a3, a0
@@ -5575,7 +5575,7 @@ define i8 @atomicrmw_nand_i8_monotonic(ptr %a, i8 %b) nounwind {
 ; RV64I-LABEL: atomicrmw_nand_i8_monotonic:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    andi a2, a0, -4
-; RV64I-NEXT:    slli a0, a0, 3
+; RV64I-NEXT:    slliw a0, a0, 3
 ; RV64I-NEXT:    li a3, 255
 ; RV64I-NEXT:    zext.b a1, a1
 ; RV64I-NEXT:    sllw a3, a3, a0
@@ -5596,7 +5596,7 @@ define i8 @atomicrmw_nand_i8_monotonic(ptr %a, i8 %b) nounwind {
 ; RV64I-ZALRSC-LABEL: atomicrmw_nand_i8_monotonic:
 ; RV64I-ZALRSC:       # %bb.0:
 ; RV64I-ZALRSC-NEXT:    andi a2, a0, -4
-; RV64I-ZALRSC-NEXT:    slli a0, a0, 3
+; RV64I-ZALRSC-NEXT:    slliw a0, a0, 3
 ; RV64I-ZALRSC-NEXT:    li a3, 255
 ; RV64I-ZALRSC-NEXT:    zext.b a1, a1
 ; RV64I-ZALRSC-NEXT:    sllw a3, a3, a0
@@ -5617,7 +5617,7 @@ define i8 @atomicrmw_nand_i8_monotonic(ptr %a, i8 %b) nounwind {
 ; RV64IA-LABEL: atomicrmw_nand_i8_monotonic:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    andi a2, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
+; RV64IA-NEXT:    slliw a0, a0, 3
 ; RV64IA-NEXT:    li a3, 255
 ; RV64IA-NEXT:    zext.b a1, a1
 ; RV64IA-NEXT:    sllw a3, a3, a0
@@ -5891,7 +5891,7 @@ define i8 @atomicrmw_nand_i8_acquire(ptr %a, i8 %b) nounwind {
 ; RV64I-LABEL: atomicrmw_nand_i8_acquire:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    andi a2, a0, -4
-; RV64I-NEXT:    slli a0, a0, 3
+; RV64I-NEXT:    slliw a0, a0, 3
 ; RV64I-NEXT:    li a3, 255
 ; RV64I-NEXT:    zext.b a1, a1
 ; RV64I-NEXT:    sllw a3, a3, a0
@@ -5912,7 +5912,7 @@ define i8 @atomicrmw_nand_i8_acquire(ptr %a, i8 %b) nounwind {
 ; RV64I-ZALRSC-LABEL: atomicrmw_nand_i8_acquire:
 ; RV64I-ZALRSC:       # %bb.0:
 ; RV64I-ZALRSC-NEXT:    andi a2, a0, -4
-; RV64I-ZALRSC-NEXT:    slli a0, a0, 3
+; RV64I-ZALRSC-NEXT:    slliw a0, a0, 3
 ; RV64I-ZALRSC-NEXT:    li a3, 255
 ; RV64I-ZALRSC-NEXT:    zext.b a1, a1
 ; RV64I-ZALRSC-NEXT:    sllw a3, a3, a0
@@ -5933,7 +5933,7 @@ define i8 @atomicrmw_nand_i8_acquire(ptr %a, i8 %b) nounwind {
 ; RV64IA-LABEL: atomicrmw_nand_i8_acquire:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    andi a2, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
+; RV64IA-NEXT:    slliw a0, a0, 3
 ; RV64IA-NEXT:    li a3, 255
 ; RV64IA-NEXT:    zext.b a1, a1
 ; RV64IA-NEXT:    sllw a3, a3, a0
@@ -6267,7 +6267,7 @@ define i8 @atomicrmw_nand_i8_release(ptr %a, i8 %b) nounwind {
 ; RV64I-LABEL: atomicrmw_nand_i8_release:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    andi a2, a0, -4
-; RV64I-NEXT:    slli a0, a0, 3
+; RV64I-NEXT:    slliw a0, a0, 3
 ; RV64I-NEXT:    li a3, 255
 ; RV64I-NEXT:    zext.b a1, a1
 ; RV64I-NEXT:    sllw a3, a3, a0
@@ -6288,7 +6288,7 @@ define i8 @atomicrmw_nand_i8_release(ptr %a, i8 %b) nounwind {
 ; RV64I-ZALRSC-LABEL: atomicrmw_nand_i8_release:
 ; RV64I-ZALRSC:       # %bb.0:
 ; RV64I-ZALRSC-NEXT:    andi a2, a0, -4
-; RV64I-ZALRSC-NEXT:    slli a0, a0, 3
+; RV64I-ZALRSC-NEXT:    slliw a0, a0, 3
 ; RV64I-ZALRSC-NEXT:    li a3, 255
 ; RV64I-ZALRSC-NEXT:    zext.b a1, a1
 ; RV64I-ZALRSC-NEXT:    sllw a3, a3, a0
@@ -6309,7 +6309,7 @@ define i8 @atomicrmw_nand_i8_release(ptr %a, i8 %b) nounwind {
 ; RV64IA-LABEL: atomicrmw_nand_i8_release:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    andi a2, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
+; RV64IA-NEXT:    slliw a0, a0, 3
 ; RV64IA-NEXT:    li a3, 255
 ; RV64IA-NEXT:    zext.b a1, a1
 ; RV64IA-NEXT:    sllw a3, a3, a0
@@ -6643,7 +6643,7 @@ define i8 @atomicrmw_nand_i8_acq_rel(ptr %a, i8 %b) nounwind {
 ; RV64I-LABEL: atomicrmw_nand_i8_acq_rel:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    andi a2, a0, -4
-; RV64I-NEXT:    slli a0, a0, 3
+; RV64I-NEXT:    slliw a0, a0, 3
 ; RV64I-NEXT:    li a3, 255
 ; RV64I-NEXT:    zext.b a1, a1
 ; RV64I-NEXT:    sllw a3, a3, a0
@@ -6664,7 +6664,7 @@ define i8 @atomicrmw_nand_i8_acq_rel(ptr %a, i8 %b) nounwind {
 ; RV64I-ZALRSC-LABEL: atomicrmw_nand_i8_acq_rel:
 ; RV64I-ZALRSC:       # %bb.0:
 ; RV64I-ZALRSC-NEXT:    andi a2, a0, -4
-; RV64I-ZALRSC-NEXT:    slli a0, a0, 3
+; RV64I-ZALRSC-NEXT:    slliw a0, a0, 3
 ; RV64I-ZALRSC-NEXT:    li a3, 255
 ; RV64I-ZALRSC-NEXT:    zext.b a1, a1
 ; RV64I-ZALRSC-NEXT:    sllw a3, a3, a0
@@ -6685,7 +6685,7 @@ define i8 @atomicrmw_nand_i8_acq_rel(ptr %a, i8 %b) nounwind {
 ; RV64IA-LABEL: atomicrmw_nand_i8_acq_rel:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    andi a2, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
+; RV64IA-NEXT:    slliw a0, a0, 3
 ; RV64IA-NEXT:    li a3, 255
 ; RV64IA-NEXT:    zext.b a1, a1
 ; RV64IA-NEXT:    sllw a3, a3, a0
@@ -6998,7 +6998,7 @@ define i8 @atomicrmw_nand_i8_seq_cst(ptr %a, i8 %b) nounwind {
 ; RV64I-LABEL: atomicrmw_nand_i8_seq_cst:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    andi a2, a0, -4
-; RV64I-NEXT:    slli a0, a0, 3
+; RV64I-NEXT:    slliw a0, a0, 3
 ; RV64I-NEXT:    li a3, 255
 ; RV64I-NEXT:    zext.b a1, a1
 ; RV64I-NEXT:    sllw a3, a3, a0
@@ -7019,7 +7019,7 @@ define i8 @atomicrmw_nand_i8_seq_cst(ptr %a, i8 %b) nounwind {
 ; RV64I-ZALRSC-LABEL: atomicrmw_nand_i8_seq_cst:
 ; RV64I-ZALRSC:       # %bb.0:
 ; RV64I-ZALRSC-NEXT:    andi a2, a0, -4
-; RV64I-ZALRSC-NEXT:    slli a0, a0, 3
+; RV64I-ZALRSC-NEXT:    slliw a0, a0, 3
 ; RV64I-ZALRSC-NEXT:    li a3, 255
 ; RV64I-ZALRSC-NEXT:    zext.b a1, a1
 ; RV64I-ZALRSC-NEXT:    sllw a3, a3, a0
@@ -7040,7 +7040,7 @@ define i8 @atomicrmw_nand_i8_seq_cst(ptr %a, i8 %b) nounwind {
 ; RV64IA-LABEL: atomicrmw_nand_i8_seq_cst:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    andi a2, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
+; RV64IA-NEXT:    slliw a0, a0, 3
 ; RV64IA-NEXT:    li a3, 255
 ; RV64IA-NEXT:    zext.b a1, a1
 ; RV64IA-NEXT:    sllw a3, a3, a0
@@ -7280,7 +7280,7 @@ define i8 @atomicrmw_or_i8_monotonic(ptr %a, i8 %b) nounwind {
 ; RV64I-LABEL: atomicrmw_or_i8_monotonic:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    andi a2, a0, -4
-; RV64I-NEXT:    slli a0, a0, 3
+; RV64I-NEXT:    slliw a0, a0, 3
 ; RV64I-NEXT:    zext.b a1, a1
 ; RV64I-NEXT:    sllw a1, a1, a0
 ; RV64I-NEXT:    amoor.w a1, a1, (a2)
@@ -7290,7 +7290,7 @@ define i8 @atomicrmw_or_i8_monotonic(ptr %a, i8 %b) nounwind {
 ; RV64I-ZALRSC-LABEL: atomicrmw_or_i8_monotonic:
 ; RV64I-ZALRSC:       # %bb.0:
 ; RV64I-ZALRSC-NEXT:    andi a2, a0, -4
-; RV64I-ZALRSC-NEXT:    slli a0, a0, 3
+; RV64I-ZALRSC-NEXT:    slliw a0, a0, 3
 ; RV64I-ZALRSC-NEXT:    zext.b a1, a1
 ; RV64I-ZALRSC-NEXT:    sllw a1, a1, a0
 ; RV64I-ZALRSC-NEXT:    amoor.w a1, a1, (a2)
@@ -7300,7 +7300,7 @@ define i8 @atomicrmw_or_i8_monotonic(ptr %a, i8 %b) nounwind {
 ; RV64IA-LABEL: atomicrmw_or_i8_monotonic:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    andi a2, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
+; RV64IA-NEXT:    slliw a0, a0, 3
 ; RV64IA-NEXT:    zext.b a1, a1
 ; RV64IA-NEXT:    sllw a1, a1, a0
 ; RV64IA-NEXT:    amoor.w a1, a1, (a2)
@@ -7393,7 +7393,7 @@ define i8 @atomicrmw_or_i8_acquire(ptr %a, i8 %b) nounwind {
 ; RV64I-LABEL: atomicrmw_or_i8_acquire:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    andi a2, a0, -4
-; RV64I-NEXT:    slli a0, a0, 3
+; RV64I-NEXT:    slliw a0, a0, 3
 ; RV64I-NEXT:    zext.b a1, a1
 ; RV64I-NEXT:    sllw a1, a1, a0
 ; RV64I-NEXT:    amoor.w.aq a1, a1, (a2)
@@ -7403,7 +7403,7 @@ define i8 @atomicrmw_or_i8_acquire(ptr %a, i8 %b) nounwind {
 ; RV64I-ZALRSC-LABEL: atomicrmw_or_i8_acquire:
 ; RV64I-ZALRSC:       # %bb.0:
 ; RV64I-ZALRSC-NEXT:    andi a2, a0, -4
-; RV64I-ZALRSC-NEXT:    slli a0, a0, 3
+; RV64I-ZALRSC-NEXT:    slliw a0, a0, 3
 ; RV64I-ZALRSC-NEXT:    zext.b a1, a1
 ; RV64I-ZALRSC-NEXT:    sllw a1, a1, a0
 ; RV64I-ZALRSC-NEXT:    amoor.w.aq a1, a1, (a2)
@@ -7413,7 +7413,7 @@ define i8 @atomicrmw_or_i8_acquire(ptr %a, i8 %b) nounwind {
 ; RV64IA-LABEL: atomicrmw_or_i8_acquire:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    andi a2, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
+; RV64IA-NEXT:    slliw a0, a0, 3
 ; RV64IA-NEXT:    zext.b a1, a1
 ; RV64IA-NEXT:    sllw a1, a1, a0
 ; RV64IA-NEXT:    amoor.w.aq a1, a1, (a2)
@@ -7533,7 +7533,7 @@ define i8 @atomicrmw_or_i8_release(ptr %a, i8 %b) nounwind {
 ; RV64I-LABEL: atomicrmw_or_i8_release:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    andi a2, a0, -4
-; RV64I-NEXT:    slli a0, a0, 3
+; RV64I-NEXT:    slliw a0, a0, 3
 ; RV64I-NEXT:    zext.b a1, a1
 ; RV64I-NEXT:    sllw a1, a1, a0
 ; RV64I-NEXT:    amoor.w.rl a1, a1, (a2)
@@ -7543,7 +7543,7 @@ define i8 @atomicrmw_or_i8_release(ptr %a, i8 %b) nounwind {
 ; RV64I-ZALRSC-LABEL: atomicrmw_or_i8_release:
 ; RV64I-ZALRSC:       # %bb.0:
 ; RV64I-ZALRSC-NEXT:    andi a2, a0, -4
-; RV64I-ZALRSC-NEXT:    slli a0, a0, 3
+; RV64I-ZALRSC-NEXT:    slliw a0, a0, 3
 ; RV64I-ZALRSC-NEXT:    zext.b a1, a1
 ; RV64I-ZALRSC-NEXT:    sllw a1, a1, a0
 ; RV64I-ZALRSC-NEXT:    amoor.w.rl a1, a1, (a2)
@@ -7553,7 +7553,7 @@ define i8 @atomicrmw_or_i8_release(ptr %a, i8 %b) nounwind {
 ; RV64IA-LABEL: atomicrmw_or_i8_release:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    andi a2, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
+; RV64IA-NEXT:    slliw a0, a0, 3
 ; RV64IA-NEXT:    zext.b a1, a1
 ; RV64IA-NEXT:    sllw a1, a1, a0
 ; RV64IA-NEXT:    amoor.w.rl a1, a1, (a2)
@@ -7673,7 +7673,7 @@ define i8 @atomicrmw_or_i8_acq_rel(ptr %a, i8 %b) nounwind {
 ; RV64I-LABEL: atomicrmw_or_i8_acq_rel:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    andi a2, a0, -4
-; RV64I-NEXT:    slli a0, a0, 3
+; RV64I-NEXT:    slliw a0, a0, 3
 ; RV64I-NEXT:    zext.b a1, a1
 ; RV64I-NEXT:    sllw a1, a1, a0
 ; RV64I-NEXT:    amoor.w.aqrl a1, a1, (a2)
@@ -7683,7 +7683,7 @@ define i8 @atomicrmw_or_i8_acq_rel(ptr %a, i8 %b) nounwind {
 ; RV64I-ZALRSC-LABEL: atomicrmw_or_i8_acq_rel:
 ; RV64I-ZALRSC:       # %bb.0:
 ; RV64I-ZALRSC-NEXT:    andi a2, a0, -4
-; RV64I-ZALRSC-NEXT:    slli a0, a0, 3
+; RV64I-ZALRSC-NEXT:    slliw a0, a0, 3
 ; RV64I-ZALRSC-NEXT:    zext.b a1, a1
 ; RV64I-ZALRSC-NEXT:    sllw a1, a1, a0
 ; RV64I-ZALRSC-NEXT:    amoor.w.aqrl a1, a1, (a2)
@@ -7693,7 +7693,7 @@ define i8 @atomicrmw_or_i8_acq_rel(ptr %a, i8 %b) nounwind {
 ; RV64IA-LABEL: atomicrmw_or_i8_acq_rel:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    andi a2, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
+; RV64IA-NEXT:    slliw a0, a0, 3
 ; RV64IA-NEXT:    zext.b a1, a1
 ; RV64IA-NEXT:    sllw a1, a1, a0
 ; RV64IA-NEXT:    amoor.w.aqrl a1, a1, (a2)
@@ -7813,7 +7813,7 @@ define i8 @atomicrmw_or_i8_seq_cst(ptr %a, i8 %b) nounwind {
 ; RV64I-LABEL: atomicrmw_or_i8_seq_cst:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    andi a2, a0, -4
-; RV64I-NEXT:    slli a0, a0, 3
+; RV64I-NEXT:    slliw a0, a0, 3
 ; RV64I-NEXT:    zext.b a1, a1
 ; RV64I-NEXT:    sllw a1, a1, a0
 ; RV64I-NEXT:    amoor.w.aqrl a1, a1, (a2)
@@ -7823,7 +7823,7 @@ define i8 @atomicrmw_or_i8_seq_cst(ptr %a, i8 %b) nounwind {
 ; RV64I-ZALRSC-LABEL: atomicrmw_or_i8_seq_cst:
 ; RV64I-ZALRSC:       # %bb.0:
 ; RV64I-ZALRSC-NEXT:    andi a2, a0, -4
-; RV64I-ZALRSC-NEXT:    slli a0, a0, 3
+; RV64I-ZALRSC-NEXT:    slliw a0, a0, 3
 ; RV64I-ZALRSC-NEXT:    zext.b a1, a1
 ; RV64I-ZALRSC-NEXT:    sllw a1, a1, a0
 ; RV64I-ZALRSC-NEXT:    amoor.w.aqrl a1, a1, (a2)
@@ -7833,7 +7833,7 @@ define i8 @atomicrmw_or_i8_seq_cst(ptr %a, i8 %b) nounwind {
 ; RV64IA-LABEL: atomicrmw_or_i8_seq_cst:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    andi a2, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
+; RV64IA-NEXT:    slliw a0, a0, 3
 ; RV64IA-NEXT:    zext.b a1, a1
 ; RV64IA-NEXT:    sllw a1, a1, a0
 ; RV64IA-NEXT:    amoor.w.aqrl a1, a1, (a2)
@@ -7943,7 +7943,7 @@ define i8 @atomicrmw_xor_i8_monotonic(ptr %a, i8 %b) nounwind {
 ; RV64I-LABEL: atomicrmw_xor_i8_monotonic:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    andi a2, a0, -4
-; RV64I-NEXT:    slli a0, a0, 3
+; RV64I-NEXT:    slliw a0, a0, 3
 ; RV64I-NEXT:    zext.b a1, a1
 ; RV64I-NEXT:    sllw a1, a1, a0
 ; RV64I-NEXT:    amoxor.w a1, a1, (a2)
@@ -7953,7 +7953,7 @@ define i8 @atomicrmw_xor_i8_monotonic(ptr %a, i8 %b) nounwind {
 ; RV64I-ZALRSC-LABEL: atomicrmw_xor_i8_monotonic:
 ; RV64I-ZALRSC:       # %bb.0:
 ; RV64I-ZALRSC-NEXT:    andi a2, a0, -4
-; RV64I-ZALRSC-NEXT:    slli a0, a0, 3
+; RV64I-ZALRSC-NEXT:    slliw a0, a0, 3
 ; RV64I-ZALRSC-NEXT:    zext.b a1, a1
 ; RV64I-ZALRSC-NEXT:    sllw a1, a1, a0
 ; RV64I-ZALRSC-NEXT:    amoxor.w a1, a1, (a2)
@@ -7963,7 +7963,7 @@ define i8 @atomicrmw_xor_i8_monotonic(ptr %a, i8 %b) nounwind {
 ; RV64IA-LABEL: atomicrmw_xor_i8_monotonic:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    andi a2, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
+; RV64IA-NEXT:    slliw a0, a0, 3
 ; RV64IA-NEXT:    zext.b a1, a1
 ; RV64IA-NEXT:    sllw a1, a1, a0
 ; RV64IA-NEXT:    amoxor.w a1, a1, (a2)
@@ -8056,7 +8056,7 @@ define i8 @atomicrmw_xor_i8_acquire(ptr %a, i8 %b) nounwind {
 ; RV64I-LABEL: atomicrmw_xor_i8_acquire:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    andi a2, a0, -4
-; RV64I-NEXT:    slli a0, a0, 3
+; RV64I-NEXT:    slliw a0, a0, 3
 ; RV64I-NEXT:    zext.b a1, a1
 ; RV64I-NEXT:    sllw a1, a1, a0
 ; RV64I-NEXT:    amoxor.w.aq a1, a1, (a2)
@@ -8066,7 +8066,7 @@ define i8 @atomicrmw_xor_i8_acquire(ptr %a, i8 %b) nounwind {
 ; RV64I-ZALRSC-LABEL: atomicrmw_xor_i8_acquire:
 ; RV64I-ZALRSC:       # %bb.0:
 ; RV64I-ZALRSC-NEXT:    andi a2, a0, -4
-; RV64I-ZALRSC-NEXT:    slli a0, a0, 3
+; RV64I-ZALRSC-NEXT:    slliw a0, a0, 3
 ; RV64I-ZALRSC-NEXT:    zext.b a1, a1
 ; RV64I-ZALRSC-NEXT:    sllw a1, a1, a0
 ; RV64I-ZALRSC-NEXT:    amoxor.w.aq a1, a1, (a2)
@@ -8076,7 +8076,7 @@ define i8 @atomicrmw_xor_i8_acquire(ptr %a, i8 %b) nounwind {
 ; RV64IA-LABEL: atomicrmw_xor_i8_acquire:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    andi a2, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
+; RV64IA-NEXT:    slliw a0, a0, 3
 ; RV64IA-NEXT:    zext.b a1, a1
 ; RV64IA-NEXT:    sllw a1, a1, a0
 ; RV64IA-NEXT:    amoxor.w.aq a1, a1, (a2)
@@ -8196,7 +8196,7 @@ define i8 @atomicrmw_xor_i8_release(ptr %a, i8 %b) nounwind {
 ; RV64I-LABEL: atomicrmw_xor_i8_release:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    andi a2, a0, -4
-; RV64I-NEXT:    slli a0, a0, 3
+; RV64I-NEXT:    slliw a0, a0, 3
 ; RV64I-NEXT:    zext.b a1, a1
 ; RV64I-NEXT:    sllw a1, a1, a0
 ; RV64I-NEXT:    amoxor.w.rl a1, a1, (a2)
@@ -8206,7 +8206,7 @@ define i8 @atomicrmw_xor_i8_release(ptr %a, i8 %b) nounwind {
 ; RV64I-ZALRSC-LABEL: atomicrmw_xor_i8_release:
 ; RV64I-ZALRSC:       # %bb.0:
 ; RV64I-ZALRSC-NEXT:    andi a2, a0, -4
-; RV64I-ZALRSC-NEXT:    slli a0, a0, 3
+; RV64I-ZALRSC-NEXT:    slliw a0, a0, 3
 ; RV64I-ZALRSC-NEXT:    zext.b a1, a1
 ; RV64I-ZALRSC-NEXT:    sllw a1, a1, a0
 ; RV64I-ZALRSC-NEXT:    amoxor.w.rl a1, a1, (a2)
@@ -8216,7 +8216,7 @@ define i8 @atomicrmw_xor_i8_release(ptr %a, i8 %b) nounwind {
 ; RV64IA-LABEL: atomicrmw_xor_i8_release:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    andi a2, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
+; RV64IA-NEXT:    slliw a0, a0, 3
 ; RV64IA-NEXT:    zext.b a1, a1
 ; RV64IA-NEXT:    sllw a1, a1, a0
 ; RV64IA-NEXT:    amoxor.w.rl a1, a1, (a2)
@@ -8336,7 +8336,7 @@ define i8 @atomicrmw_xor_i8_acq_rel(ptr %a, i8 %b) nounwind {
 ; RV64I-LABEL: atomicrmw_xor_i8_acq_rel:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    andi a2, a0, -4
-; RV64I-NEXT:    slli a0, a0, 3
+; RV64I-NEXT:    slliw a0, a0, 3
 ; RV64I-NEXT:    zext.b a1, a1
 ; RV64I-NEXT:    sllw a1, a1, a0
 ; RV64I-NEXT:    amoxor.w.aqrl a1, a1, (a2)
@@ -8346,7 +8346,7 @@ define i8 @atomicrmw_xor_i8_acq_rel(ptr %a, i8 %b) nounwind {
 ; RV64I-ZALRSC-LABEL: atomicrmw_xor_i8_acq_rel:
 ; RV64I-ZALRSC:       # %bb.0:
 ; RV64I-ZALRSC-NEXT:    andi a2, a0, -4
-; RV64I-ZALRSC-NEXT:    slli a0, a0, 3
+; RV64I-ZALRSC-NEXT:    slliw a0, a0, 3
 ; RV64I-ZALRSC-NEXT:    zext.b a1, a1
 ; RV64I-ZALRSC-NEXT:    sllw a1, a1, a0
 ; RV64I-ZALRSC-NEXT:    amoxor.w.aqrl a1, a1, (a2)
@@ -8356,7 +8356,7 @@ define i8 @atomicrmw_xor_i8_acq_rel(ptr %a, i8 %b) nounwind {
 ; RV64IA-LABEL: atomicrmw_xor_i8_acq_rel:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    andi a2, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
+; RV64IA-NEXT:    slliw a0, a0, 3
 ; RV64IA-NEXT:    zext.b a1, a1
 ; RV64IA-NEXT:    sllw a1, a1, a0
 ; RV64IA-NEXT:    amoxor.w.aqrl a1, a1, (a2)
@@ -8476,7 +8476,7 @@ define i8 @atomicrmw_xor_i8_seq_cst(ptr %a, i8 %b) nounwind {
 ; RV64I-LABEL: atomicrmw_xor_i8_seq_cst:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    andi a2, a0, -4
-; RV64I-NEXT:    slli a0, a0, 3
+; RV64I-NEXT:    slliw a0, a0, 3
 ; RV64I-NEXT:    zext.b a1, a1
 ; RV64I-NEXT:    sllw a1, a1, a0
 ; RV64I-NEXT:    amoxor.w.aqrl a1, a1, (a2)
@@ -8486,7 +8486,7 @@ define i8 @atomicrmw_xor_i8_seq_cst(ptr %a, i8 %b) nounwind {
 ; RV64I-ZALRSC-LABEL: atomicrmw_xor_i8_seq_cst:
 ; RV64I-ZALRSC:       # %bb.0:
 ; RV64I-ZALRSC-NEXT:    andi a2, a0, -4
-; RV64I-ZALRSC-NEXT:    slli a0, a0, 3
+; RV64I-ZALRSC-NEXT:    slliw a0, a0, 3
 ; RV64I-ZALRSC-NEXT:    zext.b a1, a1
 ; RV64I-ZALRSC-NEXT:    sllw a1, a1, a0
 ; RV64I-ZALRSC-NEXT:    amoxor.w.aqrl a1, a1, (a2)
@@ -8496,7 +8496,7 @@ define i8 @atomicrmw_xor_i8_seq_cst(ptr %a, i8 %b) nounwind {
 ; RV64IA-LABEL: atomicrmw_xor_i8_seq_cst:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    andi a2, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
+; RV64IA-NEXT:    slliw a0, a0, 3
 ; RV64IA-NEXT:    zext.b a1, a1
 ; RV64IA-NEXT:    sllw a1, a1, a0
 ; RV64IA-NEXT:    amoxor.w.aqrl a1, a1, (a2)
@@ -8671,7 +8671,7 @@ define i8 @atomicrmw_max_i8_monotonic(ptr %a, i8 %b) nounwind {
 ; RV64I-LABEL: atomicrmw_max_i8_monotonic:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    andi a2, a0, -4
-; RV64I-NEXT:    slli a0, a0, 3
+; RV64I-NEXT:    slliw a0, a0, 3
 ; RV64I-NEXT:    li a3, 255
 ; RV64I-NEXT:    slli a1, a1, 56
 ; RV64I-NEXT:    andi a4, a0, 24
@@ -8700,7 +8700,7 @@ define i8 @atomicrmw_max_i8_monotonic(ptr %a, i8 %b) nounwind {
 ; RV64I-ZALRSC-LABEL: atomicrmw_max_i8_monotonic:
 ; RV64I-ZALRSC:       # %bb.0:
 ; RV64I-ZALRSC-NEXT:    andi a2, a0, -4
-; RV64I-ZALRSC-NEXT:    slli a0, a0, 3
+; RV64I-ZALRSC-NEXT:    slliw a0, a0, 3
 ; RV64I-ZALRSC-NEXT:    li a3, 255
 ; RV64I-ZALRSC-NEXT:    slli a1, a1, 56
 ; RV64I-ZALRSC-NEXT:    andi a4, a0, 24
@@ -8729,7 +8729,7 @@ define i8 @atomicrmw_max_i8_monotonic(ptr %a, i8 %b) nounwind {
 ; RV64IA-LABEL: atomicrmw_max_i8_monotonic:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    andi a2, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
+; RV64IA-NEXT:    slliw a0, a0, 3
 ; RV64IA-NEXT:    li a3, 255
 ; RV64IA-NEXT:    slli a1, a1, 56
 ; RV64IA-NEXT:    andi a4, a0, 24
@@ -8963,7 +8963,7 @@ define i8 @atomicrmw_max_i8_acquire(ptr %a, i8 %b) nounwind {
 ; RV64I-LABEL: atomicrmw_max_i8_acquire:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    andi a2, a0, -4
-; RV64I-NEXT:    slli a0, a0, 3
+; RV64I-NEXT:    slliw a0, a0, 3
 ; RV64I-NEXT:    li a3, 255
 ; RV64I-NEXT:    slli a1, a1, 56
 ; RV64I-NEXT:    andi a4, a0, 24
@@ -8992,7 +8992,7 @@ define i8 @atomicrmw_max_i8_acquire(ptr %a, i8 %b) nounwind {
 ; RV64I-ZALRSC-LABEL: atomicrmw_max_i8_acquire:
 ; RV64I-ZALRSC:       # %bb.0:
 ; RV64I-ZALRSC-NEXT:    andi a2, a0, -4
-; RV64I-ZALRSC-NEXT:    slli a0, a0, 3
+; RV64I-ZALRSC-NEXT:    slliw a0, a0, 3
 ; RV64I-ZALRSC-NEXT:    li a3, 255
 ; RV64I-ZALRSC-NEXT:    slli a1, a1, 56
 ; RV64I-ZALRSC-NEXT:    andi a4, a0, 24
@@ -9021,7 +9021,7 @@ define i8 @atomicrmw_max_i8_acquire(ptr %a, i8 %b) nounwind {
 ; RV64IA-LABEL: atomicrmw_max_i8_acquire:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    andi a2, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
+; RV64IA-NEXT:    slliw a0, a0, 3
 ; RV64IA-NEXT:    li a3, 255
 ; RV64IA-NEXT:    slli a1, a1, 56
 ; RV64IA-NEXT:    andi a4, a0, 24
@@ -9339,7 +9339,7 @@ define i8 @atomicrmw_max_i8_release(ptr %a, i8 %b) nounwind {
 ; RV64I-LABEL: atomicrmw_max_i8_release:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    andi a2, a0, -4
-; RV64I-NEXT:    slli a0, a0, 3
+; RV64I-NEXT:    slliw a0, a0, 3
 ; RV64I-NEXT:    li a3, 255
 ; RV64I-NEXT:    slli a1, a1, 56
 ; RV64I-NEXT:    andi a4, a0, 24
@@ -9368,7 +9368,7 @@ define i8 @atomicrmw_max_i8_release(ptr %a, i8 %b) nounwind {
 ; RV64I-ZALRSC-LABEL: atomicrmw_max_i8_release:
 ; RV64I-ZALRSC:       # %bb.0:
 ; RV64I-ZALRSC-NEXT:    andi a2, a0, -4
-; RV64I-ZALRSC-NEXT:    slli a0, a0, 3
+; RV64I-ZALRSC-NEXT:    slliw a0, a0, 3
 ; RV64I-ZALRSC-NEXT:    li a3, 255
 ; RV64I-ZALRSC-NEXT:    slli a1, a1, 56
 ; RV64I-ZALRSC-NEXT:    andi a4, a0, 24
@@ -9397,7 +9397,7 @@ define i8 @atomicrmw_max_i8_release(ptr %a, i8 %b) nounwind {
 ; RV64IA-LABEL: atomicrmw_max_i8_release:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    andi a2, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
+; RV64IA-NEXT:    slliw a0, a0, 3
 ; RV64IA-NEXT:    li a3, 255
 ; RV64IA-NEXT:    slli a1, a1, 56
 ; RV64IA-NEXT:    andi a4, a0, 24
@@ -9715,7 +9715,7 @@ define i8 @atomicrmw_max_i8_acq_rel(ptr %a, i8 %b) nounwind {
 ; RV64I-LABEL: atomicrmw_max_i8_acq_rel:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    andi a2, a0, -4
-; RV64I-NEXT:    slli a0, a0, 3
+; RV64I-NEXT:    slliw a0, a0, 3
 ; RV64I-NEXT:    li a3, 255
 ; RV64I-NEXT:    slli a1, a1, 56
 ; RV64I-NEXT:    andi a4, a0, 24
@@ -9744,7 +9744,7 @@ define i8 @atomicrmw_max_i8_acq_rel(ptr %a, i8 %b) nounwind {
 ; RV64I-ZALRSC-LABEL: atomicrmw_max_i8_acq_rel:
 ; RV64I-ZALRSC:       # %bb.0:
 ; RV64I-ZALRSC-NEXT:    andi a2, a0, -4
-; RV64I-ZALRSC-NEXT:    slli a0, a0, 3
+; RV64I-ZALRSC-NEXT:    slliw a0, a0, 3
 ; RV64I-ZALRSC-NEXT:    li a3, 255
 ; RV64I-ZALRSC-NEXT:    slli a1, a1, 56
 ; RV64I-ZALRSC-NEXT:    andi a4, a0, 24
@@ -9773,7 +9773,7 @@ define i8 @atomicrmw_max_i8_acq_rel(ptr %a, i8 %b) nounwind {
 ; RV64IA-LABEL: atomicrmw_max_i8_acq_rel:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    andi a2, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
+; RV64IA-NEXT:    slliw a0, a0, 3
 ; RV64IA-NEXT:    li a3, 255
 ; RV64IA-NEXT:    slli a1, a1, 56
 ; RV64IA-NEXT:    andi a4, a0, 24
@@ -10062,7 +10062,7 @@ define i8 @atomicrmw_max_i8_seq_cst(ptr %a, i8 %b) nounwind {
 ; RV64I-LABEL: atomicrmw_max_i8_seq_cst:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    andi a2, a0, -4
-; RV64I-NEXT:    slli a0, a0, 3
+; RV64I-NEXT:    slliw a0, a0, 3
 ; RV64I-NEXT:    li a3, 255
 ; RV64I-NEXT:    slli a1, a1, 56
 ; RV64I-NEXT:    andi a4, a0, 24
@@ -10091,7 +10091,7 @@ define i8 @atomicrmw_max_i8_seq_cst(ptr %a, i8 %b) nounwind {
 ; RV64I-ZALRSC-LABEL: atomicrmw_max_i8_seq_cst:
 ; RV64I-ZALRSC:       # %bb.0:
 ; RV64I-ZALRSC-NEXT:    andi a2, a0, -4
-; RV64I-ZALRSC-NEXT:    slli a0, a0, 3
+; RV64I-ZALRSC-NEXT:    slliw a0, a0, 3
 ; RV64I-ZALRSC-NEXT:    li a3, 255
 ; RV64I-ZALRSC-NEXT:    slli a1, a1, 56
 ; RV64I-ZALRSC-NEXT:    andi a4, a0, 24
@@ -10120,7 +10120,7 @@ define i8 @atomicrmw_max_i8_seq_cst(ptr %a, i8 %b) nounwind {
 ; RV64IA-LABEL: atomicrmw_max_i8_seq_cst:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    andi a2, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
+; RV64IA-NEXT:    slliw a0, a0, 3
 ; RV64IA-NEXT:    li a3, 255
 ; RV64IA-NEXT:    slli a1, a1, 56
 ; RV64IA-NEXT:    andi a4, a0, 24
@@ -10325,7 +10325,7 @@ define i8 @atomicrmw_min_i8_monotonic(ptr %a, i8 %b) nounwind {
 ; RV64I-LABEL: atomicrmw_min_i8_monotonic:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    andi a2, a0, -4
-; RV64I-NEXT:    slli a0, a0, 3
+; RV64I-NEXT:    slliw a0, a0, 3
 ; RV64I-NEXT:    li a3, 255
 ; RV64I-NEXT:    slli a1, a1, 56
 ; RV64I-NEXT:    andi a4, a0, 24
@@ -10354,7 +10354,7 @@ define i8 @atomicrmw_min_i8_monotonic(ptr %a, i8 %b) nounwind {
 ; RV64I-ZALRSC-LABEL: atomicrmw_min_i8_monotonic:
 ; RV64I-ZALRSC:       # %bb.0:
 ; RV64I-ZALRSC-NEXT:    andi a2, a0, -4
-; RV64I-ZALRSC-NEXT:    slli a0, a0, 3
+; RV64I-ZALRSC-NEXT:    slliw a0, a0, 3
 ; RV64I-ZALRSC-NEXT:    li a3, 255
 ; RV64I-ZALRSC-NEXT:    slli a1, a1, 56
 ; RV64I-ZALRSC-NEXT:    andi a4, a0, 24
@@ -10383,7 +10383,7 @@ define i8 @atomicrmw_min_i8_monotonic(ptr %a, i8 %b) nounwind {
 ; RV64IA-LABEL: atomicrmw_min_i8_monotonic:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    andi a2, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
+; RV64IA-NEXT:    slliw a0, a0, 3
 ; RV64IA-NEXT:    li a3, 255
 ; RV64IA-NEXT:    slli a1, a1, 56
 ; RV64IA-NEXT:    andi a4, a0, 24
@@ -10617,7 +10617,7 @@ define i8 @atomicrmw_min_i8_acquire(ptr %a, i8 %b) nounwind {
 ; RV64I-LABEL: atomicrmw_min_i8_acquire:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    andi a2, a0, -4
-; RV64I-NEXT:    slli a0, a0, 3
+; RV64I-NEXT:    slliw a0, a0, 3
 ; RV64I-NEXT:    li a3, 255
 ; RV64I-NEXT:    slli a1, a1, 56
 ; RV64I-NEXT:    andi a4, a0, 24
@@ -10646,7 +10646,7 @@ define i8 @atomicrmw_min_i8_acquire(ptr %a, i8 %b) nounwind {
 ; RV64I-ZALRSC-LABEL: atomicrmw_min_i8_acquire:
 ; RV64I-ZALRSC:       # %bb.0:
 ; RV64I-ZALRSC-NEXT:    andi a2, a0, -4
-; RV64I-ZALRSC-NEXT:    slli a0, a0, 3
+; RV64I-ZALRSC-NEXT:    slliw a0, a0, 3
 ; RV64I-ZALRSC-NEXT:    li a3, 255
 ; RV64I-ZALRSC-NEXT:    slli a1, a1, 56
 ; RV64I-ZALRSC-NEXT:    andi a4, a0, 24
@@ -10675,7 +10675,7 @@ define i8 @atomicrmw_min_i8_acquire(ptr %a, i8 %b) nounwind {
 ; RV64IA-LABEL: atomicrmw_min_i8_acquire:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    andi a2, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
+; RV64IA-NEXT:    slliw a0, a0, 3
 ; RV64IA-NEXT:    li a3, 255
 ; RV64IA-NEXT:    slli a1, a1, 56
 ; RV64IA-NEXT:    andi a4, a0, 24
@@ -10993,7 +10993,7 @@ define i8 @atomicrmw_min_i8_release(ptr %a, i8 %b) nounwind {
 ; RV64I-LABEL: atomicrmw_min_i8_release:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    andi a2, a0, -4
-; RV64I-NEXT:    slli a0, a0, 3
+; RV64I-NEXT:    slliw a0, a0, 3
 ; RV64I-NEXT:    li a3, 255
 ; RV64I-NEXT:    slli a1, a1, 56
 ; RV64I-NEXT:    andi a4, a0, 24
@@ -11022,7 +11022,7 @@ define i8 @atomicrmw_min_i8_release(ptr %a, i8 %b) nounwind {
 ; RV64I-ZALRSC-LABEL: atomicrmw_min_i8_release:
 ; RV64I-ZALRSC:       # %bb.0:
 ; RV64I-ZALRSC-NEXT:    andi a2, a0, -4
-; RV64I-ZALRSC-NEXT:    slli a0, a0, 3
+; RV64I-ZALRSC-NEXT:    slliw a0, a0, 3
 ; RV64I-ZALRSC-NEXT:    li a3, 255
 ; RV64I-ZALRSC-NEXT:    slli a1, a1, 56
 ; RV64I-ZALRSC-NEXT:    andi a4, a0, 24
@@ -11051,7 +11051,7 @@ define i8 @atomicrmw_min_i8_release(ptr %a, i8 %b) nounwind {
 ; RV64IA-LABEL: atomicrmw_min_i8_release:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    andi a2, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
+; RV64IA-NEXT:    slliw a0, a0, 3
 ; RV64IA-NEXT:    li a3, 255
 ; RV64IA-NEXT:    slli a1, a1, 56
 ; RV64IA-NEXT:    andi a4, a0, 24
@@ -11369,7 +11369,7 @@ define i8 @atomicrmw_min_i8_acq_rel(ptr %a, i8 %b) nounwind {
 ; RV64I-LABEL: atomicrmw_min_i8_acq_rel:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    andi a2, a0, -4
-; RV64I-NEXT:    slli a0, a0, 3
+; RV64I-NEXT:    slliw a0, a0, 3
 ; RV64I-NEXT:    li a3, 255
 ; RV64I-NEXT:    slli a1, a1, 56
 ; RV64I-NEXT:    andi a4, a0, 24
@@ -11398,7 +11398,7 @@ define i8 @atomicrmw_min_i8_acq_rel(ptr %a, i8 %b) nounwind {
 ; RV64I-ZALRSC-LABEL: atomicrmw_min_i8_acq_rel:
 ; RV64I-ZALRSC:       # %bb.0:
 ; RV64I-ZALRSC-NEXT:    andi a2, a0, -4
-; RV64I-ZALRSC-NEXT:    slli a0, a0, 3
+; RV64I-ZALRSC-NEXT:    slliw a0, a0, 3
 ; RV64I-ZALRSC-NEXT:    li a3, 255
 ; RV64I-ZALRSC-NEXT:    slli a1, a1, 56
 ; RV64I-ZALRSC-NEXT:    andi a4, a0, 24
@@ -11427,7 +11427,7 @@ define i8 @atomicrmw_min_i8_acq_rel(ptr %a, i8 %b) nounwind {
 ; RV64IA-LABEL: atomicrmw_min_i8_acq_rel:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    andi a2, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
+; RV64IA-NEXT:    slliw a0, a0, 3
 ; RV64IA-NEXT:    li a3, 255
 ; RV64IA-NEXT:    slli a1, a1, 56
 ; RV64IA-NEXT:    andi a4, a0, 24
@@ -11716,7 +11716,7 @@ define i8 @atomicrmw_min_i8_seq_cst(ptr %a, i8 %b) nounwind {
 ; RV64I-LABEL: atomicrmw_min_i8_seq_cst:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    andi a2, a0, -4
-; RV64I-NEXT:    slli a0, a0, 3
+; RV64I-NEXT:    slliw a0, a0, 3
 ; RV64I-NEXT:    li a3, 255
 ; RV64I-NEXT:    slli a1, a1, 56
 ; RV64I-NEXT:    andi a4, a0, 24
@@ -11745,7 +11745,7 @@ define i8 @atomicrmw_min_i8_seq_cst(ptr %a, i8 %b) nounwind {
 ; RV64I-ZALRSC-LABEL: atomicrmw_min_i8_seq_cst:
 ; RV64I-ZALRSC:       # %bb.0:
 ; RV64I-ZALRSC-NEXT:    andi a2, a0, -4
-; RV64I-ZALRSC-NEXT:    slli a0, a0, 3
+; RV64I-ZALRSC-NEXT:    slliw a0, a0, 3
 ; RV64I-ZALRSC-NEXT:    li a3, 255
 ; RV64I-ZALRSC-NEXT:    slli a1, a1, 56
 ; RV64I-ZALRSC-NEXT:    andi a4, a0, 24
@@ -11774,7 +11774,7 @@ define i8 @atomicrmw_min_i8_seq_cst(ptr %a, i8 %b) nounwind {
 ; RV64IA-LABEL: atomicrmw_min_i8_seq_cst:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    andi a2, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
+; RV64IA-NEXT:    slliw a0, a0, 3
 ; RV64IA-NEXT:    li a3, 255
 ; RV64IA-NEXT:    slli a1, a1, 56
 ; RV64IA-NEXT:    andi a4, a0, 24
@@ -11967,7 +11967,7 @@ define i8 @atomicrmw_umax_i8_monotonic(ptr %a, i8 %b) nounwind {
 ; RV64I-LABEL: atomicrmw_umax_i8_monotonic:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    andi a2, a0, -4
-; RV64I-NEXT:    slli a0, a0, 3
+; RV64I-NEXT:    slliw a0, a0, 3
 ; RV64I-NEXT:    li a3, 255
 ; RV64I-NEXT:    zext.b a1, a1
 ; RV64I-NEXT:    sllw a3, a3, a0
@@ -11991,7 +11991,7 @@ define i8 @atomicrmw_umax_i8_monotonic(ptr %a, i8 %b) nounwind {
 ; RV64I-ZALRSC-LABEL: atomicrmw_umax_i8_monotonic:
 ; RV64I-ZALRSC:       # %bb.0:
 ; RV64I-ZALRSC-NEXT:    andi a2, a0, -4
-; RV64I-ZALRSC-NEXT:    slli a0, a0, 3
+; RV64I-ZALRSC-NEXT:    slliw a0, a0, 3
 ; RV64I-ZALRSC-NEXT:    li a3, 255
 ; RV64I-ZALRSC-NEXT:    zext.b a1, a1
 ; RV64I-ZALRSC-NEXT:    sllw a3, a3, a0
@@ -12015,7 +12015,7 @@ define i8 @atomicrmw_umax_i8_monotonic(ptr %a, i8 %b) nounwind {
 ; RV64IA-LABEL: atomicrmw_umax_i8_monotonic:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    andi a2, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
+; RV64IA-NEXT:    slliw a0, a0, 3
 ; RV64IA-NEXT:    li a3, 255
 ; RV64IA-NEXT:    zext.b a1, a1
 ; RV64IA-NEXT:    sllw a3, a3, a0
@@ -12217,7 +12217,7 @@ define i8 @atomicrmw_umax_i8_acquire(ptr %a, i8 %b) nounwind {
 ; RV64I-LABEL: atomicrmw_umax_i8_acquire:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    andi a2, a0, -4
-; RV64I-NEXT:    slli a0, a0, 3
+; RV64I-NEXT:    slliw a0, a0, 3
 ; RV64I-NEXT:    li a3, 255
 ; RV64I-NEXT:    zext.b a1, a1
 ; RV64I-NEXT:    sllw a3, a3, a0
@@ -12241,7 +12241,7 @@ define i8 @atomicrmw_umax_i8_acquire(ptr %a, i8 %b) nounwind {
 ; RV64I-ZALRSC-LABEL: atomicrmw_umax_i8_acquire:
 ; RV64I-ZALRSC:       # %bb.0:
 ; RV64I-ZALRSC-NEXT:    andi a2, a0, -4
-; RV64I-ZALRSC-NEXT:    slli a0, a0, 3
+; RV64I-ZALRSC-NEXT:    slliw a0, a0, 3
 ; RV64I-ZALRSC-NEXT:    li a3, 255
 ; RV64I-ZALRSC-NEXT:    zext.b a1, a1
 ; RV64I-ZALRSC-NEXT:    sllw a3, a3, a0
@@ -12265,7 +12265,7 @@ define i8 @atomicrmw_umax_i8_acquire(ptr %a, i8 %b) nounwind {
 ; RV64IA-LABEL: atomicrmw_umax_i8_acquire:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    andi a2, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
+; RV64IA-NEXT:    slliw a0, a0, 3
 ; RV64IA-NEXT:    li a3, 255
 ; RV64IA-NEXT:    zext.b a1, a1
 ; RV64IA-NEXT:    sllw a3, a3, a0
@@ -12536,7 +12536,7 @@ define i8 @atomicrmw_umax_i8_release(ptr %a, i8 %b) nounwind {
 ; RV64I-LABEL: atomicrmw_umax_i8_release:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    andi a2, a0, -4
-; RV64I-NEXT:    slli a0, a0, 3
+; RV64I-NEXT:    slliw a0, a0, 3
 ; RV64I-NEXT:    li a3, 255
 ; RV64I-NEXT:    zext.b a1, a1
 ; RV64I-NEXT:    sllw a3, a3, a0
@@ -12560,7 +12560,7 @@ define i8 @atomicrmw_umax_i8_release(ptr %a, i8 %b) nounwind {
 ; RV64I-ZALRSC-LABEL: atomicrmw_umax_i8_release:
 ; RV64I-ZALRSC:       # %bb.0:
 ; RV64I-ZALRSC-NEXT:    andi a2, a0, -4
-; RV64I-ZALRSC-NEXT:    slli a0, a0, 3
+; RV64I-ZALRSC-NEXT:    slliw a0, a0, 3
 ; RV64I-ZALRSC-NEXT:    li a3, 255
 ; RV64I-ZALRSC-NEXT:    zext.b a1, a1
 ; RV64I-ZALRSC-NEXT:    sllw a3, a3, a0
@@ -12584,7 +12584,7 @@ define i8 @atomicrmw_umax_i8_release(ptr %a, i8 %b) nounwind {
 ; RV64IA-LABEL: atomicrmw_umax_i8_release:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    andi a2, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
+; RV64IA-NEXT:    slliw a0, a0, 3
 ; RV64IA-NEXT:    li a3, 255
 ; RV64IA-NEXT:    zext.b a1, a1
 ; RV64IA-NEXT:    sllw a3, a3, a0
@@ -12855,7 +12855,7 @@ define i8 @atomicrmw_umax_i8_acq_rel(ptr %a, i8 %b) nounwind {
 ; RV64I-LABEL: atomicrmw_umax_i8_acq_rel:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    andi a2, a0, -4
-; RV64I-NEXT:    slli a0, a0, 3
+; RV64I-NEXT:    slliw a0, a0, 3
 ; RV64I-NEXT:    li a3, 255
 ; RV64I-NEXT:    zext.b a1, a1
 ; RV64I-NEXT:    sllw a3, a3, a0
@@ -12879,7 +12879,7 @@ define i8 @atomicrmw_umax_i8_acq_rel(ptr %a, i8 %b) nounwind {
 ; RV64I-ZALRSC-LABEL: atomicrmw_umax_i8_acq_rel:
 ; RV64I-ZALRSC:       # %bb.0:
 ; RV64I-ZALRSC-NEXT:    andi a2, a0, -4
-; RV64I-ZALRSC-NEXT:    slli a0, a0, 3
+; RV64I-ZALRSC-NEXT:    slliw a0, a0, 3
 ; RV64I-ZALRSC-NEXT:    li a3, 255
 ; RV64I-ZALRSC-NEXT:    zext.b a1, a1
 ; RV64I-ZALRSC-NEXT:    sllw a3, a3, a0
@@ -12903,7 +12903,7 @@ define i8 @atomicrmw_umax_i8_acq_rel(ptr %a, i8 %b) nounwind {
 ; RV64IA-LABEL: atomicrmw_umax_i8_acq_rel:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    andi a2, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
+; RV64IA-NEXT:    slliw a0, a0, 3
 ; RV64IA-NEXT:    li a3, 255
 ; RV64IA-NEXT:    zext.b a1, a1
 ; RV64IA-NEXT:    sllw a3, a3, a0
@@ -13150,7 +13150,7 @@ define i8 @atomicrmw_umax_i8_seq_cst(ptr %a, i8 %b) nounwind {
 ; RV64I-LABEL: atomicrmw_umax_i8_seq_cst:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    andi a2, a0, -4
-; RV64I-NEXT:    slli a0, a0, 3
+; RV64I-NEXT:    slliw a0, a0, 3
 ; RV64I-NEXT:    li a3, 255
 ; RV64I-NEXT:    zext.b a1, a1
 ; RV64I-NEXT:    sllw a3, a3, a0
@@ -13174,7 +13174,7 @@ define i8 @atomicrmw_umax_i8_seq_cst(ptr %a, i8 %b) nounwind {
 ; RV64I-ZALRSC-LABEL: atomicrmw_umax_i8_seq_cst:
 ; RV64I-ZALRSC:       # %bb.0:
 ; RV64I-ZALRSC-NEXT:    andi a2, a0, -4
-; RV64I-ZALRSC-NEXT:    slli a0, a0, 3
+; RV64I-ZALRSC-NEXT:    slliw a0, a0, 3
 ; RV64I-ZALRSC-NEXT:    li a3, 255
 ; RV64I-ZALRSC-NEXT:    zext.b a1, a1
 ; RV64I-ZALRSC-NEXT:    sllw a3, a3, a0
@@ -13198,7 +13198,7 @@ define i8 @atomicrmw_umax_i8_seq_cst(ptr %a, i8 %b) nounwind {
 ; RV64IA-LABEL: atomicrmw_umax_i8_seq_cst:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    andi a2, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
+; RV64IA-NEXT:    slliw a0, a0, 3
 ; RV64IA-NEXT:    li a3, 255
 ; RV64IA-NEXT:    zext.b a1, a1
 ; RV64IA-NEXT:    sllw a3, a3, a0
@@ -13376,7 +13376,7 @@ define i8 @atomicrmw_umin_i8_monotonic(ptr %a, i8 %b) nounwind {
 ; RV64I-LABEL: atomicrmw_umin_i8_monotonic:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    andi a2, a0, -4
-; RV64I-NEXT:    slli a0, a0, 3
+; RV64I-NEXT:    slliw a0, a0, 3
 ; RV64I-NEXT:    li a3, 255
 ; RV64I-NEXT:    zext.b a1, a1
 ; RV64I-NEXT:    sllw a3, a3, a0
@@ -13400,7 +13400,7 @@ define i8 @atomicrmw_umin_i8_monotonic(ptr %a, i8 %b) nounwind {
 ; RV64I-ZALRSC-LABEL: atomicrmw_umin_i8_monotonic:
 ; RV64I-ZALRSC:       # %bb.0:
 ; RV64I-ZALRSC-NEXT:    andi a2, a0, -4
-; RV64I-ZALRSC-NEXT:    slli a0, a0, 3
+; RV64I-ZALRSC-NEXT:    slliw a0, a0, 3
 ; RV64I-ZALRSC-NEXT:    li a3, 255
 ; RV64I-ZALRSC-NEXT:    zext.b a1, a1
 ; RV64I-ZALRSC-NEXT:    sllw a3, a3, a0
@@ -13424,7 +13424,7 @@ define i8 @atomicrmw_umin_i8_monotonic(ptr %a, i8 %b) nounwind {
 ; RV64IA-LABEL: atomicrmw_umin_i8_monotonic:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    andi a2, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
+; RV64IA-NEXT:    slliw a0, a0, 3
 ; RV64IA-NEXT:    li a3, 255
 ; RV64IA-NEXT:    zext.b a1, a1
 ; RV64IA-NEXT:    sllw a3, a3, a0
@@ -13626,7 +13626,7 @@ define i8 @atomicrmw_umin_i8_acquire(ptr %a, i8 %b) nounwind {
 ; RV64I-LABEL: atomicrmw_umin_i8_acquire:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    andi a2, a0, -4
-; RV64I-NEXT:    slli a0, a0, 3
+; RV64I-NEXT:    slliw a0, a0, 3
 ; RV64I-NEXT:    li a3, 255
 ; RV64I-NEXT:    zext.b a1, a1
 ; RV64I-NEXT:    sllw a3, a3, a0
@@ -13650,7 +13650,7 @@ define i8 @atomicrmw_umin_i8_acquire(ptr %a, i8 %b) nounwind {
 ; RV64I-ZALRSC-LABEL: atomicrmw_umin_i8_acquire:
 ; RV64I-ZALRSC:       # %bb.0:
 ; RV64I-ZALRSC-NEXT:    andi a2, a0, -4
-; RV64I-ZALRSC-NEXT:    slli a0, a0, 3
+; RV64I-ZALRSC-NEXT:    slliw a0, a0, 3
 ; RV64I-ZALRSC-NEXT:    li a3, 255
 ; RV64I-ZALRSC-NEXT:    zext.b a1, a1
 ; RV64I-ZALRSC-NEXT:    sllw a3, a3, a0
@@ -13674,7 +13674,7 @@ define i8 @atomicrmw_umin_i8_acquire(ptr %a, i8 %b) nounwind {
 ; RV64IA-LABEL: atomicrmw_umin_i8_acquire:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    andi a2, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
+; RV64IA-NEXT:    slliw a0, a0, 3
 ; RV64IA-NEXT:    li a3, 255
 ; RV64IA-NEXT:    zext.b a1, a1
 ; RV64IA-NEXT:    sllw a3, a3, a0
@@ -13945,7 +13945,7 @@ define i8 @atomicrmw_umin_i8_release(ptr %a, i8 %b) nounwind {
 ; RV64I-LABEL: atomicrmw_umin_i8_release:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    andi a2, a0, -4
-; RV64I-NEXT:    slli a0, a0, 3
+; RV64I-NEXT:    slliw a0, a0, 3
 ; RV64I-NEXT:    li a3, 255
 ; RV64I-NEXT:    zext.b a1, a1
 ; RV64I-NEXT:    sllw a3, a3, a0
@@ -13969,7 +13969,7 @@ define i8 @atomicrmw_umin_i8_release(ptr %a, i8 %b) nounwind {
 ; RV64I-ZALRSC-LABEL: atomicrmw_umin_i8_release:
 ; RV64I-ZALRSC:       # %bb.0:
 ; RV64I-ZALRSC-NEXT:    andi a2, a0, -4
-; RV64I-ZALRSC-NEXT:    slli a0, a0, 3
+; RV64I-ZALRSC-NEXT:    slliw a0, a0, 3
 ; RV64I-ZALRSC-NEXT:    li a3, 255
 ; RV64I-ZALRSC-NEXT:    zext.b a1, a1
 ; RV64I-ZALRSC-NEXT:    sllw a3, a3, a0
@@ -13993,7 +13993,7 @@ define i8 @atomicrmw_umin_i8_release(ptr %a, i8 %b) nounwind {
 ; RV64IA-LABEL: atomicrmw_umin_i8_release:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    andi a2, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
+; RV64IA-NEXT:    slliw a0, a0, 3
 ; RV64IA-NEXT:    li a3, 255
 ; RV64IA-NEXT:    zext.b a1, a1
 ; RV64IA-NEXT:    sllw a3, a3, a0
@@ -14264,7 +14264,7 @@ define i8 @atomicrmw_umin_i8_acq_rel(ptr %a, i8 %b) nounwind {
 ; RV64I-LABEL: atomicrmw_umin_i8_acq_rel:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    andi a2, a0, -4
-; RV64I-NEXT:    slli a0, a0, 3
+; RV64I-NEXT:    slliw a0, a0, 3
 ; RV64I-NEXT:    li a3, 255
 ; RV64I-NEXT:    zext.b a1, a1
 ; RV64I-NEXT:    sllw a3, a3, a0
@@ -14288,7 +14288,7 @@ define i8 @atomicrmw_umin_i8_acq_rel(ptr %a, i8 %b) nounwind {
 ; RV64I-ZALRSC-LABEL: atomicrmw_umin_i8_acq_rel:
 ; RV64I-ZALRSC:       # %bb.0:
 ; RV64I-ZALRSC-NEXT:    andi a2, a0, -4
-; RV64I-ZALRSC-NEXT:    slli a0, a0, 3
+; RV64I-ZALRSC-NEXT:    slliw a0, a0, 3
 ; RV64I-ZALRSC-NEXT:    li a3, 255
 ; RV64I-ZALRSC-NEXT:    zext.b a1, a1
 ; RV64I-ZALRSC-NEXT:    sllw a3, a3, a0
@@ -14312,7 +14312,7 @@ define i8 @atomicrmw_umin_i8_acq_rel(ptr %a, i8 %b) nounwind {
 ; RV64IA-LABEL: atomicrmw_umin_i8_acq_rel:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    andi a2, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
+; RV64IA-NEXT:    slliw a0, a0, 3
 ; RV64IA-NEXT:    li a3, 255
 ; RV64IA-NEXT:    zext.b a1, a1
 ; RV64IA-NEXT:    sllw a3, a3, a0
@@ -14559,7 +14559,7 @@ define i8 @atomicrmw_umin_i8_seq_cst(ptr %a, i8 %b) nounwind {
 ; RV64I-LABEL: atomicrmw_umin_i8_seq_cst:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    andi a2, a0, -4
-; RV64I-NEXT:    slli a0, a0, 3
+; RV64I-NEXT:    slliw a0, a0, 3
 ; RV64I-NEXT:    li a3, 255
 ; RV64I-NEXT:    zext.b a1, a1
 ; RV64I-NEXT:    sllw a3, a3, a0
@@ -14583,7 +14583,7 @@ define i8 @atomicrmw_umin_i8_seq_cst(ptr %a, i8 %b) nounwind {
 ; RV64I-ZALRSC-LABEL: atomicrmw_umin_i8_seq_cst:
 ; RV64I-ZALRSC:       # %bb.0:
 ; RV64I-ZALRSC-NEXT:    andi a2, a0, -4
-; RV64I-ZALRSC-NEXT:    slli a0, a0, 3
+; RV64I-ZALRSC-NEXT:    slliw a0, a0, 3
 ; RV64I-ZALRSC-NEXT:    li a3, 255
 ; RV64I-ZALRSC-NEXT:    zext.b a1, a1
 ; RV64I-ZALRSC-NEXT:    sllw a3, a3, a0
@@ -14607,7 +14607,7 @@ define i8 @atomicrmw_umin_i8_seq_cst(ptr %a, i8 %b) nounwind {
 ; RV64IA-LABEL: atomicrmw_umin_i8_seq_cst:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    andi a2, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
+; RV64IA-NEXT:    slliw a0, a0, 3
 ; RV64IA-NEXT:    li a3, 255
 ; RV64IA-NEXT:    zext.b a1, a1
 ; RV64IA-NEXT:    sllw a3, a3, a0
@@ -14749,7 +14749,7 @@ define i16 @atomicrmw_xchg_i16_monotonic(ptr %a, i16 %b) nounwind {
 ; RV64I-LABEL: atomicrmw_xchg_i16_monotonic:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    andi a2, a0, -4
-; RV64I-NEXT:    slli a0, a0, 3
+; RV64I-NEXT:    slliw a0, a0, 3
 ; RV64I-NEXT:    lui a3, 16
 ; RV64I-NEXT:    addi a3, a3, -1
 ; RV64I-NEXT:    sllw a4, a3, a0
@@ -14770,7 +14770,7 @@ define i16 @atomicrmw_xchg_i16_monotonic(ptr %a, i16 %b) nounwind {
 ; RV64I-ZALRSC-LABEL: atomicrmw_xchg_i16_monotonic:
 ; RV64I-ZALRSC:       # %bb.0:
 ; RV64I-ZALRSC-NEXT:    andi a2, a0, -4
-; RV64I-ZALRSC-NEXT:    slli a0, a0, 3
+; RV64I-ZALRSC-NEXT:    slliw a0, a0, 3
 ; RV64I-ZALRSC-NEXT:    lui a3, 16
 ; RV64I-ZALRSC-NEXT:    addi a3, a3, -1
 ; RV64I-ZALRSC-NEXT:    sllw a4, a3, a0
@@ -14791,7 +14791,7 @@ define i16 @atomicrmw_xchg_i16_monotonic(ptr %a, i16 %b) nounwind {
 ; RV64IA-LABEL: atomicrmw_xchg_i16_monotonic:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    andi a2, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
+; RV64IA-NEXT:    slliw a0, a0, 3
 ; RV64IA-NEXT:    lui a3, 16
 ; RV64IA-NEXT:    addi a3, a3, -1
 ; RV64IA-NEXT:    sllw a4, a3, a0
@@ -14945,7 +14945,7 @@ define i16 @atomicrmw_xchg_i16_acquire(ptr %a, i16 %b) nounwind {
 ; RV64I-LABEL: atomicrmw_xchg_i16_acquire:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    andi a2, a0, -4
-; RV64I-NEXT:    slli a0, a0, 3
+; RV64I-NEXT:    slliw a0, a0, 3
 ; RV64I-NEXT:    lui a3, 16
 ; RV64I-NEXT:    addi a3, a3, -1
 ; RV64I-NEXT:    sllw a4, a3, a0
@@ -14966,7 +14966,7 @@ define i16 @atomicrmw_xchg_i16_acquire(ptr %a, i16 %b) nounwind {
 ; RV64I-ZALRSC-LABEL: atomicrmw_xchg_i16_acquire:
 ; RV64I-ZALRSC:       # %bb.0:
 ; RV64I-ZALRSC-NEXT:    andi a2, a0, -4
-; RV64I-ZALRSC-NEXT:    slli a0, a0, 3
+; RV64I-ZALRSC-NEXT:    slliw a0, a0, 3
 ; RV64I-ZALRSC-NEXT:    lui a3, 16
 ; RV64I-ZALRSC-NEXT:    addi a3, a3, -1
 ; RV64I-ZALRSC-NEXT:    sllw a4, a3, a0
@@ -14987,7 +14987,7 @@ define i16 @atomicrmw_xchg_i16_acquire(ptr %a, i16 %b) nounwind {
 ; RV64IA-LABEL: atomicrmw_xchg_i16_acquire:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    andi a2, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
+; RV64IA-NEXT:    slliw a0, a0, 3
 ; RV64IA-NEXT:    lui a3, 16
 ; RV64IA-NEXT:    addi a3, a3, -1
 ; RV64IA-NEXT:    sllw a4, a3, a0
@@ -15201,7 +15201,7 @@ define i16 @atomicrmw_xchg_i16_release(ptr %a, i16 %b) nounwind {
 ; RV64I-LABEL: atomicrmw_xchg_i16_release:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    andi a2, a0, -4
-; RV64I-NEXT:    slli a0, a0, 3
+; RV64I-NEXT:    slliw a0, a0, 3
 ; RV64I-NEXT:    lui a3, 16
 ; RV64I-NEXT:    addi a3, a3, -1
 ; RV64I-NEXT:    sllw a4, a3, a0
@@ -15222,7 +15222,7 @@ define i16 @atomicrmw_xchg_i16_release(ptr %a, i16 %b) nounwind {
 ; RV64I-ZALRSC-LABEL: atomicrmw_xchg_i16_release:
 ; RV64I-ZALRSC:       # %bb.0:
 ; RV64I-ZALRSC-NEXT:    andi a2, a0, -4
-; RV64I-ZALRSC-NEXT:    slli a0, a0, 3
+; RV64I-ZALRSC-NEXT:    slliw a0, a0, 3
 ; RV64I-ZALRSC-NEXT:    lui a3, 16
 ; RV64I-ZALRSC-NEXT:    addi a3, a3, -1
 ; RV64I-ZALRSC-NEXT:    sllw a4, a3, a0
@@ -15243,7 +15243,7 @@ define i16 @atomicrmw_xchg_i16_release(ptr %a, i16 %b) nounwind {
 ; RV64IA-LABEL: atomicrmw_xchg_i16_release:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    andi a2, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
+; RV64IA-NEXT:    slliw a0, a0, 3
 ; RV64IA-NEXT:    lui a3, 16
 ; RV64IA-NEXT:    addi a3, a3, -1
 ; RV64IA-NEXT:    sllw a4, a3, a0
@@ -15457,7 +15457,7 @@ define i16 @atomicrmw_xchg_i16_acq_rel(ptr %a, i16 %b) nounwind {
 ; RV64I-LABEL: atomicrmw_xchg_i16_acq_rel:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    andi a2, a0, -4
-; RV64I-NEXT:    slli a0, a0, 3
+; RV64I-NEXT:    slliw a0, a0, 3
 ; RV64I-NEXT:    lui a3, 16
 ; RV64I-NEXT:    addi a3, a3, -1
 ; RV64I-NEXT:    sllw a4, a3, a0
@@ -15478,7 +15478,7 @@ define i16 @atomicrmw_xchg_i16_acq_rel(ptr %a, i16 %b) nounwind {
 ; RV64I-ZALRSC-LABEL: atomicrmw_xchg_i16_acq_rel:
 ; RV64I-ZALRSC:       # %bb.0:
 ; RV64I-ZALRSC-NEXT:    andi a2, a0, -4
-; RV64I-ZALRSC-NEXT:    slli a0, a0, 3
+; RV64I-ZALRSC-NEXT:    slliw a0, a0, 3
 ; RV64I-ZALRSC-NEXT:    lui a3, 16
 ; RV64I-ZALRSC-NEXT:    addi a3, a3, -1
 ; RV64I-ZALRSC-NEXT:    sllw a4, a3, a0
@@ -15499,7 +15499,7 @@ define i16 @atomicrmw_xchg_i16_acq_rel(ptr %a, i16 %b) nounwind {
 ; RV64IA-LABEL: atomicrmw_xchg_i16_acq_rel:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    andi a2, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
+; RV64IA-NEXT:    slliw a0, a0, 3
 ; RV64IA-NEXT:    lui a3, 16
 ; RV64IA-NEXT:    addi a3, a3, -1
 ; RV64IA-NEXT:    sllw a4, a3, a0
@@ -15692,7 +15692,7 @@ define i16 @atomicrmw_xchg_i16_seq_cst(ptr %a, i16 %b) nounwind {
 ; RV64I-LABEL: atomicrmw_xchg_i16_seq_cst:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    andi a2, a0, -4
-; RV64I-NEXT:    slli a0, a0, 3
+; RV64I-NEXT:    slliw a0, a0, 3
 ; RV64I-NEXT:    lui a3, 16
 ; RV64I-NEXT:    addi a3, a3, -1
 ; RV64I-NEXT:    sllw a4, a3, a0
@@ -15713,7 +15713,7 @@ define i16 @atomicrmw_xchg_i16_seq_cst(ptr %a, i16 %b) nounwind {
 ; RV64I-ZALRSC-LABEL: atomicrmw_xchg_i16_seq_cst:
 ; RV64I-ZALRSC:       # %bb.0:
 ; RV64I-ZALRSC-NEXT:    andi a2, a0, -4
-; RV64I-ZALRSC-NEXT:    slli a0, a0, 3
+; RV64I-ZALRSC-NEXT:    slliw a0, a0, 3
 ; RV64I-ZALRSC-NEXT:    lui a3, 16
 ; RV64I-ZALRSC-NEXT:    addi a3, a3, -1
 ; RV64I-ZALRSC-NEXT:    sllw a4, a3, a0
@@ -15734,7 +15734,7 @@ define i16 @atomicrmw_xchg_i16_seq_cst(ptr %a, i16 %b) nounwind {
 ; RV64IA-LABEL: atomicrmw_xchg_i16_seq_cst:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    andi a2, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
+; RV64IA-NEXT:    slliw a0, a0, 3
 ; RV64IA-NEXT:    lui a3, 16
 ; RV64IA-NEXT:    addi a3, a3, -1
 ; RV64IA-NEXT:    sllw a4, a3, a0
@@ -15858,7 +15858,7 @@ define i16 @atomicrmw_xchg_0_i16_monotonic(ptr %a) nounwind {
 ; RV64I-LABEL: atomicrmw_xchg_0_i16_monotonic:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    andi a1, a0, -4
-; RV64I-NEXT:    slli a0, a0, 3
+; RV64I-NEXT:    slliw a0, a0, 3
 ; RV64I-NEXT:    lui a2, 16
 ; RV64I-NEXT:    addi a2, a2, -1
 ; RV64I-NEXT:    sllw a2, a2, a0
@@ -15870,7 +15870,7 @@ define i16 @atomicrmw_xchg_0_i16_monotonic(ptr %a) nounwind {
 ; RV64I-ZALRSC-LABEL: atomicrmw_xchg_0_i16_monotonic:
 ; RV64I-ZALRSC:       # %bb.0:
 ; RV64I-ZALRSC-NEXT:    andi a1, a0, -4
-; RV64I-ZALRSC-NEXT:    slli a0, a0, 3
+; RV64I-ZALRSC-NEXT:    slliw a0, a0, 3
 ; RV64I-ZALRSC-NEXT:    lui a2, 16
 ; RV64I-ZALRSC-NEXT:    addi a2, a2, -1
 ; RV64I-ZALRSC-NEXT:    sllw a2, a2, a0
@@ -15882,7 +15882,7 @@ define i16 @atomicrmw_xchg_0_i16_monotonic(ptr %a) nounwind {
 ; RV64IA-LABEL: atomicrmw_xchg_0_i16_monotonic:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    andi a1, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
+; RV64IA-NEXT:    slliw a0, a0, 3
 ; RV64IA-NEXT:    lui a2, 16
 ; RV64IA-NEXT:    addi a2, a2, -1
 ; RV64IA-NEXT:    sllw a2, a2, a0
@@ -15988,7 +15988,7 @@ define i16 @atomicrmw_xchg_0_i16_acquire(ptr %a) nounwind {
 ; RV64I-LABEL: atomicrmw_xchg_0_i16_acquire:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    andi a1, a0, -4
-; RV64I-NEXT:    slli a0, a0, 3
+; RV64I-NEXT:    slliw a0, a0, 3
 ; RV64I-NEXT:    lui a2, 16
 ; RV64I-NEXT:    addi a2, a2, -1
 ; RV64I-NEXT:    sllw a2, a2, a0
@@ -16000,7 +16000,7 @@ define i16 @atomicrmw_xchg_0_i16_acquire(ptr %a) nounwind {
 ; RV64I-ZALRSC-LABEL: atomicrmw_xchg_0_i16_acquire:
 ; RV64I-ZALRSC:       # %bb.0:
 ; RV64I-ZALRSC-NEXT:    andi a1, a0, -4
-; RV64I-ZALRSC-NEXT:    slli a0, a0, 3
+; RV64I-ZALRSC-NEXT:    slliw a0, a0, 3
 ; RV64I-ZALRSC-NEXT:    lui a2, 16
 ; RV64I-ZALRSC-NEXT:    addi a2, a2, -1
 ; RV64I-ZALRSC-NEXT:    sllw a2, a2, a0
@@ -16012,7 +16012,7 @@ define i16 @atomicrmw_xchg_0_i16_acquire(ptr %a) nounwind {
 ; RV64IA-LABEL: atomicrmw_xchg_0_i16_acquire:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    andi a1, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
+; RV64IA-NEXT:    slliw a0, a0, 3
 ; RV64IA-NEXT:    lui a2, 16
 ; RV64IA-NEXT:    addi a2, a2, -1
 ; RV64IA-NEXT:    sllw a2, a2, a0
@@ -16151,7 +16151,7 @@ define i16 @atomicrmw_xchg_0_i16_release(ptr %a) nounwind {
 ; RV64I-LABEL: atomicrmw_xchg_0_i16_release:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    andi a1, a0, -4
-; RV64I-NEXT:    slli a0, a0, 3
+; RV64I-NEXT:    slliw a0, a0, 3
 ; RV64I-NEXT:    lui a2, 16
 ; RV64I-NEXT:    addi a2, a2, -1
 ; RV64I-NEXT:    sllw a2, a2, a0
@@ -16163,7 +16163,7 @@ define i16 @atomicrmw_xchg_0_i16_release(ptr %a) nounwind {
 ; RV64I-ZALRSC-LABEL: atomicrmw_xchg_0_i16_release:
 ; RV64I-ZALRSC:       # %bb.0:
 ; RV64I-ZALRSC-NEXT:    andi a1, a0, -4
-; RV64I-ZALRSC-NEXT:    slli a0, a0, 3
+; RV64I-ZALRSC-NEXT:    slliw a0, a0, 3
 ; RV64I-ZALRSC-NEXT:    lui a2, 16
 ; RV64I-ZALRSC-NEXT:    addi a2, a2, -1
 ; RV64I-ZALRSC-NEXT:    sllw a2, a2, a0
@@ -16175,7 +16175,7 @@ define i16 @atomicrmw_xchg_0_i16_release(ptr %a) nounwind {
 ; RV64IA-LABEL: atomicrmw_xchg_0_i16_release:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    andi a1, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
+; RV64IA-NEXT:    slliw a0, a0, 3
 ; RV64IA-NEXT:    lui a2, 16
 ; RV64IA-NEXT:    addi a2, a2, -1
 ; RV64IA-NEXT:    sllw a2, a2, a0
@@ -16314,7 +16314,7 @@ define i16 @atomicrmw_xchg_0_i16_acq_rel(ptr %a) nounwind {
 ; RV64I-LABEL: atomicrmw_xchg_0_i16_acq_rel:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    andi a1, a0, -4
-; RV64I-NEXT:    slli a0, a0, 3
+; RV64I-NEXT:    slliw a0, a0, 3
 ; RV64I-NEXT:    lui a2, 16
 ; RV64I-NEXT:    addi a2, a2, -1
 ; RV64I-NEXT:    sllw a2, a2, a0
@@ -16326,7 +16326,7 @@ define i16 @atomicrmw_xchg_0_i16_acq_rel(ptr %a) nounwind {
 ; RV64I-ZALRSC-LABEL: atomicrmw_xchg_0_i16_acq_rel:
 ; RV64I-ZALRSC:       # %bb.0:
 ; RV64I-ZALRSC-NEXT:    andi a1, a0, -4
-; RV64I-ZALRSC-NEXT:    slli a0, a0, 3
+; RV64I-ZALRSC-NEXT:    slliw a0, a0, 3
 ; RV64I-ZALRSC-NEXT:    lui a2, 16
 ; RV64I-ZALRSC-NEXT:    addi a2, a2, -1
 ; RV64I-ZALRSC-NEXT:    sllw a2, a2, a0
@@ -16338,7 +16338,7 @@ define i16 @atomicrmw_xchg_0_i16_acq_rel(ptr %a) nounwind {
 ; RV64IA-LABEL: atomicrmw_xchg_0_i16_acq_rel:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    andi a1, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
+; RV64IA-NEXT:    slliw a0, a0, 3
 ; RV64IA-NEXT:    lui a2, 16
 ; RV64IA-NEXT:    addi a2, a2, -1
 ; RV64IA-NEXT:    sllw a2, a2, a0
@@ -16477,7 +16477,7 @@ define i16 @atomicrmw_xchg_0_i16_seq_cst(ptr %a) nounwind {
 ; RV64I-LABEL: atomicrmw_xchg_0_i16_seq_cst:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    andi a1, a0, -4
-; RV64I-NEXT:    slli a0, a0, 3
+; RV64I-NEXT:    slliw a0, a0, 3
 ; RV64I-NEXT:    lui a2, 16
 ; RV64I-NEXT:    addi a2, a2, -1
 ; RV64I-NEXT:    sllw a2, a2, a0
@@ -16489,7 +16489,7 @@ define i16 @atomicrmw_xchg_0_i16_seq_cst(ptr %a) nounwind {
 ; RV64I-ZALRSC-LABEL: atomicrmw_xchg_0_i16_seq_cst:
 ; RV64I-ZALRSC:       # %bb.0:
 ; RV64I-ZALRSC-NEXT:    andi a1, a0, -4
-; RV64I-ZALRSC-NEXT:    slli a0, a0, 3
+; RV64I-ZALRSC-NEXT:    slliw a0, a0, 3
 ; RV64I-ZALRSC-NEXT:    lui a2, 16
 ; RV64I-ZALRSC-NEXT:    addi a2, a2, -1
 ; RV64I-ZALRSC-NEXT:    sllw a2, a2, a0
@@ -16501,7 +16501,7 @@ define i16 @atomicrmw_xchg_0_i16_seq_cst(ptr %a) nounwind {
 ; RV64IA-LABEL: atomicrmw_xchg_0_i16_seq_cst:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    andi a1, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
+; RV64IA-NEXT:    slliw a0, a0, 3
 ; RV64IA-NEXT:    lui a2, 16
 ; RV64IA-NEXT:    addi a2, a2, -1
 ; RV64IA-NEXT:    sllw a2, a2, a0
@@ -16627,7 +16627,7 @@ define i16 @atomicrmw_xchg_minus_1_i16_monotonic(ptr %a) nounwind {
 ; RV64I-LABEL: atomicrmw_xchg_minus_1_i16_monotonic:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    andi a1, a0, -4
-; RV64I-NEXT:    slli a0, a0, 3
+; RV64I-NEXT:    slliw a0, a0, 3
 ; RV64I-NEXT:    lui a2, 16
 ; RV64I-NEXT:    addi a2, a2, -1
 ; RV64I-NEXT:    sllw a2, a2, a0
@@ -16638,7 +16638,7 @@ define i16 @atomicrmw_xchg_minus_1_i16_monotonic(ptr %a) nounwind {
 ; RV64I-ZALRSC-LABEL: atomicrmw_xchg_minus_1_i16_monotonic:
 ; RV64I-ZALRSC:       # %bb.0:
 ; RV64I-ZALRSC-NEXT:    andi a1, a0, -4
-; RV64I-ZALRSC-NEXT:    slli a0, a0, 3
+; RV64I-ZALRSC-NEXT:    slliw a0, a0, 3
 ; RV64I-ZALRSC-NEXT:    lui a2, 16
 ; RV64I-ZALRSC-NEXT:    addi a2, a2, -1
 ; RV64I-ZALRSC-NEXT:    sllw a2, a2, a0
@@ -16649,7 +16649,7 @@ define i16 @atomicrmw_xchg_minus_1_i16_monotonic(ptr %a) nounwind {
 ; RV64IA-LABEL: atomicrmw_xchg_minus_1_i16_monotonic:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    andi a1, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
+; RV64IA-NEXT:    slliw a0, a0, 3
 ; RV64IA-NEXT:    lui a2, 16
 ; RV64IA-NEXT:    addi a2, a2, -1
 ; RV64IA-NEXT:    sllw a2, a2, a0
@@ -16754,7 +16754,7 @@ define i16 @atomicrmw_xchg_minus_1_i16_acquire(ptr %a) nounwind {
 ; RV64I-LABEL: atomicrmw_xchg_minus_1_i16_acquire:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    andi a1, a0, -4
-; RV64I-NEXT:    slli a0, a0, 3
+; RV64I-NEXT:    slliw a0, a0, 3
 ; RV64I-NEXT:    lui a2, 16
 ; RV64I-NEXT:    addi a2, a2, -1
 ; RV64I-NEXT:    sllw a2, a2, a0
@@ -16765,7 +16765,7 @@ define i16 @atomicrmw_xchg_minus_1_i16_acquire(ptr %a) nounwind {
 ; RV64I-ZALRSC-LABEL: atomicrmw_xchg_minus_1_i16_acquire:
 ; RV64I-ZALRSC:       # %bb.0:
 ; RV64I-ZALRSC-NEXT:    andi a1, a0, -4
-; RV64I-ZALRSC-NEXT:    slli a0, a0, 3
+; RV64I-ZALRSC-NEXT:    slliw a0, a0, 3
 ; RV64I-ZALRSC-NEXT:    lui a2, 16
 ; RV64I-ZALRSC-NEXT:    addi a2, a2, -1
 ; RV64I-ZALRSC-NEXT:    sllw a2, a2, a0
@@ -16776,7 +16776,7 @@ define i16 @atomicrmw_xchg_minus_1_i16_acquire(ptr %a) nounwind {
 ; RV64IA-LABEL: atomicrmw_xchg_minus_1_i16_acquire:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    andi a1, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
+; RV64IA-NEXT:    slliw a0, a0, 3
 ; RV64IA-NEXT:    lui a2, 16
 ; RV64IA-NEXT:    addi a2, a2, -1
 ; RV64IA-NEXT:    sllw a2, a2, a0
@@ -16911,7 +16911,7 @@ define i16 @atomicrmw_xchg_minus_1_i16_release(ptr %a) nounwind {
 ; RV64I-LABEL: atomicrmw_xchg_minus_1_i16_release:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    andi a1, a0, -4
-; RV64I-NEXT:    slli a0, a0, 3
+; RV64I-NEXT:    slliw a0, a0, 3
 ; RV64I-NEXT:    lui a2, 16
 ; RV64I-NEXT:    addi a2, a2, -1
 ; RV64I-NEXT:    sllw a2, a2, a0
@@ -16922,7 +16922,7 @@ define i16 @atomicrmw_xchg_minus_1_i16_release(ptr %a) nounwind {
 ; RV64I-ZALRSC-LABEL: atomicrmw_xchg_minus_1_i16_release:
 ; RV64I-ZALRSC:       # %bb.0:
 ; RV64I-ZALRSC-NEXT:    andi a1, a0, -4
-; RV64I-ZALRSC-NEXT:    slli a0, a0, 3
+; RV64I-ZALRSC-NEXT:    slliw a0, a0, 3
 ; RV64I-ZALRSC-NEXT:    lui a2, 16
 ; RV64I-ZALRSC-NEXT:    addi a2, a2, -1
 ; RV64I-ZALRSC-NEXT:    sllw a2, a2, a0
@@ -16933,7 +16933,7 @@ define i16 @atomicrmw_xchg_minus_1_i16_release(ptr %a) nounwind {
 ; RV64IA-LABEL: atomicrmw_xchg_minus_1_i16_release:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    andi a1, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
+; RV64IA-NEXT:    slliw a0, a0, 3
 ; RV64IA-NEXT:    lui a2, 16
 ; RV64IA-NEXT:    addi a2, a2, -1
 ; RV64IA-NEXT:    sllw a2, a2, a0
@@ -17068,7 +17068,7 @@ define i16 @atomicrmw_xchg_minus_1_i16_acq_rel(ptr %a) nounwind {
 ; RV64I-LABEL: atomicrmw_xchg_minus_1_i16_acq_rel:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    andi a1, a0, -4
-; RV64I-NEXT:    slli a0, a0, 3
+; RV64I-NEXT:    slliw a0, a0, 3
 ; RV64I-NEXT:    lui a2, 16
 ; RV64I-NEXT:    addi a2, a2, -1
 ; RV64I-NEXT:    sllw a2, a2, a0
@@ -17079,7 +17079,7 @@ define i16 @atomicrmw_xchg_minus_1_i16_acq_rel(ptr %a) nounwind {
 ; RV64I-ZALRSC-LABEL: atomicrmw_xchg_minus_1_i16_acq_rel:
 ; RV64I-ZALRSC:       # %bb.0:
 ; RV64I-ZALRSC-NEXT:    andi a1, a0, -4
-; RV64I-ZALRSC-NEXT:    slli a0, a0, 3
+; RV64I-ZALRSC-NEXT:    slliw a0, a0, 3
 ; RV64I-ZALRSC-NEXT:    lui a2, 16
 ; RV64I-ZALRSC-NEXT:    addi a2, a2, -1
 ; RV64I-ZALRSC-NEXT:    sllw a2, a2, a0
@@ -17090,7 +17090,7 @@ define i16 @atomicrmw_xchg_minus_1_i16_acq_rel(ptr %a) nounwind {
 ; RV64IA-LABEL: atomicrmw_xchg_minus_1_i16_acq_rel:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    andi a1, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
+; RV64IA-NEXT:    slliw a0, a0, 3
 ; RV64IA-NEXT:    lui a2, 16
 ; RV64IA-NEXT:    addi a2, a2, -1
 ; RV64IA-NEXT:    sllw a2, a2, a0
@@ -17225,7 +17225,7 @@ define i16 @atomicrmw_xchg_minus_1_i16_seq_cst(ptr %a) nounwind {
 ; RV64I-LABEL: atomicrmw_xchg_minus_1_i16_seq_cst:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    andi a1, a0, -4
-; RV64I-NEXT:    slli a0, a0, 3
+; RV64I-NEXT:    slliw a0, a0, 3
 ; RV64I-NEXT:    lui a2, 16
 ; RV64I-NEXT:    addi a2, a2, -1
 ; RV64I-NEXT:    sllw a2, a2, a0
@@ -17236,7 +17236,7 @@ define i16 @atomicrmw_xchg_minus_1_i16_seq_cst(ptr %a) nounwind {
 ; RV64I-ZALRSC-LABEL: atomicrmw_xchg_minus_1_i16_seq_cst:
 ; RV64I-ZALRSC:       # %bb.0:
 ; RV64I-ZALRSC-NEXT:    andi a1, a0, -4
-; RV64I-ZALRSC-NEXT:    slli a0, a0, 3
+; RV64I-ZALRSC-NEXT:    slliw a0, a0, 3
 ; RV64I-ZALRSC-NEXT:    lui a2, 16
 ; RV64I-ZALRSC-NEXT:    addi a2, a2, -1
 ; RV64I-ZALRSC-NEXT:    sllw a2, a2, a0
@@ -17247,7 +17247,7 @@ define i16 @atomicrmw_xchg_minus_1_i16_seq_cst(ptr %a) nounwind {
 ; RV64IA-LABEL: atomicrmw_xchg_minus_1_i16_seq_cst:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    andi a1, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
+; RV64IA-NEXT:    slliw a0, a0, 3
 ; RV64IA-NEXT:    lui a2, 16
 ; RV64IA-NEXT:    addi a2, a2, -1
 ; RV64IA-NEXT:    sllw a2, a2, a0
@@ -17384,7 +17384,7 @@ define i16 @atomicrmw_add_i16_monotonic(ptr %a, i16 %b) nounwind {
 ; RV64I-LABEL: atomicrmw_add_i16_monotonic:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    andi a2, a0, -4
-; RV64I-NEXT:    slli a0, a0, 3
+; RV64I-NEXT:    slliw a0, a0, 3
 ; RV64I-NEXT:    lui a3, 16
 ; RV64I-NEXT:    addi a3, a3, -1
 ; RV64I-NEXT:    sllw a4, a3, a0
@@ -17405,7 +17405,7 @@ define i16 @atomicrmw_add_i16_monotonic(ptr %a, i16 %b) nounwind {
 ; RV64I-ZALRSC-LABEL: atomicrmw_add_i16_monotonic:
 ; RV64I-ZALRSC:       # %bb.0:
 ; RV64I-ZALRSC-NEXT:    andi a2, a0, -4
-; RV64I-ZALRSC-NEXT:    slli a0, a0, 3
+; RV64I-ZALRSC-NEXT:    slliw a0, a0, 3
 ; RV64I-ZALRSC-NEXT:    lui a3, 16
 ; RV64I-ZALRSC-NEXT:    addi a3, a3, -1
 ; RV64I-ZALRSC-NEXT:    sllw a4, a3, a0
@@ -17426,7 +17426,7 @@ define i16 @atomicrmw_add_i16_monotonic(ptr %a, i16 %b) nounwind {
 ; RV64IA-LABEL: atomicrmw_add_i16_monotonic:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    andi a2, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
+; RV64IA-NEXT:    slliw a0, a0, 3
 ; RV64IA-NEXT:    lui a3, 16
 ; RV64IA-NEXT:    addi a3, a3, -1
 ; RV64IA-NEXT:    sllw a4, a3, a0
@@ -17580,7 +17580,7 @@ define i16 @atomicrmw_add_i16_acquire(ptr %a, i16 %b) nounwind {
 ; RV64I-LABEL: atomicrmw_add_i16_acquire:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    andi a2, a0, -4
-; RV64I-NEXT:    slli a0, a0, 3
+; RV64I-NEXT:    slliw a0, a0, 3
 ; RV64I-NEXT:    lui a3, 16
 ; RV64I-NEXT:    addi a3, a3, -1
 ; RV64I-NEXT:    sllw a4, a3, a0
@@ -17601,7 +17601,7 @@ define i16 @atomicrmw_add_i16_acquire(ptr %a, i16 %b) nounwind {
 ; RV64I-ZALRSC-LABEL: atomicrmw_add_i16_acquire:
 ; RV64I-ZALRSC:       # %bb.0:
 ; RV64I-ZALRSC-NEXT:    andi a2, a0, -4
-; RV64I-ZALRSC-NEXT:    slli a0, a0, 3
+; RV64I-ZALRSC-NEXT:    slliw a0, a0, 3
 ; RV64I-ZALRSC-NEXT:    lui a3, 16
 ; RV64I-ZALRSC-NEXT:    addi a3, a3, -1
 ; RV64I-ZALRSC-NEXT:    sllw a4, a3, a0
@@ -17622,7 +17622,7 @@ define i16 @atomicrmw_add_i16_acquire(ptr %a, i16 %b) nounwind {
 ; RV64IA-LABEL: atomicrmw_add_i16_acquire:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    andi a2, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
+; RV64IA-NEXT:    slliw a0, a0, 3
 ; RV64IA-NEXT:    lui a3, 16
 ; RV64IA-NEXT:    addi a3, a3, -1
 ; RV64IA-NEXT:    sllw a4, a3, a0
@@ -17836,7 +17836,7 @@ define i16 @atomicrmw_add_i16_release(ptr %a, i16 %b) nounwind {
 ; RV64I-LABEL: atomicrmw_add_i16_release:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    andi a2, a0, -4
-; RV64I-NEXT:    slli a0, a0, 3
+; RV64I-NEXT:    slliw a0, a0, 3
 ; RV64I-NEXT:    lui a3, 16
 ; RV64I-NEXT:    addi a3, a3, -1
 ; RV64I-NEXT:    sllw a4, a3, a0
@@ -17857,7 +17857,7 @@ define i16 @atomicrmw_add_i16_release(ptr %a, i16 %b) nounwind {
 ; RV64I-ZALRSC-LABEL: atomicrmw_add_i16_release:
 ; RV64I-ZALRSC:       # %bb.0:
 ; RV64I-ZALRSC-NEXT:    andi a2, a0, -4
-; RV64I-ZALRSC-NEXT:    slli a0, a0, 3
+; RV64I-ZALRSC-NEXT:    slliw a0, a0, 3
 ; RV64I-ZALRSC-NEXT:    lui a3, 16
 ; RV64I-ZALRSC-NEXT:    addi a3, a3, -1
 ; RV64I-ZALRSC-NEXT:    sllw a4, a3, a0
@@ -17878,7 +17878,7 @@ define i16 @atomicrmw_add_i16_release(ptr %a, i16 %b) nounwind {
 ; RV64IA-LABEL: atomicrmw_add_i16_release:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    andi a2, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
+; RV64IA-NEXT:    slliw a0, a0, 3
 ; RV64IA-NEXT:    lui a3, 16
 ; RV64IA-NEXT:    addi a3, a3, -1
 ; RV64IA-NEXT:    sllw a4, a3, a0
@@ -18092,7 +18092,7 @@ define i16 @atomicrmw_add_i16_acq_rel(ptr %a, i16 %b) nounwind {
 ; RV64I-LABEL: atomicrmw_add_i16_acq_rel:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    andi a2, a0, -4
-; RV64I-NEXT:    slli a0, a0, 3
+; RV64I-NEXT:    slliw a0, a0, 3
 ; RV64I-NEXT:    lui a3, 16
 ; RV64I-NEXT:    addi a3, a3, -1
 ; RV64I-NEXT:    sllw a4, a3, a0
@@ -18113,7 +18113,7 @@ define i16 @atomicrmw_add_i16_acq_rel(ptr %a, i16 %b) nounwind {
 ; RV64I-ZALRSC-LABEL: atomicrmw_add_i16_acq_rel:
 ; RV64I-ZALRSC:       # %bb.0:
 ; RV64I-ZALRSC-NEXT:    andi a2, a0, -4
-; RV64I-ZALRSC-NEXT:    slli a0, a0, 3
+; RV64I-ZALRSC-NEXT:    slliw a0, a0, 3
 ; RV64I-ZALRSC-NEXT:    lui a3, 16
 ; RV64I-ZALRSC-NEXT:    addi a3, a3, -1
 ; RV64I-ZALRSC-NEXT:    sllw a4, a3, a0
@@ -18134,7 +18134,7 @@ define i16 @atomicrmw_add_i16_acq_rel(ptr %a, i16 %b) nounwind {
 ; RV64IA-LABEL: atomicrmw_add_i16_acq_rel:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    andi a2, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
+; RV64IA-NEXT:    slliw a0, a0, 3
 ; RV64IA-NEXT:    lui a3, 16
 ; RV64IA-NEXT:    addi a3, a3, -1
 ; RV64IA-NEXT:    sllw a4, a3, a0
@@ -18327,7 +18327,7 @@ define i16 @atomicrmw_add_i16_seq_cst(ptr %a, i16 %b) nounwind {
 ; RV64I-LABEL: atomicrmw_add_i16_seq_cst:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    andi a2, a0, -4
-; RV64I-NEXT:    slli a0, a0, 3
+; RV64I-NEXT:    slliw a0, a0, 3
 ; RV64I-NEXT:    lui a3, 16
 ; RV64I-NEXT:    addi a3, a3, -1
 ; RV64I-NEXT:    sllw a4, a3, a0
@@ -18348,7 +18348,7 @@ define i16 @atomicrmw_add_i16_seq_cst(ptr %a, i16 %b) nounwind {
 ; RV64I-ZALRSC-LABEL: atomicrmw_add_i16_seq_cst:
 ; RV64I-ZALRSC:       # %bb.0:
 ; RV64I-ZALRSC-NEXT:    andi a2, a0, -4
-; RV64I-ZALRSC-NEXT:    slli a0, a0, 3
+; RV64I-ZALRSC-NEXT:    slliw a0, a0, 3
 ; RV64I-ZALRSC-NEXT:    lui a3, 16
 ; RV64I-ZALRSC-NEXT:    addi a3, a3, -1
 ; RV64I-ZALRSC-NEXT:    sllw a4, a3, a0
@@ -18369,7 +18369,7 @@ define i16 @atomicrmw_add_i16_seq_cst(ptr %a, i16 %b) nounwind {
 ; RV64IA-LABEL: atomicrmw_add_i16_seq_cst:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    andi a2, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
+; RV64IA-NEXT:    slliw a0, a0, 3
 ; RV64IA-NEXT:    lui a3, 16
 ; RV64IA-NEXT:    addi a3, a3, -1
 ; RV64IA-NEXT:    sllw a4, a3, a0
@@ -18502,7 +18502,7 @@ define i16 @atomicrmw_sub_i16_monotonic(ptr %a, i16 %b) nounwind {
 ; RV64I-LABEL: atomicrmw_sub_i16_monotonic:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    andi a2, a0, -4
-; RV64I-NEXT:    slli a0, a0, 3
+; RV64I-NEXT:    slliw a0, a0, 3
 ; RV64I-NEXT:    lui a3, 16
 ; RV64I-NEXT:    addi a3, a3, -1
 ; RV64I-NEXT:    sllw a4, a3, a0
@@ -18523,7 +18523,7 @@ define i16 @atomicrmw_sub_i16_monotonic(ptr %a, i16 %b) nounwind {
 ; RV64I-ZALRSC-LABEL: atomicrmw_sub_i16_monotonic:
 ; RV64I-ZALRSC:       # %bb.0:
 ; RV64I-ZALRSC-NEXT:    andi a2, a0, -4
-; RV64I-ZALRSC-NEXT:    slli a0, a0, 3
+; RV64I-ZALRSC-NEXT:    slliw a0, a0, 3
 ; RV64I-ZALRSC-NEXT:    lui a3, 16
 ; RV64I-ZALRSC-NEXT:    addi a3, a3, -1
 ; RV64I-ZALRSC-NEXT:    sllw a4, a3, a0
@@ -18544,7 +18544,7 @@ define i16 @atomicrmw_sub_i16_monotonic(ptr %a, i16 %b) nounwind {
 ; RV64IA-LABEL: atomicrmw_sub_i16_monotonic:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    andi a2, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
+; RV64IA-NEXT:    slliw a0, a0, 3
 ; RV64IA-NEXT:    lui a3, 16
 ; RV64IA-NEXT:    addi a3, a3, -1
 ; RV64IA-NEXT:    sllw a4, a3, a0
@@ -18702,7 +18702,7 @@ define i16 @atomicrmw_sub_i16_acquire(ptr %a, i16 %b) nounwind {
 ; RV64I-LABEL: atomicrmw_sub_i16_acquire:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    andi a2, a0, -4
-; RV64I-NEXT:    slli a0, a0, 3
+; RV64I-NEXT:    slliw a0, a0, 3
 ; RV64I-NEXT:    lui a3, 16
 ; RV64I-NEXT:    addi a3, a3, -1
 ; RV64I-NEXT:    sllw a4, a3, a0
@@ -18723,7 +18723,7 @@ define i16 @atomicrmw_sub_i16_acquire(ptr %a, i16 %b) nounwind {
 ; RV64I-ZALRSC-LABEL: atomicrmw_sub_i16_acquire:
 ; RV64I-ZALRSC:       # %bb.0:
 ; RV64I-ZALRSC-NEXT:    andi a2, a0, -4
-; RV64I-ZALRSC-NEXT:    slli a0, a0, 3
+; RV64I-ZALRSC-NEXT:    slliw a0, a0, 3
 ; RV64I-ZALRSC-NEXT:    lui a3, 16
 ; RV64I-ZALRSC-NEXT:    addi a3, a3, -1
 ; RV64I-ZALRSC-NEXT:    sllw a4, a3, a0
@@ -18744,7 +18744,7 @@ define i16 @atomicrmw_sub_i16_acquire(ptr %a, i16 %b) nounwind {
 ; RV64IA-LABEL: atomicrmw_sub_i16_acquire:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    andi a2, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
+; RV64IA-NEXT:    slliw a0, a0, 3
 ; RV64IA-NEXT:    lui a3, 16
 ; RV64IA-NEXT:    addi a3, a3, -1
 ; RV64IA-NEXT:    sllw a4, a3, a0
@@ -18962,7 +18962,7 @@ define i16 @atomicrmw_sub_i16_release(ptr %a, i16 %b) nounwind {
 ; RV64I-LABEL: atomicrmw_sub_i16_release:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    andi a2, a0, -4
-; RV64I-NEXT:    slli a0, a0, 3
+; RV64I-NEXT:    slliw a0, a0, 3
 ; RV64I-NEXT:    lui a3, 16
 ; RV64I-NEXT:    addi a3, a3, -1
 ; RV64I-NEXT:    sllw a4, a3, a0
@@ -18983,7 +18983,7 @@ define i16 @atomicrmw_sub_i16_release(ptr %a, i16 %b) nounwind {
 ; RV64I-ZALRSC-LABEL: atomicrmw_sub_i16_release:
 ; RV64I-ZALRSC:       # %bb.0:
 ; RV64I-ZALRSC-NEXT:    andi a2, a0, -4
-; RV64I-ZALRSC-NEXT:    slli a0, a0, 3
+; RV64I-ZALRSC-NEXT:    slliw a0, a0, 3
 ; RV64I-ZALRSC-NEXT:    lui a3, 16
 ; RV64I-ZALRSC-NEXT:    addi a3, a3, -1
 ; RV64I-ZALRSC-NEXT:    sllw a4, a3, a0
@@ -19004,7 +19004,7 @@ define i16 @atomicrmw_sub_i16_release(ptr %a, i16 %b) nounwind {
 ; RV64IA-LABEL: atomicrmw_sub_i16_release:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    andi a2, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
+; RV64IA-NEXT:    slliw a0, a0, 3
 ; RV64IA-NEXT:    lui a3, 16
 ; RV64IA-NEXT:    addi a3, a3, -1
 ; RV64IA-NEXT:    sllw a4, a3, a0
@@ -19222,7 +19222,7 @@ define i16 @atomicrmw_sub_i16_acq_rel(ptr %a, i16 %b) nounwind {
 ; RV64I-LABEL: atomicrmw_sub_i16_acq_rel:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    andi a2, a0, -4
-; RV64I-NEXT:    slli a0, a0, 3
+; RV64I-NEXT:    slliw a0, a0, 3
 ; RV64I-NEXT:    lui a3, 16
 ; RV64I-NEXT:    addi a3, a3, -1
 ; RV64I-NEXT:    sllw a4, a3, a0
@@ -19243,7 +19243,7 @@ define i16 @atomicrmw_sub_i16_acq_rel(ptr %a, i16 %b) nounwind {
 ; RV64I-ZALRSC-LABEL: atomicrmw_sub_i16_acq_rel:
 ; RV64I-ZALRSC:       # %bb.0:
 ; RV64I-ZALRSC-NEXT:    andi a2, a0, -4
-; RV64I-ZALRSC-NEXT:    slli a0, a0, 3
+; RV64I-ZALRSC-NEXT:    slliw a0, a0, 3
 ; RV64I-ZALRSC-NEXT:    lui a3, 16
 ; RV64I-ZALRSC-NEXT:    addi a3, a3, -1
 ; RV64I-ZALRSC-NEXT:    sllw a4, a3, a0
@@ -19264,7 +19264,7 @@ define i16 @atomicrmw_sub_i16_acq_rel(ptr %a, i16 %b) nounwind {
 ; RV64IA-LABEL: atomicrmw_sub_i16_acq_rel:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    andi a2, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
+; RV64IA-NEXT:    slliw a0, a0, 3
 ; RV64IA-NEXT:    lui a3, 16
 ; RV64IA-NEXT:    addi a3, a3, -1
 ; RV64IA-NEXT:    sllw a4, a3, a0
@@ -19461,7 +19461,7 @@ define i16 @atomicrmw_sub_i16_seq_cst(ptr %a, i16 %b) nounwind {
 ; RV64I-LABEL: atomicrmw_sub_i16_seq_cst:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    andi a2, a0, -4
-; RV64I-NEXT:    slli a0, a0, 3
+; RV64I-NEXT:    slliw a0, a0, 3
 ; RV64I-NEXT:    lui a3, 16
 ; RV64I-NEXT:    addi a3, a3, -1
 ; RV64I-NEXT:    sllw a4, a3, a0
@@ -19482,7 +19482,7 @@ define i16 @atomicrmw_sub_i16_seq_cst(ptr %a, i16 %b) nounwind {
 ; RV64I-ZALRSC-LABEL: atomicrmw_sub_i16_seq_cst:
 ; RV64I-ZALRSC:       # %bb.0:
 ; RV64I-ZALRSC-NEXT:    andi a2, a0, -4
-; RV64I-ZALRSC-NEXT:    slli a0, a0, 3
+; RV64I-ZALRSC-NEXT:    slliw a0, a0, 3
 ; RV64I-ZALRSC-NEXT:    lui a3, 16
 ; RV64I-ZALRSC-NEXT:    addi a3, a3, -1
 ; RV64I-ZALRSC-NEXT:    sllw a4, a3, a0
@@ -19503,7 +19503,7 @@ define i16 @atomicrmw_sub_i16_seq_cst(ptr %a, i16 %b) nounwind {
 ; RV64IA-LABEL: atomicrmw_sub_i16_seq_cst:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    andi a2, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
+; RV64IA-NEXT:    slliw a0, a0, 3
 ; RV64IA-NEXT:    lui a3, 16
 ; RV64IA-NEXT:    addi a3, a3, -1
 ; RV64IA-NEXT:    sllw a4, a3, a0
@@ -19633,7 +19633,7 @@ define i16 @atomicrmw_and_i16_monotonic(ptr %a, i16 %b) nounwind {
 ; RV64I-LABEL: atomicrmw_and_i16_monotonic:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    andi a2, a0, -4
-; RV64I-NEXT:    slli a0, a0, 3
+; RV64I-NEXT:    slliw a0, a0, 3
 ; RV64I-NEXT:    lui a3, 16
 ; RV64I-NEXT:    addi a3, a3, -1
 ; RV64I-NEXT:    sllw a4, a3, a0
@@ -19648,7 +19648,7 @@ define i16 @atomicrmw_and_i16_monotonic(ptr %a, i16 %b) nounwind {
 ; RV64I-ZALRSC-LABEL: atomicrmw_and_i16_monotonic:
 ; RV64I-ZALRSC:       # %bb.0:
 ; RV64I-ZALRSC-NEXT:    andi a2, a0, -4
-; RV64I-ZALRSC-NEXT:    slli a0, a0, 3
+; RV64I-ZALRSC-NEXT:    slliw a0, a0, 3
 ; RV64I-ZALRSC-NEXT:    lui a3, 16
 ; RV64I-ZALRSC-NEXT:    addi a3, a3, -1
 ; RV64I-ZALRSC-NEXT:    sllw a4, a3, a0
@@ -19663,7 +19663,7 @@ define i16 @atomicrmw_and_i16_monotonic(ptr %a, i16 %b) nounwind {
 ; RV64IA-LABEL: atomicrmw_and_i16_monotonic:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    andi a2, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
+; RV64IA-NEXT:    slliw a0, a0, 3
 ; RV64IA-NEXT:    lui a3, 16
 ; RV64IA-NEXT:    addi a3, a3, -1
 ; RV64IA-NEXT:    sllw a4, a3, a0
@@ -19786,7 +19786,7 @@ define i16 @atomicrmw_and_i16_acquire(ptr %a, i16 %b) nounwind {
 ; RV64I-LABEL: atomicrmw_and_i16_acquire:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    andi a2, a0, -4
-; RV64I-NEXT:    slli a0, a0, 3
+; RV64I-NEXT:    slliw a0, a0, 3
 ; RV64I-NEXT:    lui a3, 16
 ; RV64I-NEXT:    addi a3, a3, -1
 ; RV64I-NEXT:    sllw a4, a3, a0
@@ -19801,7 +19801,7 @@ define i16 @atomicrmw_and_i16_acquire(ptr %a, i16 %b) nounwind {
 ; RV64I-ZALRSC-LABEL: atomicrmw_and_i16_acquire:
 ; RV64I-ZALRSC:       # %bb.0:
 ; RV64I-ZALRSC-NEXT:    andi a2, a0, -4
-; RV64I-ZALRSC-NEXT:    slli a0, a0, 3
+; RV64I-ZALRSC-NEXT:    slliw a0, a0, 3
 ; RV64I-ZALRSC-NEXT:    lui a3, 16
 ; RV64I-ZALRSC-NEXT:    addi a3, a3, -1
 ; RV64I-ZALRSC-NEXT:    sllw a4, a3, a0
@@ -19816,7 +19816,7 @@ define i16 @atomicrmw_and_i16_acquire(ptr %a, i16 %b) nounwind {
 ; RV64IA-LABEL: atomicrmw_and_i16_acquire:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    andi a2, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
+; RV64IA-NEXT:    slliw a0, a0, 3
 ; RV64IA-NEXT:    lui a3, 16
 ; RV64IA-NEXT:    addi a3, a3, -1
 ; RV64IA-NEXT:    sllw a4, a3, a0
@@ -19981,7 +19981,7 @@ define i16 @atomicrmw_and_i16_release(ptr %a, i16 %b) nounwind {
 ; RV64I-LABEL: atomicrmw_and_i16_release:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    andi a2, a0, -4
-; RV64I-NEXT:    slli a0, a0, 3
+; RV64I-NEXT:    slliw a0, a0, 3
 ; RV64I-NEXT:    lui a3, 16
 ; RV64I-NEXT:    addi a3, a3, -1
 ; RV64I-NEXT:    sllw a4, a3, a0
@@ -19996,7 +19996,7 @@ define i16 @atomicrmw_and_i16_release(ptr %a, i16 %b) nounwind {
 ; RV64I-ZALRSC-LABEL: atomicrmw_and_i16_release:
 ; RV64I-ZALRSC:       # %bb.0:
 ; RV64I-ZALRSC-NEXT:    andi a2, a0, -4
-; RV64I-ZALRSC-NEXT:    slli a0, a0, 3
+; RV64I-ZALRSC-NEXT:    slliw a0, a0, 3
 ; RV64I-ZALRSC-NEXT:    lui a3, 16
 ; RV64I-ZALRSC-NEXT:    addi a3, a3, -1
 ; RV64I-ZALRSC-NEXT:    sllw a4, a3, a0
@@ -20011,7 +20011,7 @@ define i16 @atomicrmw_and_i16_release(ptr %a, i16 %b) nounwind {
 ; RV64IA-LABEL: atomicrmw_and_i16_release:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    andi a2, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
+; RV64IA-NEXT:    slliw a0, a0, 3
 ; RV64IA-NEXT:    lui a3, 16
 ; RV64IA-NEXT:    addi a3, a3, -1
 ; RV64IA-NEXT:    sllw a4, a3, a0
@@ -20176,7 +20176,7 @@ define i16 @atomicrmw_and_i16_acq_rel(ptr %a, i16 %b) nounwind {
 ; RV64I-LABEL: atomicrmw_and_i16_acq_rel:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    andi a2, a0, -4
-; RV64I-NEXT:    slli a0, a0, 3
+; RV64I-NEXT:    slliw a0, a0, 3
 ; RV64I-NEXT:    lui a3, 16
 ; RV64I-NEXT:    addi a3, a3, -1
 ; RV64I-NEXT:    sllw a4, a3, a0
@@ -20191,7 +20191,7 @@ define i16 @atomicrmw_and_i16_acq_rel(ptr %a, i16 %b) nounwind {
 ; RV64I-ZALRSC-LABEL: atomicrmw_and_i16_acq_rel:
 ; RV64I-ZALRSC:       # %bb.0:
 ; RV64I-ZALRSC-NEXT:    andi a2, a0, -4
-; RV64I-ZALRSC-NEXT:    slli a0, a0, 3
+; RV64I-ZALRSC-NEXT:    slliw a0, a0, 3
 ; RV64I-ZALRSC-NEXT:    lui a3, 16
 ; RV64I-ZALRSC-NEXT:    addi a3, a3, -1
 ; RV64I-ZALRSC-NEXT:    sllw a4, a3, a0
@@ -20206,7 +20206,7 @@ define i16 @atomicrmw_and_i16_acq_rel(ptr %a, i16 %b) nounwind {
 ; RV64IA-LABEL: atomicrmw_and_i16_acq_rel:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    andi a2, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
+; RV64IA-NEXT:    slliw a0, a0, 3
 ; RV64IA-NEXT:    lui a3, 16
 ; RV64IA-NEXT:    addi a3, a3, -1
 ; RV64IA-NEXT:    sllw a4, a3, a0
@@ -20371,7 +20371,7 @@ define i16 @atomicrmw_and_i16_seq_cst(ptr %a, i16 %b) nounwind {
 ; RV64I-LABEL: atomicrmw_and_i16_seq_cst:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    andi a2, a0, -4
-; RV64I-NEXT:    slli a0, a0, 3
+; RV64I-NEXT:    slliw a0, a0, 3
 ; RV64I-NEXT:    lui a3, 16
 ; RV64I-NEXT:    addi a3, a3, -1
 ; RV64I-NEXT:    sllw a4, a3, a0
@@ -20386,7 +20386,7 @@ define i16 @atomicrmw_and_i16_seq_cst(ptr %a, i16 %b) nounwind {
 ; RV64I-ZALRSC-LABEL: atomicrmw_and_i16_seq_cst:
 ; RV64I-ZALRSC:       # %bb.0:
 ; RV64I-ZALRSC-NEXT:    andi a2, a0, -4
-; RV64I-ZALRSC-NEXT:    slli a0, a0, 3
+; RV64I-ZALRSC-NEXT:    slliw a0, a0, 3
 ; RV64I-ZALRSC-NEXT:    lui a3, 16
 ; RV64I-ZALRSC-NEXT:    addi a3, a3, -1
 ; RV64I-ZALRSC-NEXT:    sllw a4, a3, a0
@@ -20401,7 +20401,7 @@ define i16 @atomicrmw_and_i16_seq_cst(ptr %a, i16 %b) nounwind {
 ; RV64IA-LABEL: atomicrmw_and_i16_seq_cst:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    andi a2, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
+; RV64IA-NEXT:    slliw a0, a0, 3
 ; RV64IA-NEXT:    lui a3, 16
 ; RV64IA-NEXT:    addi a3, a3, -1
 ; RV64IA-NEXT:    sllw a4, a3, a0
@@ -20560,7 +20560,7 @@ define i16 @atomicrmw_nand_i16_monotonic(ptr %a, i16 %b) nounwind {
 ; RV64I-LABEL: atomicrmw_nand_i16_monotonic:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    andi a2, a0, -4
-; RV64I-NEXT:    slli a0, a0, 3
+; RV64I-NEXT:    slliw a0, a0, 3
 ; RV64I-NEXT:    lui a3, 16
 ; RV64I-NEXT:    addi a3, a3, -1
 ; RV64I-NEXT:    sllw a4, a3, a0
@@ -20582,7 +20582,7 @@ define i16 @atomicrmw_nand_i16_monotonic(ptr %a, i16 %b) nounwind {
 ; RV64I-ZALRSC-LABEL: atomicrmw_nand_i16_monotonic:
 ; RV64I-ZALRSC:       # %bb.0:
 ; RV64I-ZALRSC-NEXT:    andi a2, a0, -4
-; RV64I-ZALRSC-NEXT:    slli a0, a0, 3
+; RV64I-ZALRSC-NEXT:    slliw a0, a0, 3
 ; RV64I-ZALRSC-NEXT:    lui a3, 16
 ; RV64I-ZALRSC-NEXT:    addi a3, a3, -1
 ; RV64I-ZALRSC-NEXT:    sllw a4, a3, a0
@@ -20604,7 +20604,7 @@ define i16 @atomicrmw_nand_i16_monotonic(ptr %a, i16 %b) nounwind {
 ; RV64IA-LABEL: atomicrmw_nand_i16_monotonic:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    andi a2, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
+; RV64IA-NEXT:    slliw a0, a0, 3
 ; RV64IA-NEXT:    lui a3, 16
 ; RV64IA-NEXT:    addi a3, a3, -1
 ; RV64IA-NEXT:    sllw a4, a3, a0
@@ -20888,7 +20888,7 @@ define i16 @atomicrmw_nand_i16_acquire(ptr %a, i16 %b) nounwind {
 ; RV64I-LABEL: atomicrmw_nand_i16_acquire:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    andi a2, a0, -4
-; RV64I-NEXT:    slli a0, a0, 3
+; RV64I-NEXT:    slliw a0, a0, 3
 ; RV64I-NEXT:    lui a3, 16
 ; RV64I-NEXT:    addi a3, a3, -1
 ; RV64I-NEXT:    sllw a4, a3, a0
@@ -20910,7 +20910,7 @@ define i16 @atomicrmw_nand_i16_acquire(ptr %a, i16 %b) nounwind {
 ; RV64I-ZALRSC-LABEL: atomicrmw_nand_i16_acquire:
 ; RV64I-ZALRSC:       # %bb.0:
 ; RV64I-ZALRSC-NEXT:    andi a2, a0, -4
-; RV64I-ZALRSC-NEXT:    slli a0, a0, 3
+; RV64I-ZALRSC-NEXT:    slliw a0, a0, 3
 ; RV64I-ZALRSC-NEXT:    lui a3, 16
 ; RV64I-ZALRSC-NEXT:    addi a3, a3, -1
 ; RV64I-ZALRSC-NEXT:    sllw a4, a3, a0
@@ -20932,7 +20932,7 @@ define i16 @atomicrmw_nand_i16_acquire(ptr %a, i16 %b) nounwind {
 ; RV64IA-LABEL: atomicrmw_nand_i16_acquire:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    andi a2, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
+; RV64IA-NEXT:    slliw a0, a0, 3
 ; RV64IA-NEXT:    lui a3, 16
 ; RV64IA-NEXT:    addi a3, a3, -1
 ; RV64IA-NEXT:    sllw a4, a3, a0
@@ -21279,7 +21279,7 @@ define i16 @atomicrmw_nand_i16_release(ptr %a, i16 %b) nounwind {
 ; RV64I-LABEL: atomicrmw_nand_i16_release:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    andi a2, a0, -4
-; RV64I-NEXT:    slli a0, a0, 3
+; RV64I-NEXT:    slliw a0, a0, 3
 ; RV64I-NEXT:    lui a3, 16
 ; RV64I-NEXT:    addi a3, a3, -1
 ; RV64I-NEXT:    sllw a4, a3, a0
@@ -21301,7 +21301,7 @@ define i16 @atomicrmw_nand_i16_release(ptr %a, i16 %b) nounwind {
 ; RV64I-ZALRSC-LABEL: atomicrmw_nand_i16_release:
 ; RV64I-ZALRSC:       # %bb.0:
 ; RV64I-ZALRSC-NEXT:    andi a2, a0, -4
-; RV64I-ZALRSC-NEXT:    slli a0, a0, 3
+; RV64I-ZALRSC-NEXT:    slliw a0, a0, 3
 ; RV64I-ZALRSC-NEXT:    lui a3, 16
 ; RV64I-ZALRSC-NEXT:    addi a3, a3, -1
 ; RV64I-ZALRSC-NEXT:    sllw a4, a3, a0
@@ -21323,7 +21323,7 @@ define i16 @atomicrmw_nand_i16_release(ptr %a, i16 %b) nounwind {
 ; RV64IA-LABEL: atomicrmw_nand_i16_release:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    andi a2, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
+; RV64IA-NEXT:    slliw a0, a0, 3
 ; RV64IA-NEXT:    lui a3, 16
 ; RV64IA-NEXT:    addi a3, a3, -1
 ; RV64IA-NEXT:    sllw a4, a3, a0
@@ -21670,7 +21670,7 @@ define i16 @atomicrmw_nand_i16_acq_rel(ptr %a, i16 %b) nounwind {
 ; RV64I-LABEL: atomicrmw_nand_i16_acq_rel:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    andi a2, a0, -4
-; RV64I-NEXT:    slli a0, a0, 3
+; RV64I-NEXT:    slliw a0, a0, 3
 ; RV64I-NEXT:    lui a3, 16
 ; RV64I-NEXT:    addi a3, a3, -1
 ; RV64I-NEXT:    sllw a4, a3, a0
@@ -21692,7 +21692,7 @@ define i16 @atomicrmw_nand_i16_acq_rel(ptr %a, i16 %b) nounwind {
 ; RV64I-ZALRSC-LABEL: atomicrmw_nand_i16_acq_rel:
 ; RV64I-ZALRSC:       # %bb.0:
 ; RV64I-ZALRSC-NEXT:    andi a2, a0, -4
-; RV64I-ZALRSC-NEXT:    slli a0, a0, 3
+; RV64I-ZALRSC-NEXT:    slliw a0, a0, 3
 ; RV64I-ZALRSC-NEXT:    lui a3, 16
 ; RV64I-ZALRSC-NEXT:    addi a3, a3, -1
 ; RV64I-ZALRSC-NEXT:    sllw a4, a3, a0
@@ -21714,7 +21714,7 @@ define i16 @atomicrmw_nand_i16_acq_rel(ptr %a, i16 %b) nounwind {
 ; RV64IA-LABEL: atomicrmw_nand_i16_acq_rel:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    andi a2, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
+; RV64IA-NEXT:    slliw a0, a0, 3
 ; RV64IA-NEXT:    lui a3, 16
 ; RV64IA-NEXT:    addi a3, a3, -1
 ; RV64IA-NEXT:    sllw a4, a3, a0
@@ -22039,7 +22039,7 @@ define i16 @atomicrmw_nand_i16_seq_cst(ptr %a, i16 %b) nounwind {
 ; RV64I-LABEL: atomicrmw_nand_i16_seq_cst:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    andi a2, a0, -4
-; RV64I-NEXT:    slli a0, a0, 3
+; RV64I-NEXT:    slliw a0, a0, 3
 ; RV64I-NEXT:    lui a3, 16
 ; RV64I-NEXT:    addi a3, a3, -1
 ; RV64I-NEXT:    sllw a4, a3, a0
@@ -22061,7 +22061,7 @@ define i16 @atomicrmw_nand_i16_seq_cst(ptr %a, i16 %b) nounwind {
 ; RV64I-ZALRSC-LABEL: atomicrmw_nand_i16_seq_cst:
 ; RV64I-ZALRSC:       # %bb.0:
 ; RV64I-ZALRSC-NEXT:    andi a2, a0, -4
-; RV64I-ZALRSC-NEXT:    slli a0, a0, 3
+; RV64I-ZALRSC-NEXT:    slliw a0, a0, 3
 ; RV64I-ZALRSC-NEXT:    lui a3, 16
 ; RV64I-ZALRSC-NEXT:    addi a3, a3, -1
 ; RV64I-ZALRSC-NEXT:    sllw a4, a3, a0
@@ -22083,7 +22083,7 @@ define i16 @atomicrmw_nand_i16_seq_cst(ptr %a, i16 %b) nounwind {
 ; RV64IA-LABEL: atomicrmw_nand_i16_seq_cst:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    andi a2, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
+; RV64IA-NEXT:    slliw a0, a0, 3
 ; RV64IA-NEXT:    lui a3, 16
 ; RV64IA-NEXT:    addi a3, a3, -1
 ; RV64IA-NEXT:    sllw a4, a3, a0
@@ -22332,7 +22332,7 @@ define i16 @atomicrmw_or_i16_monotonic(ptr %a, i16 %b) nounwind {
 ; RV64I-LABEL: atomicrmw_or_i16_monotonic:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    andi a2, a0, -4
-; RV64I-NEXT:    slli a0, a0, 3
+; RV64I-NEXT:    slliw a0, a0, 3
 ; RV64I-NEXT:    slli a1, a1, 48
 ; RV64I-NEXT:    srli a1, a1, 48
 ; RV64I-NEXT:    sllw a1, a1, a0
@@ -22343,7 +22343,7 @@ define i16 @atomicrmw_or_i16_monotonic(ptr %a, i16 %b) nounwind {
 ; RV64I-ZALRSC-LABEL: atomicrmw_or_i16_monotonic:
 ; RV64I-ZALRSC:       # %bb.0:
 ; RV64I-ZALRSC-NEXT:    andi a2, a0, -4
-; RV64I-ZALRSC-NEXT:    slli a0, a0, 3
+; RV64I-ZALRSC-NEXT:    slliw a0, a0, 3
 ; RV64I-ZALRSC-NEXT:    slli a1, a1, 48
 ; RV64I-ZALRSC-NEXT:    srli a1, a1, 48
 ; RV64I-ZALRSC-NEXT:    sllw a1, a1, a0
@@ -22354,7 +22354,7 @@ define i16 @atomicrmw_or_i16_monotonic(ptr %a, i16 %b) nounwind {
 ; RV64IA-LABEL: atomicrmw_or_i16_monotonic:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    andi a2, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
+; RV64IA-NEXT:    slliw a0, a0, 3
 ; RV64IA-NEXT:    slli a1, a1, 48
 ; RV64IA-NEXT:    srli a1, a1, 48
 ; RV64IA-NEXT:    sllw a1, a1, a0
@@ -22453,7 +22453,7 @@ define i16 @atomicrmw_or_i16_acquire(ptr %a, i16 %b) nounwind {
 ; RV64I-LABEL: atomicrmw_or_i16_acquire:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    andi a2, a0, -4
-; RV64I-NEXT:    slli a0, a0, 3
+; RV64I-NEXT:    slliw a0, a0, 3
 ; RV64I-NEXT:    slli a1, a1, 48
 ; RV64I-NEXT:    srli a1, a1, 48
 ; RV64I-NEXT:    sllw a1, a1, a0
@@ -22464,7 +22464,7 @@ define i16 @atomicrmw_or_i16_acquire(ptr %a, i16 %b) nounwind {
 ; RV64I-ZALRSC-LABEL: atomicrmw_or_i16_acquire:
 ; RV64I-ZALRSC:       # %bb.0:
 ; RV64I-ZALRSC-NEXT:    andi a2, a0, -4
-; RV64I-ZALRSC-NEXT:    slli a0, a0, 3
+; RV64I-ZALRSC-NEXT:    slliw a0, a0, 3
 ; RV64I-ZALRSC-NEXT:    slli a1, a1, 48
 ; RV64I-ZALRSC-NEXT:    srli a1, a1, 48
 ; RV64I-ZALRSC-NEXT:    sllw a1, a1, a0
@@ -22475,7 +22475,7 @@ define i16 @atomicrmw_or_i16_acquire(ptr %a, i16 %b) nounwind {
 ; RV64IA-LABEL: atomicrmw_or_i16_acquire:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    andi a2, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
+; RV64IA-NEXT:    slliw a0, a0, 3
 ; RV64IA-NEXT:    slli a1, a1, 48
 ; RV64IA-NEXT:    srli a1, a1, 48
 ; RV64IA-NEXT:    sllw a1, a1, a0
@@ -22604,7 +22604,7 @@ define i16 @atomicrmw_or_i16_release(ptr %a, i16 %b) nounwind {
 ; RV64I-LABEL: atomicrmw_or_i16_release:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    andi a2, a0, -4
-; RV64I-NEXT:    slli a0, a0, 3
+; RV64I-NEXT:    slliw a0, a0, 3
 ; RV64I-NEXT:    slli a1, a1, 48
 ; RV64I-NEXT:    srli a1, a1, 48
 ; RV64I-NEXT:    sllw a1, a1, a0
@@ -22615,7 +22615,7 @@ define i16 @atomicrmw_or_i16_release(ptr %a, i16 %b) nounwind {
 ; RV64I-ZALRSC-LABEL: atomicrmw_or_i16_release:
 ; RV64I-ZALRSC:       # %bb.0:
 ; RV64I-ZALRSC-NEXT:    andi a2, a0, -4
-; RV64I-ZALRSC-NEXT:    slli a0, a0, 3
+; RV64I-ZALRSC-NEXT:    slliw a0, a0, 3
 ; RV64I-ZALRSC-NEXT:    slli a1, a1, 48
 ; RV64I-ZALRSC-NEXT:    srli a1, a1, 48
 ; RV64I-ZALRSC-NEXT:    sllw a1, a1, a0
@@ -22626,7 +22626,7 @@ define i16 @atomicrmw_or_i16_release(ptr %a, i16 %b) nounwind {
 ; RV64IA-LABEL: atomicrmw_or_i16_release:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    andi a2, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
+; RV64IA-NEXT:    slliw a0, a0, 3
 ; RV64IA-NEXT:    slli a1, a1, 48
 ; RV64IA-NEXT:    srli a1, a1, 48
 ; RV64IA-NEXT:    sllw a1, a1, a0
@@ -22755,7 +22755,7 @@ define i16 @atomicrmw_or_i16_acq_rel(ptr %a, i16 %b) nounwind {
 ; RV64I-LABEL: atomicrmw_or_i16_acq_rel:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    andi a2, a0, -4
-; RV64I-NEXT:    slli a0, a0, 3
+; RV64I-NEXT:    slliw a0, a0, 3
 ; RV64I-NEXT:    slli a1, a1, 48
 ; RV64I-NEXT:    srli a1, a1, 48
 ; RV64I-NEXT:    sllw a1, a1, a0
@@ -22766,7 +22766,7 @@ define i16 @atomicrmw_or_i16_acq_rel(ptr %a, i16 %b) nounwind {
 ; RV64I-ZALRSC-LABEL: atomicrmw_or_i16_acq_rel:
 ; RV64I-ZALRSC:       # %bb.0:
 ; RV64I-ZALRSC-NEXT:    andi a2, a0, -4
-; RV64I-ZALRSC-NEXT:    slli a0, a0, 3
+; RV64I-ZALRSC-NEXT:    slliw a0, a0, 3
 ; RV64I-ZALRSC-NEXT:    slli a1, a1, 48
 ; RV64I-ZALRSC-NEXT:    srli a1, a1, 48
 ; RV64I-ZALRSC-NEXT:    sllw a1, a1, a0
@@ -22777,7 +22777,7 @@ define i16 @atomicrmw_or_i16_acq_rel(ptr %a, i16 %b) nounwind {
 ; RV64IA-LABEL: atomicrmw_or_i16_acq_rel:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    andi a2, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
+; RV64IA-NEXT:    slliw a0, a0, 3
 ; RV64IA-NEXT:    slli a1, a1, 48
 ; RV64IA-NEXT:    srli a1, a1, 48
 ; RV64IA-NEXT:    sllw a1, a1, a0
@@ -22906,7 +22906,7 @@ define i16 @atomicrmw_or_i16_seq_cst(ptr %a, i16 %b) nounwind {
 ; RV64I-LABEL: atomicrmw_or_i16_seq_cst:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    andi a2, a0, -4
-; RV64I-NEXT:    slli a0, a0, 3
+; RV64I-NEXT:    slliw a0, a0, 3
 ; RV64I-NEXT:    slli a1, a1, 48
 ; RV64I-NEXT:    srli a1, a1, 48
 ; RV64I-NEXT:    sllw a1, a1, a0
@@ -22917,7 +22917,7 @@ define i16 @atomicrmw_or_i16_seq_cst(ptr %a, i16 %b) nounwind {
 ; RV64I-ZALRSC-LABEL: atomicrmw_or_i16_seq_cst:
 ; RV64I-ZALRSC:       # %bb.0:
 ; RV64I-ZALRSC-NEXT:    andi a2, a0, -4
-; RV64I-ZALRSC-NEXT:    slli a0, a0, 3
+; RV64I-ZALRSC-NEXT:    slliw a0, a0, 3
 ; RV64I-ZALRSC-NEXT:    slli a1, a1, 48
 ; RV64I-ZALRSC-NEXT:    srli a1, a1, 48
 ; RV64I-ZALRSC-NEXT:    sllw a1, a1, a0
@@ -22928,7 +22928,7 @@ define i16 @atomicrmw_or_i16_seq_cst(ptr %a, i16 %b) nounwind {
 ; RV64IA-LABEL: atomicrmw_or_i16_seq_cst:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    andi a2, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
+; RV64IA-NEXT:    slliw a0, a0, 3
 ; RV64IA-NEXT:    slli a1, a1, 48
 ; RV64IA-NEXT:    srli a1, a1, 48
 ; RV64IA-NEXT:    sllw a1, a1, a0
@@ -23046,7 +23046,7 @@ define i16 @atomicrmw_xor_i16_monotonic(ptr %a, i16 %b) nounwind {
 ; RV64I-LABEL: atomicrmw_xor_i16_monotonic:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    andi a2, a0, -4
-; RV64I-NEXT:    slli a0, a0, 3
+; RV64I-NEXT:    slliw a0, a0, 3
 ; RV64I-NEXT:    slli a1, a1, 48
 ; RV64I-NEXT:    srli a1, a1, 48
 ; RV64I-NEXT:    sllw a1, a1, a0
@@ -23057,7 +23057,7 @@ define i16 @atomicrmw_xor_i16_monotonic(ptr %a, i16 %b) nounwind {
 ; RV64I-ZALRSC-LABEL: atomicrmw_xor_i16_monotonic:
 ; RV64I-ZALRSC:       # %bb.0:
 ; RV64I-ZALRSC-NEXT:    andi a2, a0, -4
-; RV64I-ZALRSC-NEXT:    slli a0, a0, 3
+; RV64I-ZALRSC-NEXT:    slliw a0, a0, 3
 ; RV64I-ZALRSC-NEXT:    slli a1, a1, 48
 ; RV64I-ZALRSC-NEXT:    srli a1, a1, 48
 ; RV64I-ZALRSC-NEXT:    sllw a1, a1, a0
@@ -23068,7 +23068,7 @@ define i16 @atomicrmw_xor_i16_monotonic(ptr %a, i16 %b) nounwind {
 ; RV64IA-LABEL: atomicrmw_xor_i16_monotonic:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    andi a2, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
+; RV64IA-NEXT:    slliw a0, a0, 3
 ; RV64IA-NEXT:    slli a1, a1, 48
 ; RV64IA-NEXT:    srli a1, a1, 48
 ; RV64IA-NEXT:    sllw a1, a1, a0
@@ -23167,7 +23167,7 @@ define i16 @atomicrmw_xor_i16_acquire(ptr %a, i16 %b) nounwind {
 ; RV64I-LABEL: atomicrmw_xor_i16_acquire:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    andi a2, a0, -4
-; RV64I-NEXT:    slli a0, a0, 3
+; RV64I-NEXT:    slliw a0, a0, 3
 ; RV64I-NEXT:    slli a1, a1, 48
 ; RV64I-NEXT:    srli a1, a1, 48
 ; RV64I-NEXT:    sllw a1, a1, a0
@@ -23178,7 +23178,7 @@ define i16 @atomicrmw_xor_i16_acquire(ptr %a, i16 %b) nounwind {
 ; RV64I-ZALRSC-LABEL: atomicrmw_xor_i16_acquire:
 ; RV64I-ZALRSC:       # %bb.0:
 ; RV64I-ZALRSC-NEXT:    andi a2, a0, -4
-; RV64I-ZALRSC-NEXT:    slli a0, a0, 3
+; RV64I-ZALRSC-NEXT:    slliw a0, a0, 3
 ; RV64I-ZALRSC-NEXT:    slli a1, a1, 48
 ; RV64I-ZALRSC-NEXT:    srli a1, a1, 48
 ; RV64I-ZALRSC-NEXT:    sllw a1, a1, a0
@@ -23189,7 +23189,7 @@ define i16 @atomicrmw_xor_i16_acquire(ptr %a, i16 %b) nounwind {
 ; RV64IA-LABEL: atomicrmw_xor_i16_acquire:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    andi a2, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
+; RV64IA-NEXT:    slliw a0, a0, 3
 ; RV64IA-NEXT:    slli a1, a1, 48
 ; RV64IA-NEXT:    srli a1, a1, 48
 ; RV64IA-NEXT:    sllw a1, a1, a0
@@ -23318,7 +23318,7 @@ define i16 @atomicrmw_xor_i16_release(ptr %a, i16 %b) nounwind {
 ; RV64I-LABEL: atomicrmw_xor_i16_release:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    andi a2, a0, -4
-; RV64I-NEXT:    slli a0, a0, 3
+; RV64I-NEXT:    slliw a0, a0, 3
 ; RV64I-NEXT:    slli a1, a1, 48
 ; RV64I-NEXT:    srli a1, a1, 48
 ; RV64I-NEXT:    sllw a1, a1, a0
@@ -23329,7 +23329,7 @@ define i16 @atomicrmw_xor_i16_release(ptr %a, i16 %b) nounwind {
 ; RV64I-ZALRSC-LABEL: atomicrmw_xor_i16_release:
 ; RV64I-ZALRSC:       # %bb.0:
 ; RV64I-ZALRSC-NEXT:    andi a2, a0, -4
-; RV64I-ZALRSC-NEXT:    slli a0, a0, 3
+; RV64I-ZALRSC-NEXT:    slliw a0, a0, 3
 ; RV64I-ZALRSC-NEXT:    slli a1, a1, 48
 ; RV64I-ZALRSC-NEXT:    srli a1, a1, 48
 ; RV64I-ZALRSC-NEXT:    sllw a1, a1, a0
@@ -23340,7 +23340,7 @@ define i16 @atomicrmw_xor_i16_release(ptr %a, i16 %b) nounwind {
 ; RV64IA-LABEL: atomicrmw_xor_i16_release:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    andi a2, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
+; RV64IA-NEXT:    slliw a0, a0, 3
 ; RV64IA-NEXT:    slli a1, a1, 48
 ; RV64IA-NEXT:    srli a1, a1, 48
 ; RV64IA-NEXT:    sllw a1, a1, a0
@@ -23469,7 +23469,7 @@ define i16 @atomicrmw_xor_i16_acq_rel(ptr %a, i16 %b) nounwind {
 ; RV64I-LABEL: atomicrmw_xor_i16_acq_rel:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    andi a2, a0, -4
-; RV64I-NEXT:    slli a0, a0, 3
+; RV64I-NEXT:    slliw a0, a0, 3
 ; RV64I-NEXT:    slli a1, a1, 48
 ; RV64I-NEXT:    srli a1, a1, 48
 ; RV64I-NEXT:    sllw a1, a1, a0
@@ -23480,7 +23480,7 @@ define i16 @atomicrmw_xor_i16_acq_rel(ptr %a, i16 %b) nounwind {
 ; RV64I-ZALRSC-LABEL: atomicrmw_xor_i16_acq_rel:
 ; RV64I-ZALRSC:       # %bb.0:
 ; RV64I-ZALRSC-NEXT:    andi a2, a0, -4
-; RV64I-ZALRSC-NEXT:    slli a0, a0, 3
+; RV64I-ZALRSC-NEXT:    slliw a0, a0, 3
 ; RV64I-ZALRSC-NEXT:    slli a1, a1, 48
 ; RV64I-ZALRSC-NEXT:    srli a1, a1, 48
 ; RV64I-ZALRSC-NEXT:    sllw a1, a1, a0
@@ -23491,7 +23491,7 @@ define i16 @atomicrmw_xor_i16_acq_rel(ptr %a, i16 %b) nounwind {
 ; RV64IA-LABEL: atomicrmw_xor_i16_acq_rel:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    andi a2, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
+; RV64IA-NEXT:    slliw a0, a0, 3
 ; RV64IA-NEXT:    slli a1, a1, 48
 ; RV64IA-NEXT:    srli a1, a1, 48
 ; RV64IA-NEXT:    sllw a1, a1, a0
@@ -23620,7 +23620,7 @@ define i16 @atomicrmw_xor_i16_seq_cst(ptr %a, i16 %b) nounwind {
 ; RV64I-LABEL: atomicrmw_xor_i16_seq_cst:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    andi a2, a0, -4
-; RV64I-NEXT:    slli a0, a0, 3
+; RV64I-NEXT:    slliw a0, a0, 3
 ; RV64I-NEXT:    slli a1, a1, 48
 ; RV64I-NEXT:    srli a1, a1, 48
 ; RV64I-NEXT:    sllw a1, a1, a0
@@ -23631,7 +23631,7 @@ define i16 @atomicrmw_xor_i16_seq_cst(ptr %a, i16 %b) nounwind {
 ; RV64I-ZALRSC-LABEL: atomicrmw_xor_i16_seq_cst:
 ; RV64I-ZALRSC:       # %bb.0:
 ; RV64I-ZALRSC-NEXT:    andi a2, a0, -4
-; RV64I-ZALRSC-NEXT:    slli a0, a0, 3
+; RV64I-ZALRSC-NEXT:    slliw a0, a0, 3
 ; RV64I-ZALRSC-NEXT:    slli a1, a1, 48
 ; RV64I-ZALRSC-NEXT:    srli a1, a1, 48
 ; RV64I-ZALRSC-NEXT:    sllw a1, a1, a0
@@ -23642,7 +23642,7 @@ define i16 @atomicrmw_xor_i16_seq_cst(ptr %a, i16 %b) nounwind {
 ; RV64IA-LABEL: atomicrmw_xor_i16_seq_cst:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    andi a2, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
+; RV64IA-NEXT:    slliw a0, a0, 3
 ; RV64IA-NEXT:    slli a1, a1, 48
 ; RV64IA-NEXT:    srli a1, a1, 48
 ; RV64IA-NEXT:    sllw a1, a1, a0
@@ -23827,7 +23827,7 @@ define i16 @atomicrmw_max_i16_monotonic(ptr %a, i16 %b) nounwind {
 ; RV64I-LABEL: atomicrmw_max_i16_monotonic:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    andi a2, a0, -4
-; RV64I-NEXT:    slli a0, a0, 3
+; RV64I-NEXT:    slliw a0, a0, 3
 ; RV64I-NEXT:    lui a3, 16
 ; RV64I-NEXT:    slli a1, a1, 48
 ; RV64I-NEXT:    li a4, 48
@@ -23858,7 +23858,7 @@ define i16 @atomicrmw_max_i16_monotonic(ptr %a, i16 %b) nounwind {
 ; RV64I-ZALRSC-LABEL: atomicrmw_max_i16_monotonic:
 ; RV64I-ZALRSC:       # %bb.0:
 ; RV64I-ZALRSC-NEXT:    andi a2, a0, -4
-; RV64I-ZALRSC-NEXT:    slli a0, a0, 3
+; RV64I-ZALRSC-NEXT:    slliw a0, a0, 3
 ; RV64I-ZALRSC-NEXT:    lui a3, 16
 ; RV64I-ZALRSC-NEXT:    slli a1, a1, 48
 ; RV64I-ZALRSC-NEXT:    li a4, 48
@@ -23889,7 +23889,7 @@ define i16 @atomicrmw_max_i16_monotonic(ptr %a, i16 %b) nounwind {
 ; RV64IA-LABEL: atomicrmw_max_i16_monotonic:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    andi a2, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
+; RV64IA-NEXT:    slliw a0, a0, 3
 ; RV64IA-NEXT:    lui a3, 16
 ; RV64IA-NEXT:    slli a1, a1, 48
 ; RV64IA-NEXT:    li a4, 48
@@ -24135,7 +24135,7 @@ define i16 @atomicrmw_max_i16_acquire(ptr %a, i16 %b) nounwind {
 ; RV64I-LABEL: atomicrmw_max_i16_acquire:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    andi a2, a0, -4
-; RV64I-NEXT:    slli a0, a0, 3
+; RV64I-NEXT:    slliw a0, a0, 3
 ; RV64I-NEXT:    lui a3, 16
 ; RV64I-NEXT:    slli a1, a1, 48
 ; RV64I-NEXT:    li a4, 48
@@ -24166,7 +24166,7 @@ define i16 @atomicrmw_max_i16_acquire(ptr %a, i16 %b) nounwind {
 ; RV64I-ZALRSC-LABEL: atomicrmw_max_i16_acquire:
 ; RV64I-ZALRSC:       # %bb.0:
 ; RV64I-ZALRSC-NEXT:    andi a2, a0, -4
-; RV64I-ZALRSC-NEXT:    slli a0, a0, 3
+; RV64I-ZALRSC-NEXT:    slliw a0, a0, 3
 ; RV64I-ZALRSC-NEXT:    lui a3, 16
 ; RV64I-ZALRSC-NEXT:    slli a1, a1, 48
 ; RV64I-ZALRSC-NEXT:    li a4, 48
@@ -24197,7 +24197,7 @@ define i16 @atomicrmw_max_i16_acquire(ptr %a, i16 %b) nounwind {
 ; RV64IA-LABEL: atomicrmw_max_i16_acquire:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    andi a2, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
+; RV64IA-NEXT:    slliw a0, a0, 3
 ; RV64IA-NEXT:    lui a3, 16
 ; RV64IA-NEXT:    slli a1, a1, 48
 ; RV64IA-NEXT:    li a4, 48
@@ -24533,7 +24533,7 @@ define i16 @atomicrmw_max_i16_release(ptr %a, i16 %b) nounwind {
 ; RV64I-LABEL: atomicrmw_max_i16_release:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    andi a2, a0, -4
-; RV64I-NEXT:    slli a0, a0, 3
+; RV64I-NEXT:    slliw a0, a0, 3
 ; RV64I-NEXT:    lui a3, 16
 ; RV64I-NEXT:    slli a1, a1, 48
 ; RV64I-NEXT:    li a4, 48
@@ -24564,7 +24564,7 @@ define i16 @atomicrmw_max_i16_release(ptr %a, i16 %b) nounwind {
 ; RV64I-ZALRSC-LABEL: atomicrmw_max_i16_release:
 ; RV64I-ZALRSC:       # %bb.0:
 ; RV64I-ZALRSC-NEXT:    andi a2, a0, -4
-; RV64I-ZALRSC-NEXT:    slli a0, a0, 3
+; RV64I-ZALRSC-NEXT:    slliw a0, a0, 3
 ; RV64I-ZALRSC-NEXT:    lui a3, 16
 ; RV64I-ZALRSC-NEXT:    slli a1, a1, 48
 ; RV64I-ZALRSC-NEXT:    li a4, 48
@@ -24595,7 +24595,7 @@ define i16 @atomicrmw_max_i16_release(ptr %a, i16 %b) nounwind {
 ; RV64IA-LABEL: atomicrmw_max_i16_release:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    andi a2, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
+; RV64IA-NEXT:    slliw a0, a0, 3
 ; RV64IA-NEXT:    lui a3, 16
 ; RV64IA-NEXT:    slli a1, a1, 48
 ; RV64IA-NEXT:    li a4, 48
@@ -24931,7 +24931,7 @@ define i16 @atomicrmw_max_i16_acq_rel(ptr %a, i16 %b) nounwind {
 ; RV64I-LABEL: atomicrmw_max_i16_acq_rel:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    andi a2, a0, -4
-; RV64I-NEXT:    slli a0, a0, 3
+; RV64I-NEXT:    slliw a0, a0, 3
 ; RV64I-NEXT:    lui a3, 16
 ; RV64I-NEXT:    slli a1, a1, 48
 ; RV64I-NEXT:    li a4, 48
@@ -24962,7 +24962,7 @@ define i16 @atomicrmw_max_i16_acq_rel(ptr %a, i16 %b) nounwind {
 ; RV64I-ZALRSC-LABEL: atomicrmw_max_i16_acq_rel:
 ; RV64I-ZALRSC:       # %bb.0:
 ; RV64I-ZALRSC-NEXT:    andi a2, a0, -4
-; RV64I-ZALRSC-NEXT:    slli a0, a0, 3
+; RV64I-ZALRSC-NEXT:    slliw a0, a0, 3
 ; RV64I-ZALRSC-NEXT:    lui a3, 16
 ; RV64I-ZALRSC-NEXT:    slli a1, a1, 48
 ; RV64I-ZALRSC-NEXT:    li a4, 48
@@ -24993,7 +24993,7 @@ define i16 @atomicrmw_max_i16_acq_rel(ptr %a, i16 %b) nounwind {
 ; RV64IA-LABEL: atomicrmw_max_i16_acq_rel:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    andi a2, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
+; RV64IA-NEXT:    slliw a0, a0, 3
 ; RV64IA-NEXT:    lui a3, 16
 ; RV64IA-NEXT:    slli a1, a1, 48
 ; RV64IA-NEXT:    li a4, 48
@@ -25298,7 +25298,7 @@ define i16 @atomicrmw_max_i16_seq_cst(ptr %a, i16 %b) nounwind {
 ; RV64I-LABEL: atomicrmw_max_i16_seq_cst:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    andi a2, a0, -4
-; RV64I-NEXT:    slli a0, a0, 3
+; RV64I-NEXT:    slliw a0, a0, 3
 ; RV64I-NEXT:    lui a3, 16
 ; RV64I-NEXT:    slli a1, a1, 48
 ; RV64I-NEXT:    li a4, 48
@@ -25329,7 +25329,7 @@ define i16 @atomicrmw_max_i16_seq_cst(ptr %a, i16 %b) nounwind {
 ; RV64I-ZALRSC-LABEL: atomicrmw_max_i16_seq_cst:
 ; RV64I-ZALRSC:       # %bb.0:
 ; RV64I-ZALRSC-NEXT:    andi a2, a0, -4
-; RV64I-ZALRSC-NEXT:    slli a0, a0, 3
+; RV64I-ZALRSC-NEXT:    slliw a0, a0, 3
 ; RV64I-ZALRSC-NEXT:    lui a3, 16
 ; RV64I-ZALRSC-NEXT:    slli a1, a1, 48
 ; RV64I-ZALRSC-NEXT:    li a4, 48
@@ -25360,7 +25360,7 @@ define i16 @atomicrmw_max_i16_seq_cst(ptr %a, i16 %b) nounwind {
 ; RV64IA-LABEL: atomicrmw_max_i16_seq_cst:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    andi a2, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
+; RV64IA-NEXT:    slliw a0, a0, 3
 ; RV64IA-NEXT:    lui a3, 16
 ; RV64IA-NEXT:    slli a1, a1, 48
 ; RV64IA-NEXT:    li a4, 48
@@ -25575,7 +25575,7 @@ define i16 @atomicrmw_min_i16_monotonic(ptr %a, i16 %b) nounwind {
 ; RV64I-LABEL: atomicrmw_min_i16_monotonic:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    andi a2, a0, -4
-; RV64I-NEXT:    slli a0, a0, 3
+; RV64I-NEXT:    slliw a0, a0, 3
 ; RV64I-NEXT:    lui a3, 16
 ; RV64I-NEXT:    slli a1, a1, 48
 ; RV64I-NEXT:    li a4, 48
@@ -25606,7 +25606,7 @@ define i16 @atomicrmw_min_i16_monotonic(ptr %a, i16 %b) nounwind {
 ; RV64I-ZALRSC-LABEL: atomicrmw_min_i16_monotonic:
 ; RV64I-ZALRSC:       # %bb.0:
 ; RV64I-ZALRSC-NEXT:    andi a2, a0, -4
-; RV64I-ZALRSC-NEXT:    slli a0, a0, 3
+; RV64I-ZALRSC-NEXT:    slliw a0, a0, 3
 ; RV64I-ZALRSC-NEXT:    lui a3, 16
 ; RV64I-ZALRSC-NEXT:    slli a1, a1, 48
 ; RV64I-ZALRSC-NEXT:    li a4, 48
@@ -25637,7 +25637,7 @@ define i16 @atomicrmw_min_i16_monotonic(ptr %a, i16 %b) nounwind {
 ; RV64IA-LABEL: atomicrmw_min_i16_monotonic:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    andi a2, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
+; RV64IA-NEXT:    slliw a0, a0, 3
 ; RV64IA-NEXT:    lui a3, 16
 ; RV64IA-NEXT:    slli a1, a1, 48
 ; RV64IA-NEXT:    li a4, 48
@@ -25883,7 +25883,7 @@ define i16 @atomicrmw_min_i16_acquire(ptr %a, i16 %b) nounwind {
 ; RV64I-LABEL: atomicrmw_min_i16_acquire:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    andi a2, a0, -4
-; RV64I-NEXT:    slli a0, a0, 3
+; RV64I-NEXT:    slliw a0, a0, 3
 ; RV64I-NEXT:    lui a3, 16
 ; RV64I-NEXT:    slli a1, a1, 48
 ; RV64I-NEXT:    li a4, 48
@@ -25914,7 +25914,7 @@ define i16 @atomicrmw_min_i16_acquire(ptr %a, i16 %b) nounwind {
 ; RV64I-ZALRSC-LABEL: atomicrmw_min_i16_acquire:
 ; RV64I-ZALRSC:       # %bb.0:
 ; RV64I-ZALRSC-NEXT:    andi a2, a0, -4
-; RV64I-ZALRSC-NEXT:    slli a0, a0, 3
+; RV64I-ZALRSC-NEXT:    slliw a0, a0, 3
 ; RV64I-ZALRSC-NEXT:    lui a3, 16
 ; RV64I-ZALRSC-NEXT:    slli a1, a1, 48
 ; RV64I-ZALRSC-NEXT:    li a4, 48
@@ -25945,7 +25945,7 @@ define i16 @atomicrmw_min_i16_acquire(ptr %a, i16 %b) nounwind {
 ; RV64IA-LABEL: atomicrmw_min_i16_acquire:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    andi a2, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
+; RV64IA-NEXT:    slliw a0, a0, 3
 ; RV64IA-NEXT:    lui a3, 16
 ; RV64IA-NEXT:    slli a1, a1, 48
 ; RV64IA-NEXT:    li a4, 48
@@ -26281,7 +26281,7 @@ define i16 @atomicrmw_min_i16_release(ptr %a, i16 %b) nounwind {
 ; RV64I-LABEL: atomicrmw_min_i16_release:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    andi a2, a0, -4
-; RV64I-NEXT:    slli a0, a0, 3
+; RV64I-NEXT:    slliw a0, a0, 3
 ; RV64I-NEXT:    lui a3, 16
 ; RV64I-NEXT:    slli a1, a1, 48
 ; RV64I-NEXT:    li a4, 48
@@ -26312,7 +26312,7 @@ define i16 @atomicrmw_min_i16_release(ptr %a, i16 %b) nounwind {
 ; RV64I-ZALRSC-LABEL: atomicrmw_min_i16_release:
 ; RV64I-ZALRSC:       # %bb.0:
 ; RV64I-ZALRSC-NEXT:    andi a2, a0, -4
-; RV64I-ZALRSC-NEXT:    slli a0, a0, 3
+; RV64I-ZALRSC-NEXT:    slliw a0, a0, 3
 ; RV64I-ZALRSC-NEXT:    lui a3, 16
 ; RV64I-ZALRSC-NEXT:    slli a1, a1, 48
 ; RV64I-ZALRSC-NEXT:    li a4, 48
@@ -26343,7 +26343,7 @@ define i16 @atomicrmw_min_i16_release(ptr %a, i16 %b) nounwind {
 ; RV64IA-LABEL: atomicrmw_min_i16_release:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    andi a2, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
+; RV64IA-NEXT:    slliw a0, a0, 3
 ; RV64IA-NEXT:    lui a3, 16
 ; RV64IA-NEXT:    slli a1, a1, 48
 ; RV64IA-NEXT:    li a4, 48
@@ -26679,7 +26679,7 @@ define i16 @atomicrmw_min_i16_acq_rel(ptr %a, i16 %b) nounwind {
 ; RV64I-LABEL: atomicrmw_min_i16_acq_rel:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    andi a2, a0, -4
-; RV64I-NEXT:    slli a0, a0, 3
+; RV64I-NEXT:    slliw a0, a0, 3
 ; RV64I-NEXT:    lui a3, 16
 ; RV64I-NEXT:    slli a1, a1, 48
 ; RV64I-NEXT:    li a4, 48
@@ -26710,7 +26710,7 @@ define i16 @atomicrmw_min_i16_acq_rel(ptr %a, i16 %b) nounwind {
 ; RV64I-ZALRSC-LABEL: atomicrmw_min_i16_acq_rel:
 ; RV64I-ZALRSC:       # %bb.0:
 ; RV64I-ZALRSC-NEXT:    andi a2, a0, -4
-; RV64I-ZALRSC-NEXT:    slli a0, a0, 3
+; RV64I-ZALRSC-NEXT:    slliw a0, a0, 3
 ; RV64I-ZALRSC-NEXT:    lui a3, 16
 ; RV64I-ZALRSC-NEXT:    slli a1, a1, 48
 ; RV64I-ZALRSC-NEXT:    li a4, 48
@@ -26741,7 +26741,7 @@ define i16 @atomicrmw_min_i16_acq_rel(ptr %a, i16 %b) nounwind {
 ; RV64IA-LABEL: atomicrmw_min_i16_acq_rel:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    andi a2, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
+; RV64IA-NEXT:    slliw a0, a0, 3
 ; RV64IA-NEXT:    lui a3, 16
 ; RV64IA-NEXT:    slli a1, a1, 48
 ; RV64IA-NEXT:    li a4, 48
@@ -27046,7 +27046,7 @@ define i16 @atomicrmw_min_i16_seq_cst(ptr %a, i16 %b) nounwind {
 ; RV64I-LABEL: atomicrmw_min_i16_seq_cst:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    andi a2, a0, -4
-; RV64I-NEXT:    slli a0, a0, 3
+; RV64I-NEXT:    slliw a0, a0, 3
 ; RV64I-NEXT:    lui a3, 16
 ; RV64I-NEXT:    slli a1, a1, 48
 ; RV64I-NEXT:    li a4, 48
@@ -27077,7 +27077,7 @@ define i16 @atomicrmw_min_i16_seq_cst(ptr %a, i16 %b) nounwind {
 ; RV64I-ZALRSC-LABEL: atomicrmw_min_i16_seq_cst:
 ; RV64I-ZALRSC:       # %bb.0:
 ; RV64I-ZALRSC-NEXT:    andi a2, a0, -4
-; RV64I-ZALRSC-NEXT:    slli a0, a0, 3
+; RV64I-ZALRSC-NEXT:    slliw a0, a0, 3
 ; RV64I-ZALRSC-NEXT:    lui a3, 16
 ; RV64I-ZALRSC-NEXT:    slli a1, a1, 48
 ; RV64I-ZALRSC-NEXT:    li a4, 48
@@ -27108,7 +27108,7 @@ define i16 @atomicrmw_min_i16_seq_cst(ptr %a, i16 %b) nounwind {
 ; RV64IA-LABEL: atomicrmw_min_i16_seq_cst:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    andi a2, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
+; RV64IA-NEXT:    slliw a0, a0, 3
 ; RV64IA-NEXT:    lui a3, 16
 ; RV64IA-NEXT:    slli a1, a1, 48
 ; RV64IA-NEXT:    li a4, 48
@@ -27313,7 +27313,7 @@ define i16 @atomicrmw_umax_i16_monotonic(ptr %a, i16 %b) nounwind {
 ; RV64I-LABEL: atomicrmw_umax_i16_monotonic:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    andi a2, a0, -4
-; RV64I-NEXT:    slli a0, a0, 3
+; RV64I-NEXT:    slliw a0, a0, 3
 ; RV64I-NEXT:    lui a3, 16
 ; RV64I-NEXT:    addi a3, a3, -1
 ; RV64I-NEXT:    sllw a4, a3, a0
@@ -27338,7 +27338,7 @@ define i16 @atomicrmw_umax_i16_monotonic(ptr %a, i16 %b) nounwind {
 ; RV64I-ZALRSC-LABEL: atomicrmw_umax_i16_monotonic:
 ; RV64I-ZALRSC:       # %bb.0:
 ; RV64I-ZALRSC-NEXT:    andi a2, a0, -4
-; RV64I-ZALRSC-NEXT:    slli a0, a0, 3
+; RV64I-ZALRSC-NEXT:    slliw a0, a0, 3
 ; RV64I-ZALRSC-NEXT:    lui a3, 16
 ; RV64I-ZALRSC-NEXT:    addi a3, a3, -1
 ; RV64I-ZALRSC-NEXT:    sllw a4, a3, a0
@@ -27363,7 +27363,7 @@ define i16 @atomicrmw_umax_i16_monotonic(ptr %a, i16 %b) nounwind {
 ; RV64IA-LABEL: atomicrmw_umax_i16_monotonic:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    andi a2, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
+; RV64IA-NEXT:    slliw a0, a0, 3
 ; RV64IA-NEXT:    lui a3, 16
 ; RV64IA-NEXT:    addi a3, a3, -1
 ; RV64IA-NEXT:    sllw a4, a3, a0
@@ -27575,7 +27575,7 @@ define i16 @atomicrmw_umax_i16_acquire(ptr %a, i16 %b) nounwind {
 ; RV64I-LABEL: atomicrmw_umax_i16_acquire:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    andi a2, a0, -4
-; RV64I-NEXT:    slli a0, a0, 3
+; RV64I-NEXT:    slliw a0, a0, 3
 ; RV64I-NEXT:    lui a3, 16
 ; RV64I-NEXT:    addi a3, a3, -1
 ; RV64I-NEXT:    sllw a4, a3, a0
@@ -27600,7 +27600,7 @@ define i16 @atomicrmw_umax_i16_acquire(ptr %a, i16 %b) nounwind {
 ; RV64I-ZALRSC-LABEL: atomicrmw_umax_i16_acquire:
 ; RV64I-ZALRSC:       # %bb.0:
 ; RV64I-ZALRSC-NEXT:    andi a2, a0, -4
-; RV64I-ZALRSC-NEXT:    slli a0, a0, 3
+; RV64I-ZALRSC-NEXT:    slliw a0, a0, 3
 ; RV64I-ZALRSC-NEXT:    lui a3, 16
 ; RV64I-ZALRSC-NEXT:    addi a3, a3, -1
 ; RV64I-ZALRSC-NEXT:    sllw a4, a3, a0
@@ -27625,7 +27625,7 @@ define i16 @atomicrmw_umax_i16_acquire(ptr %a, i16 %b) nounwind {
 ; RV64IA-LABEL: atomicrmw_umax_i16_acquire:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    andi a2, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
+; RV64IA-NEXT:    slliw a0, a0, 3
 ; RV64IA-NEXT:    lui a3, 16
 ; RV64IA-NEXT:    addi a3, a3, -1
 ; RV64IA-NEXT:    sllw a4, a3, a0
@@ -27909,7 +27909,7 @@ define i16 @atomicrmw_umax_i16_release(ptr %a, i16 %b) nounwind {
 ; RV64I-LABEL: atomicrmw_umax_i16_release:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    andi a2, a0, -4
-; RV64I-NEXT:    slli a0, a0, 3
+; RV64I-NEXT:    slliw a0, a0, 3
 ; RV64I-NEXT:    lui a3, 16
 ; RV64I-NEXT:    addi a3, a3, -1
 ; RV64I-NEXT:    sllw a4, a3, a0
@@ -27934,7 +27934,7 @@ define i16 @atomicrmw_umax_i16_release(ptr %a, i16 %b) nounwind {
 ; RV64I-ZALRSC-LABEL: atomicrmw_umax_i16_release:
 ; RV64I-ZALRSC:       # %bb.0:
 ; RV64I-ZALRSC-NEXT:    andi a2, a0, -4
-; RV64I-ZALRSC-NEXT:    slli a0, a0, 3
+; RV64I-ZALRSC-NEXT:    slliw a0, a0, 3
 ; RV64I-ZALRSC-NEXT:    lui a3, 16
 ; RV64I-ZALRSC-NEXT:    addi a3, a3, -1
 ; RV64I-ZALRSC-NEXT:    sllw a4, a3, a0
@@ -27959,7 +27959,7 @@ define i16 @atomicrmw_umax_i16_release(ptr %a, i16 %b) nounwind {
 ; RV64IA-LABEL: atomicrmw_umax_i16_release:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    andi a2, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
+; RV64IA-NEXT:    slliw a0, a0, 3
 ; RV64IA-NEXT:    lui a3, 16
 ; RV64IA-NEXT:    addi a3, a3, -1
 ; RV64IA-NEXT:    sllw a4, a3, a0
@@ -28243,7 +28243,7 @@ define i16 @atomicrmw_umax_i16_acq_rel(ptr %a, i16 %b) nounwind {
 ; RV64I-LABEL: atomicrmw_umax_i16_acq_rel:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    andi a2, a0, -4
-; RV64I-NEXT:    slli a0, a0, 3
+; RV64I-NEXT:    slliw a0, a0, 3
 ; RV64I-NEXT:    lui a3, 16
 ; RV64I-NEXT:    addi a3, a3, -1
 ; RV64I-NEXT:    sllw a4, a3, a0
@@ -28268,7 +28268,7 @@ define i16 @atomicrmw_umax_i16_acq_rel(ptr %a, i16 %b) nounwind {
 ; RV64I-ZALRSC-LABEL: atomicrmw_umax_i16_acq_rel:
 ; RV64I-ZALRSC:       # %bb.0:
 ; RV64I-ZALRSC-NEXT:    andi a2, a0, -4
-; RV64I-ZALRSC-NEXT:    slli a0, a0, 3
+; RV64I-ZALRSC-NEXT:    slliw a0, a0, 3
 ; RV64I-ZALRSC-NEXT:    lui a3, 16
 ; RV64I-ZALRSC-NEXT:    addi a3, a3, -1
 ; RV64I-ZALRSC-NEXT:    sllw a4, a3, a0
@@ -28293,7 +28293,7 @@ define i16 @atomicrmw_umax_i16_acq_rel(ptr %a, i16 %b) nounwind {
 ; RV64IA-LABEL: atomicrmw_umax_i16_acq_rel:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    andi a2, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
+; RV64IA-NEXT:    slliw a0, a0, 3
 ; RV64IA-NEXT:    lui a3, 16
 ; RV64IA-NEXT:    addi a3, a3, -1
 ; RV64IA-NEXT:    sllw a4, a3, a0
@@ -28552,7 +28552,7 @@ define i16 @atomicrmw_umax_i16_seq_cst(ptr %a, i16 %b) nounwind {
 ; RV64I-LABEL: atomicrmw_umax_i16_seq_cst:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    andi a2, a0, -4
-; RV64I-NEXT:    slli a0, a0, 3
+; RV64I-NEXT:    slliw a0, a0, 3
 ; RV64I-NEXT:    lui a3, 16
 ; RV64I-NEXT:    addi a3, a3, -1
 ; RV64I-NEXT:    sllw a4, a3, a0
@@ -28577,7 +28577,7 @@ define i16 @atomicrmw_umax_i16_seq_cst(ptr %a, i16 %b) nounwind {
 ; RV64I-ZALRSC-LABEL: atomicrmw_umax_i16_seq_cst:
 ; RV64I-ZALRSC:       # %bb.0:
 ; RV64I-ZALRSC-NEXT:    andi a2, a0, -4
-; RV64I-ZALRSC-NEXT:    slli a0, a0, 3
+; RV64I-ZALRSC-NEXT:    slliw a0, a0, 3
 ; RV64I-ZALRSC-NEXT:    lui a3, 16
 ; RV64I-ZALRSC-NEXT:    addi a3, a3, -1
 ; RV64I-ZALRSC-NEXT:    sllw a4, a3, a0
@@ -28602,7 +28602,7 @@ define i16 @atomicrmw_umax_i16_seq_cst(ptr %a, i16 %b) nounwind {
 ; RV64IA-LABEL: atomicrmw_umax_i16_seq_cst:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    andi a2, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
+; RV64IA-NEXT:    slliw a0, a0, 3
 ; RV64IA-NEXT:    lui a3, 16
 ; RV64IA-NEXT:    addi a3, a3, -1
 ; RV64IA-NEXT:    sllw a4, a3, a0
@@ -28789,7 +28789,7 @@ define i16 @atomicrmw_umin_i16_monotonic(ptr %a, i16 %b) nounwind {
 ; RV64I-LABEL: atomicrmw_umin_i16_monotonic:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    andi a2, a0, -4
-; RV64I-NEXT:    slli a0, a0, 3
+; RV64I-NEXT:    slliw a0, a0, 3
 ; RV64I-NEXT:    lui a3, 16
 ; RV64I-NEXT:    addi a3, a3, -1
 ; RV64I-NEXT:    sllw a4, a3, a0
@@ -28814,7 +28814,7 @@ define i16 @atomicrmw_umin_i16_monotonic(ptr %a, i16 %b) nounwind {
 ; RV64I-ZALRSC-LABEL: atomicrmw_umin_i16_monotonic:
 ; RV64I-ZALRSC:       # %bb.0:
 ; RV64I-ZALRSC-NEXT:    andi a2, a0, -4
-; RV64I-ZALRSC-NEXT:    slli a0, a0, 3
+; RV64I-ZALRSC-NEXT:    slliw a0, a0, 3
 ; RV64I-ZALRSC-NEXT:    lui a3, 16
 ; RV64I-ZALRSC-NEXT:    addi a3, a3, -1
 ; RV64I-ZALRSC-NEXT:    sllw a4, a3, a0
@@ -28839,7 +28839,7 @@ define i16 @atomicrmw_umin_i16_monotonic(ptr %a, i16 %b) nounwind {
 ; RV64IA-LABEL: atomicrmw_umin_i16_monotonic:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    andi a2, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
+; RV64IA-NEXT:    slliw a0, a0, 3
 ; RV64IA-NEXT:    lui a3, 16
 ; RV64IA-NEXT:    addi a3, a3, -1
 ; RV64IA-NEXT:    sllw a4, a3, a0
@@ -29051,7 +29051,7 @@ define i16 @atomicrmw_umin_i16_acquire(ptr %a, i16 %b) nounwind {
 ; RV64I-LABEL: atomicrmw_umin_i16_acquire:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    andi a2, a0, -4
-; RV64I-NEXT:    slli a0, a0, 3
+; RV64I-NEXT:    slliw a0, a0, 3
 ; RV64I-NEXT:    lui a3, 16
 ; RV64I-NEXT:    addi a3, a3, -1
 ; RV64I-NEXT:    sllw a4, a3, a0
@@ -29076,7 +29076,7 @@ define i16 @atomicrmw_umin_i16_acquire(ptr %a, i16 %b) nounwind {
 ; RV64I-ZALRSC-LABEL: atomicrmw_umin_i16_acquire:
 ; RV64I-ZALRSC:       # %bb.0:
 ; RV64I-ZALRSC-NEXT:    andi a2, a0, -4
-; RV64I-ZALRSC-NEXT:    slli a0, a0, 3
+; RV64I-ZALRSC-NEXT:    slliw a0, a0, 3
 ; RV64I-ZALRSC-NEXT:    lui a3, 16
 ; RV64I-ZALRSC-NEXT:    addi a3, a3, -1
 ; RV64I-ZALRSC-NEXT:    sllw a4, a3, a0
@@ -29101,7 +29101,7 @@ define i16 @atomicrmw_umin_i16_acquire(ptr %a, i16 %b) nounwind {
 ; RV64IA-LABEL: atomicrmw_umin_i16_acquire:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    andi a2, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
+; RV64IA-NEXT:    slliw a0, a0, 3
 ; RV64IA-NEXT:    lui a3, 16
 ; RV64IA-NEXT:    addi a3, a3, -1
 ; RV64IA-NEXT:    sllw a4, a3, a0
@@ -29385,7 +29385,7 @@ define i16 @atomicrmw_umin_i16_release(ptr %a, i16 %b) nounwind {
 ; RV64I-LABEL: atomicrmw_umin_i16_release:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    andi a2, a0, -4
-; RV64I-NEXT:    slli a0, a0, 3
+; RV64I-NEXT:    slliw a0, a0, 3
 ; RV64I-NEXT:    lui a3, 16
 ; RV64I-NEXT:    addi a3, a3, -1
 ; RV64I-NEXT:    sllw a4, a3, a0
@@ -29410,7 +29410,7 @@ define i16 @atomicrmw_umin_i16_release(ptr %a, i16 %b) nounwind {
 ; RV64I-ZALRSC-LABEL: atomicrmw_umin_i16_release:
 ; RV64I-ZALRSC:       # %bb.0:
 ; RV64I-ZALRSC-NEXT:    andi a2, a0, -4
-; RV64I-ZALRSC-NEXT:    slli a0, a0, 3
+; RV64I-ZALRSC-NEXT:    slliw a0, a0, 3
 ; RV64I-ZALRSC-NEXT:    lui a3, 16
 ; RV64I-ZALRSC-NEXT:    addi a3, a3, -1
 ; RV64I-ZALRSC-NEXT:    sllw a4, a3, a0
@@ -29435,7 +29435,7 @@ define i16 @atomicrmw_umin_i16_release(ptr %a, i16 %b) nounwind {
 ; RV64IA-LABEL: atomicrmw_umin_i16_release:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    andi a2, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
+; RV64IA-NEXT:    slliw a0, a0, 3
 ; RV64IA-NEXT:    lui a3, 16
 ; RV64IA-NEXT:    addi a3, a3, -1
 ; RV64IA-NEXT:    sllw a4, a3, a0
@@ -29719,7 +29719,7 @@ define i16 @atomicrmw_umin_i16_acq_rel(ptr %a, i16 %b) nounwind {
 ; RV64I-LABEL: atomicrmw_umin_i16_acq_rel:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    andi a2, a0, -4
-; RV64I-NEXT:    slli a0, a0, 3
+; RV64I-NEXT:    slliw a0, a0, 3
 ; RV64I-NEXT:    lui a3, 16
 ; RV64I-NEXT:    addi a3, a3, -1
 ; RV64I-NEXT:    sllw a4, a3, a0
@@ -29744,7 +29744,7 @@ define i16 @atomicrmw_umin_i16_acq_rel(ptr %a, i16 %b) nounwind {
 ; RV64I-ZALRSC-LABEL: atomicrmw_umin_i16_acq_rel:
 ; RV64I-ZALRSC:       # %bb.0:
 ; RV64I-ZALRSC-NEXT:    andi a2, a0, -4
-; RV64I-ZALRSC-NEXT:    slli a0, a0, 3
+; RV64I-ZALRSC-NEXT:    slliw a0, a0, 3
 ; RV64I-ZALRSC-NEXT:    lui a3, 16
 ; RV64I-ZALRSC-NEXT:    addi a3, a3, -1
 ; RV64I-ZALRSC-NEXT:    sllw a4, a3, a0
@@ -29769,7 +29769,7 @@ define i16 @atomicrmw_umin_i16_acq_rel(ptr %a, i16 %b) nounwind {
 ; RV64IA-LABEL: atomicrmw_umin_i16_acq_rel:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    andi a2, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
+; RV64IA-NEXT:    slliw a0, a0, 3
 ; RV64IA-NEXT:    lui a3, 16
 ; RV64IA-NEXT:    addi a3, a3, -1
 ; RV64IA-NEXT:    sllw a4, a3, a0
@@ -30028,7 +30028,7 @@ define i16 @atomicrmw_umin_i16_seq_cst(ptr %a, i16 %b) nounwind {
 ; RV64I-LABEL: atomicrmw_umin_i16_seq_cst:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    andi a2, a0, -4
-; RV64I-NEXT:    slli a0, a0, 3
+; RV64I-NEXT:    slliw a0, a0, 3
 ; RV64I-NEXT:    lui a3, 16
 ; RV64I-NEXT:    addi a3, a3, -1
 ; RV64I-NEXT:    sllw a4, a3, a0
@@ -30053,7 +30053,7 @@ define i16 @atomicrmw_umin_i16_seq_cst(ptr %a, i16 %b) nounwind {
 ; RV64I-ZALRSC-LABEL: atomicrmw_umin_i16_seq_cst:
 ; RV64I-ZALRSC:       # %bb.0:
 ; RV64I-ZALRSC-NEXT:    andi a2, a0, -4
-; RV64I-ZALRSC-NEXT:    slli a0, a0, 3
+; RV64I-ZALRSC-NEXT:    slliw a0, a0, 3
 ; RV64I-ZALRSC-NEXT:    lui a3, 16
 ; RV64I-ZALRSC-NEXT:    addi a3, a3, -1
 ; RV64I-ZALRSC-NEXT:    sllw a4, a3, a0
@@ -30078,7 +30078,7 @@ define i16 @atomicrmw_umin_i16_seq_cst(ptr %a, i16 %b) nounwind {
 ; RV64IA-LABEL: atomicrmw_umin_i16_seq_cst:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    andi a2, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
+; RV64IA-NEXT:    slliw a0, a0, 3
 ; RV64IA-NEXT:    lui a3, 16
 ; RV64IA-NEXT:    addi a3, a3, -1
 ; RV64IA-NEXT:    sllw a4, a3, a0

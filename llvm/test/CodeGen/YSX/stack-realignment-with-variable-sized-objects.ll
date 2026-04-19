@@ -102,7 +102,6 @@ define void @caller(i32 %n) {
 ; RV64I-NEXT:    addi sp, sp, 64
 ; RV64I-NEXT:    .cfi_def_cfa_offset 0
 ; RV64I-NEXT:    ret
-;
 ; RV64I-LP64E-LABEL: caller:
 ; RV64I-LP64E:       # %bb.0:
 ; RV64I-LP64E-NEXT:    addi sp, sp, -64

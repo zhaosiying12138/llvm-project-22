@@ -25,7 +25,6 @@ define signext i32 @select_of_or(i1 zeroext %a, i1 zeroext %b, i32 signext %c, i
 ; RV64I-NEXT:    mv a0, a3
 ; RV64I-NEXT:  .LBB0_2:
 ; RV64I-NEXT:    ret
-;
 ; RV64I-CCMOV-LABEL: select_of_or:
 ; RV64I-CCMOV:       # %bb.0:
 ; RV64I-CCMOV-NEXT:    or a0, a0, a1
@@ -73,7 +72,6 @@ define signext i32 @if_of_or(i1 zeroext %a, i1 zeroext %b) nounwind {
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
-;
 ; RV64I-CCMOV-LABEL: if_of_or:
 ; RV64I-CCMOV:       # %bb.0:
 ; RV64I-CCMOV-NEXT:    addi sp, sp, -16

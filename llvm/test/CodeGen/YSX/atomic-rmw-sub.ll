@@ -147,20 +147,20 @@ define i32 @atomicrmw_sub_i32_neg(ptr %a, i32 %x, i32 %y) nounwind {
 ;
 ; RV64I-LABEL: atomicrmw_sub_i32_neg:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    sub a2, a2, a1
-; RV64I-NEXT:    amoadd.w.aqrl a0, a2, (a0)
+; RV64I-NEXT:    sub a1, a2, a1
+; RV64I-NEXT:    amoadd.w.aqrl a0, a1, (a0)
 ; RV64I-NEXT:    ret
 ;
 ; RV64IA-LABEL: atomicrmw_sub_i32_neg:
 ; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    sub a2, a2, a1
-; RV64IA-NEXT:    amoadd.w.aqrl a0, a2, (a0)
+; RV64IA-NEXT:    sub a1, a2, a1
+; RV64IA-NEXT:    amoadd.w.aqrl a0, a1, (a0)
 ; RV64IA-NEXT:    ret
 ;
 ; RV64I-ZALRSC-LABEL: atomicrmw_sub_i32_neg:
 ; RV64I-ZALRSC:       # %bb.0:
-; RV64I-ZALRSC-NEXT:    sub a2, a2, a1
-; RV64I-ZALRSC-NEXT:    amoadd.w.aqrl a0, a2, (a0)
+; RV64I-ZALRSC-NEXT:    sub a1, a2, a1
+; RV64I-ZALRSC-NEXT:    amoadd.w.aqrl a0, a1, (a0)
 ; RV64I-ZALRSC-NEXT:    ret
   %b = sub i32 %x, %y
   %1 = atomicrmw sub ptr %a, i32 %b seq_cst
@@ -212,20 +212,20 @@ define i64 @atomicrmw_sub_i64_neg(ptr %a, i64 %x, i64 %y) nounwind {
 ;
 ; RV64I-LABEL: atomicrmw_sub_i64_neg:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    sub a2, a2, a1
-; RV64I-NEXT:    amoadd.d.aqrl a0, a2, (a0)
+; RV64I-NEXT:    sub a1, a2, a1
+; RV64I-NEXT:    amoadd.d.aqrl a0, a1, (a0)
 ; RV64I-NEXT:    ret
 ;
 ; RV64IA-LABEL: atomicrmw_sub_i64_neg:
 ; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    sub a2, a2, a1
-; RV64IA-NEXT:    amoadd.d.aqrl a0, a2, (a0)
+; RV64IA-NEXT:    sub a1, a2, a1
+; RV64IA-NEXT:    amoadd.d.aqrl a0, a1, (a0)
 ; RV64IA-NEXT:    ret
 ;
 ; RV64I-ZALRSC-LABEL: atomicrmw_sub_i64_neg:
 ; RV64I-ZALRSC:       # %bb.0:
-; RV64I-ZALRSC-NEXT:    sub a2, a2, a1
-; RV64I-ZALRSC-NEXT:    amoadd.d.aqrl a0, a2, (a0)
+; RV64I-ZALRSC-NEXT:    sub a1, a2, a1
+; RV64I-ZALRSC-NEXT:    amoadd.d.aqrl a0, a1, (a0)
 ; RV64I-ZALRSC-NEXT:    ret
   %b = sub i64 %x, %y
   %1 = atomicrmw sub ptr %a, i64 %b seq_cst

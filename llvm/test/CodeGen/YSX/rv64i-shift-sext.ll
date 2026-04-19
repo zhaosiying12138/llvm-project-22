@@ -134,9 +134,9 @@ define signext i32 @test10(ptr %0, i64 %1) {
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    lui a2, 30141
 ; RV64I-NEXT:    addi a2, a2, -747
-; RV64I-NEXT:    subw a2, a2, a1
-; RV64I-NEXT:    slli a2, a2, 2
-; RV64I-NEXT:    add a0, a0, a2
+; RV64I-NEXT:    subw a1, a2, a1
+; RV64I-NEXT:    slli a1, a1, 2
+; RV64I-NEXT:    add a0, a0, a1
 ; RV64I-NEXT:    lw a0, 0(a0)
 ; RV64I-NEXT:    ret
   %3 = mul i64 %1, -4294967296
@@ -177,9 +177,9 @@ define i8 @test13(ptr %0, i64 %1) {
 ; RV64I-NEXT:    li a2, 1
 ; RV64I-NEXT:    li a3, 2
 ; RV64I-NEXT:    subw a2, a2, a1
-; RV64I-NEXT:    subw a3, a3, a1
+; RV64I-NEXT:    subw a1, a3, a1
 ; RV64I-NEXT:    add a2, a0, a2
-; RV64I-NEXT:    add a0, a0, a3
+; RV64I-NEXT:    add a0, a0, a1
 ; RV64I-NEXT:    lbu a1, 0(a2)
 ; RV64I-NEXT:    lbu a0, 0(a0)
 ; RV64I-NEXT:    add a0, a1, a0
@@ -201,11 +201,11 @@ define signext i32 @test14(ptr %0, ptr %1, i64 %2) {
 ; RV64I-LABEL: test14:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    li a3, 1
-; RV64I-NEXT:    subw a3, a3, a2
-; RV64I-NEXT:    add a0, a0, a3
-; RV64I-NEXT:    slli a3, a3, 2
+; RV64I-NEXT:    subw a2, a3, a2
+; RV64I-NEXT:    add a0, a0, a2
+; RV64I-NEXT:    slli a2, a2, 2
 ; RV64I-NEXT:    lbu a0, 0(a0)
-; RV64I-NEXT:    add a1, a1, a3
+; RV64I-NEXT:    add a1, a1, a2
 ; RV64I-NEXT:    lw a1, 0(a1)
 ; RV64I-NEXT:    addw a0, a0, a1
 ; RV64I-NEXT:    ret
@@ -247,9 +247,9 @@ define signext i32 @test16(i32 signext %x, i32 signext %y) {
 ; RV64I-NEXT:    and a3, a3, a4
 ; RV64I-NEXT:    and a4, a2, a4
 ; RV64I-NEXT:    or a0, a3, a0
-; RV64I-NEXT:    slli a4, a4, 8
-; RV64I-NEXT:    slli a2, a2, 24
-; RV64I-NEXT:    or a2, a2, a4
+; RV64I-NEXT:    slliw a3, a4, 8
+; RV64I-NEXT:    slliw a2, a2, 24
+; RV64I-NEXT:    or a2, a2, a3
 ; RV64I-NEXT:    or a0, a2, a0
 ; RV64I-NEXT:    sraw a0, a0, a1
 ; RV64I-NEXT:    slli a0, a0, 1

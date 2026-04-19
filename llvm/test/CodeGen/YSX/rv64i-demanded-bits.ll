@@ -8,11 +8,11 @@
 define i32 @foo(i32 %x, i32 %y, i32 %z) {
 ; CHECK-LABEL: foo:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    mul a0, a0, a0
-; CHECK-NEXT:    addi a0, a0, 1
-; CHECK-NEXT:    mul a0, a0, a0
-; CHECK-NEXT:    add a0, a0, a2
-; CHECK-NEXT:    addi a0, a0, 1
+; CHECK-NEXT:    mulw a0, a0, a0
+; CHECK-NEXT:    addiw a0, a0, 1
+; CHECK-NEXT:    mulw a0, a0, a0
+; CHECK-NEXT:    addw a0, a0, a2
+; CHECK-NEXT:    addiw a0, a0, 1
 ; CHECK-NEXT:    sllw a0, a0, a1
 ; CHECK-NEXT:    ret
   %b = mul i32 %x, %x
@@ -121,7 +121,7 @@ define signext i32 @andi_sub_cse(i32 signext %0, i32 signext %1, ptr %2) {
 define signext i32 @addi_sub_cse(i32 signext %0, i32 signext %1, ptr %2) {
 ; CHECK-LABEL: addi_sub_cse:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    sub a0, a0, a1
+; CHECK-NEXT:    subw a0, a0, a1
 ; CHECK-NEXT:    addiw a0, a0, -8
 ; CHECK-NEXT:    sw a0, 0(a2)
 ; CHECK-NEXT:    ret
@@ -196,7 +196,7 @@ entry:
 define i64 @and_allones(i32 signext %x) {
 ; CHECK-LABEL: and_allones:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addi a0, a0, -1
+; CHECK-NEXT:    addiw a0, a0, -1
 ; CHECK-NEXT:    li a1, 1
 ; CHECK-NEXT:    sll a0, a1, a0
 ; CHECK-NEXT:    ret

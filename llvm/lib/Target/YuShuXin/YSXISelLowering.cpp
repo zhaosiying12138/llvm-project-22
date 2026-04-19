@@ -4463,8 +4463,11 @@ static SDValue lowerBuildVectorOfConstants(SDValue Op, SelectionDAG &DAG,
   return SDValue();
 }
 
+#if 0
 static unsigned getPACKOpcode(unsigned DestBW,
                               const YSXSubtarget &Subtarget) {
+  llvm_unreachable("YSX does not support pack instructions");
+#if 0
   switch (DestBW) {
   default:
     llvm_unreachable("Unsupported pack size");
@@ -4476,7 +4479,9 @@ static unsigned getPACKOpcode(unsigned DestBW,
     assert(Subtarget.is64Bit());
     return YSX::PACK;
   }
+#endif
 }
+#endif
 
 /// Double the element size of the build vector to reduce the number
 /// of vslide1down in the build vector chain.  In the worst case, this
@@ -4485,6 +4490,8 @@ static unsigned getPACKOpcode(unsigned DestBW,
 /// we also benefit from additional parallelism.
 static SDValue lowerBuildVectorViaPacking(SDValue Op, SelectionDAG &DAG,
                                           const YSXSubtarget &Subtarget) {
+  return SDValue();
+#if 0
   SDLoc DL(Op);
   MVT VT = Op.getSimpleValueType();
   assert(VT.isFixedLengthVector() && "Unexpected vector!");
@@ -4538,6 +4545,7 @@ static SDValue lowerBuildVectorViaPacking(SDValue Op, SelectionDAG &DAG,
   MVT WideVecVT = MVT::getVectorVT(WideVT, NumElts / 2);
   return DAG.getNode(ISD::BITCAST, DL, VT,
                      DAG.getBuildVector(WideVecVT, DL, NewOperands));
+#endif
 }
 
 static SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
@@ -4550,7 +4558,8 @@ static SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
 
   SDLoc DL(Op);
 
-  if (Subtarget.isRV32() && Subtarget.enablePExtSIMDCodeGen()) {
+  if (false && Subtarget.isRV32() && Subtarget.enablePExtSIMDCodeGen()) {
+#if 0
     if (VT != MVT::v4i8)
       return SDValue();
 
@@ -4575,6 +4584,7 @@ static SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
                 {DAG.getNode(ISD::BITCAST, DL, MVT::i32, PackDH.getValue(0)),
                  DAG.getNode(ISD::BITCAST, DL, MVT::i32, PackDH.getValue(1))}),
             0));
+#endif
   }
 
   // Proper support for f16 requires Zvfh. bf16 always requires special
@@ -7433,6 +7443,8 @@ static SDValue lowerFCOPYSIGN(SDValue Op, SelectionDAG &DAG,
 
 /// Get a RISC-V target specified VL op for a given SDNode.
 static unsigned getYSXVLOp(SDValue Op) {
+  llvm_unreachable("YSX does not support vector-length custom operations");
+#if 0
 #define OP_CASE(NODE)                                                          \
   case ISD::NODE:                                                              \
     return YSXISD::NODE##_VL;
@@ -7587,6 +7599,7 @@ static unsigned getYSXVLOp(SDValue Op) {
   // clang-format on
 #undef OP_CASE
 #undef VP_CASE
+#endif
 }
 
 static bool isPromotedOpNeedingSplit(SDValue Op,
@@ -22842,6 +22855,7 @@ static MachineBasicBlock *emitReadCounterWidePseudo(MachineInstr &MI,
   return DoneMBB;
 }
 
+#if 0
 static MachineBasicBlock *emitSplitF64Pseudo(MachineInstr &MI,
                                              MachineBasicBlock *BB,
                                              const YSXSubtarget &Subtarget) {
@@ -22962,6 +22976,7 @@ static MachineBasicBlock *emitQuietFCMP(MachineInstr &MI, MachineBasicBlock *BB,
   MI.eraseFromParent();
   return BB;
 }
+#endif
 
 static MachineBasicBlock *
 EmitLoweredCascadedSelect(MachineInstr &First, MachineInstr &Second,
@@ -23221,21 +23236,18 @@ static MachineBasicBlock *emitSelectPseudo(MachineInstr &MI,
   return TailMBB;
 }
 
+#if 0
 // Helper to find Masked Pseudo instruction from MC instruction, LMUL and SEW.
 static const YSX::YSXMaskedPseudoInfo *
 lookupMaskedIntrinsic(uint16_t MCOpcode, YSXVType::VLMUL LMul, unsigned SEW) {
-  const YSXVInversePseudosTable::PseudoInfo *Inverse =
-      YSXVInversePseudosTable::getBaseInfo(MCOpcode, LMul, SEW);
-  assert(Inverse && "Unexpected LMUL and SEW pair for instruction");
-  const YSX::YSXMaskedPseudoInfo *Masked =
-      YSX::lookupMaskedIntrinsicByUnmasked(Inverse->Pseudo);
-  assert(Masked && "Could not find masked instruction for LMUL and SEW pair");
-  return Masked;
+  return nullptr;
 }
 
 static MachineBasicBlock *emitVFROUND_NOEXCEPT_MASK(MachineInstr &MI,
                                                     MachineBasicBlock *BB,
                                                     unsigned CVTXOpc) {
+  llvm_unreachable("YSX does not support vector floating-point rounding");
+#if 0
   DebugLoc DL = MI.getDebugLoc();
 
   const TargetInstrInfo &TII = *BB->getParent()->getSubtarget().getInstrInfo();
@@ -23294,10 +23306,13 @@ static MachineBasicBlock *emitVFROUND_NOEXCEPT_MASK(MachineInstr &MI,
   // Erase the pseudoinstruction.
   MI.eraseFromParent();
   return BB;
+#endif
 }
 
 static MachineBasicBlock *emitFROUND(MachineInstr &MI, MachineBasicBlock *MBB,
                                      const YSXSubtarget &Subtarget) {
+  llvm_unreachable("YSX does not support floating-point rounding");
+#if 0
   unsigned CmpOpc, F2IOpc, I2FOpc, FSGNJOpc, FSGNJXOpc;
   const TargetRegisterClass *RC;
   switch (MI.getOpcode()) {
@@ -23426,7 +23441,9 @@ static MachineBasicBlock *emitFROUND(MachineInstr &MI, MachineBasicBlock *MBB,
 
   MI.eraseFromParent();
   return DoneMBB;
+#endif
 }
+#endif
 
 MachineBasicBlock *
 YSXTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
@@ -23439,6 +23456,8 @@ YSXTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
            "ReadCounterWide is only to be used on ysx32");
     return emitReadCounterWidePseudo(MI, BB);
   case YSX::Select_GPR_Using_CC_GPR:
+    return emitSelectPseudo(MI, BB, Subtarget);
+#if 0
   case YSX::Select_GPR_Using_CC_Imm5_Zibi:
   case YSX::Select_GPR_Using_CC_SImm5_CV:
   case YSX::Select_GPRNoX0_Using_CC_SImm5NonZero_QC:
@@ -23510,6 +23529,7 @@ YSXTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   case YSX::PseudoFROUND_D_INX:
   case YSX::PseudoFROUND_D_IN32X:
     return emitFROUND(MI, BB, Subtarget);
+#endif
   case YSX::PROBED_STACKALLOC_DYN:
     return emitDynamicProbedAlloc(MI, BB);
   case TargetOpcode::STATEPOINT:
@@ -23542,6 +23562,8 @@ void YSXTargetLowering::AdjustInstrPostInstrSelection(MachineInstr &MI,
     FRMDef->setIsDead(false);
     return;
   }
+  return;
+#if 0
   // Add FRM dependency to any instructions with dynamic rounding mode.
   int Idx = YSX::getNamedOperandIdx(MI.getOpcode(), YSX::OpName::frm);
   if (Idx < 0) {
@@ -23557,6 +23579,7 @@ void YSXTargetLowering::AdjustInstrPostInstrSelection(MachineInstr &MI,
     return;
   MI.addOperand(
       MachineOperand::CreateReg(YSX::FRM, /*isDef*/ false, /*isImp*/ true));
+#endif
 }
 
 void YSXTargetLowering::analyzeInputArgs(

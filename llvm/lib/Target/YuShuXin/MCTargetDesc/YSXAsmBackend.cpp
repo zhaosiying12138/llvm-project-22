@@ -157,49 +157,10 @@ bool YSXAsmBackend::fixupNeedsRelaxationAdvanced(const MCFragment &,
 static unsigned getRelaxedOpcode(unsigned Opcode, ArrayRef<MCOperand> Operands,
                                  const MCSubtargetInfo &STI) {
   switch (Opcode) {
-  case YSX::C_BEQZ:
-    return YSX::BEQ;
-  case YSX::C_BNEZ:
-    return YSX::BNE;
-  case YSX::C_J:
-  case YSX::C_JAL: // fall through.
-    // This only relaxes one "step" - i.e. from C.J to JAL, not from C.J to
-    // QC.E.J, because we can always relax again if needed.
-    return YSX::JAL;
-  case YSX::C_LI:
-    if (!STI.hasFeature(YSX::FeatureVendorXqcili))
-      break;
-    // We only need this because `QC.E.LI` can be compressed into a `C.LI`. This
-    // happens because the `simm6` MCOperandPredicate accepts bare symbols, and
-    // `QC.E.LI` is the only instruction that accepts bare symbols at parse-time
-    // and compresses to `C.LI`. `C.LI` does not itself accept bare symbols at
-    // parse time.
-    //
-    // If we have a bare symbol, we need to turn this back to a `QC.E.LI`, as we
-    // have no way to emit a relocation on a `C.LI` instruction.
-    return YSX::QC_E_LI;
-  case YSX::JAL: {
-    // We can only relax JAL if we have Xqcilb
-    if (!STI.hasFeature(YSX::FeatureVendorXqcilb))
-      break;
-
-    // And only if it is using X0 or X1 for rd.
-    MCRegister Reg = Operands[0].getReg();
-    if (Reg == YSX::X0)
-      return YSX::QC_E_J;
-    if (Reg == YSX::X1)
-      return YSX::QC_E_JAL;
-
-    break;
-  }
   case YSX::BEQ:
     return YSX::PseudoLongBEQ;
   case YSX::BNE:
     return YSX::PseudoLongBNE;
-  case YSX::BEQI:
-    return YSX::PseudoLongBEQI;
-  case YSX::BNEI:
-    return YSX::PseudoLongBNEI;
   case YSX::BLT:
     return YSX::PseudoLongBLT;
   case YSX::BGE:
@@ -208,30 +169,6 @@ static unsigned getRelaxedOpcode(unsigned Opcode, ArrayRef<MCOperand> Operands,
     return YSX::PseudoLongBLTU;
   case YSX::BGEU:
     return YSX::PseudoLongBGEU;
-  case YSX::QC_BEQI:
-    return YSX::PseudoLongQC_BEQI;
-  case YSX::QC_BNEI:
-    return YSX::PseudoLongQC_BNEI;
-  case YSX::QC_BLTI:
-    return YSX::PseudoLongQC_BLTI;
-  case YSX::QC_BGEI:
-    return YSX::PseudoLongQC_BGEI;
-  case YSX::QC_BLTUI:
-    return YSX::PseudoLongQC_BLTUI;
-  case YSX::QC_BGEUI:
-    return YSX::PseudoLongQC_BGEUI;
-  case YSX::QC_E_BEQI:
-    return YSX::PseudoLongQC_E_BEQI;
-  case YSX::QC_E_BNEI:
-    return YSX::PseudoLongQC_E_BNEI;
-  case YSX::QC_E_BLTI:
-    return YSX::PseudoLongQC_E_BLTI;
-  case YSX::QC_E_BGEI:
-    return YSX::PseudoLongQC_E_BGEI;
-  case YSX::QC_E_BLTUI:
-    return YSX::PseudoLongQC_E_BLTUI;
-  case YSX::QC_E_BGEUI:
-    return YSX::PseudoLongQC_E_BGEUI;
   }
 
   // Returning the original opcode means we cannot relax the instruction.
@@ -247,66 +184,12 @@ void YSXAsmBackend::relaxInstruction(MCInst &Inst,
   switch (Inst.getOpcode()) {
   default:
     llvm_unreachable("Opcode not expected!");
-  case YSX::C_BEQZ:
-  case YSX::C_BNEZ:
-  case YSX::C_J:
-  case YSX::C_JAL: {
-    [[maybe_unused]] bool Success = YSXRVC::uncompress(Res, Inst, STI);
-    assert(Success && "Can't uncompress instruction");
-    assert(Res.getOpcode() ==
-               getRelaxedOpcode(Inst.getOpcode(), Inst.getOperands(), STI) &&
-           "Branch Relaxation Error");
-    break;
-  }
-  case YSX::JAL: {
-    // This has to be written manually because the QC.E.J -> JAL is
-    // compression-only, so that it is not used when printing disassembly.
-    assert(STI.hasFeature(YSX::FeatureVendorXqcilb) &&
-           "JAL is only relaxable with Xqcilb");
-    assert((Inst.getOperand(0).getReg() == YSX::X0 ||
-            Inst.getOperand(0).getReg() == YSX::X1) &&
-           "JAL only relaxable with rd=x0 or rd=x1");
-    Res.setOpcode(getRelaxedOpcode(Inst.getOpcode(), Inst.getOperands(), STI));
-    Res.addOperand(Inst.getOperand(1));
-    break;
-  }
-  case YSX::C_LI: {
-    // This should only be hit when trying to relax a `C.LI` into a `QC.E.LI`
-    // because the `C.LI` has a bare symbol. We cannot use
-    // `YSXRVC::uncompress` because it will use decompression patterns. The
-    // `QC.E.LI` compression pattern to `C.LI` is compression-only (because we
-    // don't want `c.li` ever printed as `qc.e.li`, which might be done if the
-    // pattern applied to decompression), but that doesn't help much becuase
-    // `C.LI` with a bare symbol will decompress to an `ADDI` anyway (because
-    // `simm12`'s MCOperandPredicate accepts a bare symbol and that pattern
-    // comes first), and we still cannot emit an `ADDI` with a bare symbol.
-    assert(STI.hasFeature(YSX::FeatureVendorXqcili) &&
-           "C.LI is only relaxable with Xqcili");
-    Res.setOpcode(getRelaxedOpcode(Inst.getOpcode(), Inst.getOperands(), STI));
-    Res.addOperand(Inst.getOperand(0));
-    Res.addOperand(Inst.getOperand(1));
-    break;
-  }
   case YSX::BEQ:
   case YSX::BNE:
-  case YSX::BEQI:
-  case YSX::BNEI:
   case YSX::BLT:
   case YSX::BGE:
   case YSX::BLTU:
   case YSX::BGEU:
-  case YSX::QC_BEQI:
-  case YSX::QC_BNEI:
-  case YSX::QC_BLTI:
-  case YSX::QC_BGEI:
-  case YSX::QC_BLTUI:
-  case YSX::QC_BGEUI:
-  case YSX::QC_E_BEQI:
-  case YSX::QC_E_BNEI:
-  case YSX::QC_E_BLTI:
-  case YSX::QC_E_BGEI:
-  case YSX::QC_E_BLTUI:
-  case YSX::QC_E_BGEUI:
     Res.setOpcode(getRelaxedOpcode(Inst.getOpcode(), Inst.getOperands(), STI));
     Res.addOperand(Inst.getOperand(0));
     Res.addOperand(Inst.getOperand(1));

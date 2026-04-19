@@ -425,25 +425,33 @@ public:
   /// alignment is legal.
   bool isLegalFirstFaultLoad(EVT DataType, Align Alignment) const;
 
-  unsigned getMaxSupportedInterleaveFactor() const override { return 8; }
+  unsigned getMaxSupportedInterleaveFactor() const override { return 1; }
 
   bool fallBackToDAGISel(const Instruction &Inst) const override;
 
   bool lowerInterleavedLoad(Instruction *Load, Value *Mask,
                             ArrayRef<ShuffleVectorInst *> Shuffles,
                             ArrayRef<unsigned> Indices, unsigned Factor,
-                            const APInt &GapMask) const override;
+                            const APInt &GapMask) const override {
+    return false;
+  }
 
   bool lowerInterleavedStore(Instruction *Store, Value *Mask,
                              ShuffleVectorInst *SVI, unsigned Factor,
-                             const APInt &GapMask) const override;
+                             const APInt &GapMask) const override {
+    return false;
+  }
 
   bool lowerDeinterleaveIntrinsicToLoad(Instruction *Load, Value *Mask,
-                                        IntrinsicInst *DI) const override;
+                                        IntrinsicInst *DI) const override {
+    return false;
+  }
 
   bool lowerInterleaveIntrinsicToStore(
       Instruction *Store, Value *Mask,
-      ArrayRef<Value *> InterleaveValues) const override;
+      ArrayRef<Value *> InterleaveValues) const override {
+    return false;
+  }
 
   bool supportKCFIBundles() const override { return true; }
 
@@ -667,6 +675,10 @@ using namespace YSX;
 #define GET_YSXVIntrinsicsTable_DECL
 #include "YSXGenSearchableTables.inc"
 #undef GET_YSXVIntrinsicsTable_DECL
+
+inline const YSXVIntrinsicInfo *getYSXVIntrinsicInfo(unsigned) {
+  return nullptr;
+}
 
 } // end namespace YSXVIntrinsicsTable
 

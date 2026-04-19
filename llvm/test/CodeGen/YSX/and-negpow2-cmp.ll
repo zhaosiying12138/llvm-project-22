@@ -14,12 +14,12 @@ define i1 @test1(i64 %x) {
 ; RV32-NEXT:    seqz a0, a0
 ; RV32-NEXT:    ret
 ;
-; RV64-LABEL: test1:
-; RV64:       # %bb.0:
-; RV64-NEXT:    srai a0, a0, 30
-; RV64-NEXT:    addi a0, a0, 2
-; RV64-NEXT:    seqz a0, a0
-; RV64-NEXT:    ret
+; CHECK-LABEL: test1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    srai a0, a0, 30
+; CHECK-NEXT:    addi a0, a0, 2
+; CHECK-NEXT:    seqz a0, a0
+; CHECK-NEXT:    ret
   %a = and i64 %x, -1073741824
   %b = icmp eq i64 %a, -2147483648
   ret i1 %b
@@ -54,11 +54,11 @@ define i1 @test4(i64 %x) {
 ; RV32-NEXT:    seqz a0, a1
 ; RV32-NEXT:    ret
 ;
-; RV64-LABEL: test4:
-; RV64:       # %bb.0:
-; RV64-NEXT:    srli a0, a0, 46
-; RV64-NEXT:    seqz a0, a0
-; RV64-NEXT:    ret
+; CHECK-LABEL: test4:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    srli a0, a0, 46
+; CHECK-NEXT:    seqz a0, a0
+; CHECK-NEXT:    ret
   %a = and i64 %x, -70368744177664
   %b = icmp eq i64 %a, 0
   ret i1 %b
@@ -71,11 +71,11 @@ define i1 @test5(i64 %x) {
 ; RV32-NEXT:    seqz a0, a0
 ; RV32-NEXT:    ret
 ;
-; RV64-LABEL: test5:
-; RV64:       # %bb.0:
-; RV64-NEXT:    sraiw a0, a0, 29
-; RV64-NEXT:    seqz a0, a0
-; RV64-NEXT:    ret
+; CHECK-LABEL: test5:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    sraiw a0, a0, 29
+; CHECK-NEXT:    seqz a0, a0
+; CHECK-NEXT:    ret
   %a = and i64 %x, u0xE0000000
   %b = icmp eq i64 %a, 0
   ret i1 %b
@@ -88,11 +88,11 @@ define i1 @test6(i64 %x) {
 ; RV32-NEXT:    snez a0, a0
 ; RV32-NEXT:    ret
 ;
-; RV64-LABEL: test6:
-; RV64:       # %bb.0:
-; RV64-NEXT:    sraiw a0, a0, 29
-; RV64-NEXT:    snez a0, a0
-; RV64-NEXT:    ret
+; CHECK-LABEL: test6:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    sraiw a0, a0, 29
+; CHECK-NEXT:    snez a0, a0
+; CHECK-NEXT:    ret
   %a = and i64 %x, u0xE0000000
   %b = icmp ne i64 %a, 0
   ret i1 %b
@@ -106,12 +106,12 @@ define i1 @test7(i64 %x) {
 ; RV32-NEXT:    seqz a0, a0
 ; RV32-NEXT:    ret
 ;
-; RV64-LABEL: test7:
-; RV64:       # %bb.0:
-; RV64-NEXT:    sraiw a0, a0, 29
-; RV64-NEXT:    addi a0, a0, 2
-; RV64-NEXT:    seqz a0, a0
-; RV64-NEXT:    ret
+; CHECK-LABEL: test7:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    sraiw a0, a0, 29
+; CHECK-NEXT:    addi a0, a0, 2
+; CHECK-NEXT:    seqz a0, a0
+; CHECK-NEXT:    ret
   %a = and i64 %x, u0xE0000000
   %b = icmp eq i64 %a, u0xC0000000
   ret i1 %b
@@ -125,12 +125,12 @@ define i1 @test8(i64 %x) {
 ; RV32-NEXT:    snez a0, a0
 ; RV32-NEXT:    ret
 ;
-; RV64-LABEL: test8:
-; RV64:       # %bb.0:
-; RV64-NEXT:    sraiw a0, a0, 20
-; RV64-NEXT:    xori a0, a0, -2048
-; RV64-NEXT:    snez a0, a0
-; RV64-NEXT:    ret
+; CHECK-LABEL: test8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    sraiw a0, a0, 20
+; CHECK-NEXT:    xori a0, a0, -2048
+; CHECK-NEXT:    snez a0, a0
+; CHECK-NEXT:    ret
   %a = and i64 %x, u0xFFF00000
   %b = icmp ne i64 %a, u0x80000000
   ret i1 %b
@@ -144,12 +144,12 @@ define i1 @test9(i64 %x) {
 ; RV32-NEXT:    seqz a0, a0
 ; RV32-NEXT:    ret
 ;
-; RV64-LABEL: test9:
-; RV64:       # %bb.0:
-; RV64-NEXT:    sraiw a0, a0, 16
-; RV64-NEXT:    addi a0, a0, -2048
-; RV64-NEXT:    seqz a0, a0
-; RV64-NEXT:    ret
+; CHECK-LABEL: test9:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    sraiw a0, a0, 16
+; CHECK-NEXT:    addi a0, a0, -2048
+; CHECK-NEXT:    seqz a0, a0
+; CHECK-NEXT:    ret
   %a = and i64 %x, u0xFFFF0000
   %b = icmp eq i64 %a, u0x08000000
   ret i1 %b
@@ -166,12 +166,12 @@ define i64 @test10(i64 %0) #0 {
 ; RV32-NEXT:    li a1, 0
 ; RV32-NEXT:    ret
 ;
-; RV64-LABEL: test10:
-; RV64:       # %bb.0: # %entry
-; RV64-NEXT:    addi a0, a0, -1
-; RV64-NEXT:    sraiw a0, a0, 4
-; RV64-NEXT:    snez a0, a0
-; RV64-NEXT:    ret
+; CHECK-LABEL: test10:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addiw a0, a0, -1
+; CHECK-NEXT:    sraiw a0, a0, 4
+; CHECK-NEXT:    snez a0, a0
+; CHECK-NEXT:    ret
 entry:
   %1 = add nuw nsw i64 %0, u0xffffffff
   %2 = and i64 %1, u0xfffffff0
@@ -192,13 +192,13 @@ define i64 @test11(i64 %0) #0 {
 ; RV32-NEXT:    li a1, 0
 ; RV32-NEXT:    ret
 ;
-; RV64-LABEL: test11:
-; RV64:       # %bb.0: # %entry
-; RV64-NEXT:    addi a0, a0, -1
-; RV64-NEXT:    sraiw a0, a0, 4
-; RV64-NEXT:    addi a0, a0, 1621
-; RV64-NEXT:    seqz a0, a0
-; RV64-NEXT:    ret
+; CHECK-LABEL: test11:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addiw a0, a0, -1
+; CHECK-NEXT:    sraiw a0, a0, 4
+; CHECK-NEXT:    addi a0, a0, 1621
+; CHECK-NEXT:    seqz a0, a0
+; CHECK-NEXT:    ret
 entry:
   %1 = add nuw nsw i64 %0, u0xffffffff
   %2 = and i64 %1, u0xfffffff0
@@ -218,12 +218,12 @@ define i64 @test12(i64 %0) #0 {
 ; RV32-NEXT:    li a1, 0
 ; RV32-NEXT:    ret
 ;
-; RV64-LABEL: test12:
-; RV64:       # %bb.0: # %entry
-; RV64-NEXT:    addi a0, a0, -16
-; RV64-NEXT:    addiw a0, a0, 13
-; RV64-NEXT:    seqz a0, a0
-; RV64-NEXT:    ret
+; CHECK-LABEL: test12:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addiw a0, a0, -16
+; CHECK-NEXT:    addiw a0, a0, 13
+; CHECK-NEXT:    seqz a0, a0
+; CHECK-NEXT:    ret
 entry:
   %1 = add nuw nsw i64 %0, u0xfffffff0
   %2 = and i64 %1, u0xffffffff
@@ -245,14 +245,14 @@ define i64 @test13(i64 %0) #0 {
 ; RV32-NEXT:    li a1, 0
 ; RV32-NEXT:    ret
 ;
-; RV64-LABEL: test13:
-; RV64:       # %bb.0: # %entry
-; RV64-NEXT:    lui a1, 524288
-; RV64-NEXT:    addi a1, a1, -15
-; RV64-NEXT:    sub a0, a0, a1
-; RV64-NEXT:    sraiw a0, a0, 31
-; RV64-NEXT:    seqz a0, a0
-; RV64-NEXT:    ret
+; CHECK-LABEL: test13:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    lui a1, 524288
+; CHECK-NEXT:    addi a1, a1, -15
+; CHECK-NEXT:    sub a0, a0, a1
+; CHECK-NEXT:    sraiw a0, a0, 31
+; CHECK-NEXT:    seqz a0, a0
+; CHECK-NEXT:    ret
 entry:
   %1 = add nuw nsw i64 %0, u0x8000000f
   %2 = and i64 %1, u0x80000000
@@ -260,3 +260,5 @@ entry:
   %4 = zext i1 %3 to i64
   ret i64 %4
 }
+;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
+; RV64: {{.*}}

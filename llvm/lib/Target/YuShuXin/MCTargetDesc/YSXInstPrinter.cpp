@@ -344,8 +344,7 @@ void YSXInstPrinter::printImm(const MCInst *MI, unsigned OpNo,
   uint64_t Imm = Op.getImm();
   if (STI.getTargetTriple().isOSBinFormatMachO() &&
       (Opcode == YSX::ANDI || Opcode == YSX::ORI || Opcode == YSX::XORI ||
-       Opcode == YSX::C_ANDI || Opcode == YSX::AUIPC ||
-       Opcode == YSX::LUI)) {
+       Opcode == YSX::AUIPC || Opcode == YSX::LUI)) {
     if (!STI.hasFeature(YSX::Feature64Bit))
       Imm &= 0xffffffff;
     markup(O, Markup::Immediate) << formatHex(Imm);

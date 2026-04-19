@@ -288,12 +288,6 @@ public:
     }
 
     switch (Inst.getOpcode()) {
-    case YSX::C_J:
-    case YSX::C_JAL:
-    case YSX::QC_E_J:
-    case YSX::QC_E_JAL:
-      Target = Addr + Inst.getOperand(0).getImm();
-      return true;
     case YSX::JAL:
       Target = Addr + Inst.getOperand(1).getImm();
       return true;
@@ -345,8 +339,6 @@ public:
     case YSX::JALR:
       return Inst.getOperand(0).getReg() == YSX::X0 &&
              maybeReturnAddress(Inst.getOperand(1).getReg());
-    case YSX::C_JR:
-      return maybeReturnAddress(Inst.getOperand(0).getReg());
     }
   }
 
@@ -374,8 +366,6 @@ public:
     case YSX::JALR:
       return Inst.getOperand(0).getReg() == YSX::X0 &&
              !maybeReturnAddress(Inst.getOperand(1).getReg());
-    case YSX::C_JR:
-      return !maybeReturnAddress(Inst.getOperand(0).getReg());
     }
   }
 
@@ -431,8 +421,6 @@ private:
     case YSX::JALR:
       return Inst.getOperand(0).getReg() == YSX::X0 &&
              !maybeReturnAddress(Inst.getOperand(1).getReg());
-    case YSX::C_JR:
-      return !maybeReturnAddress(Inst.getOperand(0).getReg());
     }
   }
 };

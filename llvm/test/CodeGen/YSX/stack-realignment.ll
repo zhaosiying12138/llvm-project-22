@@ -55,7 +55,6 @@ define void @caller16() {
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    .cfi_def_cfa_offset 0
 ; RV64I-NEXT:    ret
-;
 ; RV64I-LP64E-LABEL: caller16:
 ; RV64I-LP64E:       # %bb.0:
 ; RV64I-LP64E-NEXT:    addi sp, sp, -32
@@ -125,7 +124,6 @@ define void @caller_no_realign16() "no-realign-stack" {
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    .cfi_def_cfa_offset 0
 ; RV64I-NEXT:    ret
-;
 ; RV64I-LP64E-LABEL: caller_no_realign16:
 ; RV64I-LP64E:       # %bb.0:
 ; RV64I-LP64E-NEXT:    addi sp, sp, -16
@@ -213,7 +211,6 @@ define void @caller32() {
 ; RV64I-NEXT:    addi sp, sp, 32
 ; RV64I-NEXT:    .cfi_def_cfa_offset 0
 ; RV64I-NEXT:    ret
-;
 ; RV64I-LP64E-LABEL: caller32:
 ; RV64I-LP64E:       # %bb.0:
 ; RV64I-LP64E-NEXT:    addi sp, sp, -32
@@ -283,7 +280,6 @@ define void @caller_no_realign32() "no-realign-stack" {
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    .cfi_def_cfa_offset 0
 ; RV64I-NEXT:    ret
-;
 ; RV64I-LP64E-LABEL: caller_no_realign32:
 ; RV64I-LP64E:       # %bb.0:
 ; RV64I-LP64E-NEXT:    addi sp, sp, -16
@@ -371,7 +367,6 @@ define void @caller64() {
 ; RV64I-NEXT:    addi sp, sp, 64
 ; RV64I-NEXT:    .cfi_def_cfa_offset 0
 ; RV64I-NEXT:    ret
-;
 ; RV64I-LP64E-LABEL: caller64:
 ; RV64I-LP64E:       # %bb.0:
 ; RV64I-LP64E-NEXT:    addi sp, sp, -64
@@ -441,7 +436,6 @@ define void @caller_no_realign64() "no-realign-stack" {
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    .cfi_def_cfa_offset 0
 ; RV64I-NEXT:    ret
-;
 ; RV64I-LP64E-LABEL: caller_no_realign64:
 ; RV64I-LP64E:       # %bb.0:
 ; RV64I-LP64E-NEXT:    addi sp, sp, -16
@@ -529,7 +523,6 @@ define void @caller128() {
 ; RV64I-NEXT:    addi sp, sp, 128
 ; RV64I-NEXT:    .cfi_def_cfa_offset 0
 ; RV64I-NEXT:    ret
-;
 ; RV64I-LP64E-LABEL: caller128:
 ; RV64I-LP64E:       # %bb.0:
 ; RV64I-LP64E-NEXT:    addi sp, sp, -128
@@ -599,7 +592,6 @@ define void @caller_no_realign128() "no-realign-stack" {
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    .cfi_def_cfa_offset 0
 ; RV64I-NEXT:    ret
-;
 ; RV64I-LP64E-LABEL: caller_no_realign128:
 ; RV64I-LP64E:       # %bb.0:
 ; RV64I-LP64E-NEXT:    addi sp, sp, -16
@@ -687,7 +679,6 @@ define void @caller256() {
 ; RV64I-NEXT:    addi sp, sp, 256
 ; RV64I-NEXT:    .cfi_def_cfa_offset 0
 ; RV64I-NEXT:    ret
-;
 ; RV64I-LP64E-LABEL: caller256:
 ; RV64I-LP64E:       # %bb.0:
 ; RV64I-LP64E-NEXT:    addi sp, sp, -256
@@ -757,7 +748,6 @@ define void @caller_no_realign256() "no-realign-stack" {
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    .cfi_def_cfa_offset 0
 ; RV64I-NEXT:    ret
-;
 ; RV64I-LP64E-LABEL: caller_no_realign256:
 ; RV64I-LP64E:       # %bb.0:
 ; RV64I-LP64E-NEXT:    addi sp, sp, -16
@@ -845,7 +835,6 @@ define void @caller512() {
 ; RV64I-NEXT:    addi sp, sp, 1024
 ; RV64I-NEXT:    .cfi_def_cfa_offset 0
 ; RV64I-NEXT:    ret
-;
 ; RV64I-LP64E-LABEL: caller512:
 ; RV64I-LP64E:       # %bb.0:
 ; RV64I-LP64E-NEXT:    addi sp, sp, -1024
@@ -915,7 +904,6 @@ define void @caller_no_realign512() "no-realign-stack" {
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    .cfi_def_cfa_offset 0
 ; RV64I-NEXT:    ret
-;
 ; RV64I-LP64E-LABEL: caller_no_realign512:
 ; RV64I-LP64E:       # %bb.0:
 ; RV64I-LP64E-NEXT:    addi sp, sp, -16
@@ -1006,7 +994,6 @@ define void @caller1024() {
 ; RV64I-NEXT:    addi sp, sp, 2032
 ; RV64I-NEXT:    .cfi_def_cfa_offset 0
 ; RV64I-NEXT:    ret
-;
 ; RV64I-LP64E-LABEL: caller1024:
 ; RV64I-LP64E:       # %bb.0:
 ; RV64I-LP64E-NEXT:    addi sp, sp, -2040
@@ -1077,7 +1064,6 @@ define void @caller_no_realign1024() "no-realign-stack" {
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    .cfi_def_cfa_offset 0
 ; RV64I-NEXT:    ret
-;
 ; RV64I-LP64E-LABEL: caller_no_realign1024:
 ; RV64I-LP64E:       # %bb.0:
 ; RV64I-LP64E-NEXT:    addi sp, sp, -16
@@ -1174,7 +1160,6 @@ define void @caller2048() {
 ; RV64I-NEXT:    addi sp, sp, 2032
 ; RV64I-NEXT:    .cfi_def_cfa_offset 0
 ; RV64I-NEXT:    ret
-;
 ; RV64I-LP64E-LABEL: caller2048:
 ; RV64I-LP64E:       # %bb.0:
 ; RV64I-LP64E-NEXT:    addi sp, sp, -2040
@@ -1247,7 +1232,6 @@ define void @caller_no_realign2048() "no-realign-stack" {
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    .cfi_def_cfa_offset 0
 ; RV64I-NEXT:    ret
-;
 ; RV64I-LP64E-LABEL: caller_no_realign2048:
 ; RV64I-LP64E:       # %bb.0:
 ; RV64I-LP64E-NEXT:    addi sp, sp, -16
@@ -1350,7 +1334,6 @@ define void @caller4096() {
 ; RV64I-NEXT:    addi sp, sp, 2032
 ; RV64I-NEXT:    .cfi_def_cfa_offset 0
 ; RV64I-NEXT:    ret
-;
 ; RV64I-LP64E-LABEL: caller4096:
 ; RV64I-LP64E:       # %bb.0:
 ; RV64I-LP64E-NEXT:    addi sp, sp, -2040
@@ -1425,7 +1408,6 @@ define void @caller_no_realign4096() "no-realign-stack" {
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    .cfi_def_cfa_offset 0
 ; RV64I-NEXT:    ret
-;
 ; RV64I-LP64E-LABEL: caller_no_realign4096:
 ; RV64I-LP64E:       # %bb.0:
 ; RV64I-LP64E-NEXT:    addi sp, sp, -16

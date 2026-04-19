@@ -108,6 +108,7 @@ bool YSXExpandPseudo::expandMBB(MachineBasicBlock &MBB) {
 bool YSXExpandPseudo::expandMI(MachineBasicBlock &MBB,
                                  MachineBasicBlock::iterator MBBI,
                                  MachineBasicBlock::iterator &NextMBBI) {
+#if 0
   // YSXInstrInfo::getInstSizeInBytes expects that the total size of the
   // expanded instructions for each pseudo is correct in the Size field of the
   // tablegen definition for the pseudo.
@@ -193,6 +194,7 @@ bool YSXExpandPseudo::expandMI(MachineBasicBlock &MBB,
   case YSX::PseudoReadVLENBViaVSETVLIX0:
     return expandPseudoReadVLENBViaVSETVLIX0(MBB, MBBI);
   }
+#endif
 
   return false;
 }
@@ -200,6 +202,7 @@ bool YSXExpandPseudo::expandMI(MachineBasicBlock &MBB,
 bool YSXExpandPseudo::expandCCOp(MachineBasicBlock &MBB,
                                    MachineBasicBlock::iterator MBBI,
                                    MachineBasicBlock::iterator &NextMBBI) {
+#if 0
   // First try expanding to a Conditional Move rather than a branch+mv
   if (expandCCOpToCMov(MBB, MBBI))
     return true;
@@ -325,10 +328,13 @@ bool YSXExpandPseudo::expandCCOp(MachineBasicBlock &MBB,
   computeAndAddLiveIns(LiveRegs, *MergeBB);
 
   return true;
+#endif
+  return false;
 }
 
 bool YSXExpandPseudo::expandCCOpToCMov(MachineBasicBlock &MBB,
                                          MachineBasicBlock::iterator MBBI) {
+#if 0
   MachineInstr &MI = *MBBI;
   DebugLoc DL = MI.getDebugLoc();
 
@@ -405,11 +411,14 @@ bool YSXExpandPseudo::expandCCOpToCMov(MachineBasicBlock &MBB,
       .addReg(MI.getOperand(5).getReg());
   MI.eraseFromParent();
   return true;
+#endif
+  return false;
 }
 
 bool YSXExpandPseudo::expandVMSET_VMCLR(MachineBasicBlock &MBB,
                                           MachineBasicBlock::iterator MBBI,
                                           unsigned Opcode) {
+#if 0
   DebugLoc DL = MBBI->getDebugLoc();
   Register DstReg = MBBI->getOperand(0).getReg();
   const MCInstrDesc &Desc = TII->get(Opcode);
@@ -418,6 +427,8 @@ bool YSXExpandPseudo::expandVMSET_VMCLR(MachineBasicBlock &MBB,
       .addReg(DstReg, RegState::Undef);
   MBBI->eraseFromParent(); // The pseudo instruction is gone now.
   return true;
+#endif
+  return false;
 }
 
 bool YSXExpandPseudo::expandMV_FPR16INX(MachineBasicBlock &MBB,
@@ -566,6 +577,7 @@ bool YSXExpandPseudo::expandRV32ZdinxLoad(MachineBasicBlock &MBB,
 
 bool YSXExpandPseudo::expandPseudoReadVLENBViaVSETVLIX0(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI) {
+#if 0
   DebugLoc DL = MBBI->getDebugLoc();
   Register Dst = MBBI->getOperand(0).getReg();
   unsigned Mul = MBBI->getOperand(1).getImm();
@@ -580,6 +592,8 @@ bool YSXExpandPseudo::expandPseudoReadVLENBViaVSETVLIX0(
 
   MBBI->eraseFromParent();
   return true;
+#endif
+  return false;
 }
 
 class YSXPreRAExpandPseudo : public MachineFunctionPass {

@@ -49,7 +49,6 @@ define signext i32 @select_i32_trunc(i32 signext %cond, i32 signext %x, i32 sign
 ; RV64-NEXT:    mv a0, a2
 ; RV64-NEXT:  .LBB0_2:
 ; RV64-NEXT:    ret
-;
 ; RV64-MIPS-LABEL: select_i32_trunc:
 ; RV64-MIPS:       # %bb.0:
 ; RV64-MIPS-NEXT:    andi a0, a0, 1
@@ -107,7 +106,6 @@ define signext i32 @select_i32_param(i1 signext %cond, i32 signext %x, i32 signe
 ; RV64-NEXT:    mv a0, a2
 ; RV64-NEXT:  .LBB1_2:
 ; RV64-NEXT:    ret
-;
 ; RV64-MIPS-LABEL: select_i32_param:
 ; RV64-MIPS:       # %bb.0:
 ; RV64-MIPS-NEXT:    andi a0, a0, 1
@@ -163,7 +161,6 @@ define signext i32 @select_i32_eq(i32 signext %a, i32 signext %b, i32 signext %x
 ; RV64-NEXT:  .LBB2_2:
 ; RV64-NEXT:    mv a0, a2
 ; RV64-NEXT:    ret
-;
 ; RV64-MIPS-LABEL: select_i32_eq:
 ; RV64-MIPS:       # %bb.0:
 ; RV64-MIPS-NEXT:    xor a0, a0, a1
@@ -220,7 +217,6 @@ define signext i32 @select_i32_ne(i32 signext %a, i32 signext %b, i32 signext %x
 ; RV64-NEXT:  .LBB3_2:
 ; RV64-NEXT:    mv a0, a2
 ; RV64-NEXT:    ret
-;
 ; RV64-MIPS-LABEL: select_i32_ne:
 ; RV64-MIPS:       # %bb.0:
 ; RV64-MIPS-NEXT:    xor a0, a0, a1
@@ -277,7 +273,6 @@ define signext i32 @select_i32_ugt(i32 signext %a, i32 signext %b, i32 signext %
 ; RV64-NEXT:  .LBB4_2:
 ; RV64-NEXT:    mv a0, a2
 ; RV64-NEXT:    ret
-;
 ; RV64-MIPS-LABEL: select_i32_ugt:
 ; RV64-MIPS:       # %bb.0:
 ; RV64-MIPS-NEXT:    sltu a0, a1, a0
@@ -334,7 +329,6 @@ define signext i32 @select_i32_uge(i32 signext %a, i32 signext %b, i32 signext %
 ; RV64-NEXT:  .LBB5_2:
 ; RV64-NEXT:    mv a0, a2
 ; RV64-NEXT:    ret
-;
 ; RV64-MIPS-LABEL: select_i32_uge:
 ; RV64-MIPS:       # %bb.0:
 ; RV64-MIPS-NEXT:    sltu a0, a0, a1
@@ -391,7 +385,6 @@ define signext i32 @select_i32_ult(i32 signext %a, i32 signext %b, i32 signext %
 ; RV64-NEXT:  .LBB6_2:
 ; RV64-NEXT:    mv a0, a2
 ; RV64-NEXT:    ret
-;
 ; RV64-MIPS-LABEL: select_i32_ult:
 ; RV64-MIPS:       # %bb.0:
 ; RV64-MIPS-NEXT:    sltu a0, a0, a1
@@ -448,7 +441,6 @@ define signext i32 @select_i32_ule(i32 signext %a, i32 signext %b, i32 signext %
 ; RV64-NEXT:  .LBB7_2:
 ; RV64-NEXT:    mv a0, a2
 ; RV64-NEXT:    ret
-;
 ; RV64-MIPS-LABEL: select_i32_ule:
 ; RV64-MIPS:       # %bb.0:
 ; RV64-MIPS-NEXT:    sltu a0, a1, a0
@@ -505,7 +497,6 @@ define signext i32 @select_i32_sgt(i32 signext %a, i32 signext %b, i32 signext %
 ; RV64-NEXT:  .LBB8_2:
 ; RV64-NEXT:    mv a0, a2
 ; RV64-NEXT:    ret
-;
 ; RV64-MIPS-LABEL: select_i32_sgt:
 ; RV64-MIPS:       # %bb.0:
 ; RV64-MIPS-NEXT:    slt a0, a1, a0
@@ -562,7 +553,6 @@ define signext i32 @select_i32_sge(i32 signext %a, i32 signext %b, i32 signext %
 ; RV64-NEXT:  .LBB9_2:
 ; RV64-NEXT:    mv a0, a2
 ; RV64-NEXT:    ret
-;
 ; RV64-MIPS-LABEL: select_i32_sge:
 ; RV64-MIPS:       # %bb.0:
 ; RV64-MIPS-NEXT:    slt a0, a0, a1
@@ -619,7 +609,6 @@ define signext i32 @select_i32_slt(i32 signext %a, i32 signext %b, i32 signext %
 ; RV64-NEXT:  .LBB10_2:
 ; RV64-NEXT:    mv a0, a2
 ; RV64-NEXT:    ret
-;
 ; RV64-MIPS-LABEL: select_i32_slt:
 ; RV64-MIPS:       # %bb.0:
 ; RV64-MIPS-NEXT:    slt a0, a0, a1
@@ -676,7 +665,6 @@ define signext i32 @select_i32_sle(i32 signext %a, i32 signext %b, i32 signext %
 ; RV64-NEXT:  .LBB11_2:
 ; RV64-NEXT:    mv a0, a2
 ; RV64-NEXT:    ret
-;
 ; RV64-MIPS-LABEL: select_i32_sle:
 ; RV64-MIPS:       # %bb.0:
 ; RV64-MIPS-NEXT:    slt a0, a1, a0
@@ -744,7 +732,6 @@ define i64 @select_i64_trunc(i64 %cond, i64 %x, i64 %y) nounwind {
 ; RV64-NEXT:    mv a0, a2
 ; RV64-NEXT:  .LBB12_2:
 ; RV64-NEXT:    ret
-;
 ; RV64-MIPS-LABEL: select_i64_trunc:
 ; RV64-MIPS:       # %bb.0:
 ; RV64-MIPS-NEXT:    andi a0, a0, 1
@@ -813,7 +800,6 @@ define i64 @select_i64_param(i1 %cond, i64 %x, i64 %y) nounwind {
 ; RV64-NEXT:    mv a0, a2
 ; RV64-NEXT:  .LBB13_2:
 ; RV64-NEXT:    ret
-;
 ; RV64-MIPS-LABEL: select_i64_param:
 ; RV64-MIPS:       # %bb.0:
 ; RV64-MIPS-NEXT:    andi a0, a0, 1
@@ -889,7 +875,6 @@ define i64 @select_i64_eq(i64 %a, i64 %b, i64 %x, i64 %y) nounwind {
 ; RV64-NEXT:  .LBB14_2:
 ; RV64-NEXT:    mv a0, a2
 ; RV64-NEXT:    ret
-;
 ; RV64-MIPS-LABEL: select_i64_eq:
 ; RV64-MIPS:       # %bb.0:
 ; RV64-MIPS-NEXT:    xor a0, a0, a1
@@ -966,7 +951,6 @@ define i64 @select_i64_ne(i64 %a, i64 %b, i64 %x, i64 %y) nounwind {
 ; RV64-NEXT:  .LBB15_2:
 ; RV64-NEXT:    mv a0, a2
 ; RV64-NEXT:    ret
-;
 ; RV64-MIPS-LABEL: select_i64_ne:
 ; RV64-MIPS:       # %bb.0:
 ; RV64-MIPS-NEXT:    xor a0, a0, a1
@@ -1052,7 +1036,6 @@ define i64 @select_i64_ugt(i64 %a, i64 %b, i64 %x, i64 %y) nounwind {
 ; RV64-NEXT:  .LBB16_2:
 ; RV64-NEXT:    mv a0, a2
 ; RV64-NEXT:    ret
-;
 ; RV64-MIPS-LABEL: select_i64_ugt:
 ; RV64-MIPS:       # %bb.0:
 ; RV64-MIPS-NEXT:    sltu a0, a1, a0
@@ -1138,7 +1121,6 @@ define i64 @select_i64_uge(i64 %a, i64 %b, i64 %x, i64 %y) nounwind {
 ; RV64-NEXT:  .LBB17_2:
 ; RV64-NEXT:    mv a0, a2
 ; RV64-NEXT:    ret
-;
 ; RV64-MIPS-LABEL: select_i64_uge:
 ; RV64-MIPS:       # %bb.0:
 ; RV64-MIPS-NEXT:    sltu a0, a0, a1
@@ -1224,7 +1206,6 @@ define i64 @select_i64_ult(i64 %a, i64 %b, i64 %x, i64 %y) nounwind {
 ; RV64-NEXT:  .LBB18_2:
 ; RV64-NEXT:    mv a0, a2
 ; RV64-NEXT:    ret
-;
 ; RV64-MIPS-LABEL: select_i64_ult:
 ; RV64-MIPS:       # %bb.0:
 ; RV64-MIPS-NEXT:    sltu a0, a0, a1
@@ -1310,7 +1291,6 @@ define i64 @select_i64_ule(i64 %a, i64 %b, i64 %x, i64 %y) nounwind {
 ; RV64-NEXT:  .LBB19_2:
 ; RV64-NEXT:    mv a0, a2
 ; RV64-NEXT:    ret
-;
 ; RV64-MIPS-LABEL: select_i64_ule:
 ; RV64-MIPS:       # %bb.0:
 ; RV64-MIPS-NEXT:    sltu a0, a1, a0
@@ -1396,7 +1376,6 @@ define i64 @select_i64_sgt(i64 %a, i64 %b, i64 %x, i64 %y) nounwind {
 ; RV64-NEXT:  .LBB20_2:
 ; RV64-NEXT:    mv a0, a2
 ; RV64-NEXT:    ret
-;
 ; RV64-MIPS-LABEL: select_i64_sgt:
 ; RV64-MIPS:       # %bb.0:
 ; RV64-MIPS-NEXT:    slt a0, a1, a0
@@ -1482,7 +1461,6 @@ define i64 @select_i64_sge(i64 %a, i64 %b, i64 %x, i64 %y) nounwind {
 ; RV64-NEXT:  .LBB21_2:
 ; RV64-NEXT:    mv a0, a2
 ; RV64-NEXT:    ret
-;
 ; RV64-MIPS-LABEL: select_i64_sge:
 ; RV64-MIPS:       # %bb.0:
 ; RV64-MIPS-NEXT:    slt a0, a0, a1
@@ -1568,7 +1546,6 @@ define i64 @select_i64_slt(i64 %a, i64 %b, i64 %x, i64 %y) nounwind {
 ; RV64-NEXT:  .LBB22_2:
 ; RV64-NEXT:    mv a0, a2
 ; RV64-NEXT:    ret
-;
 ; RV64-MIPS-LABEL: select_i64_slt:
 ; RV64-MIPS:       # %bb.0:
 ; RV64-MIPS-NEXT:    slt a0, a0, a1
@@ -1654,7 +1631,6 @@ define i64 @select_i64_sle(i64 %a, i64 %b, i64 %x, i64 %y) nounwind {
 ; RV64-NEXT:  .LBB23_2:
 ; RV64-NEXT:    mv a0, a2
 ; RV64-NEXT:    ret
-;
 ; RV64-MIPS-LABEL: select_i64_sle:
 ; RV64-MIPS:       # %bb.0:
 ; RV64-MIPS-NEXT:    slt a0, a1, a0

@@ -28,31 +28,22 @@ add_llvm_target(YSXCodeGen
   YSXDeadRegisterDefinitions.cpp
   YSXExpandAtomicPseudoInsts.cpp
   YSXExpandPseudoInsts.cpp
-  YSXFoldMemOffset.cpp
   YSXFrameLowering.cpp
   YSXInsertReadWriteCSR.cpp
   YSXInstrInfo.cpp
-  YSXInterleavedAccess.cpp
   YSXISelDAGToDAG.cpp
   YSXISelLowering.cpp
   YSXIndirectBranchTracking.cpp
   YSXLandingPadSetup.cpp
   YSXLateBranchOpt.cpp
-  YSXLoadStoreOptimizer.cpp
   YSXMachineFunctionInfo.cpp
-  YSXMergeBaseOffset.cpp
-  YSXMoveMerger.cpp
-  YSXOptWInstrs.cpp
   YSXPostRAExpandPseudoInsts.cpp
   YSXPromoteConstant.cpp
-  YSXPushPopOptimizer.cpp
-  YSXRedundantCopyElimination.cpp
   YSXRegisterInfo.cpp
   YSXSelectionDAGInfo.cpp
   YSXSubtarget.cpp
   YSXTargetMachine.cpp
   YSXTargetObjectFile.cpp
-  YSXTargetTransformInfo.cpp
   PARTIAL_SOURCES_INTENDED
 
   LINK_COMPONENTS

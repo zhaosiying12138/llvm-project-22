@@ -112,8 +112,7 @@ static void emitSCSPrologue(MachineFunction &MF, MachineBasicBlock &MBB,
   // reserve X5 due to c.sspopchk only takes X5 and we currently do not support
   // using X5 as the return address register.
   // However, we can still aggressively use c.sspush x1 if zcmop is available.
-  bool HasHWShadowStack = MF.getFunction().hasFnAttribute("hw-shadow-stack") &&
-                          STI.hasStdExtZimop();
+  bool HasHWShadowStack = false;
   bool HasSWShadowStack =
       MF.getFunction().hasFnAttribute(Attribute::ShadowCallStack);
   if (!HasHWShadowStack && !HasSWShadowStack)
@@ -129,6 +128,7 @@ static void emitSCSPrologue(MachineFunction &MF, MachineBasicBlock &MBB,
     return;
 
   const YSXInstrInfo *TII = STI.getInstrInfo();
+#if 0
   if (HasHWShadowStack) {
     if (STI.hasStdExtZcmop()) {
       static_assert(RAReg == YSX::X1, "C.SSPUSH only accepts X1");
@@ -138,6 +138,7 @@ static void emitSCSPrologue(MachineFunction &MF, MachineBasicBlock &MBB,
     }
     return;
   }
+#endif
 
   Register SCSPReg = YSXABI::getSCSPReg();
 
@@ -182,8 +183,7 @@ static void emitSCSEpilogue(MachineFunction &MF, MachineBasicBlock &MBB,
                             MachineBasicBlock::iterator MI,
                             const DebugLoc &DL) {
   const auto &STI = MF.getSubtarget<YSXSubtarget>();
-  bool HasHWShadowStack = MF.getFunction().hasFnAttribute("hw-shadow-stack") &&
-                          STI.hasStdExtZimop();
+  bool HasHWShadowStack = false;
   bool HasSWShadowStack =
       MF.getFunction().hasFnAttribute(Attribute::ShadowCallStack);
   if (!HasHWShadowStack && !HasSWShadowStack)
@@ -196,10 +196,12 @@ static void emitSCSEpilogue(MachineFunction &MF, MachineBasicBlock &MBB,
     return;
 
   const YSXInstrInfo *TII = STI.getInstrInfo();
+#if 0
   if (HasHWShadowStack) {
     BuildMI(MBB, MI, DL, TII->get(YSX::PseudoMOP_SSPOPCHK)).addReg(RAReg);
     return;
   }
+#endif
 
   Register SCSPReg = YSXABI::getSCSPReg();
 
@@ -628,6 +630,8 @@ void YSXFrameLowering::allocateAndProbeStackForRVV(
     MachineFunction &MF, MachineBasicBlock &MBB,
     MachineBasicBlock::iterator MBBI, const DebugLoc &DL, int64_t Amount,
     MachineInstr::MIFlag Flag, bool EmitCFI, bool DynAllocation) const {
+  llvm_unreachable("YSX rv64ima does not support RVV stack probing");
+#if 0
   assert(Amount != 0 && "Did not need to adjust stack pointer for RVV.");
 
   // Emit a variable-length allocation probing loop.
@@ -669,6 +673,7 @@ void YSXFrameLowering::allocateAndProbeStackForRVV(
         .addImm(0)
         .setMIFlags(MachineInstr::FrameSetup);
   }
+#endif
 }
 
 static void appendScalableVectorExpression(const TargetRegisterInfo &TRI,
@@ -862,35 +867,16 @@ void YSXFrameLowering::allocateStack(MachineBasicBlock &MBB,
 }
 
 static bool isPush(unsigned Opcode) {
-  switch (Opcode) {
-  case YSX::CM_PUSH:
-  case YSX::QC_CM_PUSH:
-  case YSX::QC_CM_PUSHFP:
-    return true;
-  default:
-    return false;
-  }
+  return false;
 }
 
 static bool isPop(unsigned Opcode) {
-  // There are other pops but these are the only ones introduced during this
-  // pass.
-  switch (Opcode) {
-  case YSX::CM_POP:
-  case YSX::QC_CM_POP:
-    return true;
-  default:
-    return false;
-  }
+  return false;
 }
 
 static unsigned getPushOpcode(YSXMachineFunctionInfo::PushPopKind Kind,
                               bool UpdateFP) {
   switch (Kind) {
-  case YSXMachineFunctionInfo::PushPopKind::StdExtZcmp:
-    return YSX::CM_PUSH;
-  case YSXMachineFunctionInfo::PushPopKind::VendorXqccmp:
-    return UpdateFP ? YSX::QC_CM_PUSHFP : YSX::QC_CM_PUSH;
   default:
     llvm_unreachable("Unhandled PushPopKind");
   }
@@ -900,10 +886,6 @@ static unsigned getPopOpcode(YSXMachineFunctionInfo::PushPopKind Kind) {
   // There are other pops but they are introduced later by the Push/Pop
   // Optimizer.
   switch (Kind) {
-  case YSXMachineFunctionInfo::PushPopKind::StdExtZcmp:
-    return YSX::CM_POP;
-  case YSXMachineFunctionInfo::PushPopKind::VendorXqccmp:
-    return YSX::QC_CM_POP;
   default:
     llvm_unreachable("Unhandled PushPopKind");
   }
@@ -2115,6 +2097,7 @@ bool YSXFrameLowering::spillCalleeSavedRegisters(
     DL = MI->getDebugLoc();
 
   YSXMachineFunctionInfo *RVFI = MF->getInfo<YSXMachineFunctionInfo>();
+#if 0
   if (RVFI->useQCIInterrupt(*MF)) {
     // Emit QC.C.MIENTER(.NEST)
     BuildMI(
@@ -2128,6 +2111,7 @@ bool YSXFrameLowering::spillCalleeSavedRegisters(
     for (auto [Reg, _Offset] : FixedCSRFIQCIInterruptMap)
       MBB.addLiveIn(Reg);
   }
+#endif
 
   if (RVFI->isPushable(*MF)) {
     // Emit CM.PUSH with base StackAdj & evaluate Push stack

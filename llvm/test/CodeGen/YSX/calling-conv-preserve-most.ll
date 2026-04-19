@@ -72,7 +72,6 @@ define preserve_mostcc void @preserve_mostcc1() nounwind {
 ; RV64I-NEXT:    ld t6, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 112
 ; RV64I-NEXT:    ret
-;
 ; RV32E-LABEL: preserve_mostcc1:
 ; RV32E:       # %bb.0: # %entry
 ; RV32E-NEXT:    addi sp, sp, -32
@@ -95,7 +94,6 @@ define preserve_mostcc void @preserve_mostcc1() nounwind {
 ; RV32E-NEXT:    lw a5, 0(sp) # 4-byte Folded Reload
 ; RV32E-NEXT:    addi sp, sp, 32
 ; RV32E-NEXT:    ret
-;
 ; RV64E-LABEL: preserve_mostcc1:
 ; RV64E:       # %bb.0: # %entry
 ; RV64E-NEXT:    addi sp, sp, -64
@@ -141,7 +139,6 @@ define preserve_mostcc void @preserve_mostcc2() nounwind {
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
-;
 ; RV32E-LABEL: preserve_mostcc2:
 ; RV32E:       # %bb.0:
 ; RV32E-NEXT:    addi sp, sp, -4
@@ -150,7 +147,6 @@ define preserve_mostcc void @preserve_mostcc2() nounwind {
 ; RV32E-NEXT:    lw ra, 0(sp) # 4-byte Folded Reload
 ; RV32E-NEXT:    addi sp, sp, 4
 ; RV32E-NEXT:    ret
-;
 ; RV64E-LABEL: preserve_mostcc2:
 ; RV64E:       # %bb.0:
 ; RV64E-NEXT:    addi sp, sp, -8
@@ -226,7 +222,6 @@ define void @preserve_mostcc3() nounwind {
 ; RV64I-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 32
 ; RV64I-NEXT:    ret
-;
 ; RV32E-LABEL: preserve_mostcc3:
 ; RV32E:       # %bb.0:
 ; RV32E-NEXT:    addi sp, sp, -12
@@ -257,7 +252,6 @@ define void @preserve_mostcc3() nounwind {
 ; RV32E-NEXT:    lw s1, 0(sp) # 4-byte Folded Reload
 ; RV32E-NEXT:    addi sp, sp, 12
 ; RV32E-NEXT:    ret
-;
 ; RV64E-LABEL: preserve_mostcc3:
 ; RV64E:       # %bb.0:
 ; RV64E-NEXT:    addi sp, sp, -24
@@ -373,7 +367,6 @@ define void @preserve_mostcc4() nounwind {
 ; RV64I-NEXT:    ld s4, 0(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 48
 ; RV64I-NEXT:    ret
-;
 ; RV32E-LABEL: preserve_mostcc4:
 ; RV32E:       # %bb.0:
 ; RV32E-NEXT:    addi sp, sp, -24
@@ -404,7 +397,6 @@ define void @preserve_mostcc4() nounwind {
 ; RV32E-NEXT:    lw s1, 12(sp) # 4-byte Folded Reload
 ; RV32E-NEXT:    addi sp, sp, 24
 ; RV32E-NEXT:    ret
-;
 ; RV64E-LABEL: preserve_mostcc4:
 ; RV64E:       # %bb.0:
 ; RV64E-NEXT:    addi sp, sp, -48

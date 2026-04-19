@@ -28,58 +28,6 @@ def YSXTuneAUIPCADDIFusion
                  CheckOpcode<[AUIPC]>,
                  CheckOpcode<[ADDI]>>;
 
-// Fuse zero extension of halfword:
-//   slli rd, rs1, 48
-//   srli rd, rd, 48
-def YSXTuneZExtHFusion
-  : SimpleFusion<"zexth-fusion", "HasZExtHFusion",
-                 "Enable SLLI+SRLI to be fused to zero extension of halfword",
-                 CheckAll<[
-                   CheckOpcode<[SLLI]>,
-                   CheckIsImmOperand<2>,
-                   CheckImmOperand<2, 48>
-                 ]>,
-                 CheckAll<[
-                   CheckOpcode<[SRLI]>,
-                   CheckIsImmOperand<2>,
-                   CheckImmOperand<2, 48>
-                 ]>>;
-
-// Fuse zero extension of word:
-//   slli rd, rs1, 32
-//   srli rd, rd, 32
-def YSXTuneZExtWFusion
-  : SimpleFusion<"zextw-fusion", "HasZExtWFusion",
-                 "Enable SLLI+SRLI to be fused to zero extension of word",
-                 CheckAll<[
-                   CheckOpcode<[SLLI]>,
-                   CheckIsImmOperand<2>,
-                   CheckImmOperand<2, 32>
-                 ]>,
-                 CheckAll<[
-                   CheckOpcode<[SRLI]>,
-                   CheckIsImmOperand<2>,
-                   CheckImmOperand<2, 32>
-                 ]>>;
-
-// Fuse shifted zero extension of word:
-//   slli rd, rs1, 32
-//   srli rd, rd, x
-//   where 0 <= x < 32
-def YSXTuneShiftedZExtWFusion
-  : SimpleFusion<"shifted-zextw-fusion", "HasShiftedZExtWFusion",
-                 "Enable SLLI+SRLI to be fused when computing (shifted) word zero extension",
-                 CheckAll<[
-                   CheckOpcode<[SLLI]>,
-                   CheckIsImmOperand<2>,
-                   CheckImmOperand<2, 32>
-                 ]>,
-                 CheckAll<[
-                   CheckOpcode<[SRLI]>,
-                   CheckIsImmOperand<2>,
-                   CheckImmOperandRange<2, 0, 31>
-                 ]>>;
-
 // Fuse load with add:
 //   add rd, rs1, rs2
 //   ld rd, 0(rd)
@@ -98,8 +46,8 @@ defvar Load = [LB, LH, LW, LD, LBU, LHU, LWU];
 //   add(.uw) rd, rs1, rs2
 //   load rd, imm12(rd)
 def YSXTuneADDLoadFusion
-  : SimpleFusion<"add-load-fusion", "HasADDLoadFusion", "Enable ADD(.UW) + load macrofusion",
-                 CheckOpcode<[ADD, ADD_UW]>,
+  : SimpleFusion<"add-load-fusion", "HasADDLoadFusion", "Enable ADD + load macrofusion",
+                 CheckOpcode<[ADD]>,
                  CheckOpcode<Load>>;
 
 // Fuse AUIPC followed by by a load (lb, lh, lw, ld, lbu, lhu, lwu)
@@ -120,16 +68,6 @@ def YSXTuneLUILoadFusion
                  CheckOpcode<[LUI]>,
                  CheckOpcode<Load>>;
 
-// Bitfield extract fusion: similar to TuneShiftedZExtWFusion
-// but without the immediate restriction
-//   slli rd, rs1, imm12
-//   srli rd, rd, imm12
-def YSXTuneBFExtFusion
-  : SimpleFusion<"bfext-fusion", "HasBFExtFusion",
-                 "Enable SLLI+SRLI (bitfield extract) macrofusion",
-                 CheckOpcode<[SLLI]>,
-                 CheckOpcode<[SRLI]>>;
-
 // Fuse ADDI followed by a load (lb, lh, lw, ld, lbu, lhu, lwu)
 //   addi rd, rs1, imm12
 //   load rd, imm12(rd)
@@ -142,8 +80,3 @@ def YSXTuneADDILoadFusion
 // Fuse shXadd(.uw) followed by a load (lb, lh, lw, ld, lbu, lhu, lwu)
 //   shXadd(.uw) rd, rs1, rs2
 //   load rd, imm12(rd)
-def YSXTuneSHXADDLoadFusion
-  : SimpleFusion<"shxadd-load-fusion", "HasSHXADDLoadFusion",
-                 "Enable SH(1|2|3)ADD(.UW) + load macrofusion",
-                 CheckOpcode<[SH1ADD, SH2ADD, SH3ADD, SH1ADD_UW, SH2ADD_UW, SH3ADD_UW]>,
-                 CheckOpcode<Load>>;

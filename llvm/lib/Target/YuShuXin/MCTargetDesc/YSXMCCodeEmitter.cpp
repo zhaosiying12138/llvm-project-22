@@ -68,10 +68,6 @@ public:
                         SmallVectorImpl<MCFixup> &Fixups,
                         const MCSubtargetInfo &STI) const;
 
-  void expandQCLongCondBrImm(const MCInst &MI, SmallVectorImpl<char> &CB,
-                             SmallVectorImpl<MCFixup> &Fixups,
-                             const MCSubtargetInfo &STI, unsigned Size) const;
-
   /// TableGen'erated function for getting the binary encoding for an
   /// instruction.
   uint64_t getBinaryCodeForInstr(const MCInst &MI,
@@ -255,10 +251,6 @@ static unsigned getInvertedBranchOp(unsigned BrOp) {
     return YSX::BNE;
   case YSX::PseudoLongBNE:
     return YSX::BEQ;
-  case YSX::PseudoLongBEQI:
-    return YSX::BNEI;
-  case YSX::PseudoLongBNEI:
-    return YSX::BEQI;
   case YSX::PseudoLongBLT:
     return YSX::BGE;
   case YSX::PseudoLongBGE:
@@ -267,30 +259,6 @@ static unsigned getInvertedBranchOp(unsigned BrOp) {
     return YSX::BGEU;
   case YSX::PseudoLongBGEU:
     return YSX::BLTU;
-  case YSX::PseudoLongQC_BEQI:
-    return YSX::QC_BNEI;
-  case YSX::PseudoLongQC_BNEI:
-    return YSX::QC_BEQI;
-  case YSX::PseudoLongQC_BLTI:
-    return YSX::QC_BGEI;
-  case YSX::PseudoLongQC_BGEI:
-    return YSX::QC_BLTI;
-  case YSX::PseudoLongQC_BLTUI:
-    return YSX::QC_BGEUI;
-  case YSX::PseudoLongQC_BGEUI:
-    return YSX::QC_BLTUI;
-  case YSX::PseudoLongQC_E_BEQI:
-    return YSX::QC_E_BNEI;
-  case YSX::PseudoLongQC_E_BNEI:
-    return YSX::QC_E_BEQI;
-  case YSX::PseudoLongQC_E_BLTI:
-    return YSX::QC_E_BGEI;
-  case YSX::PseudoLongQC_E_BGEI:
-    return YSX::QC_E_BLTI;
-  case YSX::PseudoLongQC_E_BLTUI:
-    return YSX::QC_E_BGEUI;
-  case YSX::PseudoLongQC_E_BGEUI:
-    return YSX::QC_E_BLTUI;
   }
 }
 
@@ -304,38 +272,12 @@ void YSXMCCodeEmitter::expandLongCondBr(const MCInst &MI,
   const MCOperand &Src2 = MI.getOperand(1);
   const MCOperand &SrcSymbol = MI.getOperand(2);
   unsigned Opcode = MI.getOpcode();
-  bool IsEqTest =
-      Opcode == YSX::PseudoLongBNE || Opcode == YSX::PseudoLongBEQ;
-
-  bool UseCompressedBr = false;
-  if (IsEqTest && STI.hasFeature(YSX::FeatureStdExtZca)) {
-    MCRegister SrcReg2 = Src2.getReg();
-    if (YSX::X8 <= SrcReg1.id() && SrcReg1.id() <= YSX::X15 &&
-        SrcReg2.id() == YSX::X0) {
-      UseCompressedBr = true;
-    } else if (YSX::X8 <= SrcReg2.id() && SrcReg2.id() <= YSX::X15 &&
-               SrcReg1.id() == YSX::X0) {
-      std::swap(SrcReg1, SrcReg2);
-      UseCompressedBr = true;
-    }
-  }
-
-  uint32_t Offset;
-  if (UseCompressedBr) {
-    unsigned InvOpc =
-        Opcode == YSX::PseudoLongBNE ? YSX::C_BEQZ : YSX::C_BNEZ;
-    MCInst TmpInst = MCInstBuilder(InvOpc).addReg(SrcReg1).addImm(6);
-    uint16_t Binary = getBinaryCodeForInstr(TmpInst, Fixups, STI);
-    support::endian::write<uint16_t>(CB, Binary, llvm::endianness::little);
-    Offset = 2;
-  } else {
-    unsigned InvOpc = getInvertedBranchOp(Opcode);
-    MCInst TmpInst =
-        MCInstBuilder(InvOpc).addReg(SrcReg1).addOperand(Src2).addImm(8);
-    uint32_t Binary = getBinaryCodeForInstr(TmpInst, Fixups, STI);
-    support::endian::write(CB, Binary, llvm::endianness::little);
-    Offset = 4;
-  }
+  unsigned InvOpc = getInvertedBranchOp(Opcode);
+  MCInst TmpBr =
+      MCInstBuilder(InvOpc).addReg(SrcReg1).addOperand(Src2).addImm(8);
+  uint32_t BrBinary = getBinaryCodeForInstr(TmpBr, Fixups, STI);
+  support::endian::write(CB, BrBinary, llvm::endianness::little);
+  uint32_t Offset = 4;
 
   // Save the number fixups.
   size_t FixupStartIndex = Fixups.size();
@@ -349,57 +291,6 @@ void YSXMCCodeEmitter::expandLongCondBr(const MCInst &MI,
   // Drop any fixup added so we can add the correct one.
   Fixups.resize(FixupStartIndex);
 
-  if (SrcSymbol.isExpr()) {
-    addFixup(Fixups, Offset, SrcSymbol.getExpr(), YSX::fixup_ysx_jal);
-    if (STI.hasFeature(YSX::FeatureRelax))
-      Fixups.back().setLinkerRelaxable();
-  }
-}
-
-// Expand PseudoLongQC_(E_)Bxxx to an inverted conditional branch and an
-// unconditional jump.
-void YSXMCCodeEmitter::expandQCLongCondBrImm(const MCInst &MI,
-                                               SmallVectorImpl<char> &CB,
-                                               SmallVectorImpl<MCFixup> &Fixups,
-                                               const MCSubtargetInfo &STI,
-                                               unsigned Size) const {
-  MCRegister SrcReg1 = MI.getOperand(0).getReg();
-  auto BrImm = MI.getOperand(1).getImm();
-  MCOperand SrcSymbol = MI.getOperand(2);
-  unsigned Opcode = MI.getOpcode();
-  uint32_t Offset;
-  unsigned InvOpc = getInvertedBranchOp(Opcode);
-  // Emit inverted conditional branch with offset:
-  // 8 (QC.BXXX(4) + JAL(4))
-  // or
-  // 10 (QC.E.BXXX(6) + JAL(4)).
-  if (Size == 4) {
-    MCInst TmpBr =
-        MCInstBuilder(InvOpc).addReg(SrcReg1).addImm(BrImm).addImm(8);
-    uint32_t BrBinary = getBinaryCodeForInstr(TmpBr, Fixups, STI);
-    support::endian::write(CB, BrBinary, llvm::endianness::little);
-  } else {
-    MCInst TmpBr =
-        MCInstBuilder(InvOpc).addReg(SrcReg1).addImm(BrImm).addImm(10);
-    uint64_t BrBinary =
-        getBinaryCodeForInstr(TmpBr, Fixups, STI) & 0xffff'ffff'ffffu;
-    SmallVector<char, 8> Encoding;
-    support::endian::write(Encoding, BrBinary, llvm::endianness::little);
-    assert(Encoding[6] == 0 && Encoding[7] == 0 &&
-           "Unexpected encoding for 48-bit instruction");
-    Encoding.truncate(6);
-    CB.append(Encoding);
-  }
-  Offset = Size;
-  // Save the number fixups.
-  size_t FixupStartIndex = Fixups.size();
-  // Emit an unconditional jump to the destination.
-  MCInst TmpJ =
-      MCInstBuilder(YSX::JAL).addReg(YSX::X0).addOperand(SrcSymbol);
-  uint32_t JBinary = getBinaryCodeForInstr(TmpJ, Fixups, STI);
-  support::endian::write(CB, JBinary, llvm::endianness::little);
-  // Drop any fixup added so we can add the correct one.
-  Fixups.resize(FixupStartIndex);
   if (SrcSymbol.isExpr()) {
     addFixup(Fixups, Offset, SrcSymbol.getExpr(), YSX::fixup_ysx_jal);
     if (STI.hasFeature(YSX::FeatureRelax))
@@ -434,31 +325,11 @@ void YSXMCCodeEmitter::encodeInstruction(const MCInst &MI,
     return;
   case YSX::PseudoLongBEQ:
   case YSX::PseudoLongBNE:
-  case YSX::PseudoLongBEQI:
-  case YSX::PseudoLongBNEI:
   case YSX::PseudoLongBLT:
   case YSX::PseudoLongBGE:
   case YSX::PseudoLongBLTU:
   case YSX::PseudoLongBGEU:
     expandLongCondBr(MI, CB, Fixups, STI);
-    MCNumEmitted += 2;
-    return;
-  case YSX::PseudoLongQC_BEQI:
-  case YSX::PseudoLongQC_BNEI:
-  case YSX::PseudoLongQC_BLTI:
-  case YSX::PseudoLongQC_BGEI:
-  case YSX::PseudoLongQC_BLTUI:
-  case YSX::PseudoLongQC_BGEUI:
-    expandQCLongCondBrImm(MI, CB, Fixups, STI, 4);
-    MCNumEmitted += 2;
-    return;
-  case YSX::PseudoLongQC_E_BEQI:
-  case YSX::PseudoLongQC_E_BNEI:
-  case YSX::PseudoLongQC_E_BLTI:
-  case YSX::PseudoLongQC_E_BGEI:
-  case YSX::PseudoLongQC_E_BLTUI:
-  case YSX::PseudoLongQC_E_BGEUI:
-    expandQCLongCondBrImm(MI, CB, Fixups, STI, 6);
     MCNumEmitted += 2;
     return;
   case YSX::PseudoTLSDESCCall:

@@ -36,12 +36,7 @@ def isSEXT_W
 // Returns true if this is the zext.w pattern, adduw rd, rs1, x0.
 def isZEXT_W
     : TIIPredicate<"isZEXT_W",
-                   MCReturnStatement<CheckAll<[
-                     CheckOpcode<[ADD_UW]>,
-                     CheckIsRegOperand<1>,
-                     CheckIsRegOperand<2>,
-                     CheckRegOperand<2, X0>
-                   ]>>>;
+                   MCReturnStatement<FalsePred>>;
 
 // Returns true if this is the zext.b pattern, andi rd, rs1, 255.
 def isZEXT_B
@@ -57,130 +52,8 @@ def isSelectPseudo
     : TIIPredicate<"isSelectPseudo",
                    MCReturnStatement<
                      CheckOpcode<[
-                       Select_GPR_Using_CC_GPR,
-                       Select_GPR_Using_CC_Imm5_Zibi,
-                       Select_GPR_Using_CC_SImm5_CV,
-                       Select_GPRNoX0_Using_CC_SImm5NonZero_QC,
-                       Select_GPRNoX0_Using_CC_UImm5NonZero_QC,
-                       Select_GPRNoX0_Using_CC_SImm16NonZero_QC,
-                       Select_GPRNoX0_Using_CC_UImm16NonZero_QC,
-                       Select_GPR_Using_CC_UImmLog2XLen_NDS,
-                       Select_GPR_Using_CC_UImm7_NDS,
-                       Select_FPR16_Using_CC_GPR,
-                       Select_FPR16INX_Using_CC_GPR,
-                       Select_FPR32_Using_CC_GPR,
-                       Select_FPR32INX_Using_CC_GPR,
-                       Select_FPR64_Using_CC_GPR,
-                       Select_FPR64INX_Using_CC_GPR,
-                       Select_FPR64IN32X_Using_CC_GPR
+                       Select_GPR_Using_CC_GPR
                      ]>>>;
-
-// Returns true if this is a vector configuration instruction.
-def isVectorConfigInstr
-    : TIIPredicate<"isVectorConfigInstr",
-                   MCReturnStatement<
-                     CheckOpcode<[
-                       PseudoVSETVLI,
-                       PseudoVSETVLIX0,
-                       PseudoVSETVLIX0X0,
-                       PseudoVSETIVLI,
-                       PseudoSF_VSETTNT,
-                       PseudoSF_VSETTNTX0,
-                       PseudoSF_VSETTNTX0X0
-                     ]>>>;
-
-// Returns true if this is a PseudoSF_VSETTNT* instructions.
-def isXSfmmVectorConfigTNInstr
-    : TIIPredicate<"isXSfmmVectorConfigTNInstr",
-                   MCReturnStatement<
-                     CheckOpcode<[
-                       PseudoSF_VSETTNT,
-                       PseudoSF_VSETTNTX0,
-                       PseudoSF_VSETTNTX0X0
-                     ]>>>;
-
-// Returns true if this is PseudoSF_VSETTM or PseudoSF_VSETTK.
-def isXSfmmVectorConfigTMTKInstr
-    : TIIPredicate<"isXSfmmVectorConfigTMTKInstr",
-                   MCReturnStatement<
-                     CheckOpcode<[
-                       PseudoSF_VSETTM,
-                       PseudoSF_VSETTK
-                     ]>>>;
-
-// Returns true if this is a XSfmm vector configuration instruction.
-def isXSfmmVectorConfigInstr
-    : TIIPredicate<"isXSfmmVectorConfigInstr",
-                   MCReturnStatement<
-                     CheckOpcode<[
-                       PseudoSF_VSETTNT,
-                       PseudoSF_VSETTNTX0,
-                       PseudoSF_VSETTNTX0X0,
-                       PseudoSF_VSETTM,
-                       PseudoSF_VSETTK
-                     ]>>>;
-
-// Return true if this is 'vsetvli x0, x0, vtype' which preserves
-// VL and only sets VTYPE.
-def isVLPreservingConfig
-    : TIIPredicate<"isVLPreservingConfig",
-                   MCReturnStatement<CheckOpcode<[PseudoVSETVLIX0X0]>>>;
-
-def isFloatScalarMoveOrScalarSplatInstr
-    : TIIPredicate<"isFloatScalarMoveOrScalarSplatInstr",
-                   MCReturnStatement<
-                     CheckOpcode<!listflatten([
-                      !instances<Pseudo>("^PseudoVFMV_S_F.*"),
-                      !instances<Pseudo>("^PseudoVFMV_V_F.*")
-                     ])>>>;
-
-def isScalarExtractInstr
-    : TIIPredicate<"isScalarExtractInstr",
-                   MCReturnStatement<
-                     CheckOpcode<!listflatten([
-                      !instances<Pseudo>("^PseudoVMV_X_S.*"),
-                      !instances<Pseudo>("^PseudoVFMV_F.*_S.*")
-                     ])>>>;
-
-def isVExtractInstr
-    : TIIPredicate<"isVExtractInstr",
-                   MCReturnStatement<
-                     CheckOpcode<
-                      !instances<Instruction>("^PseudoRI_VEXTRACT.*")>>>;
-
-def isScalarInsertInstr
-    : TIIPredicate<"isScalarInsertInstr",
-                   MCReturnStatement<
-                     CheckOpcode<!listflatten([
-                      !instances<Pseudo>("^PseudoVMV_S_X.*"),
-                      !instances<Pseudo>("^PseudoVFMV_S_F.*")
-                     ])>>>;
-
-def isScalarSplatInstr
-    : TIIPredicate<"isScalarSplatInstr",
-                   MCReturnStatement<
-                     CheckOpcode<!listflatten([
-                      !instances<Pseudo>("^PseudoVMV_V_I.*"),
-                      !instances<Pseudo>("^PseudoVMV_V_X.*"),
-                      !instances<Pseudo>("^PseudoVFMV_V_F.*")
-                     ])>>>;
-
-def isVSlideInstr
-    : TIIPredicate<"isVSlideInstr",
-                   MCReturnStatement<
-                     CheckOpcode<!listflatten([
-                      !instances<Pseudo>("^PseudoVSLIDEDOWN_VX.*"),
-                      !instances<Pseudo>("^PseudoVSLIDEDOWN_VI.*"),
-                      !instances<Pseudo>("^PseudoVSLIDEUP_VX.*"),
-                      !instances<Pseudo>("^PseudoVSLIDEUP_VI.*")
-                     ])>>>;
-
-def isFaultOnlyFirstLoad
-    : TIIPredicate<"isFaultOnlyFirstLoad",
-                    MCReturnStatement<
-                      CheckOpcode<
-                       !instances<Pseudo>(
-                          "^PseudoVL(SEG[2-8])?E(8|16|32|64)FF_V.*")>>>;
 
 def isNonZeroLoadImmediate
     : TIIPredicate<"isNonZeroLoadImmediate",
@@ -199,14 +72,3 @@ def isLPAD
                      CheckIsRegOperand<0>,
                      CheckRegOperand<0, X0>,
                    ]>>>;
-
-def ignoresVXRM
-    : TIIPredicate<"ignoresVXRM",
-                   MCOpcodeSwitchStatement<
-                     [MCOpcodeSwitchCase<
-                        !listflatten([
-                          !instances<Pseudo>("^PseudoVNCLIP_WI.*"),
-                          !instances<Pseudo>("^PseudoVNCLIPU_WI.*")
-                        ]),
-                        MCReturnStatement<CheckImmOperand<3, 0>>>],
-                      MCReturnStatement<FalsePred>>>;

@@ -293,10 +293,7 @@ void YSXAsmPrinter::emitNTLHint(const MachineInstr *MI) {
     NontemporalMode += 0b10;
 
   MCInst Hint;
-  if (STI->hasStdExtZca())
-    Hint.setOpcode(YSX::C_ADD);
-  else
-    Hint.setOpcode(YSX::ADD);
+  Hint.setOpcode(YSX::ADD);
 
   Hint.addOperand(MCOperand::createReg(YSX::X0));
   Hint.addOperand(MCOperand::createReg(YSX::X0));
@@ -1081,114 +1078,7 @@ bool YSXAsmPrinter::lowerOperand(const MachineOperand &MO,
 static bool lowerYSXVMachineInstrToMCInst(const MachineInstr *MI,
                                             MCInst &OutMI,
                                             const YSXSubtarget *STI) {
-  const YSXVPseudosTable::PseudoInfo *RVV =
-      YSXVPseudosTable::getPseudoInfo(MI->getOpcode());
-  if (!RVV)
-    return false;
-
-  OutMI.setOpcode(RVV->BaseInstr);
-
-  const TargetInstrInfo *TII = STI->getInstrInfo();
-  const TargetRegisterInfo *TRI = STI->getRegisterInfo();
-  assert(TRI && "TargetRegisterInfo expected");
-
-  const MCInstrDesc &MCID = MI->getDesc();
-  uint64_t TSFlags = MCID.TSFlags;
-  unsigned NumOps = MI->getNumExplicitOperands();
-
-  // Skip policy, SEW, VL, VXRM/FRM operands which are the last operands if
-  // present.
-  if (YSXII::hasVecPolicyOp(TSFlags))
-    --NumOps;
-  if (YSXII::hasSEWOp(TSFlags))
-    --NumOps;
-  if (YSXII::hasVLOp(TSFlags))
-    --NumOps;
-  if (YSXII::hasRoundModeOp(TSFlags))
-    --NumOps;
-  if (YSXII::hasTWidenOp(TSFlags))
-    --NumOps;
-  if (YSXII::hasTMOp(TSFlags))
-    --NumOps;
-  if (YSXII::hasTKOp(TSFlags))
-    --NumOps;
-
-  bool hasVLOutput = YSXInstrInfo::isFaultOnlyFirstLoad(*MI);
-  for (unsigned OpNo = 0; OpNo != NumOps; ++OpNo) {
-    const MachineOperand &MO = MI->getOperand(OpNo);
-    // Skip vl output. It should be the second output.
-    if (hasVLOutput && OpNo == 1)
-      continue;
-
-    // Skip passthru op. It should be the first operand after the defs.
-    if (OpNo == MI->getNumExplicitDefs() && MO.isReg() && MO.isTied()) {
-      assert(MCID.getOperandConstraint(OpNo, MCOI::TIED_TO) == 0 &&
-             "Expected tied to first def.");
-      const MCInstrDesc &OutMCID = TII->get(OutMI.getOpcode());
-      // Skip if the next operand in OutMI is not supposed to be tied. Unless it
-      // is a _TIED instruction.
-      if (OutMCID.getOperandConstraint(OutMI.getNumOperands(), MCOI::TIED_TO) <
-              0 &&
-          !YSXII::isTiedPseudo(TSFlags))
-        continue;
-    }
-
-    MCOperand MCOp;
-    switch (MO.getType()) {
-    default:
-      llvm_unreachable("Unknown operand type");
-    case MachineOperand::MO_Register: {
-      Register Reg = MO.getReg();
-
-      if (YSX::VRM2RegClass.contains(Reg) ||
-          YSX::VRM4RegClass.contains(Reg) ||
-          YSX::VRM8RegClass.contains(Reg)) {
-        Reg = TRI->getSubReg(Reg, YSX::sub_vrm1_0);
-        assert(Reg && "Subregister does not exist");
-      } else if (YSX::FPR16RegClass.contains(Reg)) {
-        Reg =
-            TRI->getMatchingSuperReg(Reg, YSX::sub_16, &YSX::FPR32RegClass);
-        assert(Reg && "Subregister does not exist");
-      } else if (YSX::FPR64RegClass.contains(Reg)) {
-        Reg = TRI->getSubReg(Reg, YSX::sub_32);
-        assert(Reg && "Superregister does not exist");
-      } else if (YSX::VRN2M1RegClass.contains(Reg) ||
-                 YSX::VRN2M2RegClass.contains(Reg) ||
-                 YSX::VRN2M4RegClass.contains(Reg) ||
-                 YSX::VRN3M1RegClass.contains(Reg) ||
-                 YSX::VRN3M2RegClass.contains(Reg) ||
-                 YSX::VRN4M1RegClass.contains(Reg) ||
-                 YSX::VRN4M2RegClass.contains(Reg) ||
-                 YSX::VRN5M1RegClass.contains(Reg) ||
-                 YSX::VRN6M1RegClass.contains(Reg) ||
-                 YSX::VRN7M1RegClass.contains(Reg) ||
-                 YSX::VRN8M1RegClass.contains(Reg)) {
-        Reg = TRI->getSubReg(Reg, YSX::sub_vrm1_0);
-        assert(Reg && "Subregister does not exist");
-      }
-
-      MCOp = MCOperand::createReg(Reg);
-      break;
-    }
-    case MachineOperand::MO_Immediate:
-      MCOp = MCOperand::createImm(MO.getImm());
-      break;
-    }
-    OutMI.addOperand(MCOp);
-  }
-
-  // Unmasked pseudo instructions need to append dummy mask operand to
-  // V instructions. All V instructions are modeled as the masked version.
-  const MCInstrDesc &OutMCID = TII->get(OutMI.getOpcode());
-  if (OutMI.getNumOperands() < OutMCID.getNumOperands()) {
-    assert(OutMCID.operands()[OutMI.getNumOperands()].OperandType ==
-               YSXOp::OPERAND_VMASK &&
-           "Expected only mask operand to be missing");
-    OutMI.addOperand(MCOperand::createReg(YSX::NoRegister));
-  }
-
-  assert(OutMI.getNumOperands() == OutMCID.getNumOperands());
-  return true;
+  return false;
 }
 
 void YSXAsmPrinter::lowerToMCInst(const MachineInstr *MI, MCInst &OutMI) {

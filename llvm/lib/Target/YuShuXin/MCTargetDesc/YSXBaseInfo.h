@@ -867,6 +867,40 @@ struct NDSVLNPseudo {
 #define GET_YSXVSXTable_DECL
 #define GET_YSXNDSVLNTable_DECL
 #include "YSXGenSearchableTables.inc"
+
+inline const VLSEGPseudo *getVLSEGPseudo(uint8_t, bool, bool, bool, uint8_t,
+                                         uint8_t) {
+  return nullptr;
+}
+inline const VLXSEGPseudo *getVLXSEGPseudo(uint8_t, bool, bool, uint8_t,
+                                           uint8_t, uint8_t) {
+  return nullptr;
+}
+inline const VSSEGPseudo *getVSSEGPseudo(uint8_t, bool, bool, uint8_t,
+                                         uint8_t) {
+  return nullptr;
+}
+inline const VSXSEGPseudo *getVSXSEGPseudo(uint8_t, bool, bool, uint8_t,
+                                           uint8_t, uint8_t) {
+  return nullptr;
+}
+inline const VLEPseudo *getVLEPseudo(bool, bool, bool, uint8_t, uint8_t) {
+  return nullptr;
+}
+inline const VSEPseudo *getVSEPseudo(bool, bool, uint8_t, uint8_t) {
+  return nullptr;
+}
+inline const VLX_VSXPseudo *getVLXPseudo(bool, bool, uint8_t, uint8_t,
+                                         uint8_t) {
+  return nullptr;
+}
+inline const VLX_VSXPseudo *getVSXPseudo(bool, bool, uint8_t, uint8_t,
+                                         uint8_t) {
+  return nullptr;
+}
+inline const NDSVLNPseudo *getNDSVLNPseudo(bool, bool, uint8_t, uint8_t) {
+  return nullptr;
+}
 } // namespace YSX
 
 } // namespace llvm

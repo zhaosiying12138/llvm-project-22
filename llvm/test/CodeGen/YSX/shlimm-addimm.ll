@@ -16,7 +16,7 @@ define i32 @shl5_add1184_a(i32 %x) {
 ;
 ; RV64I-LABEL: shl5_add1184_a:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    slli a0, a0, 5
+; RV64I-NEXT:    slliw a0, a0, 5
 ; RV64I-NEXT:    addiw a0, a0, 1184
 ; RV64I-NEXT:    ret
   %tmp0 = shl i32 %x, 5
@@ -33,7 +33,7 @@ define signext i32 @shl5_add1184_b(i32 signext %x) {
 ;
 ; RV64I-LABEL: shl5_add1184_b:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    slli a0, a0, 5
+; RV64I-NEXT:    slliw a0, a0, 5
 ; RV64I-NEXT:    addiw a0, a0, 1184
 ; RV64I-NEXT:    ret
   %tmp0 = shl i32 %x, 5
@@ -74,7 +74,7 @@ define i32 @shl5_add101024_a(i32 %x) {
 ;
 ; RV64I-LABEL: shl5_add101024_a:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    slli a0, a0, 5
+; RV64I-NEXT:    slliw a0, a0, 5
 ; RV64I-NEXT:    lui a1, 25
 ; RV64I-NEXT:    addi a1, a1, -1376
 ; RV64I-NEXT:    addw a0, a0, a1
@@ -95,7 +95,7 @@ define signext i32 @shl5_add101024_b(i32 signext %x) {
 ;
 ; RV64I-LABEL: shl5_add101024_b:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    slli a0, a0, 5
+; RV64I-NEXT:    slliw a0, a0, 5
 ; RV64I-NEXT:    lui a1, 25
 ; RV64I-NEXT:    addi a1, a1, -1376
 ; RV64I-NEXT:    addw a0, a0, a1
@@ -142,7 +142,7 @@ define i32 @shl5_add47968_a(i32 %x) {
 ;
 ; RV64I-LABEL: shl5_add47968_a:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    slli a0, a0, 5
+; RV64I-NEXT:    slliw a0, a0, 5
 ; RV64I-NEXT:    lui a1, 12
 ; RV64I-NEXT:    addi a1, a1, -1184
 ; RV64I-NEXT:    addw a0, a0, a1
@@ -163,7 +163,7 @@ define signext i32 @shl5_add47968_b(i32 signext %x) {
 ;
 ; RV64I-LABEL: shl5_add47968_b:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    slli a0, a0, 5
+; RV64I-NEXT:    slliw a0, a0, 5
 ; RV64I-NEXT:    lui a1, 12
 ; RV64I-NEXT:    addi a1, a1, -1184
 ; RV64I-NEXT:    addw a0, a0, a1
@@ -210,7 +210,7 @@ define i32 @shl5_add47969_a(i32 %x) {
 ;
 ; RV64I-LABEL: shl5_add47969_a:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    slli a0, a0, 5
+; RV64I-NEXT:    slliw a0, a0, 5
 ; RV64I-NEXT:    lui a1, 12
 ; RV64I-NEXT:    addi a1, a1, -1183
 ; RV64I-NEXT:    addw a0, a0, a1
@@ -231,7 +231,7 @@ define signext i32 @shl5_add47969_b(i32 signext %x) {
 ;
 ; RV64I-LABEL: shl5_add47969_b:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    slli a0, a0, 5
+; RV64I-NEXT:    slliw a0, a0, 5
 ; RV64I-NEXT:    lui a1, 12
 ; RV64I-NEXT:    addi a1, a1, -1183
 ; RV64I-NEXT:    addw a0, a0, a1
@@ -278,7 +278,7 @@ define i32 @shl5_sub47968_a(i32 %x) {
 ;
 ; RV64I-LABEL: shl5_sub47968_a:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    slli a0, a0, 5
+; RV64I-NEXT:    slliw a0, a0, 5
 ; RV64I-NEXT:    lui a1, 1048564
 ; RV64I-NEXT:    addi a1, a1, 1184
 ; RV64I-NEXT:    addw a0, a0, a1
@@ -299,7 +299,7 @@ define signext i32 @shl5_sub47968_b(i32 signext %x) {
 ;
 ; RV64I-LABEL: shl5_sub47968_b:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    slli a0, a0, 5
+; RV64I-NEXT:    slliw a0, a0, 5
 ; RV64I-NEXT:    lui a1, 1048564
 ; RV64I-NEXT:    addi a1, a1, 1184
 ; RV64I-NEXT:    addw a0, a0, a1
@@ -347,7 +347,7 @@ define i32 @shl5_sub47969_a(i32 %x) {
 ;
 ; RV64I-LABEL: shl5_sub47969_a:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    slli a0, a0, 5
+; RV64I-NEXT:    slliw a0, a0, 5
 ; RV64I-NEXT:    lui a1, 1048564
 ; RV64I-NEXT:    addi a1, a1, 1183
 ; RV64I-NEXT:    addw a0, a0, a1
@@ -368,7 +368,7 @@ define signext i32 @shl5_sub47969_b(i32 signext %x) {
 ;
 ; RV64I-LABEL: shl5_sub47969_b:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    slli a0, a0, 5
+; RV64I-NEXT:    slliw a0, a0, 5
 ; RV64I-NEXT:    lui a1, 1048564
 ; RV64I-NEXT:    addi a1, a1, 1183
 ; RV64I-NEXT:    addw a0, a0, a1

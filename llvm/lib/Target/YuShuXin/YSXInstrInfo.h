@@ -21,6 +21,7 @@
 #define GET_INSTRINFO_HEADER
 #define GET_INSTRINFO_OPERAND_ENUM
 #include "YSXGenInstrInfo.inc"
+#include "MCTargetDesc/YSXUnsupportedOpcodes.h"
 #include "YSXGenRegisterInfo.inc"
 
 namespace llvm {
@@ -425,6 +426,8 @@ struct PseudoInfo {
 #define GET_YSXVPseudosTable_DECL
 #include "YSXGenSearchableTables.inc"
 
+inline const PseudoInfo *getPseudoInfo(unsigned) { return nullptr; }
+
 } // end namespace YSXVPseudosTable
 
 namespace YSX {
@@ -436,6 +439,10 @@ struct YSXMaskedPseudoInfo {
 };
 #define GET_YSXMaskedPseudosTable_DECL
 #include "YSXGenSearchableTables.inc"
+
+inline const YSXMaskedPseudoInfo *getMaskedPseudoInfo(unsigned) {
+  return nullptr;
+}
 } // end namespace YSX
 
 } // end namespace llvm

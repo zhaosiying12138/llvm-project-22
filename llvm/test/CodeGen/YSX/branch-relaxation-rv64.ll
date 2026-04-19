@@ -20,7 +20,6 @@ define void @relax_bcc(i1 %a) nounwind {
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:  .LBB0_2: # %tail
 ; CHECK-NEXT:    ret
-;
 ; CHECK-ZICFILP-LABEL: relax_bcc:
 ; CHECK-ZICFILP:       # %bb.0:
 ; CHECK-ZICFILP-NEXT:    lpad 0
@@ -65,7 +64,6 @@ define i32 @relax_jal(i1 %a) nounwind {
 ; CHECK-NEXT:    li a0, 1
 ; CHECK-NEXT:    addi sp, sp, 16
 ; CHECK-NEXT:    ret
-;
 ; CHECK-ZICFILP-LABEL: relax_jal:
 ; CHECK-ZICFILP:       # %bb.0:
 ; CHECK-ZICFILP-NEXT:    lpad 0
@@ -348,7 +346,6 @@ define void @relax_jal_spill_64() {
 ; CHECK-NEXT:    addi sp, sp, 112
 ; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
-;
 ; CHECK-ZICFILP-LABEL: relax_jal_spill_64:
 ; CHECK-ZICFILP:       # %bb.0:
 ; CHECK-ZICFILP-NEXT:    lpad 0
@@ -911,7 +908,6 @@ define void @relax_jal_spill_64_adjust_spill_slot() {
 ; CHECK-NEXT:    addi sp, sp, 2032
 ; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
-;
 ; CHECK-ZICFILP-LABEL: relax_jal_spill_64_adjust_spill_slot:
 ; CHECK-ZICFILP:       # %bb.0:
 ; CHECK-ZICFILP-NEXT:    lpad 0
@@ -1491,7 +1487,6 @@ define void @relax_jal_spill_64_restore_block_correspondence() {
 ; CHECK-NEXT:  # %bb.7: # %space
 ; CHECK-NEXT:    sd s11, 0(sp) # 8-byte Folded Spill
 ; CHECK-NEXT:    jump .LBB4_8, s11
-;
 ; CHECK-ZICFILP-LABEL: relax_jal_spill_64_restore_block_correspondence:
 ; CHECK-ZICFILP:       # %bb.0: # %entry
 ; CHECK-ZICFILP-NEXT:    lpad 0
