@@ -29,8 +29,6 @@ public:
   void emitPrologue(MachineFunction &MF, MachineBasicBlock &MBB) const override;
   void emitEpilogue(MachineFunction &MF, MachineBasicBlock &MBB) const override;
 
-  uint64_t getStackSizeWithYSXVecPadding(const MachineFunction &MF) const;
-
   StackOffset getFrameIndexReference(const MachineFunction &MF, int FI,
                                      Register &FrameReg) const override;
 
@@ -72,12 +70,9 @@ public:
   bool enableShrinkWrapping(const MachineFunction &MF) const override;
 
   bool isSupportedStackID(TargetStackID::Value ID) const override;
-  TargetStackID::Value getStackIDForScalableVectors() const override;
 
   bool isStackIdSafeForLocalArea(unsigned StackId) const override {
-    // We don't support putting RISC-V Vector objects into the pre-allocated
-    // local frame block at the moment.
-    return StackId != TargetStackID::ScalableVector;
+    return StackId == TargetStackID::Default;
   }
 
   void allocateStack(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
@@ -93,11 +88,6 @@ protected:
 
 private:
   void determineFrameLayout(MachineFunction &MF) const;
-  void emitCalleeSavedYSXVecPrologCFI(MachineBasicBlock &MBB,
-                                   MachineBasicBlock::iterator MI,
-                                   bool HasFP) const;
-  void emitCalleeSavedYSXVecEpilogCFI(MachineBasicBlock &MBB,
-                                   MachineBasicBlock::iterator MI) const;
   template <typename Emitter>
   void emitCFIForCSI(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
                      const SmallVector<CalleeSavedInfo, 8> &CSI) const;
@@ -105,16 +95,9 @@ private:
                        MachineBasicBlock::iterator MBBI, const DebugLoc &DL,
                        uint64_t &StackSize, int64_t CFAOffset) const;
 
-  std::pair<int64_t, Align>
-  assignYSXVecStackObjectOffsets(MachineFunction &MF) const;
   // Replace a StackProbe stub (if any) with the actual probe code inline
   void inlineStackProbe(MachineFunction &MF,
                         MachineBasicBlock &PrologueMBB) const override;
-  void allocateAndProbeStackForYSXVec(MachineFunction &MF, MachineBasicBlock &MBB,
-                                   MachineBasicBlock::iterator MBBI,
-                                   const DebugLoc &DL, int64_t Amount,
-                                   MachineInstr::MIFlag Flag, bool EmitCFI,
-                                   bool DynAllocation) const;
 };
 } // namespace llvm
 #endif
