@@ -427,6 +427,8 @@ static bool appendNormalizedYSXFeature(StringRef RawFeature,
   std::string LowerFeature = RawFeature.lower();
   StringRef Feature(LowerFeature);
   if (!isYSXAllowedFeatureName(Feature)) {
+    if (!Enable)
+      return true;
     Diags.Report(diag::err_invalid_feature_combination)
         << YSXUnsupportedFeatureMsg;
     return false;
