@@ -2561,11 +2561,8 @@ void Generic_GCC::GCCInstallationDetector::AddDefaultGCCPrefixes(
       LibDirs.append(begin(AArch64LibDirs), end(AArch64LibDirs));
       TripleAliases.push_back("aarch64-gnu");
       break;
-    case llvm::Triple::riscv64:
-      LibDirs.append(begin(RISCV64LibDirs), end(RISCV64LibDirs));
-      TripleAliases.push_back("riscv64-gnu");
-      break;
     case llvm::Triple::ysx64:
+    case llvm::Triple::riscv64:
       LibDirs.append(begin(RISCV64LibDirs), end(RISCV64LibDirs));
       TripleAliases.push_back("riscv64-gnu");
       break;
