@@ -14,11 +14,15 @@
 #include "YSXTargetMachine.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/DiagnosticInfo.h"
+#include "llvm/IR/InlineAsm.h"
+#include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/InstVisitor.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
+#include <optional>
+#include <string>
 
 using namespace llvm;
 
@@ -100,6 +104,45 @@ static bool usesScalableType(const Instruction &I) {
   return false;
 }
 
+static bool hasNumberedRegister(StringRef Reg, StringRef Prefix,
+                                unsigned Max) {
+  if (!Reg.consume_front(Prefix))
+    return false;
+
+  unsigned RegNo;
+  return !Reg.empty() && !Reg.getAsInteger(10, RegNo) && RegNo <= Max;
+}
+
+static bool isUnsupportedInlineAsmClobber(StringRef Code) {
+  if (!Code.consume_front("{") || !Code.consume_back("}"))
+    return false;
+
+  if (hasNumberedRegister(Code, "f", 31) ||
+      hasNumberedRegister(Code, "v", 31) ||
+      hasNumberedRegister(Code, "ft", 11) ||
+      hasNumberedRegister(Code, "fs", 11) ||
+      hasNumberedRegister(Code, "fa", 7))
+    return true;
+
+  return Code == "fflags" || Code == "frm" || Code == "fcsr" ||
+         Code == "vtype" || Code == "vl" || Code == "vlenb" ||
+         Code == "vxsat" || Code == "vxrm" || Code == "sf.vcix_state";
+}
+
+static std::optional<std::string>
+findUnsupportedInlineAsmClobber(const InlineAsm &Asm) {
+  for (const InlineAsm::ConstraintInfo &Constraint : Asm.ParseConstraints()) {
+    if (Constraint.Type != InlineAsm::isClobber)
+      continue;
+
+    for (StringRef Code : Constraint.Codes)
+      if (isUnsupportedInlineAsmClobber(Code))
+        return Code.str();
+  }
+
+  return std::nullopt;
+}
+
 static bool diagnoseUnsupportedVectorIR(Function &F) {
   auto Diagnose = [&](const Twine &Message, const Instruction *I = nullptr) {
     F.getContext().diagnose(DiagnosticInfoUnsupported(
@@ -134,6 +177,19 @@ static bool diagnoseUnsupportedVectorIR(Function &F) {
                  "vector IR",
                  &I);
         return true;
+      }
+
+      if (const auto *CB = dyn_cast<CallBase>(&I)) {
+        if (const auto *Asm = dyn_cast<InlineAsm>(CB->getCalledOperand())) {
+          if (std::optional<std::string> Clobber =
+                  findUnsupportedInlineAsmClobber(*Asm)) {
+            Diagnose(Twine("YuShuXin only supports rv64ima and does not "
+                           "support removed inline asm clobber ") +
+                         StringRef(*Clobber),
+                     &I);
+            return true;
+          }
+        }
       }
     }
   }

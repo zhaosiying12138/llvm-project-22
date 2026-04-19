@@ -16,6 +16,14 @@
 // RUN: not %clang --target=ysx64-unknown-elf -Xclang -target-feature -Xclang +v -dM -E -x c /dev/null 2>&1 | FileCheck %s --check-prefix=FEATUREERR --implicit-check-not=__riscv_vector --implicit-check-not=__riscv_v
 // RUN: printf 'void f(double x){ asm volatile("" :: "f"(x)); }\n' | not %clang --target=ysx64-unknown-elf -x c -fsyntax-only - 2>&1 | FileCheck %s --check-prefix=ASMFP
 // RUN: printf 'void f(long x){ asm volatile("" :: "vr"(x)); }\n' | not %clang --target=ysx64-unknown-elf -x c -fsyntax-only - 2>&1 | FileCheck %s --check-prefix=ASMV
+// RUN: printf 'void f(void){ asm volatile("" ::: "x9", "s1"); }\n' | %clang --target=ysx64-unknown-elf -x c -fsyntax-only -
+// RUN: printf 'void f(void){ asm volatile("" ::: "f8"); }\n' | not %clang --target=ysx64-unknown-elf -x c -fsyntax-only - 2>&1 | FileCheck %s --check-prefix=ASMCLB-F8
+// RUN: printf 'void f(void){ asm volatile("" ::: "fs0"); }\n' | not %clang --target=ysx64-unknown-elf -x c -fsyntax-only - 2>&1 | FileCheck %s --check-prefix=ASMCLB-FS0
+// RUN: printf 'void f(void){ asm volatile("" ::: "v0"); }\n' | not %clang --target=ysx64-unknown-elf -x c -fsyntax-only - 2>&1 | FileCheck %s --check-prefix=ASMCLB-V0
+// RUN: printf 'void f(void){ asm volatile("" ::: "vtype"); }\n' | not %clang --target=ysx64-unknown-elf -x c -fsyntax-only - 2>&1 | FileCheck %s --check-prefix=ASMCLB-VTYPE
+// RUN: printf 'void f(void){ asm volatile("" ::: "vl"); }\n' | not %clang --target=ysx64-unknown-elf -x c -fsyntax-only - 2>&1 | FileCheck %s --check-prefix=ASMCLB-VL
+// RUN: printf 'void f(void){ asm volatile("" ::: "vxsat"); }\n' | not %clang --target=ysx64-unknown-elf -x c -fsyntax-only - 2>&1 | FileCheck %s --check-prefix=ASMCLB-VXSAT
+// RUN: printf 'void f(void){ asm volatile("" ::: "vxrm"); }\n' | not %clang --target=ysx64-unknown-elf -x c -fsyntax-only - 2>&1 | FileCheck %s --check-prefix=ASMCLB-VXRM
 
 // CHECK: "-target-cpu" "generic-rv64"
 // CHECK: "-target-feature" "+i"
@@ -50,5 +58,12 @@
 // FEATUREERR: error: invalid feature combination: YSX only supports the rv64ima ISA
 // ASMFP: error: invalid input constraint 'f' in asm
 // ASMV: error: invalid input constraint 'vr' in asm
+// ASMCLB-F8: error: unknown register name 'f8' in asm
+// ASMCLB-FS0: error: unknown register name 'fs0' in asm
+// ASMCLB-V0: error: unknown register name 'v0' in asm
+// ASMCLB-VTYPE: error: unknown register name 'vtype' in asm
+// ASMCLB-VL: error: unknown register name 'vl' in asm
+// ASMCLB-VXSAT: error: unknown register name 'vxsat' in asm
+// ASMCLB-VXRM: error: unknown register name 'vxrm' in asm
 
 int x;

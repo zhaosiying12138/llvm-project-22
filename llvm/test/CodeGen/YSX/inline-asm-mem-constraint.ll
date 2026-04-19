@@ -2347,6 +2347,6 @@ define void @should_not_fold() {
 ; RV64I-LARGE-NEXT:    #NO_APP
 ; RV64I-LARGE-NEXT:    ret
 start:
-  %0 = tail call ptr asm sideeffect alignstack "ecall", "=&{x10},0,~{vtype},~{vl},~{vxsat},~{vxrm},~{memory}"(ptr @_ZN5repro9MY_BUFFER17hb0f674501d5980a6E)
+  %0 = tail call ptr asm sideeffect alignstack "ecall", "=&{x10},0,~{memory}"(ptr @_ZN5repro9MY_BUFFER17hb0f674501d5980a6E)
   ret void
 }
