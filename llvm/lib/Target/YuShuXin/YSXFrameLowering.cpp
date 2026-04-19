@@ -166,43 +166,6 @@ static void emitSCSEpilogue(MachineFunction &MF, MachineBasicBlock &MBB,
   }
 }
 
-// Insert instruction to swap mscratchsw with sp
-static void emitSiFiveCLICStackSwap(MachineFunction &MF, MachineBasicBlock &MBB,
-                                    MachineBasicBlock::iterator MBBI,
-                                    const DebugLoc &DL) {
-  (void)MF;
-  (void)MBB;
-  (void)MBBI;
-  (void)DL;
-}
-
-static void
-createSiFivePreemptibleInterruptFrameEntries(MachineFunction &MF,
-                                             YSXMachineFunctionInfo &RVFI) {
-  (void)MF;
-  (void)RVFI;
-}
-
-static void emitSiFiveCLICPreemptibleSaves(MachineFunction &MF,
-                                           MachineBasicBlock &MBB,
-                                           MachineBasicBlock::iterator MBBI,
-                                           const DebugLoc &DL) {
-  (void)MF;
-  (void)MBB;
-  (void)MBBI;
-  (void)DL;
-}
-
-static void emitSiFiveCLICPreemptibleRestores(MachineFunction &MF,
-                                              MachineBasicBlock &MBB,
-                                              MachineBasicBlock::iterator MBBI,
-                                              const DebugLoc &DL) {
-  (void)MF;
-  (void)MBB;
-  (void)MBBI;
-  (void)DL;
-}
-
 // Get the ID of the libcall used for spilling and restoring callee saved
 // registers. The ID is representative of the number of registers saved or
 // restored by the libcall, except it is zero-indexed - ID 0 corresponds to a
@@ -507,9 +470,6 @@ void YSXFrameLowering::emitPrologue(MachineFunction &MF,
   if (MF.getFunction().getCallingConv() == CallingConv::GHC)
     return;
 
-  // SiFive CLIC needs to swap `sp` into `sf.mscratchcsw`
-  emitSiFiveCLICStackSwap(MF, MBB, MBBI, DL);
-
   // Emit prologue for shadow call stack.
   emitSCSPrologue(MF, MBB, MBBI, DL);
 
@@ -596,9 +556,6 @@ void YSXFrameLowering::emitPrologue(MachineFunction &MF,
     allocateStack(MBB, MBBI, MF, StackSize, RealStackSize, NeedsDwarfCFI,
                   NeedProbe, ProbeSize, DynAllocation,
                   MachineInstr::FrameSetup);
-
-  // Save SiFive CLIC CSRs into Stack
-  emitSiFiveCLICPreemptibleSaves(MF, MBB, MBBI, DL);
 
   // The frame pointer is callee-saved, and code has been generated for us to
   // save it to the stack. We need to skip over the storing of callee-saved
@@ -826,16 +783,12 @@ void YSXFrameLowering::emitEpilogue(MachineFunction &MF,
     for (const CalleeSavedInfo &CS : getUnmanagedCSI(MF, CSI))
       CFIBuilder.buildRestore(CS.getReg());
 
-  emitSiFiveCLICPreemptibleRestores(MF, MBB, MBBI, DL);
-
   if (StackSize != 0)
     deallocateStack(MF, MBB, MBBI, DL, StackSize, 0);
 
   // Emit epilogue for shadow call stack.
   emitSCSEpilogue(MF, MBB, MBBI, DL);
 
-  // SiFive CLIC needs to swap `sf.mscratchcsw` into `sp`
-  emitSiFiveCLICStackSwap(MF, MBB, MBBI, DL);
 }
 
 StackOffset
@@ -934,9 +887,6 @@ void YSXFrameLowering::determineCalleeSaves(MachineFunction &MF,
   if (hasBP(MF))
     SavedRegs.set(YSXABI::getBPReg());
 
-  auto *RVFI = MF.getInfo<YSXMachineFunctionInfo>();
-  // SiFive Preemptible Interrupt Handlers need additional frame entries
-  createSiFivePreemptibleInterruptFrameEntries(MF, *RVFI);
 }
 
 static unsigned estimateFunctionSizeInBytes(const MachineFunction &MF,
@@ -1107,18 +1057,9 @@ YSXFrameLowering::getFirstSPAdjustAmount(const MachineFunction &MF) const {
 bool YSXFrameLowering::assignCalleeSavedSpillSlots(
     MachineFunction &MF, const TargetRegisterInfo *TRI,
     std::vector<CalleeSavedInfo> &CSI) const {
-  auto *RVFI = MF.getInfo<YSXMachineFunctionInfo>();
   MachineFrameInfo &MFI = MF.getFrameInfo();
+  auto *RVFI = MF.getInfo<YSXMachineFunctionInfo>();
   const TargetRegisterInfo *RegInfo = MF.getSubtarget().getRegisterInfo();
-
-  // Preemptible Interrupts have two additional Callee-save Frame Indexes,
-  // not tracked by `CSI`.
-  if (RVFI->isSiFivePreemptibleInterrupt(MF)) {
-    for (int I = 0; I < 2; ++I) {
-      int FI = RVFI->getInterruptCSRFrameIndex(I);
-      MFI.setIsCalleeSavedObjectIndex(FI, true);
-    }
-  }
 
   // Early exit if no callee saved registers are modified!
   if (CSI.empty())

@@ -407,19 +407,6 @@ def tprel_add_symbol : Operand<XLenVT> {
   let ParserMatchClass = TPRelAddSymbol;
 }
 
-def CSRSystemRegister : AsmOperandClass {
-  let Name = "CSRSystemRegister";
-  let ParserMethod = "parseCSRSystemRegister";
-  let DiagnosticType = "InvalidCSRSystemRegister";
-}
-
-def csr_sysreg : YSXOp, TImmLeaf<XLenVT, "return isUInt<12>(Imm);"> {
-  let ParserMatchClass = CSRSystemRegister;
-  let PrintMethod = "printCSRSystemRegister";
-  let DecoderMethod = "decodeUImmOperand<12>";
-  let OperandType = "OPERAND_UIMM12";
-}
-
 // Condition code used by select and short forward branch pseudos.
 def cond_code : YSXOp {
   let OperandType = "OPERAND_COND_CODE";
@@ -557,34 +544,19 @@ class BranchCC_rri<bits<3> funct3, string opcodestr>
   let mayStore = 0;
 }
 
-let hasSideEffects = 0, mayLoad = 1, mayStore = 0 in {
+let hasSideEffects = 0, mayLoad = 1, mayStore = 0 in
 class Load_ri<bits<3> funct3, string opcodestr, DAGOperand rty = GPR>
     : RVInstI<funct3, OPC_LOAD, (outs rty:$rd), (ins GPRMem:$rs1, simm12_lo:$imm12),
               opcodestr, "$rd, ${imm12}(${rs1})">;
 
-class HLoad_r<bits<7> funct7, bits<5> funct5, string opcodestr>
-    : RVInstR<funct7, 0b100, OPC_SYSTEM, (outs GPR:$rd),
-              (ins GPRMemZeroOffset:$rs1), opcodestr, "$rd, $rs1"> {
-  let rs2 = funct5;
-}
-}
-
 // Operands for stores are in the order srcreg, base, offset rather than
 // reflecting the order these fields are specified in the instruction
 // encoding.
-let hasSideEffects = 0, mayLoad = 0, mayStore = 1 in {
+let hasSideEffects = 0, mayLoad = 0, mayStore = 1 in
 class Store_rri<bits<3> funct3, string opcodestr, DAGOperand rty = GPR>
     : RVInstS<funct3, OPC_STORE, (outs),
               (ins rty:$rs2, GPRMem:$rs1, simm12_lo:$imm12),
               opcodestr, "$rs2, ${imm12}(${rs1})">;
-
-class HStore_rr<bits<7> funct7, string opcodestr>
-    : RVInstR<funct7, 0b100, OPC_SYSTEM, (outs),
-              (ins GPR:$rs2, GPRMemZeroOffset:$rs1),
-               opcodestr, "$rs2, $rs1"> {
-  let rd = 0;
-}
-}
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 class ALU_ri<bits<3> funct3, string opcodestr>
@@ -606,19 +578,6 @@ class ALU_rr<bits<7> funct7, bits<3> funct3, string opcodestr,
   let isCommutable = Commutable;
 }
 
-let hasNoSchedulingInfo = 1,
-    hasSideEffects = 1, mayLoad = 0, mayStore = 0 in
-class CSR_ir<bits<3> funct3, string opcodestr>
-    : RVInstI<funct3, OPC_SYSTEM, (outs GPR:$rd), (ins csr_sysreg:$imm12, GPR:$rs1),
-              opcodestr, "$rd, $imm12, $rs1">, Sched<[WriteCSR, ReadCSR]>;
-
-let hasNoSchedulingInfo = 1,
-    hasSideEffects = 1, mayLoad = 0, mayStore = 0 in
-class CSR_ii<bits<3> funct3, string opcodestr>
-    : RVInstI<funct3, OPC_SYSTEM, (outs GPR:$rd),
-              (ins csr_sysreg:$imm12, uimm5:$rs1),
-              opcodestr, "$rd, $imm12, $rs1">, Sched<[WriteCSR]>;
-
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 class ShiftW_ri<bits<7> imm11_5, bits<3> funct3, string opcodestr>
     : RVInstIShiftW<imm11_5, funct3, OPC_OP_IMM_32, (outs GPR:$rd),
@@ -631,17 +590,6 @@ class ALUW_rr<bits<7> funct7, bits<3> funct3, string opcodestr,
     : RVInstR<funct7, funct3, OPC_OP_32, (outs GPR:$rd),
               (ins GPR:$rs1, GPR:$rs2), opcodestr, "$rd, $rs1, $rs2"> {
   let isCommutable = Commutable;
-}
-
-let hasSideEffects = 1, mayLoad = 0, mayStore = 0 in
-class Priv<string opcodestr, bits<7> funct7>
-    : RVInstR<funct7, 0b000, OPC_SYSTEM, (outs), (ins), opcodestr, "">;
-
-let hasSideEffects = 1, mayLoad = 0, mayStore = 0 in
-class Priv_rr<string opcodestr, bits<7> funct7>
-    : RVInstR<funct7, 0b000, OPC_SYSTEM, (outs), (ins GPR:$rs1, GPR:$rs2),
-              opcodestr, "$rs1, $rs2"> {
-  let rd = 0;
 }
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in

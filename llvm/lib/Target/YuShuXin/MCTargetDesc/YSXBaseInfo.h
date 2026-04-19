@@ -98,7 +98,6 @@ enum OperandType : unsigned {
   OPERAND_UIMM5_PLUS1,
   OPERAND_UIMM5_GE6_PLUS1,
   OPERAND_UIMM5_LSB0,
-  OPERAND_UIMM5_SLIST,
   OPERAND_UIMM6,
   OPERAND_UIMM6_LSB0,
   OPERAND_UIMM7,
@@ -124,7 +123,6 @@ enum OperandType : unsigned {
   OPERAND_UIMM64,
   OPERAND_THREE,
   OPERAND_FOUR,
-  OPERAND_IMM5_ZIBI,
   OPERAND_SIMM5,
   OPERAND_SIMM5_NONZERO,
   OPERAND_SIMM5_PLUS1,
@@ -140,13 +138,6 @@ enum OperandType : unsigned {
   OPERAND_SIMM16_NONZERO,
   OPERAND_SIMM20_LI,
   OPERAND_SIMM26,
-  OPERAND_CLUI_IMM,
-  OPERAND_VTYPEI10,
-  OPERAND_VTYPEI11,
-  OPERAND_RVKRNUM,
-  OPERAND_RVKRNUM_0_7,
-  OPERAND_RVKRNUM_1_10,
-  OPERAND_RVKRNUM_2_14,
   // Condition code used by select and short forward branch pseudos.
   OPERAND_COND_CODE,
   // Ordering for atomic pseudos.
@@ -173,46 +164,6 @@ enum FenceField {
   W = 1
 };
 }
-
-namespace YSXExceptFlags {
-enum ExceptionFlag {
-  NX = 0x01, // Inexact
-  UF = 0x02, // Underflow
-  OF = 0x04, // Overflow
-  DZ = 0x08, // Divide by zero
-  NV = 0x10, // Invalid operation
-  ALL = 0x1F // Mask for all accrued exception flags
-};
-}
-
-namespace YSXSysReg {
-struct SysReg {
-  const char Name[32];
-  unsigned Encoding;
-  // FIXME: add these additional fields when needed.
-  // Privilege Access: Read, Write, Read-Only.
-  // unsigned ReadWrite;
-  // Privilege Mode: User, System or Machine.
-  // unsigned Mode;
-  // Check field name.
-  // unsigned Extra;
-  // Register number without the privilege bits.
-  // unsigned Number;
-  FeatureBitset FeaturesRequired;
-  bool IsAltName;
-  bool IsDeprecatedName;
-
-  bool haveRequiredFeatures(const FeatureBitset &ActiveFeatures) const {
-    // No required feature associated with the system register.
-    if (FeaturesRequired.none())
-      return true;
-    return (FeaturesRequired & ActiveFeatures) == FeaturesRequired;
-  }
-};
-
-inline ArrayRef<SysReg> lookupSysRegByEncoding(unsigned) { return {}; }
-inline const SysReg *lookupSysRegByName(StringRef) { return nullptr; }
-} // end namespace YSXSysReg
 
 namespace YSXInsnOpcode {
 struct YSXOpcode {

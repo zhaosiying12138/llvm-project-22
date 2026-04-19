@@ -1310,9 +1310,6 @@ bool YSXInstrInfo::verifyInstruction(const MachineInstr &MI,
         case YSXOp::OPERAND_FOUR:
           Ok = Imm == 4;
           break;
-        case YSXOp::OPERAND_IMM5_ZIBI:
-          Ok = (isUInt<5>(Imm) && Imm != 0) || Imm == -1;
-          break;
           // clang-format off
         CASE_OPERAND_SIMM(5)
         CASE_OPERAND_SIMM(6)
@@ -1344,22 +1341,6 @@ bool YSXInstrInfo::verifyInstruction(const MachineInstr &MI,
         case YSXOp::OPERAND_UIMMLOG2XLEN_NONZERO:
           Ok = STI.is64Bit() ? isUInt<6>(Imm) : isUInt<5>(Imm);
           Ok = Ok && Imm != 0;
-          break;
-        case YSXOp::OPERAND_CLUI_IMM:
-          Ok = (isUInt<5>(Imm) && Imm != 0) ||
-               (Imm >= 0xfffe0 && Imm <= 0xfffff);
-          break;
-        case YSXOp::OPERAND_RVKRNUM:
-          Ok = Imm >= 0 && Imm <= 10;
-          break;
-        case YSXOp::OPERAND_RVKRNUM_0_7:
-          Ok = Imm >= 0 && Imm <= 7;
-          break;
-        case YSXOp::OPERAND_RVKRNUM_1_10:
-          Ok = Imm >= 1 && Imm <= 10;
-          break;
-        case YSXOp::OPERAND_RVKRNUM_2_14:
-          Ok = Imm >= 2 && Imm <= 14;
           break;
         case YSXOp::OPERAND_COND_CODE:
           Ok = Imm >= 0 && Imm < YSXCC::COND_INVALID;

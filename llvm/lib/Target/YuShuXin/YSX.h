@@ -63,8 +63,6 @@ void initializeYSXExpandAtomicPseudoPass(PassRegistry &);
 
 FunctionPass *createYSXPostRAExpandPseudoPass();
 void initializeYSXPostRAExpandPseudoPass(PassRegistry &);
-FunctionPass *createYSXInsertReadWriteCSRPass();
-void initializeYSXInsertReadWriteCSRPass(PassRegistry &);
 
 void initializeYSXDAGToDAGISelLegacyPass(PassRegistry &);
 

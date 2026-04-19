@@ -33,7 +33,6 @@ def WriteLDB        : SchedWrite;    // Load byte
 def WriteLDH        : SchedWrite;    // Load half-word
 def WriteLDW        : SchedWrite;    // Load word
 def WriteLDD        : SchedWrite;    // Load double-word
-def WriteCSR        : SchedWrite;    // CSR instructions
 def WriteSTB        : SchedWrite;    // Store byte
 def WriteSTH        : SchedWrite;    // Store half-word
 def WriteSTW        : SchedWrite;    // Store word
@@ -55,7 +54,6 @@ def ReadSFBALU      : SchedRead;
 /// Define scheduler resources associated with use operands.
 def ReadJmp         : SchedRead;
 def ReadJalr        : SchedRead;
-def ReadCSR         : SchedRead;
 def ReadMemBase     : SchedRead;
 def ReadFMemBase    : SchedRead;
 def ReadStoreData   : SchedRead;

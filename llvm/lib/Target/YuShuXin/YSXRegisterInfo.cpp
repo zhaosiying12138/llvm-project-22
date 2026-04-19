@@ -56,8 +56,6 @@ YSXRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
     return CSR_NoRegs_SaveList;
   if (MF->getFunction().getCallingConv() == CallingConv::PreserveMost)
     return CSR_RT_MostRegs_SaveList;
-  if (MF->getFunction().hasFnAttribute("interrupt"))
-    return CSR_Interrupt_SaveList;
 
   switch (Subtarget.getTargetABI()) {
   default:

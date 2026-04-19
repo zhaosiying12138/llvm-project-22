@@ -116,22 +116,6 @@ void YSXInstPrinter::printBranchOperand(const MCInst *MI, uint64_t Address,
   }
 }
 
-void YSXInstPrinter::printCSRSystemRegister(const MCInst *MI, unsigned OpNo,
-                                              const MCSubtargetInfo &STI,
-                                              raw_ostream &O) {
-  unsigned Imm = MI->getOperand(OpNo).getImm();
-  auto Range = YSXSysReg::lookupSysRegByEncoding(Imm);
-  for (auto &Reg : Range) {
-    if (Reg.IsAltName || Reg.IsDeprecatedName)
-      continue;
-    if (Reg.haveRequiredFeatures(STI.getFeatureBits())) {
-      markup(O, Markup::Register) << Reg.Name;
-      return;
-    }
-  }
-  markup(O, Markup::Register) << formatImm(Imm);
-}
-
 void YSXInstPrinter::printFenceArg(const MCInst *MI, unsigned OpNo,
                                      const MCSubtargetInfo &STI,
                                      raw_ostream &O) {

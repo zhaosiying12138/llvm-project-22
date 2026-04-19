@@ -56,28 +56,6 @@ YSXMachineFunctionInfo::YSXMachineFunctionInfo(const Function &F,
   }
 }
 
-YSXMachineFunctionInfo::InterruptStackKind
-YSXMachineFunctionInfo::getInterruptStackKind(
-    const MachineFunction &MF) const {
-  if (!MF.getFunction().hasFnAttribute("interrupt"))
-    return InterruptStackKind::None;
-
-  assert(VarArgsSaveSize == 0 &&
-         "Interrupt functions should not having incoming varargs");
-
-  StringRef InterruptVal =
-      MF.getFunction().getFnAttribute("interrupt").getValueAsString();
-
-  return StringSwitch<YSXMachineFunctionInfo::InterruptStackKind>(
-             InterruptVal)
-      .Case("SiFive-CLIC-preemptible",
-            InterruptStackKind::SiFiveCLICPreemptible)
-      .Case("SiFive-CLIC-stack-swap", InterruptStackKind::SiFiveCLICStackSwap)
-      .Case("SiFive-CLIC-preemptible-stack-swap",
-            InterruptStackKind::SiFiveCLICPreemptibleStackSwap)
-      .Default(InterruptStackKind::None);
-}
-
 void yaml::YSXMachineFunctionInfo::mappingImpl(yaml::IO &YamlIO) {
   MappingTraits<YSXMachineFunctionInfo>::mapping(YamlIO, *this);
 }

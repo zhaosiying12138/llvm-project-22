@@ -21,8 +21,5 @@ def CSR_NoRegs : CalleeSavedRegs<(add)>;
 
 def CSR_IPRA : CalleeSavedRegs<(add X1)>;
 
-// Interrupt handler needs to save/restore all registers that are used,
-// both Caller and Callee saved registers.
-def CSR_Interrupt : CalleeSavedRegs<(add X1, (sequence "X%u", 5, 31))>;
-
-def CSR_RT_MostRegs : CalleeSavedRegs<(sub CSR_Interrupt, X6, X7, X28)>;
+def CSR_RT_MostRegs
+    : CalleeSavedRegs<(add X1, X5, (sequence "X%u", 8, 27), X29, X30, X31)>;

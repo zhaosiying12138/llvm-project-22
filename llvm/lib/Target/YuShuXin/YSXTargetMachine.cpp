@@ -93,7 +93,6 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeYSXTarget() {
   initializeYSXPostRAExpandPseudoPass(*PR);
   initializeYSXPreRAExpandPseudoPass(*PR);
   initializeYSXExpandPseudoPass(*PR);
-  initializeYSXInsertReadWriteCSRPass(*PR);
   initializeYSXDAGToDAGISelLegacyPass(*PR);
   initializeYSXExpandAtomicPseudoPass(*PR);
   initializeYSXAsmPrinterPass(*PR);
@@ -376,8 +375,6 @@ void YSXPassConfig::addMachineSSAOptimization() {
 
 void YSXPassConfig::addPreRegAlloc() {
   addPass(createYSXPreRAExpandPseudoPass());
-
-  addPass(createYSXInsertReadWriteCSRPass());
 
   if (TM->getOptLevel() != CodeGenOptLevel::None && EnableMachinePipeliner)
     addPass(&MachinePipelinerID);

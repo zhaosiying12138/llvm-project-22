@@ -172,7 +172,6 @@ class YSXAsmParser : public MCTargetAsmParser {
 #define GET_ASSEMBLER_HEADER
 #include "YSXGenAsmMatcher.inc"
 
-  ParseStatus parseCSRSystemRegister(OperandVector &Operands);
   ParseStatus parseExpression(OperandVector &Operands);
   ParseStatus parseRegister(OperandVector &Operands, bool AllowParens = false);
   ParseStatus parseMemOpBaseReg(OperandVector &Operands);
@@ -282,7 +281,6 @@ struct YSXOperand final : public MCParsedAsmOperand {
     Token,
     Register,
     Expression,
-    SystemRegister,
     Fence,
     RegReg,
   } Kind;
@@ -294,14 +292,6 @@ struct YSXOperand final : public MCParsedAsmOperand {
   struct ExprOp {
     const MCExpr *Expr;
     bool IsRV64;
-  };
-
-  struct SysRegOp {
-    const char *Data;
-    unsigned Length;
-    unsigned Encoding;
-    // FIXME: Add the Encoding parsed fields as needed for checks,
-    // e.g.: read/write or user/supervisor/machine privileges.
   };
 
   struct FenceOp {
@@ -318,7 +308,6 @@ struct YSXOperand final : public MCParsedAsmOperand {
     StringRef Tok;
     RegOp Reg;
     ExprOp Expr;
-    SysRegOp SysReg;
     FenceOp Fence;
     RegRegOp RegReg;
   };
@@ -339,9 +328,6 @@ public:
       break;
     case KindTy::Token:
       Tok = o.Tok;
-      break;
-    case KindTy::SystemRegister:
-      SysReg = o.SysReg;
       break;
     case KindTy::Fence:
       Fence = o.Fence;
@@ -368,7 +354,6 @@ public:
   }
   bool isImm() const override { return isExpr(); }
   bool isMem() const override { return false; }
-  bool isSystemRegister() const { return Kind == KindTy::SystemRegister; }
   bool isRegReg() const { return Kind == KindTy::RegReg; }
 
   bool isGPR() const {
@@ -488,8 +473,6 @@ public:
            VK == ELF::R_RISCV_TLSDESC_CALL;
   }
 
-  bool isCSRSystemRegister() const { return isSystemRegister(); }
-
   /// Return true if the operand is a valid for the fence instruction e.g.
   /// ('iorw').
   bool isFenceArg() const { return Kind == KindTy::Fence; }
@@ -586,35 +569,8 @@ public:
         [](int64_t Imm) { return Imm >= 6 && isUInt<5>(Imm - 1); });
   }
 
-  bool isUImm5Slist() const {
-    return isUImmPred([](int64_t Imm) {
-      return (Imm == 0) || (Imm == 1) || (Imm == 2) || (Imm == 4) ||
-             (Imm == 8) || (Imm == 16) || (Imm == 15) || (Imm == 31);
-    });
-  }
-
   bool isUImm8GE32() const {
     return isUImmPred([](int64_t Imm) { return isUInt<8>(Imm) && Imm >= 32; });
-  }
-
-  bool isRnumArg() const {
-    return isUImmPred(
-        [](int64_t Imm) { return Imm >= INT64_C(0) && Imm <= INT64_C(10); });
-  }
-
-  bool isRnumArg_0_7() const {
-    return isUImmPred(
-        [](int64_t Imm) { return Imm >= INT64_C(0) && Imm <= INT64_C(7); });
-  }
-
-  bool isRnumArg_1_10() const {
-    return isUImmPred(
-        [](int64_t Imm) { return Imm >= INT64_C(1) && Imm <= INT64_C(10); });
-  }
-
-  bool isRnumArg_2_14() const {
-    return isUImmPred(
-        [](int64_t Imm) { return Imm >= INT64_C(2) && Imm <= INT64_C(14); });
   }
 
   template <unsigned N> bool isSImm() const {
@@ -647,12 +603,6 @@ public:
 
   bool isSImm6NonZero() const {
     return isSImmPred([](int64_t Imm) { return Imm != 0 && isInt<6>(Imm); });
-  }
-
-  bool isCLUIImm() const {
-    return isUImmPred([](int64_t Imm) {
-      return (isUInt<5>(Imm) && Imm != 0) || (Imm >= 0xfffe0 && Imm <= 0xfffff);
-    });
   }
 
   bool isUImm2Lsb0() const { return isUImmShifted<1, 1>(); }
@@ -764,11 +714,6 @@ public:
     return isUImmPred([](int64_t Imm) { return 4 == Imm; });
   }
 
-  bool isImm5Zibi() const {
-    return isUImmPred(
-        [](int64_t Imm) { return (Imm != 0 && isUInt<5>(Imm)) || Imm == -1; });
-  }
-
   bool isSImm5Plus1() const {
     return isSImmPred(
         [](int64_t Imm) { return Imm != INT64_MIN && isInt<5>(Imm - 1); });
@@ -810,11 +755,6 @@ public:
     return Reg.Reg;
   }
 
-  StringRef getSysReg() const {
-    assert(Kind == KindTy::SystemRegister && "Invalid type access!");
-    return StringRef(SysReg.Data, SysReg.Length);
-  }
-
   const MCExpr *getExpr() const {
     assert(Kind == KindTy::Expression && "Invalid type access!");
     return Expr.Expr;
@@ -849,9 +789,6 @@ public:
       break;
     case KindTy::Token:
       OS << "'" << getToken() << "'";
-      break;
-    case KindTy::SystemRegister:
-      OS << "<sysreg: " << getSysReg() << " (" << SysReg.Encoding << ")>";
       break;
     case KindTy::Fence:
       OS << "<fence: ";
@@ -889,17 +826,6 @@ public:
     Op->Expr.IsRV64 = IsRV64;
     Op->StartLoc = S;
     Op->EndLoc = E;
-    return Op;
-  }
-
-  static std::unique_ptr<YSXOperand> createSysReg(StringRef Str, SMLoc S,
-                                                    unsigned Encoding) {
-    auto Op = std::make_unique<YSXOperand>(KindTy::SystemRegister);
-    Op->SysReg.Data = Str.data();
-    Op->SysReg.Length = Str.size();
-    Op->SysReg.Encoding = Encoding;
-    Op->StartLoc = S;
-    Op->EndLoc = S;
     return Op;
   }
 
@@ -962,11 +888,6 @@ public:
   void addFenceArgOperands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
     Inst.addOperand(MCOperand::createImm(Fence.Val));
-  }
-
-  void addCSRSystemRegisterOperands(MCInst &Inst, unsigned N) const {
-    assert(N == 1 && "Invalid number of operands!");
-    Inst.addOperand(MCOperand::createImm(SysReg.Encoding));
   }
 
   void addRegRegOperands(MCInst &Inst, unsigned N) const {
@@ -1138,11 +1059,6 @@ bool YSXAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
     return generateImmOutOfRangeError(
         Operands, ErrorInfo, -(1 << 20), (1 << 20) - 2,
         "immediate must be a multiple of 2 bytes in the range");
-  case Match_InvalidCSRSystemRegister: {
-    return generateImmOutOfRangeError(Operands, ErrorInfo, 0, (1 << 12) - 1,
-                                      "operand must be a valid system register "
-                                      "name or an integer in the range");
-  }
   }
 
   if (const char *MatchDiag = getMatchKindDiag((YSXMatchResultTy)Result)) {
@@ -1289,113 +1205,6 @@ ParseStatus YSXAsmParser::parseInsnDirectiveOpcode(OperandVector &Operands) {
   return generateImmOutOfRangeError(
       S, 0, 127,
       "opcode must be a valid opcode name or an immediate in the range");
-}
-
-ParseStatus YSXAsmParser::parseCSRSystemRegister(OperandVector &Operands) {
-  SMLoc S = getLoc();
-  const MCExpr *Res;
-
-  auto SysRegFromConstantInt = [this](const MCExpr *E, SMLoc S) {
-    if (auto *CE = dyn_cast<MCConstantExpr>(E)) {
-      int64_t Imm = CE->getValue();
-      if (isUInt<12>(Imm)) {
-        auto Range = YSXSysReg::lookupSysRegByEncoding(Imm);
-        // Accept an immediate representing a named Sys Reg if it satisfies the
-        // the required features.
-        for (auto &Reg : Range) {
-          if (Reg.IsAltName || Reg.IsDeprecatedName)
-            continue;
-          if (Reg.haveRequiredFeatures(STI->getFeatureBits()))
-            return YSXOperand::createSysReg(Reg.Name, S, Imm);
-        }
-        // Accept an immediate representing an un-named Sys Reg if the range is
-        // valid, regardless of the required features.
-        return YSXOperand::createSysReg("", S, Imm);
-      }
-    }
-    return std::unique_ptr<YSXOperand>();
-  };
-
-  switch (getLexer().getKind()) {
-  default:
-    return ParseStatus::NoMatch;
-  case AsmToken::LParen:
-  case AsmToken::Minus:
-  case AsmToken::Plus:
-  case AsmToken::Exclaim:
-  case AsmToken::Tilde:
-  case AsmToken::Integer:
-  case AsmToken::String: {
-    if (getParser().parseExpression(Res))
-      return ParseStatus::Failure;
-
-    if (auto SysOpnd = SysRegFromConstantInt(Res, S)) {
-      Operands.push_back(std::move(SysOpnd));
-      return ParseStatus::Success;
-    }
-
-    return generateImmOutOfRangeError(S, 0, (1 << 12) - 1);
-  }
-  case AsmToken::Identifier: {
-    StringRef Identifier;
-    if (getParser().parseIdentifier(Identifier))
-      return ParseStatus::Failure;
-
-    const auto *SysReg = YSXSysReg::lookupSysRegByName(Identifier);
-
-    if (SysReg) {
-      if (SysReg->IsDeprecatedName) {
-        // Lookup the undeprecated name.
-        auto Range = YSXSysReg::lookupSysRegByEncoding(SysReg->Encoding);
-        for (auto &Reg : Range) {
-          if (Reg.IsAltName || Reg.IsDeprecatedName)
-            continue;
-          Warning(S, "'" + Identifier + "' is a deprecated alias for '" +
-                         Reg.Name + "'");
-        }
-      }
-
-      // Accept a named Sys Reg if the required features are present.
-      const auto &FeatureBits = getSTI().getFeatureBits();
-      if (!SysReg->haveRequiredFeatures(FeatureBits)) {
-        const auto *Feature = llvm::find_if(YSXFeatureKV, [&](auto Feature) {
-          return SysReg->FeaturesRequired[Feature.Value];
-        });
-        auto ErrorMsg = std::string("system register '") + SysReg->Name + "' ";
-        if (Feature != std::end(YSXFeatureKV)) {
-          ErrorMsg +=
-              "requires '" + std::string(Feature->Key) + "' to be enabled";
-        }
-
-        return Error(S, ErrorMsg);
-      }
-      Operands.push_back(
-          YSXOperand::createSysReg(Identifier, S, SysReg->Encoding));
-      return ParseStatus::Success;
-    }
-
-    // Accept a symbol name that evaluates to an absolute value.
-    MCSymbol *Sym = getContext().lookupSymbol(Identifier);
-    if (Sym && Sym->isVariable()) {
-      // Pass false for SetUsed, since redefining the value later does not
-      // affect this instruction.
-      if (auto SysOpnd = SysRegFromConstantInt(Sym->getVariableValue(), S)) {
-        Operands.push_back(std::move(SysOpnd));
-        return ParseStatus::Success;
-      }
-    }
-
-    return generateImmOutOfRangeError(S, 0, (1 << 12) - 1,
-                                      "operand must be a valid system register "
-                                      "name or an integer in the range");
-  }
-  case AsmToken::Percent: {
-    // Discard operand with modifier.
-    return generateImmOutOfRangeError(S, 0, (1 << 12) - 1);
-  }
-  }
-
-  return ParseStatus::NoMatch;
 }
 
 ParseStatus YSXAsmParser::parseExpression(OperandVector &Operands) {

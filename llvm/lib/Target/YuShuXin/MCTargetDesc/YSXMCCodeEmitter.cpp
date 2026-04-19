@@ -84,16 +84,8 @@ public:
                                SmallVectorImpl<MCFixup> &Fixups,
                                const MCSubtargetInfo &STI) const;
 
-  uint64_t getImmOpValueSlist(const MCInst &MI, unsigned OpNo,
-                              SmallVectorImpl<MCFixup> &Fixups,
-                              const MCSubtargetInfo &STI) const;
-
   template <unsigned N>
   unsigned getImmOpValueAsrN(const MCInst &MI, unsigned OpNo,
-                             SmallVectorImpl<MCFixup> &Fixups,
-                             const MCSubtargetInfo &STI) const;
-
-  uint64_t getImmOpValueZibi(const MCInst &MI, unsigned OpNo,
                              SmallVectorImpl<MCFixup> &Fixups,
                              const MCSubtargetInfo &STI) const;
 
@@ -380,36 +372,6 @@ YSXMCCodeEmitter::getImmOpValueMinus1(const MCInst &MI, unsigned OpNo,
   return 0;
 }
 
-uint64_t
-YSXMCCodeEmitter::getImmOpValueSlist(const MCInst &MI, unsigned OpNo,
-                                       SmallVectorImpl<MCFixup> &Fixups,
-                                       const MCSubtargetInfo &STI) const {
-  const MCOperand &MO = MI.getOperand(OpNo);
-  assert(MO.isImm() && "Slist operand must be immediate");
-
-  uint64_t Res = MO.getImm();
-  switch (Res) {
-  case 0:
-    return 0;
-  case 1:
-    return 1;
-  case 2:
-    return 2;
-  case 4:
-    return 3;
-  case 8:
-    return 4;
-  case 16:
-    return 5;
-  case 15:
-    return 6;
-  case 31:
-    return 7;
-  default:
-    llvm_unreachable("Unhandled Slist value!");
-  }
-}
-
 template <unsigned N>
 unsigned
 YSXMCCodeEmitter::getImmOpValueAsrN(const MCInst &MI, unsigned OpNo,
@@ -424,19 +386,6 @@ YSXMCCodeEmitter::getImmOpValueAsrN(const MCInst &MI, unsigned OpNo,
   }
 
   return getImmOpValue(MI, OpNo, Fixups, STI);
-}
-
-uint64_t
-YSXMCCodeEmitter::getImmOpValueZibi(const MCInst &MI, unsigned OpNo,
-                                      SmallVectorImpl<MCFixup> &Fixups,
-                                      const MCSubtargetInfo &STI) const {
-  const MCOperand &MO = MI.getOperand(OpNo);
-  assert(MO.isImm() && "Zibi operand must be an immediate");
-  int64_t Res = MO.getImm();
-  if (Res == -1)
-    return 0;
-
-  return Res;
 }
 
 uint64_t YSXMCCodeEmitter::getImmOpValue(const MCInst &MI, unsigned OpNo,

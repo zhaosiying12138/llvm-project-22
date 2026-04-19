@@ -28,7 +28,6 @@ add_llvm_target(YSXCodeGen
   YSXExpandAtomicPseudoInsts.cpp
   YSXExpandPseudoInsts.cpp
   YSXFrameLowering.cpp
-  YSXInsertReadWriteCSR.cpp
   YSXInstrInfo.cpp
   YSXISelDAGToDAG.cpp
   YSXISelLowering.cpp

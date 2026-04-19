@@ -59,9 +59,6 @@ private:
   /// Registers that have been sign extended from i32.
   SmallVector<Register, 8> SExt32Registers;
 
-  /// Store Frame Indexes for Interrupt-Related CSR Spills.
-  SmallVector<int, 2> InterruptCSRFrameIndexes;
-
   int64_t StackProbeSize = 0;
 
   /// Does it probe the stack for a dynamic allocation?
@@ -97,49 +94,13 @@ public:
 
   bool useSaveRestoreLibCalls(const MachineFunction &MF) const {
     // We cannot use fixed locations for the callee saved spill slots if the
-    // function uses a varargs save area, or is an interrupt handler.
+    // function uses a varargs save area.
     return MF.getSubtarget<YSXSubtarget>().enableSaveRestore() &&
-           VarArgsSaveSize == 0 && !MF.getFrameInfo().hasTailCall() &&
-           !MF.getFunction().hasFnAttribute("interrupt");
+           VarArgsSaveSize == 0 && !MF.getFrameInfo().hasTailCall();
   }
 
   unsigned getCalleeSavedStackSize() const { return CalleeSavedStackSize; }
   void setCalleeSavedStackSize(unsigned Size) { CalleeSavedStackSize = Size; }
-
-  enum class InterruptStackKind {
-    None = 0,
-    SiFiveCLICPreemptible,
-    SiFiveCLICStackSwap,
-    SiFiveCLICPreemptibleStackSwap
-  };
-
-  InterruptStackKind getInterruptStackKind(const MachineFunction &MF) const;
-
-  bool useSiFiveInterrupt(const MachineFunction &MF) const {
-    InterruptStackKind Kind = getInterruptStackKind(MF);
-    return Kind == InterruptStackKind::SiFiveCLICPreemptible ||
-           Kind == InterruptStackKind::SiFiveCLICStackSwap ||
-           Kind == InterruptStackKind::SiFiveCLICPreemptibleStackSwap;
-  }
-
-  bool isSiFivePreemptibleInterrupt(const MachineFunction &MF) const {
-    InterruptStackKind Kind = getInterruptStackKind(MF);
-    return Kind == InterruptStackKind::SiFiveCLICPreemptible ||
-           Kind == InterruptStackKind::SiFiveCLICPreemptibleStackSwap;
-  }
-
-  bool isSiFiveStackSwapInterrupt(const MachineFunction &MF) const {
-    InterruptStackKind Kind = getInterruptStackKind(MF);
-    return Kind == InterruptStackKind::SiFiveCLICStackSwap ||
-           Kind == InterruptStackKind::SiFiveCLICPreemptibleStackSwap;
-  }
-
-  void pushInterruptCSRFrameIndex(int FI) {
-    InterruptCSRFrameIndexes.push_back(FI);
-  }
-  int getInterruptCSRFrameIndex(size_t Idx) const {
-    return InterruptCSRFrameIndexes[Idx];
-  }
 
   // Some Stack Management Variants automatically update FP in a frame-pointer
   // convention compatible way - which means we don't need to manually update
