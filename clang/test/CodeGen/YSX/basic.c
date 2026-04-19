@@ -5,3 +5,20 @@ long add(long a, long b) {
 // CHECK: add nsw i64
   return a + b;
 }
+
+struct pair {
+  long a;
+  long b;
+};
+
+struct pair ret_pair(long a, long b) {
+// CHECK-LABEL: define{{.*}} [2 x i64] @ret_pair
+  struct pair p = {a, b};
+// CHECK: ret [2 x i64]
+  return p;
+}
+
+long take_pair(struct pair p) {
+// CHECK-LABEL: define{{.*}} i64 @take_pair([2 x i64] %p.coerce)
+  return p.a + p.b;
+}
