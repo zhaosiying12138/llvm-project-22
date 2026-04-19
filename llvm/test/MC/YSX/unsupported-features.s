@@ -7,6 +7,7 @@
 # RUN: not llvm-mc -triple=ysx64 -mattr=+prefer-vsetvli-over-read-vlenb %s 2>&1 | FileCheck %s
 # RUN: not llvm-mc -triple=ysx64 -mattr=+andes45 %s 2>&1 | FileCheck %s
 # RUN: printf "add a0, a0, a1\n" | llvm-mc -triple=ysx64 -mattr=-f,-v,-zbb -
+# RUN: printf "add a0, a0, a1\n" | llvm-mc -triple=ysx64 -mattr=+reserve-x5 -
 # RUN: llvm-mc -triple=ysx64 -mattr=help 2>&1 | FileCheck %s --check-prefix=HELP
 # RUN: not llvm-mc -triple=ysx64 %s 2>&1 | FileCheck %s --check-prefix=ARCH
 # RUN: printf ".option arch, rv64ima\nadd a0, a0, a1\n" | llvm-mc -triple=ysx64 -

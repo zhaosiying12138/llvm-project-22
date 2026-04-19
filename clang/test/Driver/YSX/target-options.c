@@ -2,6 +2,8 @@
 // RUN: %clang --target=ysx64-unknown-elf -dM -E -x c /dev/null | FileCheck %s --check-prefix=DEFS --implicit-check-not=__riscv_v_intrinsic --implicit-check-not=__riscv_vector
 // RUN: %clang --target=ysx64-unknown-elf -c %s -o %t-default.o
 // RUN: %clang --target=ysx64-unknown-elf -march=rv64ima -c %s -o %t-rv64ima.o
+// RUN: %clang --target=ysx64 -ffixed-x5 -### -c %s 2>&1 | FileCheck %s --check-prefix=FIXED
+// RUN: %clang --target=ysx64-unknown-elf -ffixed-x5 -c %s -o %t-fixed-x5.o
 // RUN: not %clang --target=ysx64 -march=rv64gc -c %s 2>&1 | FileCheck %s --check-prefix=ERR
 // RUN: not %clang --target=ysx64 -march=rv64imaf -c %s 2>&1 | FileCheck %s --check-prefix=ERR
 // RUN: not %clang --target=ysx64 -march=rv64imac -c %s 2>&1 | FileCheck %s --check-prefix=ERR
@@ -38,6 +40,8 @@
 // CHECK-NOT: "-target-feature" "-zvl128b"
 // CHECK-NOT: "-target-feature" "-xventanacondops"
 // CHECK: "-target-abi" "lp64"
+
+// FIXED: "-target-feature" "+reserve-x5"
 
 // DEFS-DAG: #define __SIZEOF_POINTER__ 8
 // DEFS-DAG: #define __riscv_xlen 64

@@ -62,9 +62,17 @@ static bool isRequiredYSXFeature(StringRef Feature) {
          Feature == "zalrsc";
 }
 
+static bool isYSXReserveXFeature(StringRef Feature) {
+  if (!Feature.consume_front("reserve-x"))
+    return false;
+  unsigned Reg = 0;
+  return !Feature.empty() && !Feature.getAsInteger(10, Reg) && Reg >= 1 &&
+         Reg <= 31;
+}
+
 static bool isRetainedYSXFeature(StringRef Feature) {
   return isRequiredYSXFeature(Feature) || Feature == "relax" ||
-         Feature == "exact-asm";
+         Feature == "exact-asm" || isYSXReserveXFeature(Feature);
 }
 
 static std::string filterYSXFeatureString(StringRef FS) {

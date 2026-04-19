@@ -1,5 +1,5 @@
 ---
-current_round: 29
+current_round: 30
 max_iterations: 42
 codex_model: gpt-5.4
 codex_effort: high
@@ -11,7 +11,7 @@ plan_tracked: true
 start_branch: ysx-rv64ima
 base_branch: ysx-rv64ima-base
 base_commit: e9846648fd6183ee6d8cbdb4502213fcf902a211
-review_started: false
+review_started: true
 ask_codex_question: true
 session_id:
 agent_teams: false
