@@ -136,10 +136,6 @@ public:
   bool GETTER() const { return ATTRIBUTE; }
 #include "YSXGenSubtargetInfo.inc"
 
-  bool hasConditionalMoveFusion() const {
-    return hasShortForwardBranchIALU();
-  }
-
   bool is64Bit() const { return IsRV64; }
   bool isLittleEndian() const { return IsLittleEndian; }
   MVT getXLenVT() const {

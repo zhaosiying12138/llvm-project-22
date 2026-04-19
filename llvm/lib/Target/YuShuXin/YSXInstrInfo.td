@@ -16,12 +16,7 @@
 
 class RVSDNode<string opcode, SDTypeProfile type_profile,
                list<SDNodeProperty> properties = []>
-    : SDNode<"YSXISD::" # opcode, type_profile, properties> {
-  bit HasPassthruOp = false;
-  bit HasMaskOp = false;
-  let TSFlags{0} = HasPassthruOp;
-  let TSFlags{1} = HasMaskOp;
-}
+    : SDNode<"YSXISD::" # opcode, type_profile, properties>;
 
 // Target-independent type requirements, but with target-specific formats.
 def SDT_CallSeqStart : SDCallSeqStart<[SDTCisVT<0, i64>,
@@ -1309,7 +1304,6 @@ multiclass SelectCC_GPR_rrirr<DAGOperand valty, ValueType vt,
              (IntCCtoYSXCC $cc), valty:$truev, valty:$falsev)>;
 }
 
-let Predicates = [NoConditionalMoveFusion] in
 defm Select_GPR : SelectCC_GPR_rrirr<GPR, XLenVT>;
 
 def OptForMinSize : Predicate<"MF ? MF->getFunction().hasMinSize() : false">;

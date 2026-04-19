@@ -155,12 +155,7 @@ YSXTargetLowering::YSXTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::CTPOP, MVT::i64, Expand);
   setOperationAction(ISD::CTLZ, XLenVT, Expand);
 
-  if (Subtarget.hasShortForwardBranchIALU()) {
-    // We can use PseudoCCSUB to implement ABS.
-    setOperationAction(ISD::ABS, XLenVT, Legal);
-  } else {
-    setOperationAction(ISD::ABS, MVT::i32, Custom);
-  }
+  setOperationAction(ISD::ABS, MVT::i32, Custom);
 
   setOperationAction(ISD::SELECT, XLenVT, Custom);
 
@@ -1172,38 +1167,35 @@ static std::optional<bool> matchSetCC(SDValue LHS, SDValue RHS,
   return std::nullopt;
 }
 
-static SDValue lowerSelectToBinOp(SDNode *N, SelectionDAG &DAG,
-                                  const YSXSubtarget &Subtarget) {
+static SDValue lowerSelectToBinOp(SDNode *N, SelectionDAG &DAG) {
   SDValue CondV = N->getOperand(0);
   SDValue TrueV = N->getOperand(1);
   SDValue FalseV = N->getOperand(2);
   MVT VT = N->getSimpleValueType(0);
   SDLoc DL(N);
 
-  if (!Subtarget.hasConditionalMoveFusion()) {
-    // (select c, -1, y) -> -c | y
-    if (isAllOnesConstant(TrueV)) {
-      SDValue Neg = DAG.getNegative(CondV, DL, VT);
-      return DAG.getNode(ISD::OR, DL, VT, Neg, DAG.getFreeze(FalseV));
-    }
-    // (select c, y, -1) -> (c-1) | y
-    if (isAllOnesConstant(FalseV)) {
-      SDValue Neg = DAG.getNode(ISD::ADD, DL, VT, CondV,
-                                DAG.getAllOnesConstant(DL, VT));
-      return DAG.getNode(ISD::OR, DL, VT, Neg, DAG.getFreeze(TrueV));
-    }
+  // (select c, -1, y) -> -c | y
+  if (isAllOnesConstant(TrueV)) {
+    SDValue Neg = DAG.getNegative(CondV, DL, VT);
+    return DAG.getNode(ISD::OR, DL, VT, Neg, DAG.getFreeze(FalseV));
+  }
+  // (select c, y, -1) -> (c-1) | y
+  if (isAllOnesConstant(FalseV)) {
+    SDValue Neg =
+        DAG.getNode(ISD::ADD, DL, VT, CondV, DAG.getAllOnesConstant(DL, VT));
+    return DAG.getNode(ISD::OR, DL, VT, Neg, DAG.getFreeze(TrueV));
+  }
 
-    // (select c, 0, y) -> (c-1) & y
-    if (isNullConstant(TrueV)) {
-      SDValue Neg =
-          DAG.getNode(ISD::ADD, DL, VT, CondV, DAG.getAllOnesConstant(DL, VT));
-      return DAG.getNode(ISD::AND, DL, VT, Neg, DAG.getFreeze(FalseV));
-    }
-    if (isNullConstant(FalseV)) {
-      // (select c, y, 0) -> -c & y
-      SDValue Neg = DAG.getNegative(CondV, DL, VT);
-      return DAG.getNode(ISD::AND, DL, VT, Neg, DAG.getFreeze(TrueV));
-    }
+  // (select c, 0, y) -> (c-1) & y
+  if (isNullConstant(TrueV)) {
+    SDValue Neg =
+        DAG.getNode(ISD::ADD, DL, VT, CondV, DAG.getAllOnesConstant(DL, VT));
+    return DAG.getNode(ISD::AND, DL, VT, Neg, DAG.getFreeze(FalseV));
+  }
+  if (isNullConstant(FalseV)) {
+    // (select c, y, 0) -> -c & y
+    SDValue Neg = DAG.getNegative(CondV, DL, VT);
+    return DAG.getNode(ISD::AND, DL, VT, Neg, DAG.getFreeze(TrueV));
   }
 
   // select c, ~x, x --> xor -c, x
@@ -1252,7 +1244,7 @@ SDValue YSXTargetLowering::lowerSELECT(SDValue Op, SelectionDAG &DAG) const {
   if (VT.isVector())
     return SDValue();
 
-  if (SDValue V = lowerSelectToBinOp(Op.getNode(), DAG, Subtarget))
+  if (SDValue V = lowerSelectToBinOp(Op.getNode(), DAG))
     return V;
 
   if (CondV.getOpcode() != ISD::SETCC ||
@@ -3523,27 +3515,6 @@ unsigned YSXTargetLowering::getCustomCtpopCost(EVT VT,
 bool YSXTargetLowering::shouldInsertFencesForAtomic(
     const Instruction *I) const {
   return isa<LoadInst>(I) || isa<StoreInst>(I);
-}
-
-SDValue
-YSXTargetLowering::BuildSDIVPow2(SDNode *N, const APInt &Divisor,
-                                   SelectionDAG &DAG,
-                                   SmallVectorImpl<SDNode *> &Created) const {
-  AttributeList Attr = DAG.getMachineFunction().getFunction().getAttributes();
-  if (isIntDivCheap(N->getValueType(0), Attr))
-    return SDValue(N, 0); // Lower SDIV as SDIV
-
-  // Only perform this transform if short forward branch opt is supported.
-  if (!Subtarget.hasShortForwardBranchIALU())
-    return SDValue();
-  EVT VT = N->getValueType(0);
-  if (!(VT == MVT::i32 || (VT == MVT::i64 && Subtarget.is64Bit())))
-    return SDValue();
-
-  // Ensure 2**k-1 < 2048 so that we can just emit a single addi/addiw.
-  if (Divisor.sgt(2048) || Divisor.slt(-2048))
-    return SDValue();
-  return TargetLowering::buildSDIVPow2WithCMov(N, Divisor, DAG, Created);
 }
 
 bool YSXTargetLowering::shouldFoldSelectWithSingleBitTest(

@@ -17,14 +17,6 @@
 
 namespace llvm {
 
-namespace YSXISD {
-// YSXISD Node TSFlags
-enum : llvm::SDNodeTSFlags {
-  HasPassthruOpMask = 1 << 0,
-  HasMaskOpMask = 1 << 1,
-};
-} // namespace YSXISD
-
 class YSXSelectionDAGInfo : public SelectionDAGGenTargetInfo {
 public:
   YSXSelectionDAGInfo();
@@ -40,17 +32,6 @@ public:
                                   bool isVolatile, bool AlwaysInline,
                                   MachinePointerInfo DstPtrInfo) const override;
 
-  bool hasPassthruOp(unsigned Opcode) const {
-    return GenNodeInfo.getDesc(Opcode).TSFlags & YSXISD::HasPassthruOpMask;
-  }
-
-  bool hasMaskOp(unsigned Opcode) const {
-    return GenNodeInfo.getDesc(Opcode).TSFlags & YSXISD::HasMaskOpMask;
-  }
-
-  unsigned getMAccOpcode(unsigned MulOpcode) const {
-    llvm_unreachable("YSX rv64ima does not define vector multiply-add nodes");
-  }
 };
 
 } // namespace llvm

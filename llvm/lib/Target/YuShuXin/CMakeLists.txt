@@ -14,7 +14,6 @@ tablegen(LLVM YSXGenMCPseudoLowering.inc -gen-pseudo-lowering)
 tablegen(LLVM YSXGenRegisterInfo.inc -gen-register-info)
 tablegen(LLVM YSXGenSearchableTables.inc -gen-searchable-tables)
 tablegen(LLVM YSXGenSubtargetInfo.inc -gen-subtarget)
-tablegen(LLVM YSXGenExegesis.inc -gen-exegesis)
 tablegen(LLVM YSXGenSDNodeInfo.inc -gen-sd-node-info)
 
 add_public_tablegen_target(YSXCommonTableGen)

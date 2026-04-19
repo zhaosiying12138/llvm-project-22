@@ -10,12 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// No vector load/store scheduling predicates are active in the rv64ima subset.
-def VLDSX0Pred
-    : MCSchedPredicate<FalsePred>;
-
-def SingleElementVecFP64SchedPred : MCSchedPredicate<FalsePred>;
-
 // Returns true if this is the sext.w pattern, addiw rd, rs1, 0.
 def isSEXT_W
     : TIIPredicate<"isSEXT_W",

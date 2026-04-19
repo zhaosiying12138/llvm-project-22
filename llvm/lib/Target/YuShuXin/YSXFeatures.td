@@ -176,37 +176,6 @@ def TuneNoDefaultUnroll
     : SubtargetFeature<"no-default-unroll", "EnableDefaultUnroll", "false",
                        "Disable default unroll preference">;
 
-def TuneShortForwardBranchIALU
-    : SubtargetFeature<"short-forward-branch-ialu",
-                       "HasShortForwardBranchIALU", "true",
-                       "Enable short forward branch optimization for IALU">;
-def HasShortForwardBranchIALU : Predicate<"Subtarget->hasShortForwardBranchIALU()">;
-def NoShortForwardBranch : Predicate<"!Subtarget->hasShortForwardBranchIALU()">;
-
-def TuneShortForwardBranchIMinMax
-    : SubtargetFeature<"short-forward-branch-iminmax",
-                       "HasShortForwardBranchIMinMax", "true",
-                       "Enable short forward branch optimization for min/max",
-                       [TuneShortForwardBranchIALU]>;
-def HasShortForwardBranchIMinMax : Predicate<"Subtarget->hasShortForwardBranchIMinMax()">;
-
-def TuneShortForwardBranchIMul
-    : SubtargetFeature<"short-forward-branch-imul",
-                       "HasShortForwardBranchIMul", "true",
-                       "Enable short forward branch optimization for mul",
-                       [TuneShortForwardBranchIALU]>;
-def HasShortForwardBranchIMul : Predicate<"Subtarget->hasShortForwardBranchIMul()">;
-
-def TuneShortForwardBranchILoad
-    : SubtargetFeature<"short-forward-branch-iload",
-                       "HasShortForwardBranchILoad", "true",
-                       "Enable short forward branch optimization for loads",
-                       [TuneShortForwardBranchIALU]>;
-def HasShortForwardBranchILoad : Predicate<"Subtarget->hasShortForwardBranchILoad()">;
-
 def TunePreferWInst
     : SubtargetFeature<"prefer-w-inst", "PreferWInst", "true",
                        "Prefer W-suffixed instructions">;
-
-def HasConditionalMoveFusion : Predicate<"Subtarget->hasConditionalMoveFusion()">;
-def NoConditionalMoveFusion  : Predicate<"!Subtarget->hasConditionalMoveFusion()">;

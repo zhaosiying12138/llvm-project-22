@@ -46,18 +46,11 @@ def WriteAtomicLDD  : SchedWrite;    // Atomic load double word
 def WriteAtomicSTW  : SchedWrite;    // Atomic store word
 def WriteAtomicSTD  : SchedWrite;    // Atomic store double word
 
-// short forward branch for Bullet
-def WriteSFB        : SchedWrite;
-def ReadSFBJmp      : SchedRead;
-def ReadSFBALU      : SchedRead;
-
 /// Define scheduler resources associated with use operands.
 def ReadJmp         : SchedRead;
 def ReadJalr        : SchedRead;
 def ReadMemBase     : SchedRead;
-def ReadFMemBase    : SchedRead;
 def ReadStoreData   : SchedRead;
-def ReadFStoreData  : SchedRead;
 def ReadIALU        : SchedRead;
 def ReadIALU32      : SchedRead;    // 32-bit integer ALU operations on RV64I
 def ReadShiftImm    : SchedRead;
