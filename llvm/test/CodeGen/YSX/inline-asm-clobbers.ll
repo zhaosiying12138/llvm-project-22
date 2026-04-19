@@ -16,16 +16,6 @@ define void @testcase() nounwind {
 ; RV64I-NEXT:    ld s2, 0(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
-; RV64IF-LABEL: testcase:
-; RV64IF:      sd s1, {{[0-9]+}}(sp)
-; RV64IF-NEXT: sd s2, {{[0-9]+}}(sp)
-; RV64IF-NEXT: fsw fs0, {{[0-9]+}}(sp)
-; RV64IF-NEXT: fsw fs1, {{[0-9]+}}(sp)
-; RV64ID-LABEL: testcase:
-; RV64ID:      sd s1, {{[0-9]+}}(sp)
-; RV64ID-NEXT: sd s2, {{[0-9]+}}(sp)
-; RV64ID-NEXT: fsd fs0, {{[0-9]+}}(sp)
-; RV64ID-NEXT: fsd fs1, {{[0-9]+}}(sp)
   tail call void asm sideeffect "", "~{f8},~{f9},~{x9},~{x18}"()
   ret void
 }

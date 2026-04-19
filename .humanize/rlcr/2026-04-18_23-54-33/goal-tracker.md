@@ -60,7 +60,7 @@ for deterministic verification.
 ## MUTABLE SECTION
 <!-- Update each round with justification for changes -->
 
-### Plan Version: 51 (Updated: Round 25 implementation)
+### Plan Version: 53 (Updated: Round 26 implementation)
 
 #### Plan Evolution Log
 <!-- Document any changes to the plan with justification -->
@@ -119,19 +119,21 @@ for deterministic verification.
 | 24 | Closed the `.reloc` removed-relocation-name surface | Replaced the broad YSX MC relocation-name imports with an explicit retained standard relocation whitelist, excluded compressed/vendor/custom/nonstandard relocation names, and added focused negative MC coverage for the reviewed `.reloc` leak. Current YSX backend line count is 26,038 versus RISCV's 136,068. | AC-2 and AC-3 advanced for the reviewed `.reloc` MC/source leak; AC-4 preserved by YSX-only build, focused 132-test lit, combined RISCV+YSX static build, smoke tests, negative probes, `git diff --check`, and RISCV zero-diff, pending Codex review. |
 | 24 review | Verified the Round-24 `.reloc` fix but rejected full completion | Direct probes confirm reviewed compressed/vendor/custom/nonstandard `.reloc` names now reject and retained relocation directives still assemble; the YSX source scan no longer finds the broad RISCV relocation imports. However the full plan is still incomplete because YSX-owned tests still contain inactive removed-extension check blocks such as `C-OR-ZCA-EXT` in `llvm/test/MC/YSX/align.s` and `RV64IZCMP` in `llvm/test/CodeGen/YSX/callee-saved-gprs.ll`. | AC-2 and AC-3 are verified for the Round-24 relocation slice; AC-4 remains unmet until stale inactive copied test surfaces are trimmed and revalidated. |
 | 25 | Trimmed stale inactive removed-extension YSX test check blocks | Removed inactive C/Zca alignment check prefixes and compressed-instruction expectations from `llvm/test/MC/YSX/align.s`; removed inactive Zcmp check blocks and comments from `llvm/test/CodeGen/YSX/callee-saved-gprs.ll`. Current YSX backend line count is 26,038 versus RISCV's 136,068, and YSX focused tests are 50,069 lines. | AC-4 advanced by removing the reviewed stale copied test surfaces; YSX-only build, focused 132-test lit, combined RISCV+YSX static build, smoke tests, negative probes, stale-prefix scan, `git diff --check`, and RISCV zero-diff all pass pending Codex review. |
+| 25 review | Rejected full Round-25 completion because stale inactive removed-surface test blocks remain | Review confirmed the two Round-24 examples were removed, but broader YSX test review found additional inactive copied prefixes and expectations for removed compressed, RVE, FP, Zicfilp, Zabha/Zalasr, XAndes, SFB, CCMOV, and VTCONDOPS surfaces in YSX-owned CodeGen tests. | AC-4 remains unmet; task5/task6 stay active for a comprehensive test-corpus cleanup and revalidation. |
+| 26 | Completed broad inactive removed-surface YSX test cleanup | Removed stale inactive check blocks for compressed, RVE, FP, Zicfilp, Zabha/Zalasr, XAndes, SFB, CCMOV, and VTCONDOPS surfaces from 13 YSX CodeGen tests. Current YSX backend line count is 26,038 versus RISCV's 136,068, and YSX focused tests are 48,338 lines. | AC-4 advanced by removing the reviewed broad stale copied test surfaces; focused 132-test YSX lit, targeted 13-test lit, YSX-only build, combined RISCV+YSX static build, smoke/negative probes, broadened stale-prefix scan, `git diff --check`, and RISCV zero-diff all pass pending Codex review. |
 
 #### Active Tasks
 <!-- Mainline tasks only: each task must directly advance the current round objective and carry routing metadata -->
 | Task | Target AC | Status | Tag | Owner | Notes |
 |------|-----------|--------|-----|-------|-------|
-| task5 follow-up: Trim stale inactive unsupported YSX test check blocks | AC-4 | implemented in Round 25, pending Codex review | coding | Claude | Removed inactive copied C/Zca/Zcmp check blocks and comments from the reviewed YSX-owned tests; stale-prefix scan is clean. |
-| task6: Revalidate after final source/test cleanup | AC-1, AC-2, AC-4 | implemented in Round 25, pending Codex review | coding | Claude | YSX-only build, combined RISCV+YSX build, focused YSX lit, smoke/negative probes, `git diff --check`, and RISCV zero-diff validation passed after stale test cleanup. |
+| task5 follow-up: Trim stale inactive unsupported YSX test check blocks | AC-4 | implemented in Round 26, pending Codex review | coding | Claude | Broad removed-surface scan is clean after deleting inactive copied checks for `RV64C`, `RV64E`, `RV64IF*`, `ZICFILP`, `ZABHA`, `ZALASR`, `XANDESPERF`, `SFB64`, `CMV-FUSION`, and `VTCONDOPS64` surfaces from the reviewed YSX CodeGen tests. |
+| task6: Revalidate after final source/test cleanup | AC-1, AC-2, AC-4 | implemented in Round 26, pending Codex review | coding | Claude | Focused YSX lit, targeted changed-test lit, YSX-only build, RISCV+YSX combined build, smoke/negative probes, stale-prefix scans, `git diff --check`, and RISCV zero-diff validation all pass. |
 
 ### Blocking Side Issues
 <!-- Only issues that directly block current mainline progress belong here -->
 | Issue | Discovered Round | Blocking AC | Resolution Path |
 |-------|-----------------|-------------|-----------------|
-| YSX-owned tests still contain inactive removed-extension check blocks | 24 review | AC-4 | Addressed in Round 25 by trimming inactive copied C/Zca/Zcmp check blocks, confirming the stale-prefix scan is clean, and rerunning focused YSX lit plus smoke/negative validation; pending Codex review. |
+| YSX-owned tests still contain inactive removed-extension check blocks | 24 review, expanded in 25 review | AC-4 | Addressed in Round 26 by removing the broad reviewed inactive copied check blocks for removed compressed, RVE, FP, Zicfilp, Zabha/Zalasr, XAndes, SFB, CCMOV, and VTCONDOPS surfaces; focused validation and broadened stale-prefix scan now pass, pending Codex review. |
 
 ### Queued Side Issues
 <!-- Non-blocking issues stay queued and must NOT replace the round objective -->

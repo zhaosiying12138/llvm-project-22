@@ -13,12 +13,6 @@ define signext i32 @add_small_const(i32 signext %a) nounwind {
 ; RV64I-NEXT:    slli a0, a0, 56
 ; RV64I-NEXT:    srai a0, a0, 56
 ; RV64I-NEXT:    jalr zero, 0(ra)
-; RV64C-LABEL: add_small_const:
-; RV64C:       # %bb.0:
-; RV64C-NEXT:    c.addi a0, 1
-; RV64C-NEXT:    c.slli a0, 56
-; RV64C-NEXT:    c.srai a0, 56
-; RV64C-NEXT:    c.jr ra
   %1 = add i32 %a, 1
   %2 = shl i32 %1, 24
   %3 = ashr i32 %2, 24
@@ -35,14 +29,6 @@ define signext i32 @add_large_const(i32 signext %a) nounwind {
 ; RV64I-NEXT:    add a0, a0, a1
 ; RV64I-NEXT:    srai a0, a0, 48
 ; RV64I-NEXT:    jalr zero, 0(ra)
-; RV64C-LABEL: add_large_const:
-; RV64C:       # %bb.0:
-; RV64C-NEXT:    c.lui a1, 1
-; RV64C-NEXT:    c.addi a1, -1
-; RV64C-NEXT:    c.add a0, a1
-; RV64C-NEXT:    c.slli a0, 48
-; RV64C-NEXT:    c.srai a0, 48
-; RV64C-NEXT:    c.jr ra
   %1 = add i32 %a, 4095
   %2 = shl i32 %1, 16
   %3 = ashr i32 %2, 16
@@ -59,14 +45,6 @@ define signext i32 @add_huge_const(i32 signext %a) nounwind {
 ; RV64I-NEXT:    add a0, a0, a1
 ; RV64I-NEXT:    srai a0, a0, 48
 ; RV64I-NEXT:    jalr zero, 0(ra)
-; RV64C-LABEL: add_huge_const:
-; RV64C:       # %bb.0:
-; RV64C-NEXT:    c.lui a1, 8
-; RV64C-NEXT:    c.addi a1, -1
-; RV64C-NEXT:    c.add a0, a1
-; RV64C-NEXT:    c.slli a0, 48
-; RV64C-NEXT:    c.srai a0, 48
-; RV64C-NEXT:    c.jr ra
   %1 = add i32 %a, 32767
   %2 = shl i32 %1, 16
   %3 = ashr i32 %2, 16
@@ -81,12 +59,6 @@ define signext i24 @add_non_machine_type(i24 signext %a) nounwind {
 ; RV64I-NEXT:    slli a0, a0, 52
 ; RV64I-NEXT:    srai a0, a0, 40
 ; RV64I-NEXT:    jalr zero, 0(ra)
-; RV64C-LABEL: add_non_machine_type:
-; RV64C:       # %bb.0:
-; RV64C-NEXT:    addi a0, a0, 256
-; RV64C-NEXT:    c.slli a0, 52
-; RV64C-NEXT:    c.srai a0, 40
-; RV64C-NEXT:    c.jr ra
   %1 = add i24 %a, 256
   %2 = shl i24 %1, 12
   ret i24 %2
@@ -104,16 +76,6 @@ define i128 @add_wide_operand(i128 %a) nounwind {
 ; RV64I-NEXT:    slli a2, a2, 51
 ; RV64I-NEXT:    add a1, a1, a2
 ; RV64I-NEXT:    jalr zero, 0(ra)
-; RV64C-LABEL: add_wide_operand:
-; RV64C:       # %bb.0:
-; RV64C-NEXT:    srli a2, a0, 61
-; RV64C-NEXT:    c.slli a1, 3
-; RV64C-NEXT:    c.slli a0, 3
-; RV64C-NEXT:    c.or a1, a2
-; RV64C-NEXT:    c.li a2, 1
-; RV64C-NEXT:    c.slli a2, 51
-; RV64C-NEXT:    c.add a1, a2
-; RV64C-NEXT:    c.jr ra
   %1 = add i128 %a, 5192296858534827628530496329220096
   %2 = shl i128 %1, 3
   ret i128 %2

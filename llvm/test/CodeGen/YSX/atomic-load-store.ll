@@ -106,10 +106,6 @@ define i8 @atomic_load_i8_seq_cst(ptr %a) nounwind {
 ; RV64IA-NEXT:    lb a0, 0(a0)
 ; RV64IA-NEXT:    fence r, rw
 ; RV64IA-NEXT:    ret
-; RV64IA-ZALASR-LABEL: atomic_load_i8_seq_cst:
-; RV64IA-ZALASR:       # %bb.0:
-; RV64IA-ZALASR-NEXT:    lb.aq a0, (a0)
-; RV64IA-ZALASR-NEXT:    ret
   %1 = load atomic i8, ptr %a seq_cst, align 1
   ret i8 %1
 }
@@ -209,10 +205,6 @@ define i16 @atomic_load_i16_seq_cst(ptr %a) nounwind {
 ; RV64IA-NEXT:    lh a0, 0(a0)
 ; RV64IA-NEXT:    fence r, rw
 ; RV64IA-NEXT:    ret
-; RV64IA-ZALASR-LABEL: atomic_load_i16_seq_cst:
-; RV64IA-ZALASR:       # %bb.0:
-; RV64IA-ZALASR-NEXT:    lh.aq a0, (a0)
-; RV64IA-ZALASR-NEXT:    ret
   %1 = load atomic i16, ptr %a seq_cst, align 2
   ret i16 %1
 }
@@ -312,10 +304,6 @@ define i32 @atomic_load_i32_seq_cst(ptr %a) nounwind {
 ; RV64IA-NEXT:    lw a0, 0(a0)
 ; RV64IA-NEXT:    fence r, rw
 ; RV64IA-NEXT:    ret
-; RV64IA-ZALASR-LABEL: atomic_load_i32_seq_cst:
-; RV64IA-ZALASR:       # %bb.0:
-; RV64IA-ZALASR-NEXT:    lw.aq a0, (a0)
-; RV64IA-ZALASR-NEXT:    ret
   %1 = load atomic i32, ptr %a seq_cst, align 4
   ret i32 %1
 }
@@ -413,10 +401,6 @@ define i64 @atomic_load_i64_seq_cst(ptr %a) nounwind {
 ; RV64IA-NEXT:    ld a0, 0(a0)
 ; RV64IA-NEXT:    fence r, rw
 ; RV64IA-NEXT:    ret
-; RV64IA-ZALASR-LABEL: atomic_load_i64_seq_cst:
-; RV64IA-ZALASR:       # %bb.0:
-; RV64IA-ZALASR-NEXT:    ld.aq a0, (a0)
-; RV64IA-ZALASR-NEXT:    ret
   %1 = load atomic i64, ptr %a seq_cst, align 8
   ret i64 %1
 }
@@ -516,10 +500,6 @@ define void @atomic_store_i8_seq_cst(ptr %a, i8 %b) nounwind {
 ; RV64IA-NEXT:    sb a1, 0(a0)
 ; RV64IA-NEXT:    fence rw, rw
 ; RV64IA-NEXT:    ret
-; RV64IA-ZALASR-LABEL: atomic_store_i8_seq_cst:
-; RV64IA-ZALASR:       # %bb.0:
-; RV64IA-ZALASR-NEXT:    sb.rl a1, (a0)
-; RV64IA-ZALASR-NEXT:    ret
   store atomic i8 %b, ptr %a seq_cst, align 1
   ret void
 }
@@ -619,10 +599,6 @@ define void @atomic_store_i16_seq_cst(ptr %a, i16 %b) nounwind {
 ; RV64IA-NEXT:    sh a1, 0(a0)
 ; RV64IA-NEXT:    fence rw, rw
 ; RV64IA-NEXT:    ret
-; RV64IA-ZALASR-LABEL: atomic_store_i16_seq_cst:
-; RV64IA-ZALASR:       # %bb.0:
-; RV64IA-ZALASR-NEXT:    sh.rl a1, (a0)
-; RV64IA-ZALASR-NEXT:    ret
   store atomic i16 %b, ptr %a seq_cst, align 2
   ret void
 }
@@ -722,10 +698,6 @@ define void @atomic_store_i32_seq_cst(ptr %a, i32 %b) nounwind {
 ; RV64IA-NEXT:    sw a1, 0(a0)
 ; RV64IA-NEXT:    fence rw, rw
 ; RV64IA-NEXT:    ret
-; RV64IA-ZALASR-LABEL: atomic_store_i32_seq_cst:
-; RV64IA-ZALASR:       # %bb.0:
-; RV64IA-ZALASR-NEXT:    sw.rl a1, (a0)
-; RV64IA-ZALASR-NEXT:    ret
   store atomic i32 %b, ptr %a seq_cst, align 4
   ret void
 }
@@ -823,10 +795,6 @@ define void @atomic_store_i64_seq_cst(ptr %a, i64 %b) nounwind {
 ; RV64IA-NEXT:    sd a1, 0(a0)
 ; RV64IA-NEXT:    fence rw, rw
 ; RV64IA-NEXT:    ret
-; RV64IA-ZALASR-LABEL: atomic_store_i64_seq_cst:
-; RV64IA-ZALASR:       # %bb.0:
-; RV64IA-ZALASR-NEXT:    sd.rl a1, (a0)
-; RV64IA-ZALASR-NEXT:    ret
   store atomic i64 %b, ptr %a seq_cst, align 8
   ret void
 }

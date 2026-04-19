@@ -80,10 +80,6 @@ define zeroext i1 @atomic_load_i1_seq_cst(ptr %a) nounwind {
 ; RV64IA-NEXT:    lb a0, 0(a0)
 ; RV64IA-NEXT:    fence r, rw
 ; RV64IA-NEXT:    ret
-; RV64IA-ZALASR-LABEL: atomic_load_i1_seq_cst:
-; RV64IA-ZALASR:       # %bb.0:
-; RV64IA-ZALASR-NEXT:    lb.aq a0, (a0)
-; RV64IA-ZALASR-NEXT:    ret
   %1 = load atomic i8, ptr %a seq_cst, align 1, !range !0, !noundef !1
   %2 = trunc nuw i8 %1 to i1
   ret i1 %2
@@ -165,11 +161,6 @@ define zeroext i8 @atomic_load_i8_seq_cst(ptr %a) nounwind {
 ; RV64IA-NEXT:    zext.b a0, a0
 ; RV64IA-NEXT:    fence r, rw
 ; RV64IA-NEXT:    ret
-; RV64IA-ZALASR-LABEL: atomic_load_i8_seq_cst:
-; RV64IA-ZALASR:       # %bb.0:
-; RV64IA-ZALASR-NEXT:    lb.aq a0, (a0)
-; RV64IA-ZALASR-NEXT:    zext.b a0, a0
-; RV64IA-ZALASR-NEXT:    ret
   %1 = load atomic i8, ptr %a seq_cst, align 1
   ret i8 %1
 }
@@ -258,12 +249,6 @@ define zeroext i16 @atomic_load_i16_seq_cst(ptr %a) nounwind {
 ; RV64IA-NEXT:    srli a0, a0, 48
 ; RV64IA-NEXT:    fence r, rw
 ; RV64IA-NEXT:    ret
-; RV64IA-ZALASR-LABEL: atomic_load_i16_seq_cst:
-; RV64IA-ZALASR:       # %bb.0:
-; RV64IA-ZALASR-NEXT:    lh.aq a0, (a0)
-; RV64IA-ZALASR-NEXT:    slli a0, a0, 48
-; RV64IA-ZALASR-NEXT:    srli a0, a0, 48
-; RV64IA-ZALASR-NEXT:    ret
   %1 = load atomic i16, ptr %a seq_cst, align 2
   ret i16 %1
 }
@@ -352,12 +337,6 @@ define zeroext i32 @atomic_load_i32_seq_cst(ptr %a) nounwind {
 ; RV64IA-NEXT:    srli a0, a0, 32
 ; RV64IA-NEXT:    fence r, rw
 ; RV64IA-NEXT:    ret
-; RV64IA-ZALASR-LABEL: atomic_load_i32_seq_cst:
-; RV64IA-ZALASR:       # %bb.0:
-; RV64IA-ZALASR-NEXT:    lw.aq a0, (a0)
-; RV64IA-ZALASR-NEXT:    slli a0, a0, 32
-; RV64IA-ZALASR-NEXT:    srli a0, a0, 32
-; RV64IA-ZALASR-NEXT:    ret
   %1 = load atomic i32, ptr %a seq_cst, align 4
   ret i32 %1
 }
@@ -428,10 +407,6 @@ define zeroext i64 @atomic_load_i64_seq_cst(ptr %a) nounwind {
 ; RV64IA-NEXT:    ld a0, 0(a0)
 ; RV64IA-NEXT:    fence r, rw
 ; RV64IA-NEXT:    ret
-; RV64IA-ZALASR-LABEL: atomic_load_i64_seq_cst:
-; RV64IA-ZALASR:       # %bb.0:
-; RV64IA-ZALASR-NEXT:    ld.aq a0, (a0)
-; RV64IA-ZALASR-NEXT:    ret
   %1 = load atomic i64, ptr %a seq_cst, align 8
   ret i64 %1
 }

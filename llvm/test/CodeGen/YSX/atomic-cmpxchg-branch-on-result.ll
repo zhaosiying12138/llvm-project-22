@@ -73,16 +73,6 @@ exit:
 define void @cmpxchg_masked_and_branch1(ptr %ptr, i8 signext %cmp, i8 signext %val) nounwind {
 ;
 ;
-; RV64IA-ZABHA-LABEL: cmpxchg_masked_and_branch1:
-; RV64IA-ZABHA:       # %bb.0: # %entry
-; RV64IA-ZABHA-NEXT:  .LBB2_1: # %do_cmpxchg
-; RV64IA-ZABHA-NEXT:    # =>This Inner Loop Header: Depth=1
-; RV64IA-ZABHA-NEXT:    fence rw, rw
-; RV64IA-ZABHA-NEXT:    mv a3, a1
-; RV64IA-ZABHA-NEXT:    amocas.b.aqrl a3, a2, (a0)
-; RV64IA-ZABHA-NEXT:    bne a3, a1, .LBB2_1
-; RV64IA-ZABHA-NEXT:  # %bb.2: # %exit
-; RV64IA-ZABHA-NEXT:    ret
 ; RV64IA-LABEL: cmpxchg_masked_and_branch1:
 ; RV64IA:       # %bb.0: # %entry
 ; RV64IA-NEXT:    andi a3, a0, -4
@@ -129,16 +119,6 @@ exit:
 define void @cmpxchg_masked_and_branch2(ptr %ptr, i8 signext %cmp, i8 signext %val) nounwind {
 ;
 ;
-; RV64IA-ZABHA-LABEL: cmpxchg_masked_and_branch2:
-; RV64IA-ZABHA:       # %bb.0: # %entry
-; RV64IA-ZABHA-NEXT:  .LBB3_1: # %do_cmpxchg
-; RV64IA-ZABHA-NEXT:    # =>This Inner Loop Header: Depth=1
-; RV64IA-ZABHA-NEXT:    fence rw, rw
-; RV64IA-ZABHA-NEXT:    mv a3, a1
-; RV64IA-ZABHA-NEXT:    amocas.b.aqrl a3, a2, (a0)
-; RV64IA-ZABHA-NEXT:    beq a3, a1, .LBB3_1
-; RV64IA-ZABHA-NEXT:  # %bb.2: # %exit
-; RV64IA-ZABHA-NEXT:    ret
 ; RV64IA-LABEL: cmpxchg_masked_and_branch2:
 ; RV64IA:       # %bb.0: # %entry
 ; RV64IA-NEXT:    andi a3, a0, -4

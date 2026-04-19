@@ -52,10 +52,6 @@ define void @cmpxchg_i8_monotonic_monotonic(ptr %ptr, i8 %cmp, i8 %val) nounwind
 ; RV64IA-NEXT:    bnez a5, .LBB0_1
 ; RV64IA-NEXT:  .LBB0_3:
 ; RV64IA-NEXT:    ret
-; RV64IA-ZABHA-LABEL: cmpxchg_i8_monotonic_monotonic:
-; RV64IA-ZABHA:       # %bb.0:
-; RV64IA-ZABHA-NEXT:    amocas.b a1, a2, (a0)
-; RV64IA-ZABHA-NEXT:    ret
   %res = cmpxchg ptr %ptr, i8 %cmp, i8 %val monotonic monotonic
   ret void
 }
@@ -596,10 +592,6 @@ define void @cmpxchg_i16_monotonic_monotonic(ptr %ptr, i16 %cmp, i16 %val) nounw
 ; RV64IA-NEXT:    bnez a4, .LBB10_1
 ; RV64IA-NEXT:  .LBB10_3:
 ; RV64IA-NEXT:    ret
-; RV64IA-ZABHA-LABEL: cmpxchg_i16_monotonic_monotonic:
-; RV64IA-ZABHA:       # %bb.0:
-; RV64IA-ZABHA-NEXT:    amocas.h a1, a2, (a0)
-; RV64IA-ZABHA-NEXT:    ret
   %res = cmpxchg ptr %ptr, i16 %cmp, i16 %val monotonic monotonic
   ret void
 }
@@ -1136,10 +1128,6 @@ define void @cmpxchg_i32_monotonic_monotonic(ptr %ptr, i32 %cmp, i32 %val) nounw
 ; RV64IA-NEXT:    bnez a4, .LBB20_1
 ; RV64IA-NEXT:  .LBB20_3:
 ; RV64IA-NEXT:    ret
-; RV64IA-ZABHA-LABEL: cmpxchg_i32_monotonic_monotonic:
-; RV64IA-ZABHA:       # %bb.0:
-; RV64IA-ZABHA-NEXT:    amocas.w a1, a2, (a0)
-; RV64IA-ZABHA-NEXT:    ret
   %res = cmpxchg ptr %ptr, i32 %cmp, i32 %val monotonic monotonic
   ret void
 }
@@ -1465,10 +1453,6 @@ define void @cmpxchg_i64_monotonic_monotonic(ptr %ptr, i64 %cmp, i64 %val) nounw
 ; RV64IA-NEXT:    bnez a4, .LBB30_1
 ; RV64IA-NEXT:  .LBB30_3:
 ; RV64IA-NEXT:    ret
-; RV64IA-ZABHA-LABEL: cmpxchg_i64_monotonic_monotonic:
-; RV64IA-ZABHA:       # %bb.0:
-; RV64IA-ZABHA-NEXT:    amocas.d a1, a2, (a0)
-; RV64IA-ZABHA-NEXT:    ret
   %res = cmpxchg ptr %ptr, i64 %cmp, i64 %val monotonic monotonic
   ret void
 }

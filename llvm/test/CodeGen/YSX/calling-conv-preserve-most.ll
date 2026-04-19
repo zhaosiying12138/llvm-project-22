@@ -40,28 +40,6 @@ define preserve_mostcc void @preserve_mostcc1() nounwind {
 ; RV64I-NEXT:    ld t6, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 112
 ; RV64I-NEXT:    ret
-; RV64E-LABEL: preserve_mostcc1:
-; RV64E:       # %bb.0: # %entry
-; RV64E-NEXT:    addi sp, sp, -64
-; RV64E-NEXT:    sd ra, 56(sp) # 8-byte Folded Spill
-; RV64E-NEXT:    sd t0, 48(sp) # 8-byte Folded Spill
-; RV64E-NEXT:    sd a0, 40(sp) # 8-byte Folded Spill
-; RV64E-NEXT:    sd a1, 32(sp) # 8-byte Folded Spill
-; RV64E-NEXT:    sd a2, 24(sp) # 8-byte Folded Spill
-; RV64E-NEXT:    sd a3, 16(sp) # 8-byte Folded Spill
-; RV64E-NEXT:    sd a4, 8(sp) # 8-byte Folded Spill
-; RV64E-NEXT:    sd a5, 0(sp) # 8-byte Folded Spill
-; RV64E-NEXT:    call standard_cc_func
-; RV64E-NEXT:    ld ra, 56(sp) # 8-byte Folded Reload
-; RV64E-NEXT:    ld t0, 48(sp) # 8-byte Folded Reload
-; RV64E-NEXT:    ld a0, 40(sp) # 8-byte Folded Reload
-; RV64E-NEXT:    ld a1, 32(sp) # 8-byte Folded Reload
-; RV64E-NEXT:    ld a2, 24(sp) # 8-byte Folded Reload
-; RV64E-NEXT:    ld a3, 16(sp) # 8-byte Folded Reload
-; RV64E-NEXT:    ld a4, 8(sp) # 8-byte Folded Reload
-; RV64E-NEXT:    ld a5, 0(sp) # 8-byte Folded Reload
-; RV64E-NEXT:    addi sp, sp, 64
-; RV64E-NEXT:    ret
 entry:
   call void @standard_cc_func()
   ret void
@@ -77,14 +55,6 @@ define preserve_mostcc void @preserve_mostcc2() nounwind {
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
-; RV64E-LABEL: preserve_mostcc2:
-; RV64E:       # %bb.0:
-; RV64E-NEXT:    addi sp, sp, -8
-; RV64E-NEXT:    sd ra, 0(sp) # 8-byte Folded Spill
-; RV64E-NEXT:    call preserve_mostcc_func
-; RV64E-NEXT:    ld ra, 0(sp) # 8-byte Folded Reload
-; RV64E-NEXT:    addi sp, sp, 8
-; RV64E-NEXT:    ret
   call preserve_mostcc void @preserve_mostcc_func()
   ret void
 }
@@ -122,36 +92,6 @@ define void @preserve_mostcc3() nounwind {
 ; RV64I-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 32
 ; RV64I-NEXT:    ret
-; RV64E-LABEL: preserve_mostcc3:
-; RV64E:       # %bb.0:
-; RV64E-NEXT:    addi sp, sp, -24
-; RV64E-NEXT:    sd ra, 16(sp) # 8-byte Folded Spill
-; RV64E-NEXT:    sd s0, 8(sp) # 8-byte Folded Spill
-; RV64E-NEXT:    sd s1, 0(sp) # 8-byte Folded Spill
-; RV64E-NEXT:    #APP
-; RV64E-NEXT:    #NO_APP
-; RV64E-NEXT:    mv a0, t1
-; RV64E-NEXT:    #APP
-; RV64E-NEXT:    #NO_APP
-; RV64E-NEXT:    mv a1, t2
-; RV64E-NEXT:    #APP
-; RV64E-NEXT:    #NO_APP
-; RV64E-NEXT:    #APP
-; RV64E-NEXT:    #NO_APP
-; RV64E-NEXT:    #APP
-; RV64E-NEXT:    #NO_APP
-; RV64E-NEXT:    mv a2, t3
-; RV64E-NEXT:    call preserve_mostcc_func
-; RV64E-NEXT:    mv t1, a0
-; RV64E-NEXT:    mv t2, a1
-; RV64E-NEXT:    mv t3, a2
-; RV64E-NEXT:    #APP
-; RV64E-NEXT:    #NO_APP
-; RV64E-NEXT:    ld ra, 16(sp) # 8-byte Folded Reload
-; RV64E-NEXT:    ld s0, 8(sp) # 8-byte Folded Reload
-; RV64E-NEXT:    ld s1, 0(sp) # 8-byte Folded Reload
-; RV64E-NEXT:    addi sp, sp, 24
-; RV64E-NEXT:    ret
   %1 = call i32 asm sideeffect "", "={x6}"() nounwind
   %2 = call i32 asm sideeffect "", "={x7}"() nounwind
   %3 = call i32 asm sideeffect "", "={x8}"() nounwind
@@ -201,36 +141,6 @@ define void @preserve_mostcc4() nounwind {
 ; RV64I-NEXT:    ld s4, 0(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 48
 ; RV64I-NEXT:    ret
-; RV64E-LABEL: preserve_mostcc4:
-; RV64E:       # %bb.0:
-; RV64E-NEXT:    addi sp, sp, -48
-; RV64E-NEXT:    sd ra, 40(sp) # 8-byte Folded Spill
-; RV64E-NEXT:    sd s0, 32(sp) # 8-byte Folded Spill
-; RV64E-NEXT:    sd s1, 24(sp) # 8-byte Folded Spill
-; RV64E-NEXT:    #APP
-; RV64E-NEXT:    #NO_APP
-; RV64E-NEXT:    sd t1, 16(sp) # 8-byte Folded Spill
-; RV64E-NEXT:    #APP
-; RV64E-NEXT:    #NO_APP
-; RV64E-NEXT:    sd t2, 8(sp) # 8-byte Folded Spill
-; RV64E-NEXT:    #APP
-; RV64E-NEXT:    #NO_APP
-; RV64E-NEXT:    #APP
-; RV64E-NEXT:    #NO_APP
-; RV64E-NEXT:    #APP
-; RV64E-NEXT:    #NO_APP
-; RV64E-NEXT:    sd t3, 0(sp) # 8-byte Folded Spill
-; RV64E-NEXT:    call standard_cc_func
-; RV64E-NEXT:    ld t1, 16(sp) # 8-byte Folded Reload
-; RV64E-NEXT:    ld t2, 8(sp) # 8-byte Folded Reload
-; RV64E-NEXT:    ld t3, 0(sp) # 8-byte Folded Reload
-; RV64E-NEXT:    #APP
-; RV64E-NEXT:    #NO_APP
-; RV64E-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
-; RV64E-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
-; RV64E-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
-; RV64E-NEXT:    addi sp, sp, 48
-; RV64E-NEXT:    ret
   %1 = call i32 asm sideeffect "", "={x6}"() nounwind
   %2 = call i32 asm sideeffect "", "={x7}"() nounwind
   %3 = call i32 asm sideeffect "", "={x8}"() nounwind
