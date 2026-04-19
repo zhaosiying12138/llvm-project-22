@@ -68,16 +68,6 @@ unsigned getBrCond(CondCode CC, unsigned SelectOpc = 0);
 
 } // end of namespace YSXCC
 
-// YSX MachineCombiner patterns
-enum YSXMachineCombinerPattern : unsigned {
-  FMADD_AX = MachineCombinerPattern::TARGET_PATTERN_START,
-  FMADD_XA,
-  FMSUB,
-  FNMSUB,
-  SHXADD_ADD_SLLI_OP1,
-  SHXADD_ADD_SLLI_OP2,
-};
-
 class YSXInstrInfo : public YSXGenInstrInfo {
   const YSXRegisterInfo RegInfo;
 
@@ -104,10 +94,6 @@ public:
            MI.getOperand(1).getReg() == YSX::X0;
   }
 
-  void copyPhysRegVector(MachineBasicBlock &MBB,
-                         MachineBasicBlock::iterator MBBI, const DebugLoc &DL,
-                         MCRegister DstReg, MCRegister SrcReg, bool KillSrc,
-                         const TargetRegisterClass *RegClass) const;
   void copyPhysReg(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
                    const DebugLoc &DL, Register DstReg, Register SrcReg,
                    bool KillSrc, bool RenamableDest = false,
@@ -217,7 +203,6 @@ public:
 
   bool areMemAccessesTriviallyDisjoint(const MachineInstr &MIa,
                                        const MachineInstr &MIb) const override;
-
 
   std::pair<unsigned, unsigned>
   decomposeMachineOperandsTargetFlags(unsigned TF) const override;
@@ -330,10 +315,6 @@ public:
 
   bool isHighLatencyDef(int Opc) const override;
 
-  /// Return true if \p MI is a COPY to a vector register of a specific \p LMul,
-  /// or any kind of vector registers when \p LMul is zero.
-  bool isVRegCopy(const MachineInstr *MI, unsigned LMul = 0) const;
-
   /// Return true if pairing the given load or store may be paired with another.
   static bool isPairableLdStInstOpc(unsigned Opc);
 
@@ -358,13 +339,6 @@ protected:
 
 private:
   unsigned getInstBundleLength(const MachineInstr &MI) const;
-
-  bool isVectorAssociativeAndCommutative(const MachineInstr &MI,
-                                         bool Invert = false) const;
-  bool areYSXVecInstsReassociable(const MachineInstr &MI1,
-                               const MachineInstr &MI2) const;
-  bool hasReassociableVectorSibling(const MachineInstr &Inst,
-                                    bool &Commuted) const;
 };
 
 namespace YSX {
@@ -373,34 +347,8 @@ namespace YSX {
 // expect to see a FrameIndex operand.
 bool isYSXVecSpill(const MachineInstr &MI);
 
-/// Return true if \p MI is a copy that will be lowered to one or more vmvNr.vs.
-bool isVectorCopy(const TargetRegisterInfo *TRI, const MachineInstr &MI);
-
-std::optional<std::pair<unsigned, unsigned>>
-isYSXVecSpillForZvlsseg(unsigned Opcode);
-
-// Return true if both input instructions have equal rounding mode. If at least
-// one of the instructions does not have rounding mode, false will be returned.
-bool hasEqualFRM(const MachineInstr &MI1, const MachineInstr &MI2);
-
-// If \p Opcode is a .vx vector instruction, returns the lower number of bits
-// that are used from the scalar .x operand for a given \p Log2SEW. Otherwise
-// returns null.
-std::optional<unsigned> getVectorLowDemandedScalarBits(unsigned Opcode,
-                                                       unsigned Log2SEW);
-
-// Returns the MC opcode of YSXVec pseudo instruction.
-unsigned getYSXVecMCOpcode(unsigned YSXVecPseudoOpcode);
-
-// For a (non-pseudo) YSXVec instruction \p Desc and the given \p Log2SEW, returns
-// the log2 EEW of the destination operand.
-unsigned getDestLog2EEW(const MCInstrDesc &Desc, unsigned Log2SEW);
-
 // Special immediate for AVL operand of V pseudo instructions to indicate VLMax.
 static constexpr int64_t VLMaxSentinel = -1LL;
-
-/// Given two VL operands, do we know that LHS <= RHS?
-bool isVLKnownLE(const MachineOperand &LHS, const MachineOperand &RHS);
 
 // Mask assignments for floating-point
 static constexpr unsigned FPMASK_Negative_Infinity = 0x001;

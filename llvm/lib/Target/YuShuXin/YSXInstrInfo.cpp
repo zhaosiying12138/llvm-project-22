@@ -18,12 +18,10 @@
 #include "YSXSubtarget.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/LiveVariables.h"
-#include "llvm/CodeGen/MachineCombinerPattern.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/MachineTraceMetrics.h"
@@ -43,19 +41,11 @@ using namespace llvm;
 #include "YSXGenInstrInfo.inc"
 
 #define DEBUG_TYPE "ysx-instr-info"
-STATISTIC(NumVRegSpilled,
-          "Number of registers within vector register groups spilled");
-STATISTIC(NumVRegReloaded,
-          "Number of registers within vector register groups reloaded");
 
 static bool isCompressibleInst(const MachineInstr &MI,
                                const YSXSubtarget &STI) {
   return false;
 }
-
-static cl::opt<bool> PreferWholeRegisterMove(
-    "ysx-prefer-whole-register-move", cl::init(false), cl::Hidden,
-    cl::desc("Prefer whole register move for vector registers."));
 
 static cl::opt<MachineTraceStrategy> ForceMachineCombinerStrategy(
     "ysx-force-machine-combiner-strategy", cl::Hidden,
@@ -84,29 +74,25 @@ namespace llvm::YSX {
 } // end namespace llvm::YSX
 
 YSXInstrInfo::YSXInstrInfo(const YSXSubtarget &STI)
-    : YSXGenInstrInfo(STI, RegInfo, YSX::ADJCALLSTACKDOWN,
-                        YSX::ADJCALLSTACKUP),
+    : YSXGenInstrInfo(STI, RegInfo, YSX::ADJCALLSTACKDOWN, YSX::ADJCALLSTACKUP),
       RegInfo(STI.getHwMode()), STI(STI) {}
 
 #define GET_INSTRINFO_HELPERS
 #include "YSXGenInstrInfo.inc"
 
 MCInst YSXInstrInfo::getNop() const {
-  return MCInstBuilder(YSX::ADDI)
-      .addReg(YSX::X0)
-      .addReg(YSX::X0)
-      .addImm(0);
+  return MCInstBuilder(YSX::ADDI).addReg(YSX::X0).addReg(YSX::X0).addImm(0);
 }
 
 Register YSXInstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
-                                             int &FrameIndex) const {
+                                           int &FrameIndex) const {
   TypeSize Dummy = TypeSize::getZero();
   return isLoadFromStackSlot(MI, FrameIndex, Dummy);
 }
 
 Register YSXInstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
-                                             int &FrameIndex,
-                                             TypeSize &MemBytes) const {
+                                           int &FrameIndex,
+                                           TypeSize &MemBytes) const {
   switch (MI.getOpcode()) {
   default:
     return 0;
@@ -137,14 +123,14 @@ Register YSXInstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
 }
 
 Register YSXInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
-                                            int &FrameIndex) const {
+                                          int &FrameIndex) const {
   TypeSize Dummy = TypeSize::getZero();
   return isStoreToStackSlot(MI, FrameIndex, Dummy);
 }
 
 Register YSXInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
-                                            int &FrameIndex,
-                                            TypeSize &MemBytes) const {
+                                          int &FrameIndex,
+                                          TypeSize &MemBytes) const {
   switch (MI.getOpcode()) {
   default:
     return 0;
@@ -171,23 +157,15 @@ Register YSXInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
   return 0;
 }
 
-bool YSXInstrInfo::isReMaterializableImpl(
-    const MachineInstr &MI) const {
+bool YSXInstrInfo::isReMaterializableImpl(const MachineInstr &MI) const {
   return TargetInstrInfo::isReMaterializableImpl(MI);
 }
 
-void YSXInstrInfo::copyPhysRegVector(
-    MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
-    const DebugLoc &DL, MCRegister DstReg, MCRegister SrcReg, bool KillSrc,
-    const TargetRegisterClass *RegClass) const {
-  llvm_unreachable("YSX does not support vector register copies");
-}
-
 void YSXInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
-                                 MachineBasicBlock::iterator MBBI,
-                                 const DebugLoc &DL, Register DstReg,
-                                 Register SrcReg, bool KillSrc,
-                                 bool RenamableDest, bool RenamableSrc) const {
+                               MachineBasicBlock::iterator MBBI,
+                               const DebugLoc &DL, Register DstReg,
+                               Register SrcReg, bool KillSrc,
+                               bool RenamableDest, bool RenamableSrc) const {
   const TargetRegisterInfo *TRI = STI.getRegisterInfo();
   unsigned KillFlag = getKillRegState(KillSrc);
 
@@ -198,31 +176,7 @@ void YSXInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     return;
   }
 
-#if 0
-  if (YSX::GPRF16RegClass.contains(DstReg, SrcReg)) {
-    BuildMI(MBB, MBBI, DL, get(YSX::PseudoMV_FPR16INX), DstReg)
-        .addReg(SrcReg, KillFlag | getRenamableRegState(RenamableSrc));
-    return;
-  }
-
-  if (YSX::GPRF32RegClass.contains(DstReg, SrcReg)) {
-    BuildMI(MBB, MBBI, DL, get(YSX::PseudoMV_FPR32INX), DstReg)
-        .addReg(SrcReg, KillFlag | getRenamableRegState(RenamableSrc));
-    return;
-  }
-#endif
-
   if (YSX::GPRPairRegClass.contains(DstReg, SrcReg)) {
-#if 0
-    if (STI.isRV32() && STI.hasStdExtZdinx()) {
-      // On RV32_Zdinx, FMV.D will move a pair of registers to another pair of
-      // registers, in one instruction.
-      BuildMI(MBB, MBBI, DL, get(YSX::FSGNJ_D_IN32X), DstReg)
-          .addReg(SrcReg, getRenamableRegState(RenamableSrc))
-          .addReg(SrcReg, KillFlag | getRenamableRegState(RenamableSrc));
-      return;
-    }
-#endif
 
     MCRegister EvenReg = TRI->getSubReg(SrcReg, YSX::sub_gpr_even);
     MCRegister OddReg = TRI->getSubReg(SrcReg, YSX::sub_gpr_odd);
@@ -243,90 +197,15 @@ void YSXInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     return;
   }
 
-#if 0
-  if (YSX::FPR16RegClass.contains(DstReg, SrcReg)) {
-    unsigned Opc;
-    if (STI.hasStdExtZfh()) {
-      Opc = YSX::FSGNJ_H;
-    } else {
-      assert(STI.hasStdExtF() &&
-             (STI.hasStdExtZfhmin() || STI.hasStdExtZfbfmin()) &&
-             "Unexpected extensions");
-      // Zfhmin/Zfbfmin doesn't have FSGNJ_H, replace FSGNJ_H with FSGNJ_S.
-      DstReg = TRI->getMatchingSuperReg(DstReg, YSX::sub_16,
-                                        &YSX::FPR32RegClass);
-      SrcReg = TRI->getMatchingSuperReg(SrcReg, YSX::sub_16,
-                                        &YSX::FPR32RegClass);
-      Opc = YSX::FSGNJ_S;
-    }
-    BuildMI(MBB, MBBI, DL, get(Opc), DstReg)
-        .addReg(SrcReg, KillFlag)
-        .addReg(SrcReg, KillFlag);
-    return;
-  }
-
-  if (YSX::FPR32RegClass.contains(DstReg, SrcReg)) {
-    BuildMI(MBB, MBBI, DL, get(YSX::FSGNJ_S), DstReg)
-        .addReg(SrcReg, KillFlag)
-        .addReg(SrcReg, KillFlag);
-    return;
-  }
-
-  if (YSX::FPR64RegClass.contains(DstReg, SrcReg)) {
-    BuildMI(MBB, MBBI, DL, get(YSX::FSGNJ_D), DstReg)
-        .addReg(SrcReg, KillFlag)
-        .addReg(SrcReg, KillFlag);
-    return;
-  }
-
-  if (YSX::FPR32RegClass.contains(DstReg) &&
-      YSX::GPRRegClass.contains(SrcReg)) {
-    BuildMI(MBB, MBBI, DL, get(YSX::FMV_W_X), DstReg)
-        .addReg(SrcReg, KillFlag);
-    return;
-  }
-
-  if (YSX::GPRRegClass.contains(DstReg) &&
-      YSX::FPR32RegClass.contains(SrcReg)) {
-    BuildMI(MBB, MBBI, DL, get(YSX::FMV_X_W), DstReg)
-        .addReg(SrcReg, KillFlag);
-    return;
-  }
-
-  if (YSX::FPR64RegClass.contains(DstReg) &&
-      YSX::GPRRegClass.contains(SrcReg)) {
-    assert(STI.getXLen() == 64 && "Unexpected GPR size");
-    BuildMI(MBB, MBBI, DL, get(YSX::FMV_D_X), DstReg)
-        .addReg(SrcReg, KillFlag);
-    return;
-  }
-
-  if (YSX::GPRRegClass.contains(DstReg) &&
-      YSX::FPR64RegClass.contains(SrcReg)) {
-    assert(STI.getXLen() == 64 && "Unexpected GPR size");
-    BuildMI(MBB, MBBI, DL, get(YSX::FMV_X_D), DstReg)
-        .addReg(SrcReg, KillFlag);
-    return;
-  }
-
-  // VR->VR copies.
-  const TargetRegisterClass *RegClass =
-      TRI->getCommonMinimalPhysRegClass(SrcReg, DstReg);
-  if (YSXRegisterInfo::isYSXVecRegClass(RegClass)) {
-    copyPhysRegVector(MBB, MBBI, DL, DstReg, SrcReg, KillSrc, RegClass);
-    return;
-  }
-#endif
-
   llvm_unreachable("Impossible reg-to-reg copy");
 }
 
 void YSXInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
-                                         MachineBasicBlock::iterator I,
-                                         Register SrcReg, bool IsKill, int FI,
-                                         const TargetRegisterClass *RC,
-                                         Register VReg,
-                                         MachineInstr::MIFlag Flags) const {
+                                       MachineBasicBlock::iterator I,
+                                       Register SrcReg, bool IsKill, int FI,
+                                       const TargetRegisterClass *RC,
+                                       Register VReg,
+                                       MachineInstr::MIFlag Flags) const {
   MachineFunction *MF = MBB.getParent();
   MachineFrameInfo &MFI = MF->getFrameInfo();
   Align Alignment = MFI.getObjectAlign(FI);
@@ -348,11 +227,11 @@ void YSXInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
 }
 
 void YSXInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
-                                          MachineBasicBlock::iterator I,
-                                          Register DstReg, int FI,
-                                          const TargetRegisterClass *RC,
-                                          Register VReg, unsigned SubReg,
-                                          MachineInstr::MIFlag Flags) const {
+                                        MachineBasicBlock::iterator I,
+                                        Register DstReg, int FI,
+                                        const TargetRegisterClass *RC,
+                                        Register VReg, unsigned SubReg,
+                                        MachineInstr::MIFlag Flags) const {
   MachineFunction *MF = MBB.getParent();
   MachineFrameInfo &MFI = MF->getFrameInfo();
   Align Alignment = MFI.getObjectAlign(FI);
@@ -422,56 +301,13 @@ MachineInstr *YSXInstrInfo::foldMemoryOperandImpl(
     MachineBasicBlock::iterator InsertPt, MachineInstr &LoadMI,
     LiveIntervals *LIS) const {
   return nullptr;
-#if 0
-  // For now, only handle YSX::PseudoCCMOVGPR.
-  if (MI.getOpcode() != YSX::PseudoCCMOVGPR)
-    return nullptr;
-
-  unsigned PredOpc = getLoadPredicatedOpcode(LoadMI.getOpcode());
-
-  if (!STI.hasShortForwardBranchILoad() || !PredOpc)
-    return nullptr;
-
-  MachineRegisterInfo &MRI = MF.getRegInfo();
-  if (Ops.size() != 1 || (Ops[0] != 4 && Ops[0] != 5))
-    return nullptr;
-
-  bool Invert = Ops[0] == 5;
-  const MachineOperand &FalseReg = MI.getOperand(!Invert ? 5 : 4);
-  Register DestReg = MI.getOperand(0).getReg();
-  const TargetRegisterClass *PreviousClass = MRI.getRegClass(FalseReg.getReg());
-  if (!MRI.constrainRegClass(DestReg, PreviousClass))
-    return nullptr;
-
-  // Create a new predicated version of DefMI.
-  MachineInstrBuilder NewMI = BuildMI(*MI.getParent(), InsertPt,
-                                      MI.getDebugLoc(), get(PredOpc), DestReg)
-                                  .add({MI.getOperand(1), MI.getOperand(2)});
-
-  // Add condition code, inverting if necessary.
-  auto CC = static_cast<YSXCC::CondCode>(MI.getOperand(3).getImm());
-  if (!Invert)
-    CC = YSXCC::getInverseBranchCondition(CC);
-  NewMI.addImm(CC);
-
-  // Copy the false register.
-  NewMI.add(FalseReg);
-
-  // Copy all the DefMI operands.
-  const MCInstrDesc &DefDesc = LoadMI.getDesc();
-  for (unsigned i = 1, e = DefDesc.getNumOperands(); i != e; ++i)
-    NewMI.add(LoadMI.getOperand(i));
-
-  NewMI.cloneMemRefs(LoadMI);
-  return NewMI;
-#endif
 }
 
 void YSXInstrInfo::movImm(MachineBasicBlock &MBB,
-                            MachineBasicBlock::iterator MBBI,
-                            const DebugLoc &DL, Register DstReg, uint64_t Val,
-                            MachineInstr::MIFlag Flag, bool DstRenamable,
-                            bool DstIsDead) const {
+                          MachineBasicBlock::iterator MBBI, const DebugLoc &DL,
+                          Register DstReg, uint64_t Val,
+                          MachineInstr::MIFlag Flag, bool DstRenamable,
+                          bool DstIsDead) const {
   Register SrcReg = YSX::X0;
 
   // For RV32, allow a sign or unsigned 32 bit value.
@@ -494,8 +330,8 @@ void YSXInstrInfo::movImm(MachineBasicBlock &MBB,
     bool LastItem = ++Num == Seq.size();
     unsigned DstRegState = getDeadRegState(DstIsDead && LastItem) |
                            getRenamableRegState(DstRenamable);
-    unsigned SrcRegState = getKillRegState(SrcReg != YSX::X0) |
-                           getRenamableRegState(SrcRenamable);
+    unsigned SrcRegState =
+        getKillRegState(SrcReg != YSX::X0) | getRenamableRegState(SrcRenamable);
     switch (Inst.getOpndKind()) {
     case YSXMatInt::Imm:
       BuildMI(MBB, MBBI, DL, get(Inst.getOpcode()))
@@ -552,7 +388,7 @@ YSXCC::CondCode YSXInstrInfo::getCondFromBranchOpc(unsigned Opc) {
 }
 
 bool YSXInstrInfo::evaluateCondBranch(YSXCC::CondCode CC, int64_t C0,
-                                        int64_t C1) {
+                                      int64_t C1) {
   switch (CC) {
   default:
     llvm_unreachable("Unexpected CC");
@@ -585,42 +421,6 @@ static void parseCondBranch(MachineInstr &LastInst, MachineBasicBlock *&Target,
   Cond.push_back(LastInst.getOperand(1));
 }
 
-#if 0
-static unsigned getInverseXRemovedQcicmOpcode(unsigned Opcode) {
-  llvm_unreachable("YSX does not support XRemovedQci conditional moves");
-#if 0
-  switch (Opcode) {
-  default:
-    llvm_unreachable("Unexpected Opcode");
-  case YSX::QC_MVEQ:
-    return YSX::QC_MVNE;
-  case YSX::QC_MVNE:
-    return YSX::QC_MVEQ;
-  case YSX::QC_MVLT:
-    return YSX::QC_MVGE;
-  case YSX::QC_MVGE:
-    return YSX::QC_MVLT;
-  case YSX::QC_MVLTU:
-    return YSX::QC_MVGEU;
-  case YSX::QC_MVGEU:
-    return YSX::QC_MVLTU;
-  case YSX::QC_MVEQI:
-    return YSX::QC_MVNEI;
-  case YSX::QC_MVNEI:
-    return YSX::QC_MVEQI;
-  case YSX::QC_MVLTI:
-    return YSX::QC_MVGEI;
-  case YSX::QC_MVGEI:
-    return YSX::QC_MVLTI;
-  case YSX::QC_MVLTUI:
-    return YSX::QC_MVGEUI;
-  case YSX::QC_MVGEUI:
-    return YSX::QC_MVLTUI;
-  }
-#endif
-}
-#endif
-
 unsigned YSXCC::getBrCond(YSXCC::CondCode CC, unsigned SelectOpc) {
   switch (SelectOpc) {
   default:
@@ -641,96 +441,6 @@ unsigned YSXCC::getBrCond(YSXCC::CondCode CC, unsigned SelectOpc) {
       return YSX::BGEU;
     }
     break;
-#if 0
-  case YSX::Select_GPR_Using_CC_Imm5_Zibi:
-    switch (CC) {
-    default:
-      llvm_unreachable("Unexpected condition code!");
-    case YSXCC::COND_EQ:
-      return YSX::BEQI;
-    case YSXCC::COND_NE:
-      return YSX::BNEI;
-    }
-    break;
-  case YSX::Select_GPR_Using_CC_SImm5_CV:
-    switch (CC) {
-    default:
-      llvm_unreachable("Unexpected condition code!");
-    case YSXCC::COND_EQ:
-      return YSX::CV_BEQIMM;
-    case YSXCC::COND_NE:
-      return YSX::CV_BNEIMM;
-    }
-    break;
-  case YSX::Select_GPRNoX0_Using_CC_SImm5NonZero_QC:
-    switch (CC) {
-    default:
-      llvm_unreachable("Unexpected condition code!");
-    case YSXCC::COND_EQ:
-      return YSX::QC_BEQI;
-    case YSXCC::COND_NE:
-      return YSX::QC_BNEI;
-    case YSXCC::COND_LT:
-      return YSX::QC_BLTI;
-    case YSXCC::COND_GE:
-      return YSX::QC_BGEI;
-    }
-    break;
-  case YSX::Select_GPRNoX0_Using_CC_UImm5NonZero_QC:
-    switch (CC) {
-    default:
-      llvm_unreachable("Unexpected condition code!");
-    case YSXCC::COND_LTU:
-      return YSX::QC_BLTUI;
-    case YSXCC::COND_GEU:
-      return YSX::QC_BGEUI;
-    }
-    break;
-  case YSX::Select_GPRNoX0_Using_CC_SImm16NonZero_QC:
-    switch (CC) {
-    default:
-      llvm_unreachable("Unexpected condition code!");
-    case YSXCC::COND_EQ:
-      return YSX::QC_E_BEQI;
-    case YSXCC::COND_NE:
-      return YSX::QC_E_BNEI;
-    case YSXCC::COND_LT:
-      return YSX::QC_E_BLTI;
-    case YSXCC::COND_GE:
-      return YSX::QC_E_BGEI;
-    }
-    break;
-  case YSX::Select_GPRNoX0_Using_CC_UImm16NonZero_QC:
-    switch (CC) {
-    default:
-      llvm_unreachable("Unexpected condition code!");
-    case YSXCC::COND_LTU:
-      return YSX::QC_E_BLTUI;
-    case YSXCC::COND_GEU:
-      return YSX::QC_E_BGEUI;
-    }
-    break;
-  case YSX::Select_GPR_Using_CC_UImmLog2XLen_NDS:
-    switch (CC) {
-    default:
-      llvm_unreachable("Unexpected condition code!");
-    case YSXCC::COND_EQ:
-      return YSX::NDS_BBC;
-    case YSXCC::COND_NE:
-      return YSX::NDS_BBS;
-    }
-    break;
-  case YSX::Select_GPR_Using_CC_UImm7_NDS:
-    switch (CC) {
-    default:
-      llvm_unreachable("Unexpected condition code!");
-    case YSXCC::COND_EQ:
-      return YSX::NDS_BEQC;
-    case YSXCC::COND_NE:
-      return YSX::NDS_BNEC;
-    }
-    break;
-#endif
   }
 }
 
@@ -754,10 +464,10 @@ YSXCC::CondCode YSXCC::getInverseBranchCondition(YSXCC::CondCode CC) {
 }
 
 bool YSXInstrInfo::analyzeBranch(MachineBasicBlock &MBB,
-                                   MachineBasicBlock *&TBB,
-                                   MachineBasicBlock *&FBB,
-                                   SmallVectorImpl<MachineOperand> &Cond,
-                                   bool AllowModify) const {
+                                 MachineBasicBlock *&TBB,
+                                 MachineBasicBlock *&FBB,
+                                 SmallVectorImpl<MachineOperand> &Cond,
+                                 bool AllowModify) const {
   TBB = FBB = nullptr;
   Cond.clear();
 
@@ -826,7 +536,7 @@ bool YSXInstrInfo::analyzeBranch(MachineBasicBlock &MBB,
 }
 
 unsigned YSXInstrInfo::removeBranch(MachineBasicBlock &MBB,
-                                      int *BytesRemoved) const {
+                                    int *BytesRemoved) const {
   if (BytesRemoved)
     *BytesRemoved = 0;
   MachineBasicBlock::iterator I = MBB.getLastNonDebugInstr();
@@ -859,9 +569,11 @@ unsigned YSXInstrInfo::removeBranch(MachineBasicBlock &MBB,
 
 // Inserts a branch into the end of the specific MachineBasicBlock, returning
 // the number of instructions inserted.
-unsigned YSXInstrInfo::insertBranch(
-    MachineBasicBlock &MBB, MachineBasicBlock *TBB, MachineBasicBlock *FBB,
-    ArrayRef<MachineOperand> Cond, const DebugLoc &DL, int *BytesAdded) const {
+unsigned YSXInstrInfo::insertBranch(MachineBasicBlock &MBB,
+                                    MachineBasicBlock *TBB,
+                                    MachineBasicBlock *FBB,
+                                    ArrayRef<MachineOperand> Cond,
+                                    const DebugLoc &DL, int *BytesAdded) const {
   if (BytesAdded)
     *BytesAdded = 0;
 
@@ -898,10 +610,10 @@ unsigned YSXInstrInfo::insertBranch(
 }
 
 void YSXInstrInfo::insertIndirectBranch(MachineBasicBlock &MBB,
-                                          MachineBasicBlock &DestBB,
-                                          MachineBasicBlock &RestoreBB,
-                                          const DebugLoc &DL, int64_t BrOffset,
-                                          RegScavenger *RS) const {
+                                        MachineBasicBlock &DestBB,
+                                        MachineBasicBlock &RestoreBB,
+                                        const DebugLoc &DL, int64_t BrOffset,
+                                        RegScavenger *RS) const {
   assert(RS && "RegScavenger required for long branching");
   assert(MBB.empty() &&
          "new block should be inserted for expanding unconditional branch");
@@ -977,19 +689,9 @@ bool YSXInstrInfo::reverseBranchCondition(
   case YSX::BEQ:
     Cond[0].setImm(YSX::BNE);
     break;
-#if 0
-  case YSX::BEQI:
-    Cond[0].setImm(YSX::BNEI);
-    break;
-#endif
   case YSX::BNE:
     Cond[0].setImm(YSX::BEQ);
     break;
-#if 0
-  case YSX::BNEI:
-    Cond[0].setImm(YSX::BEQI);
-    break;
-#endif
   case YSX::BLT:
     Cond[0].setImm(YSX::BGE);
     break;
@@ -1002,62 +704,6 @@ bool YSXInstrInfo::reverseBranchCondition(
   case YSX::BGEU:
     Cond[0].setImm(YSX::BLTU);
     break;
-#if 0
-  case YSX::CV_BEQIMM:
-    Cond[0].setImm(YSX::CV_BNEIMM);
-    break;
-  case YSX::CV_BNEIMM:
-    Cond[0].setImm(YSX::CV_BEQIMM);
-    break;
-  case YSX::QC_BEQI:
-    Cond[0].setImm(YSX::QC_BNEI);
-    break;
-  case YSX::QC_BNEI:
-    Cond[0].setImm(YSX::QC_BEQI);
-    break;
-  case YSX::QC_BGEI:
-    Cond[0].setImm(YSX::QC_BLTI);
-    break;
-  case YSX::QC_BLTI:
-    Cond[0].setImm(YSX::QC_BGEI);
-    break;
-  case YSX::QC_BGEUI:
-    Cond[0].setImm(YSX::QC_BLTUI);
-    break;
-  case YSX::QC_BLTUI:
-    Cond[0].setImm(YSX::QC_BGEUI);
-    break;
-  case YSX::QC_E_BEQI:
-    Cond[0].setImm(YSX::QC_E_BNEI);
-    break;
-  case YSX::QC_E_BNEI:
-    Cond[0].setImm(YSX::QC_E_BEQI);
-    break;
-  case YSX::QC_E_BGEI:
-    Cond[0].setImm(YSX::QC_E_BLTI);
-    break;
-  case YSX::QC_E_BLTI:
-    Cond[0].setImm(YSX::QC_E_BGEI);
-    break;
-  case YSX::QC_E_BGEUI:
-    Cond[0].setImm(YSX::QC_E_BLTUI);
-    break;
-  case YSX::QC_E_BLTUI:
-    Cond[0].setImm(YSX::QC_E_BGEUI);
-    break;
-  case YSX::NDS_BBC:
-    Cond[0].setImm(YSX::NDS_BBS);
-    break;
-  case YSX::NDS_BBS:
-    Cond[0].setImm(YSX::NDS_BBC);
-    break;
-  case YSX::NDS_BEQC:
-    Cond[0].setImm(YSX::NDS_BNEC);
-    break;
-  case YSX::NDS_BNEC:
-    Cond[0].setImm(YSX::NDS_BEQC);
-    break;
-#endif
   }
 
   return false;
@@ -1075,7 +721,7 @@ static bool isLoadImm(const MachineInstr *MI, int64_t &Imm) {
 }
 
 bool YSXInstrInfo::isFromLoadImm(const MachineRegisterInfo &MRI,
-                                   const MachineOperand &Op, int64_t &Imm) {
+                                 const MachineOperand &Op, int64_t &Imm) {
   // Either a load from immediate instruction or X0.
   if (!Op.isReg())
     return false;
@@ -1222,7 +868,7 @@ YSXInstrInfo::getBranchDestBlock(const MachineInstr &MI) const {
 }
 
 bool YSXInstrInfo::isBranchOffsetInRange(unsigned BranchOp,
-                                           int64_t BrOffset) const {
+                                         int64_t BrOffset) const {
   unsigned XLen = STI.getXLen();
   // Ideally we could determine the supported branch offset from the
   // YSXII::FormMask, but this can't be used for Pseudo instructions like
@@ -1250,56 +896,6 @@ bool YSXInstrInfo::isBranchOffsetInRange(unsigned BranchOp,
 // TODO: Support more operations.
 static unsigned getPredicatedOpcode(unsigned Opcode) {
   return YSX::INSTRUCTION_LIST_END;
-#if 0
-  // clang-format off
-  switch (Opcode) {
-  case YSX::ADD:   return YSX::PseudoCCADD;
-  case YSX::SUB:   return YSX::PseudoCCSUB;
-  case YSX::SLL:   return YSX::PseudoCCSLL;
-  case YSX::SRL:   return YSX::PseudoCCSRL;
-  case YSX::SRA:   return YSX::PseudoCCSRA;
-  case YSX::AND:   return YSX::PseudoCCAND;
-  case YSX::OR:    return YSX::PseudoCCOR;
-  case YSX::XOR:   return YSX::PseudoCCXOR;
-  case YSX::MAX:   return YSX::PseudoCCMAX;
-  case YSX::MAXU:  return YSX::PseudoCCMAXU;
-  case YSX::MIN:   return YSX::PseudoCCMIN;
-  case YSX::MINU:  return YSX::PseudoCCMINU;
-  case YSX::MUL:   return YSX::PseudoCCMUL;
-  case YSX::LUI:   return YSX::PseudoCCLUI;
-  case YSX::QC_LI:   return YSX::PseudoCCQC_LI;
-  case YSX::QC_E_LI:   return YSX::PseudoCCQC_E_LI;
-
-  case YSX::ADDI:  return YSX::PseudoCCADDI;
-  case YSX::SLLI:  return YSX::PseudoCCSLLI;
-  case YSX::SRLI:  return YSX::PseudoCCSRLI;
-  case YSX::SRAI:  return YSX::PseudoCCSRAI;
-  case YSX::ANDI:  return YSX::PseudoCCANDI;
-  case YSX::ORI:   return YSX::PseudoCCORI;
-  case YSX::XORI:  return YSX::PseudoCCXORI;
-
-  case YSX::ADDW:  return YSX::PseudoCCADDW;
-  case YSX::SUBW:  return YSX::PseudoCCSUBW;
-  case YSX::SLLW:  return YSX::PseudoCCSLLW;
-  case YSX::SRLW:  return YSX::PseudoCCSRLW;
-  case YSX::SRAW:  return YSX::PseudoCCSRAW;
-
-  case YSX::ADDIW: return YSX::PseudoCCADDIW;
-  case YSX::SLLIW: return YSX::PseudoCCSLLIW;
-  case YSX::SRLIW: return YSX::PseudoCCSRLIW;
-  case YSX::SRAIW: return YSX::PseudoCCSRAIW;
-
-  case YSX::ANDN:  return YSX::PseudoCCANDN;
-  case YSX::ORN:   return YSX::PseudoCCORN;
-  case YSX::XNOR:  return YSX::PseudoCCXNOR;
-
-  case YSX::NDS_BFOS:  return YSX::PseudoCCNDS_BFOS;
-  case YSX::NDS_BFOZ:  return YSX::PseudoCCNDS_BFOZ;
-  }
-  // clang-format on
-
-  return YSX::INSTRUCTION_LIST_END;
-#endif
 }
 
 /// Identify instructions that can be folded into a CCMOV instruction, and
@@ -1349,11 +945,10 @@ static MachineInstr *canFoldAsPredicatedOp(Register Reg,
 }
 
 bool YSXInstrInfo::analyzeSelect(const MachineInstr &MI,
-                                   SmallVectorImpl<MachineOperand> &Cond,
-                                   unsigned &TrueOp, unsigned &FalseOp,
-                                   bool &Optimizable) const {
-  assert(MI.getOpcode() == YSX::PseudoCCMOVGPR &&
-         "Unknown select instruction");
+                                 SmallVectorImpl<MachineOperand> &Cond,
+                                 unsigned &TrueOp, unsigned &FalseOp,
+                                 bool &Optimizable) const {
+  assert(MI.getOpcode() == YSX::PseudoCCMOVGPR && "Unknown select instruction");
   // CCMOV operands:
   // 0: Def.
   // 1: LHS of compare.
@@ -1373,10 +968,9 @@ bool YSXInstrInfo::analyzeSelect(const MachineInstr &MI,
 
 MachineInstr *
 YSXInstrInfo::optimizeSelect(MachineInstr &MI,
-                               SmallPtrSetImpl<MachineInstr *> &SeenMIs,
-                               bool PreferFalse) const {
-  assert(MI.getOpcode() == YSX::PseudoCCMOVGPR &&
-         "Unknown select instruction");
+                             SmallPtrSetImpl<MachineInstr *> &SeenMIs,
+                             bool PreferFalse) const {
+  assert(MI.getOpcode() == YSX::PseudoCCMOVGPR && "Unknown select instruction");
   if (!STI.hasShortForwardBranchIALU())
     return nullptr;
 
@@ -1527,8 +1121,7 @@ bool YSXInstrInfo::isAsCheapAsAMove(const MachineInstr &MI) const {
   case YSX::ADDI:
   case YSX::ORI:
   case YSX::XORI:
-    return (MI.getOperand(1).isReg() &&
-            MI.getOperand(1).getReg() == YSX::X0) ||
+    return (MI.getOperand(1).isReg() && MI.getOperand(1).getReg() == YSX::X0) ||
            (MI.getOperand(2).isImm() && MI.getOperand(2).getImm() == 0);
   }
   return MI.isAsCheapAsAMove();
@@ -1584,51 +1177,9 @@ void YSXInstrInfo::finalizeInsInstrs(
     MachineInstr &Root, unsigned &Pattern,
     SmallVectorImpl<MachineInstr *> &InsInstrs) const {}
 
-static bool isFADD(unsigned Opc) {
-  return false;
-}
-
-static bool isFMUL(unsigned Opc) {
-  return false;
-}
-
-bool YSXInstrInfo::isVectorAssociativeAndCommutative(const MachineInstr &Inst,
-                                                       bool Invert) const {
-  return false;
-}
-
-bool YSXInstrInfo::areYSXVecInstsReassociable(const MachineInstr &Root,
-                                             const MachineInstr &Prev) const {
-  return false;
-}
-
-bool YSXInstrInfo::hasReassociableVectorSibling(const MachineInstr &Inst,
-                                                  bool &Commuted) const {
-  Commuted = false;
-  return false;
-}
-
-bool YSXInstrInfo::hasReassociableOperands(
-    const MachineInstr &Inst, const MachineBasicBlock *MBB) const {
-  if (!isVectorAssociativeAndCommutative(Inst) &&
-      !isVectorAssociativeAndCommutative(Inst, /*Invert=*/true))
-    return TargetInstrInfo::hasReassociableOperands(Inst, MBB);
-
-  const MachineOperand &Op1 = Inst.getOperand(2);
-  const MachineOperand &Op2 = Inst.getOperand(3);
-  const MachineRegisterInfo &MRI = MBB->getParent()->getRegInfo();
-
-  // We need virtual register definitions for the operands that we will
-  // reassociate.
-  MachineInstr *MI1 = nullptr;
-  MachineInstr *MI2 = nullptr;
-  if (Op1.isReg() && Op1.getReg().isVirtual())
-    MI1 = MRI.getUniqueVRegDef(Op1.getReg());
-  if (Op2.isReg() && Op2.getReg().isVirtual())
-    MI2 = MRI.getUniqueVRegDef(Op2.getReg());
-
-  // And at least one operand must be defined in MBB.
-  return MI1 && MI2 && (MI1->getParent() == MBB || MI2->getParent() == MBB);
+bool YSXInstrInfo::hasReassociableOperands(const MachineInstr &Inst,
+                                           const MachineBasicBlock *MBB) const {
+  return TargetInstrInfo::hasReassociableOperands(Inst, MBB);
 }
 
 void YSXInstrInfo::getReassociateOperandIndices(
@@ -1638,12 +1189,12 @@ void YSXInstrInfo::getReassociateOperandIndices(
 }
 
 bool YSXInstrInfo::hasReassociableSibling(const MachineInstr &Inst,
-                                            bool &Commuted) const {
+                                          bool &Commuted) const {
   return TargetInstrInfo::hasReassociableSibling(Inst, Commuted);
 }
 
 bool YSXInstrInfo::isAssociativeAndCommutative(const MachineInstr &Inst,
-                                                 bool Invert) const {
+                                               bool Invert) const {
   unsigned Opc = Inst.getOpcode();
   if (Invert) {
     auto InverseOpcode = getInverseOpcode(Opc);
@@ -1651,10 +1202,6 @@ bool YSXInstrInfo::isAssociativeAndCommutative(const MachineInstr &Inst,
       return false;
     Opc = *InverseOpcode;
   }
-
-  if (isFADD(Opc) || isFMUL(Opc))
-    return Inst.getFlag(MachineInstr::MIFlag::FmReassoc) &&
-           Inst.getFlag(MachineInstr::MIFlag::FmNsz);
 
   switch (Opc) {
   default:
@@ -1684,8 +1231,7 @@ bool YSXInstrInfo::isAssociativeAndCommutative(const MachineInstr &Inst,
   return false;
 }
 
-std::optional<unsigned>
-YSXInstrInfo::getInverseOpcode(unsigned Opcode) const {
+std::optional<unsigned> YSXInstrInfo::getInverseOpcode(unsigned Opcode) const {
   switch (Opcode) {
   default:
     return std::nullopt;
@@ -1700,268 +1246,15 @@ YSXInstrInfo::getInverseOpcode(unsigned Opcode) const {
   }
 }
 
-#if 0
-static bool canCombineFPFusedMultiply(const MachineInstr &Root,
-                                      const MachineOperand &MO,
-                                      bool DoRegPressureReduce) {
-  if (!MO.isReg() || !MO.getReg().isVirtual())
-    return false;
-  const MachineRegisterInfo &MRI = Root.getMF()->getRegInfo();
-  MachineInstr *MI = MRI.getVRegDef(MO.getReg());
-  if (!MI || !isFMUL(MI->getOpcode()))
-    return false;
-
-  if (!Root.getFlag(MachineInstr::MIFlag::FmContract) ||
-      !MI->getFlag(MachineInstr::MIFlag::FmContract))
-    return false;
-
-  // Try combining even if fmul has more than one use as it eliminates
-  // dependency between fadd(fsub) and fmul. However, it can extend liveranges
-  // for fmul operands, so reject the transformation in register pressure
-  // reduction mode.
-  if (DoRegPressureReduce && !MRI.hasOneNonDBGUse(MI->getOperand(0).getReg()))
-    return false;
-
-  // Do not combine instructions from different basic blocks.
-  if (Root.getParent() != MI->getParent())
-    return false;
-  return YSX::hasEqualFRM(Root, *MI);
-}
-#endif
-
-static bool getFPFusedMultiplyPatterns(MachineInstr &Root,
-                                       SmallVectorImpl<unsigned> &Patterns,
-                                       bool DoRegPressureReduce) {
-#if 0
-  unsigned Opc = Root.getOpcode();
-  bool IsFAdd = isFADD(Opc);
-  if (!IsFAdd && !isFSUB(Opc))
-    return false;
-  bool Added = false;
-  if (canCombineFPFusedMultiply(Root, Root.getOperand(1),
-                                DoRegPressureReduce)) {
-    Patterns.push_back(IsFAdd ? YSXMachineCombinerPattern::FMADD_AX
-                              : YSXMachineCombinerPattern::FMSUB);
-    Added = true;
-  }
-  if (canCombineFPFusedMultiply(Root, Root.getOperand(2),
-                                DoRegPressureReduce)) {
-    Patterns.push_back(IsFAdd ? YSXMachineCombinerPattern::FMADD_XA
-                              : YSXMachineCombinerPattern::FNMSUB);
-    Added = true;
-  }
-  return Added;
-#endif
-  return false;
-}
-
-static bool getFPPatterns(MachineInstr &Root,
-                          SmallVectorImpl<unsigned> &Patterns,
-                          bool DoRegPressureReduce) {
-  return getFPFusedMultiplyPatterns(Root, Patterns, DoRegPressureReduce);
-}
-
-// Look for opportunities to combine (sh3add Z, (add X, (slli Y, 5))) into
-// (sh3add (sh2add Y, Z), X).
-static bool getSHXADDPatterns(const MachineInstr &Root,
-                              SmallVectorImpl<unsigned> &Patterns) {
-  return false;
-#if 0
-  unsigned ShiftAmt = getSHXADDShiftAmount(Root.getOpcode());
-  if (!ShiftAmt)
-    return false;
-
-  const MachineBasicBlock &MBB = *Root.getParent();
-
-  const MachineInstr *AddMI = canCombine(MBB, Root.getOperand(2), YSX::ADD);
-  if (!AddMI)
-    return false;
-
-  bool Found = false;
-  if (canCombineShiftIntoShXAdd(MBB, AddMI->getOperand(1), ShiftAmt)) {
-    Patterns.push_back(YSXMachineCombinerPattern::SHXADD_ADD_SLLI_OP1);
-    Found = true;
-  }
-  if (canCombineShiftIntoShXAdd(MBB, AddMI->getOperand(2), ShiftAmt)) {
-    Patterns.push_back(YSXMachineCombinerPattern::SHXADD_ADD_SLLI_OP2);
-    Found = true;
-  }
-
-  return Found;
-#endif
-}
-
 CombinerObjective YSXInstrInfo::getCombinerObjective(unsigned Pattern) const {
-  switch (Pattern) {
-  case YSXMachineCombinerPattern::FMADD_AX:
-  case YSXMachineCombinerPattern::FMADD_XA:
-  case YSXMachineCombinerPattern::FMSUB:
-  case YSXMachineCombinerPattern::FNMSUB:
-    return CombinerObjective::MustReduceDepth;
-  default:
-    return TargetInstrInfo::getCombinerObjective(Pattern);
-  }
+  return TargetInstrInfo::getCombinerObjective(Pattern);
 }
 
 bool YSXInstrInfo::getMachineCombinerPatterns(
     MachineInstr &Root, SmallVectorImpl<unsigned> &Patterns,
     bool DoRegPressureReduce) const {
-
-  if (getFPPatterns(Root, Patterns, DoRegPressureReduce))
-    return true;
-
-  if (getSHXADDPatterns(Root, Patterns))
-    return true;
-
   return TargetInstrInfo::getMachineCombinerPatterns(Root, Patterns,
                                                      DoRegPressureReduce);
-}
-
-#if 0
-static unsigned getFPFusedMultiplyOpcode(unsigned RootOpc, unsigned Pattern) {
-#if 0
-  switch (RootOpc) {
-  default:
-    llvm_unreachable("Unexpected opcode");
-  case YSX::FADD_H:
-    return YSX::FMADD_H;
-  case YSX::FADD_S:
-    return YSX::FMADD_S;
-  case YSX::FADD_D:
-    return YSX::FMADD_D;
-  case YSX::FSUB_H:
-    return Pattern == YSXMachineCombinerPattern::FMSUB ? YSX::FMSUB_H
-                                                         : YSX::FNMSUB_H;
-  case YSX::FSUB_S:
-    return Pattern == YSXMachineCombinerPattern::FMSUB ? YSX::FMSUB_S
-                                                         : YSX::FNMSUB_S;
-  case YSX::FSUB_D:
-    return Pattern == YSXMachineCombinerPattern::FMSUB ? YSX::FMSUB_D
-                                                         : YSX::FNMSUB_D;
-  }
-#endif
-  llvm_unreachable("FP fused multiply is not supported by YSX rv64ima");
-}
-
-static unsigned getAddendOperandIdx(unsigned Pattern) {
-  switch (Pattern) {
-  default:
-    llvm_unreachable("Unexpected pattern");
-  case YSXMachineCombinerPattern::FMADD_AX:
-  case YSXMachineCombinerPattern::FMSUB:
-    return 2;
-  case YSXMachineCombinerPattern::FMADD_XA:
-  case YSXMachineCombinerPattern::FNMSUB:
-    return 1;
-  }
-}
-
-static void combineFPFusedMultiply(MachineInstr &Root, MachineInstr &Prev,
-                                   unsigned Pattern,
-                                   SmallVectorImpl<MachineInstr *> &InsInstrs,
-                                   SmallVectorImpl<MachineInstr *> &DelInstrs) {
-  MachineFunction *MF = Root.getMF();
-  MachineRegisterInfo &MRI = MF->getRegInfo();
-  const TargetInstrInfo *TII = MF->getSubtarget().getInstrInfo();
-
-  MachineOperand &Mul1 = Prev.getOperand(1);
-  MachineOperand &Mul2 = Prev.getOperand(2);
-  MachineOperand &Dst = Root.getOperand(0);
-  MachineOperand &Addend = Root.getOperand(getAddendOperandIdx(Pattern));
-
-  Register DstReg = Dst.getReg();
-  unsigned FusedOpc = getFPFusedMultiplyOpcode(Root.getOpcode(), Pattern);
-  uint32_t IntersectedFlags = Root.getFlags() & Prev.getFlags();
-  DebugLoc MergedLoc =
-      DILocation::getMergedLocation(Root.getDebugLoc(), Prev.getDebugLoc());
-
-  bool Mul1IsKill = Mul1.isKill();
-  bool Mul2IsKill = Mul2.isKill();
-  bool AddendIsKill = Addend.isKill();
-
-  // We need to clear kill flags since we may be extending the live range past
-  // a kill. If the mul had kill flags, we can preserve those since we know
-  // where the previous range stopped.
-  MRI.clearKillFlags(Mul1.getReg());
-  MRI.clearKillFlags(Mul2.getReg());
-
-  MachineInstrBuilder MIB =
-      BuildMI(*MF, MergedLoc, TII->get(FusedOpc), DstReg)
-          .addReg(Mul1.getReg(), getKillRegState(Mul1IsKill))
-          .addReg(Mul2.getReg(), getKillRegState(Mul2IsKill))
-          .addReg(Addend.getReg(), getKillRegState(AddendIsKill))
-          .setMIFlags(IntersectedFlags);
-
-  InsInstrs.push_back(MIB);
-  if (MRI.hasOneNonDBGUse(Prev.getOperand(0).getReg()))
-    DelInstrs.push_back(&Prev);
-  DelInstrs.push_back(&Root);
-}
-#endif
-
-// Combine patterns like (sh3add Z, (add X, (slli Y, 5))) to
-// (sh3add (sh2add Y, Z), X) if the shift amount can be split across two
-// shXadd instructions. The outer shXadd keeps its original opcode.
-static void
-genShXAddAddShift(MachineInstr &Root, unsigned AddOpIdx,
-                  SmallVectorImpl<MachineInstr *> &InsInstrs,
-                  SmallVectorImpl<MachineInstr *> &DelInstrs,
-                  DenseMap<Register, unsigned> &InstrIdxForVirtReg) {
-  llvm_unreachable("YSX does not support Zba SHxADD combines");
-#if 0
-  MachineFunction *MF = Root.getMF();
-  MachineRegisterInfo &MRI = MF->getRegInfo();
-  const TargetInstrInfo *TII = MF->getSubtarget().getInstrInfo();
-
-  unsigned OuterShiftAmt = getSHXADDShiftAmount(Root.getOpcode());
-  assert(OuterShiftAmt != 0 && "Unexpected opcode");
-
-  MachineInstr *AddMI = MRI.getUniqueVRegDef(Root.getOperand(2).getReg());
-  MachineInstr *ShiftMI =
-      MRI.getUniqueVRegDef(AddMI->getOperand(AddOpIdx).getReg());
-
-  unsigned InnerShiftAmt = ShiftMI->getOperand(2).getImm();
-  assert(InnerShiftAmt >= OuterShiftAmt && "Unexpected shift amount");
-
-  unsigned InnerOpc;
-  switch (InnerShiftAmt - OuterShiftAmt) {
-  default:
-    llvm_unreachable("Unexpected shift amount");
-  case 0:
-    InnerOpc = YSX::ADD;
-    break;
-  case 1:
-    InnerOpc = YSX::SH1ADD;
-    break;
-  case 2:
-    InnerOpc = YSX::SH2ADD;
-    break;
-  case 3:
-    InnerOpc = YSX::SH3ADD;
-    break;
-  }
-
-  const MachineOperand &X = AddMI->getOperand(3 - AddOpIdx);
-  const MachineOperand &Y = ShiftMI->getOperand(1);
-  const MachineOperand &Z = Root.getOperand(1);
-
-  Register NewVR = MRI.createVirtualRegister(&YSX::GPRRegClass);
-
-  auto MIB1 = BuildMI(*MF, MIMetadata(Root), TII->get(InnerOpc), NewVR)
-                  .addReg(Y.getReg(), getKillRegState(Y.isKill()))
-                  .addReg(Z.getReg(), getKillRegState(Z.isKill()));
-  auto MIB2 = BuildMI(*MF, MIMetadata(Root), TII->get(Root.getOpcode()),
-                      Root.getOperand(0).getReg())
-                  .addReg(NewVR, RegState::Kill)
-                  .addReg(X.getReg(), getKillRegState(X.isKill()));
-
-  InstrIdxForVirtReg.insert(std::make_pair(NewVR, 0));
-  InsInstrs.push_back(MIB1);
-  InsInstrs.push_back(MIB2);
-  DelInstrs.push_back(ShiftMI);
-  DelInstrs.push_back(AddMI);
-  DelInstrs.push_back(&Root);
-#endif
 }
 
 void YSXInstrInfo::genAlternativeCodeSequence(
@@ -1969,45 +1262,12 @@ void YSXInstrInfo::genAlternativeCodeSequence(
     SmallVectorImpl<MachineInstr *> &InsInstrs,
     SmallVectorImpl<MachineInstr *> &DelInstrs,
     DenseMap<Register, unsigned> &InstrIdxForVirtReg) const {
-#if 0
-  MachineRegisterInfo &MRI = Root.getMF()->getRegInfo();
-#endif
-  switch (Pattern) {
-  default:
-    TargetInstrInfo::genAlternativeCodeSequence(Root, Pattern, InsInstrs,
-                                                DelInstrs, InstrIdxForVirtReg);
-    return;
-  case YSXMachineCombinerPattern::FMADD_AX:
-  case YSXMachineCombinerPattern::FMSUB:
-#if 0
-  {
-    MachineInstr &Prev = *MRI.getVRegDef(Root.getOperand(1).getReg());
-    combineFPFusedMultiply(Root, Prev, Pattern, InsInstrs, DelInstrs);
-    return;
-  }
-#endif
-    llvm_unreachable("FP fused multiply is not supported by YSX rv64ima");
-  case YSXMachineCombinerPattern::FMADD_XA:
-  case YSXMachineCombinerPattern::FNMSUB:
-#if 0
-  {
-    MachineInstr &Prev = *MRI.getVRegDef(Root.getOperand(2).getReg());
-    combineFPFusedMultiply(Root, Prev, Pattern, InsInstrs, DelInstrs);
-    return;
-  }
-#endif
-    llvm_unreachable("FP fused multiply is not supported by YSX rv64ima");
-  case YSXMachineCombinerPattern::SHXADD_ADD_SLLI_OP1:
-    genShXAddAddShift(Root, 1, InsInstrs, DelInstrs, InstrIdxForVirtReg);
-    return;
-  case YSXMachineCombinerPattern::SHXADD_ADD_SLLI_OP2:
-    genShXAddAddShift(Root, 2, InsInstrs, DelInstrs, InstrIdxForVirtReg);
-    return;
-  }
+  TargetInstrInfo::genAlternativeCodeSequence(Root, Pattern, InsInstrs,
+                                              DelInstrs, InstrIdxForVirtReg);
 }
 
 bool YSXInstrInfo::verifyInstruction(const MachineInstr &MI,
-                                       StringRef &ErrInfo) const {
+                                     StringRef &ErrInfo) const {
   MCInstrDesc const &Desc = MI.getDesc();
 
   for (const auto &[Index, Operand] : enumerate(Desc.operands())) {
@@ -2125,12 +1385,6 @@ bool YSXInstrInfo::verifyInstruction(const MachineInstr &MI,
         case YSXOp::OPERAND_SIMM6_NONZERO:
           Ok = Imm != 0 && isInt<6>(Imm);
           break;
-        case YSXOp::OPERAND_VTYPEI10:
-          Ok = isUInt<10>(Imm);
-          break;
-        case YSXOp::OPERAND_VTYPEI11:
-          Ok = isUInt<11>(Imm);
-          break;
         case YSXOp::OPERAND_SIMM12_LSB00000:
           Ok = isShiftedInt<7, 5>(Imm);
           break;
@@ -2148,7 +1402,8 @@ bool YSXInstrInfo::verifyInstruction(const MachineInstr &MI,
           Ok = Ok && Imm != 0;
           break;
         case YSXOp::OPERAND_CLUI_IMM:
-          Ok = (isUInt<5>(Imm) && Imm != 0) || (Imm >= 0xfffe0 && Imm <= 0xfffff);
+          Ok = (isUInt<5>(Imm) && Imm != 0) ||
+               (Imm >= 0xfffe0 && Imm <= 0xfffff);
           break;
         case YSXOp::OPERAND_RVKRNUM:
           Ok = Imm >= 0 && Imm <= 10;
@@ -2182,28 +1437,6 @@ bool YSXInstrInfo::verifyInstruction(const MachineInstr &MI,
           break;
         case YSXOp::OPERAND_ATOMIC_ORDERING:
           Ok = isValidAtomicOrdering(Imm);
-          break;
-        case YSXOp::OPERAND_VEC_POLICY:
-          Ok = false;
-          break;
-        case YSXOp::OPERAND_SEW:
-          Ok = false;
-          break;
-        case YSXOp::OPERAND_SEW_MASK:
-          Ok = Imm == 0;
-          break;
-        case YSXOp::OPERAND_VEC_RM:
-          assert(YSXII::hasRoundModeOp(Desc.TSFlags));
-          if (YSXII::usesVXRM(Desc.TSFlags))
-            Ok = isUInt<2>(Imm);
-          else
-            Ok = YSXFPRndMode::isValidRoundingMode(Imm);
-          break;
-        case YSXOp::OPERAND_XSFMM_VTYPE:
-          Ok = false;
-          break;
-        case YSXOp::OPERAND_XSFMM_TWIDEN:
-          Ok = Imm == 1 || Imm == 2 || Imm == 4;
           break;
         }
         if (!Ok) {
@@ -2249,57 +1482,15 @@ bool YSXInstrInfo::verifyInstruction(const MachineInstr &MI,
         return false;
       }
       break;
-    case YSXOp::OPERAND_AVL:
-      if (MO.isImm()) {
-        int64_t Imm = MO.getImm();
-        // VLMAX is represented as -1.
-        if (!isUInt<5>(Imm) && Imm != -1) {
-          ErrInfo = "Invalid immediate";
-          return false;
-        }
-      } else if (!MO.isReg()) {
-        ErrInfo = "Expected a register or immediate operand.";
-        return false;
-      }
-      break;
     }
-  }
-
-  const uint64_t TSFlags = Desc.TSFlags;
-  if (YSXII::hasVLOp(TSFlags)) {
-    const MachineOperand &Op = MI.getOperand(YSXII::getVLOpNum(Desc));
-    if (!Op.isImm() && !Op.isReg())  {
-      ErrInfo = "Invalid operand type for VL operand";
-      return false;
-    }
-    if (Op.isReg() && Op.getReg().isValid()) {
-      const MachineRegisterInfo &MRI = MI.getParent()->getParent()->getRegInfo();
-      auto *RC = MRI.getRegClass(Op.getReg());
-      if (!YSX::GPRNoX0RegClass.hasSubClassEq(RC)) {
-        ErrInfo = "Invalid register class for VL operand";
-        return false;
-      }
-    }
-    if (!YSXII::hasSEWOp(TSFlags)) {
-      ErrInfo = "VL operand w/o SEW operand?";
-      return false;
-    }
-  }
-  if (YSXII::hasSEWOp(TSFlags)) {
-    ErrInfo = "YSX does not support vector SEW operands";
-    return false;
-  }
-  if (YSXII::hasVecPolicyOp(TSFlags)) {
-    ErrInfo = "YSX does not support vector policy operands";
-    return false;
   }
 
   return true;
 }
 
 bool YSXInstrInfo::canFoldIntoAddrMode(const MachineInstr &MemI, Register Reg,
-                                         const MachineInstr &AddrI,
-                                         ExtAddrMode &AM) const {
+                                       const MachineInstr &AddrI,
+                                       ExtAddrMode &AM) const {
   switch (MemI.getOpcode()) {
   default:
     return false;
@@ -2342,7 +1533,7 @@ bool YSXInstrInfo::canFoldIntoAddrMode(const MachineInstr &MemI, Register Reg,
 }
 
 MachineInstr *YSXInstrInfo::emitLdStWithAddr(MachineInstr &MemI,
-                                               const ExtAddrMode &AM) const {
+                                             const ExtAddrMode &AM) const {
 
   const DebugLoc &DL = MemI.getDebugLoc();
   MachineBasicBlock &MBB = *MemI.getParent();
@@ -2375,7 +1566,7 @@ bool YSXInstrInfo::isPairableLdStInstOpc(unsigned Opc) {
 }
 
 bool YSXInstrInfo::isLdStSafeToPair(const MachineInstr &LdSt,
-                                      const TargetRegisterInfo *TRI) {
+                                    const TargetRegisterInfo *TRI) {
   // If this is a volatile load/store, don't mess with it.
   if (LdSt.hasOrderedMemoryRef() || LdSt.getNumExplicitOperands() != 3)
     return false;
@@ -2596,7 +1787,7 @@ bool YSXInstrInfo::isFunctionSafeToOutlineFrom(
 }
 
 bool YSXInstrInfo::isMBBSafeToOutlineFrom(MachineBasicBlock &MBB,
-                                            unsigned &Flags) const {
+                                          unsigned &Flags) const {
   // More accurate safety checking is done in getOutliningCandidateInfo.
   return TargetInstrInfo::isMBBSafeToOutlineFrom(MBB, Flags);
 }
@@ -2746,8 +1937,8 @@ YSXInstrInfo::getOutliningCandidateInfo(
 
 outliner::InstrType
 YSXInstrInfo::getOutliningTypeImpl(const MachineModuleInfo &MMI,
-                                     MachineBasicBlock::iterator &MBBI,
-                                     unsigned Flags) const {
+                                   MachineBasicBlock::iterator &MBBI,
+                                   unsigned Flags) const {
   MachineInstr &MI = *MBBI;
   MachineBasicBlock *MBB = MI.getParent();
   const TargetRegisterInfo *TRI =
@@ -2792,9 +1983,9 @@ void YSXInstrInfo::buildOutlinedFrame(
 
   // Add in a return instruction to the end of the outlined frame.
   MBB.insert(MBB.end(), BuildMI(MF, DebugLoc(), get(YSX::JALR))
-      .addReg(YSX::X0, RegState::Define)
-      .addReg(YSX::X5)
-      .addImm(0));
+                            .addReg(YSX::X0, RegState::Define)
+                            .addReg(YSX::X5)
+                            .addImm(0));
 }
 
 MachineBasicBlock::iterator YSXInstrInfo::insertOutlinedCall(
@@ -2809,15 +2000,14 @@ MachineBasicBlock::iterator YSXInstrInfo::insertOutlinedCall(
   }
 
   // Add in a call instruction to the outlined function at the given location.
-  It = MBB.insert(It,
-                  BuildMI(MF, DebugLoc(), get(YSX::PseudoCALLReg), YSX::X5)
-                      .addGlobalAddress(M.getNamedValue(MF.getName()), 0,
-                                        YSXII::MO_CALL));
+  It = MBB.insert(It, BuildMI(MF, DebugLoc(), get(YSX::PseudoCALLReg), YSX::X5)
+                          .addGlobalAddress(M.getNamedValue(MF.getName()), 0,
+                                            YSXII::MO_CALL));
   return It;
 }
 
 std::optional<RegImmPair> YSXInstrInfo::isAddImmediate(const MachineInstr &MI,
-                                                         Register Reg) const {
+                                                       Register Reg) const {
   // TODO: Handle cases where Reg is a super- or sub-register of the
   // destination register.
   const MachineOperand &Op0 = MI.getOperand(0);
@@ -2834,9 +2024,10 @@ std::optional<RegImmPair> YSXInstrInfo::isAddImmediate(const MachineInstr &MI,
 }
 
 // MIR printer helper function to annotate Operands with a comment.
-std::string YSXInstrInfo::createMIROperandComment(
-    const MachineInstr &MI, const MachineOperand &Op, unsigned OpIdx,
-    const TargetRegisterInfo *TRI) const {
+std::string
+YSXInstrInfo::createMIROperandComment(const MachineInstr &MI,
+                                      const MachineOperand &Op, unsigned OpIdx,
+                                      const TargetRegisterInfo *TRI) const {
   // Print a generic comment for this operand if there is one.
   std::string GenericComment =
       TargetInstrInfo::createMIROperandComment(MI, Op, OpIdx, TRI);
@@ -2847,533 +2038,24 @@ std::string YSXInstrInfo::createMIROperandComment(
   if (!Op.isImm())
     return std::string();
 
-  const MCInstrDesc &Desc = MI.getDesc();
-  if (OpIdx >= Desc.getNumOperands())
-    return std::string();
-
-  std::string Comment;
-  raw_string_ostream OS(Comment);
-
-  const MCOperandInfo &OpInfo = Desc.operands()[OpIdx];
-
-  // Print the full VType operand of vsetvli/vsetivli instructions, and the SEW
-  // operand of vector codegen pseudos.
-  switch (OpInfo.OperandType) {
-  case YSXOp::OPERAND_VTYPEI10:
-  case YSXOp::OPERAND_VTYPEI11: {
-    OS << Op.getImm();
-    break;
-  }
-  case YSXOp::OPERAND_XSFMM_VTYPE: {
-    OS << Op.getImm();
-    break;
-  }
-  case YSXOp::OPERAND_XSFMM_TWIDEN: {
-    unsigned Imm = Op.getImm();
-    OS << "w" << Imm;
-    break;
-  }
-  case YSXOp::OPERAND_SEW:
-  case YSXOp::OPERAND_SEW_MASK: {
-    OS << Op.getImm();
-    break;
-  }
-  case YSXOp::OPERAND_VEC_POLICY:
-    OS << Op.getImm();
-    break;
-  }
-
-  return Comment;
+  return std::string();
 }
 
-// clang-format off
-#define CASE_YSXVec_OPCODE_UNMASK_LMUL(OP, LMUL)                                 \
-  YSX::Pseudo##OP##_##LMUL
-
-#define CASE_YSXVec_OPCODE_MASK_LMUL(OP, LMUL)                                   \
-  YSX::Pseudo##OP##_##LMUL##_MASK
-
-#define CASE_YSXVec_OPCODE_LMUL(OP, LMUL)                                        \
-  CASE_YSXVec_OPCODE_UNMASK_LMUL(OP, LMUL):                                      \
-  case CASE_YSXVec_OPCODE_MASK_LMUL(OP, LMUL)
-
-#define CASE_YSXVec_OPCODE_UNMASK_WIDEN(OP)                                      \
-  CASE_YSXVec_OPCODE_UNMASK_LMUL(OP, MF8):                                       \
-  case CASE_YSXVec_OPCODE_UNMASK_LMUL(OP, MF4):                                  \
-  case CASE_YSXVec_OPCODE_UNMASK_LMUL(OP, MF2):                                  \
-  case CASE_YSXVec_OPCODE_UNMASK_LMUL(OP, M1):                                   \
-  case CASE_YSXVec_OPCODE_UNMASK_LMUL(OP, M2):                                   \
-  case CASE_YSXVec_OPCODE_UNMASK_LMUL(OP, M4)
-
-#define CASE_YSXVec_OPCODE_UNMASK(OP)                                            \
-  CASE_YSXVec_OPCODE_UNMASK_WIDEN(OP):                                           \
-  case CASE_YSXVec_OPCODE_UNMASK_LMUL(OP, M8)
-
-#define CASE_YSXVec_OPCODE_MASK_WIDEN(OP)                                        \
-  CASE_YSXVec_OPCODE_MASK_LMUL(OP, MF8):                                         \
-  case CASE_YSXVec_OPCODE_MASK_LMUL(OP, MF4):                                    \
-  case CASE_YSXVec_OPCODE_MASK_LMUL(OP, MF2):                                    \
-  case CASE_YSXVec_OPCODE_MASK_LMUL(OP, M1):                                     \
-  case CASE_YSXVec_OPCODE_MASK_LMUL(OP, M2):                                     \
-  case CASE_YSXVec_OPCODE_MASK_LMUL(OP, M4)
-
-#define CASE_YSXVec_OPCODE_MASK(OP)                                              \
-  CASE_YSXVec_OPCODE_MASK_WIDEN(OP):                                             \
-  case CASE_YSXVec_OPCODE_MASK_LMUL(OP, M8)
-
-#define CASE_YSXVec_OPCODE_WIDEN(OP)                                             \
-  CASE_YSXVec_OPCODE_UNMASK_WIDEN(OP):                                           \
-  case CASE_YSXVec_OPCODE_MASK_WIDEN(OP)
-
-#define CASE_YSXVec_OPCODE(OP)                                                   \
-  CASE_YSXVec_OPCODE_UNMASK(OP):                                                 \
-  case CASE_YSXVec_OPCODE_MASK(OP)
-// clang-format on
-
-// clang-format off
-#define CASE_VMA_OPCODE_COMMON(OP, TYPE, LMUL)                                 \
-  YSX::PseudoV##OP##_##TYPE##_##LMUL
-
-#define CASE_VMA_OPCODE_LMULS(OP, TYPE)                                        \
-  CASE_VMA_OPCODE_COMMON(OP, TYPE, MF8):                                       \
-  case CASE_VMA_OPCODE_COMMON(OP, TYPE, MF4):                                  \
-  case CASE_VMA_OPCODE_COMMON(OP, TYPE, MF2):                                  \
-  case CASE_VMA_OPCODE_COMMON(OP, TYPE, M1):                                   \
-  case CASE_VMA_OPCODE_COMMON(OP, TYPE, M2):                                   \
-  case CASE_VMA_OPCODE_COMMON(OP, TYPE, M4):                                   \
-  case CASE_VMA_OPCODE_COMMON(OP, TYPE, M8)
-
-// VFMA instructions are SEW specific.
-#define CASE_VFMA_OPCODE_COMMON(OP, TYPE, LMUL, SEW)                           \
-  YSX::PseudoV##OP##_##TYPE##_##LMUL##_##SEW
-
-#define CASE_VFMA_OPCODE_LMULS_M1(OP, TYPE, SEW)                               \
-  CASE_VFMA_OPCODE_COMMON(OP, TYPE, M1, SEW):                                  \
-  case CASE_VFMA_OPCODE_COMMON(OP, TYPE, M2, SEW):                             \
-  case CASE_VFMA_OPCODE_COMMON(OP, TYPE, M4, SEW):                             \
-  case CASE_VFMA_OPCODE_COMMON(OP, TYPE, M8, SEW)
-
-#define CASE_VFMA_OPCODE_LMULS_MF2(OP, TYPE, SEW)                              \
-  CASE_VFMA_OPCODE_COMMON(OP, TYPE, MF2, SEW):                                 \
-  case CASE_VFMA_OPCODE_LMULS_M1(OP, TYPE, SEW)
-
-#define CASE_VFMA_OPCODE_LMULS_MF4(OP, TYPE, SEW)                              \
-  CASE_VFMA_OPCODE_COMMON(OP, TYPE, MF4, SEW):                                 \
-  case CASE_VFMA_OPCODE_LMULS_MF2(OP, TYPE, SEW)
-
-#define CASE_VFMA_OPCODE_VV(OP)                                                \
-  CASE_VFMA_OPCODE_LMULS_MF4(OP, VV, E16):                                     \
-  case CASE_VFMA_OPCODE_LMULS_MF4(OP##_ALT, VV, E16):                          \
-  case CASE_VFMA_OPCODE_LMULS_MF2(OP, VV, E32):                                \
-  case CASE_VFMA_OPCODE_LMULS_M1(OP, VV, E64)
-
-#define CASE_VFMA_SPLATS(OP)                                                   \
-  CASE_VFMA_OPCODE_LMULS_MF4(OP, VFPR16, E16):                                 \
-  case CASE_VFMA_OPCODE_LMULS_MF4(OP##_ALT, VFPR16, E16):                      \
-  case CASE_VFMA_OPCODE_LMULS_MF2(OP, VFPR32, E32):                            \
-  case CASE_VFMA_OPCODE_LMULS_M1(OP, VFPR64, E64)
-// clang-format on
-
 bool YSXInstrInfo::findCommutedOpIndices(const MachineInstr &MI,
-                                           unsigned &SrcOpIdx1,
-                                           unsigned &SrcOpIdx2) const {
+                                         unsigned &SrcOpIdx1,
+                                         unsigned &SrcOpIdx2) const {
   const MCInstrDesc &Desc = MI.getDesc();
   if (!Desc.isCommutable())
     return false;
 
-#if 0
-  switch (MI.getOpcode()) {
-  case YSX::TH_MVEQZ:
-  case YSX::TH_MVNEZ:
-    // We can't commute operands if operand 2 (i.e., rs1 in
-    // mveqz/mvnez rd,rs1,rs2) is the zero-register (as it is
-    // not valid as the in/out-operand 1).
-    if (MI.getOperand(2).getReg() == YSX::X0)
-      return false;
-    // Operands 1 and 2 are commutable, if we switch the opcode.
-    return fixCommutedOpIndices(SrcOpIdx1, SrcOpIdx2, 1, 2);
-  case YSX::QC_SELECTIEQ:
-  case YSX::QC_SELECTINE:
-  case YSX::QC_SELECTIIEQ:
-  case YSX::QC_SELECTIINE:
-    return fixCommutedOpIndices(SrcOpIdx1, SrcOpIdx2, 1, 2);
-  case YSX::QC_MVEQ:
-  case YSX::QC_MVNE:
-  case YSX::QC_MVLT:
-  case YSX::QC_MVGE:
-  case YSX::QC_MVLTU:
-  case YSX::QC_MVGEU:
-  case YSX::QC_MVEQI:
-  case YSX::QC_MVNEI:
-  case YSX::QC_MVLTI:
-  case YSX::QC_MVGEI:
-  case YSX::QC_MVLTUI:
-  case YSX::QC_MVGEUI:
-    return fixCommutedOpIndices(SrcOpIdx1, SrcOpIdx2, 1, 4);
-  case YSX::TH_MULA:
-  case YSX::TH_MULAW:
-  case YSX::TH_MULAH:
-  case YSX::TH_MULS:
-  case YSX::TH_MULSW:
-  case YSX::TH_MULSH:
-    // Operands 2 and 3 are commutable.
-    return fixCommutedOpIndices(SrcOpIdx1, SrcOpIdx2, 2, 3);
-  case YSX::PseudoCCMOVGPRNoX0:
-  case YSX::PseudoCCMOVGPR:
-    // Operands 4 and 5 are commutable.
-    return fixCommutedOpIndices(SrcOpIdx1, SrcOpIdx2, 4, 5);
-  case CASE_YSXVec_OPCODE(VADD_VV):
-  case CASE_YSXVec_OPCODE(VAND_VV):
-  case CASE_YSXVec_OPCODE(VOR_VV):
-  case CASE_YSXVec_OPCODE(VXOR_VV):
-  case CASE_YSXVec_OPCODE_MASK(VMSEQ_VV):
-  case CASE_YSXVec_OPCODE_MASK(VMSNE_VV):
-  case CASE_YSXVec_OPCODE(VMIN_VV):
-  case CASE_YSXVec_OPCODE(VMINU_VV):
-  case CASE_YSXVec_OPCODE(VMAX_VV):
-  case CASE_YSXVec_OPCODE(VMAXU_VV):
-  case CASE_YSXVec_OPCODE(VMUL_VV):
-  case CASE_YSXVec_OPCODE(VMULH_VV):
-  case CASE_YSXVec_OPCODE(VMULHU_VV):
-  case CASE_YSXVec_OPCODE_WIDEN(VWADD_VV):
-  case CASE_YSXVec_OPCODE_WIDEN(VWADDU_VV):
-  case CASE_YSXVec_OPCODE_WIDEN(VWMUL_VV):
-  case CASE_YSXVec_OPCODE_WIDEN(VWMULU_VV):
-  case CASE_YSXVec_OPCODE_WIDEN(VWMACC_VV):
-  case CASE_YSXVec_OPCODE_WIDEN(VWMACCU_VV):
-  case CASE_YSXVec_OPCODE_UNMASK(VADC_VVM):
-  case CASE_YSXVec_OPCODE(VSADD_VV):
-  case CASE_YSXVec_OPCODE(VSADDU_VV):
-  case CASE_YSXVec_OPCODE(VAADD_VV):
-  case CASE_YSXVec_OPCODE(VAADDU_VV):
-  case CASE_YSXVec_OPCODE(VSMUL_VV):
-    // Operands 2 and 3 are commutable.
-    return fixCommutedOpIndices(SrcOpIdx1, SrcOpIdx2, 2, 3);
-  case CASE_VFMA_SPLATS(FMADD):
-  case CASE_VFMA_SPLATS(FMSUB):
-  case CASE_VFMA_SPLATS(FMACC):
-  case CASE_VFMA_SPLATS(FMSAC):
-  case CASE_VFMA_SPLATS(FNMADD):
-  case CASE_VFMA_SPLATS(FNMSUB):
-  case CASE_VFMA_SPLATS(FNMACC):
-  case CASE_VFMA_SPLATS(FNMSAC):
-  case CASE_VFMA_OPCODE_VV(FMACC):
-  case CASE_VFMA_OPCODE_VV(FMSAC):
-  case CASE_VFMA_OPCODE_VV(FNMACC):
-  case CASE_VFMA_OPCODE_VV(FNMSAC):
-  case CASE_VMA_OPCODE_LMULS(MADD, VX):
-  case CASE_VMA_OPCODE_LMULS(NMSUB, VX):
-  case CASE_VMA_OPCODE_LMULS(MACC, VX):
-  case CASE_VMA_OPCODE_LMULS(NMSAC, VX):
-  case CASE_VMA_OPCODE_LMULS(MACC, VV):
-  case CASE_VMA_OPCODE_LMULS(NMSAC, VV): {
-    // If the tail policy is undisturbed we can't commute.
-    assert(YSXII::hasVecPolicyOp(MI.getDesc().TSFlags));
-    if ((MI.getOperand(YSXII::getVecPolicyOpNum(MI.getDesc())).getImm() &
-         1) == 0)
-      return false;
-
-    // For these instructions we can only swap operand 1 and operand 3 by
-    // changing the opcode.
-    unsigned CommutableOpIdx1 = 1;
-    unsigned CommutableOpIdx2 = 3;
-    if (!fixCommutedOpIndices(SrcOpIdx1, SrcOpIdx2, CommutableOpIdx1,
-                              CommutableOpIdx2))
-      return false;
-    return true;
-  }
-  case CASE_VFMA_OPCODE_VV(FMADD):
-  case CASE_VFMA_OPCODE_VV(FMSUB):
-  case CASE_VFMA_OPCODE_VV(FNMADD):
-  case CASE_VFMA_OPCODE_VV(FNMSUB):
-  case CASE_VMA_OPCODE_LMULS(MADD, VV):
-  case CASE_VMA_OPCODE_LMULS(NMSUB, VV): {
-    // If the tail policy is undisturbed we can't commute.
-    assert(YSXII::hasVecPolicyOp(MI.getDesc().TSFlags));
-    if ((MI.getOperand(YSXII::getVecPolicyOpNum(MI.getDesc())).getImm() &
-         1) == 0)
-      return false;
-
-    // For these instructions we have more freedom. We can commute with the
-    // other multiplicand or with the addend/subtrahend/minuend.
-
-    // Any fixed operand must be from source 1, 2 or 3.
-    if (SrcOpIdx1 != CommuteAnyOperandIndex && SrcOpIdx1 > 3)
-      return false;
-    if (SrcOpIdx2 != CommuteAnyOperandIndex && SrcOpIdx2 > 3)
-      return false;
-
-    // It both ops are fixed one must be the tied source.
-    if (SrcOpIdx1 != CommuteAnyOperandIndex &&
-        SrcOpIdx2 != CommuteAnyOperandIndex && SrcOpIdx1 != 1 && SrcOpIdx2 != 1)
-      return false;
-
-    // Look for two different register operands assumed to be commutable
-    // regardless of the FMA opcode. The FMA opcode is adjusted later if
-    // needed.
-    if (SrcOpIdx1 == CommuteAnyOperandIndex ||
-        SrcOpIdx2 == CommuteAnyOperandIndex) {
-      // At least one of operands to be commuted is not specified and
-      // this method is free to choose appropriate commutable operands.
-      unsigned CommutableOpIdx1 = SrcOpIdx1;
-      if (SrcOpIdx1 == SrcOpIdx2) {
-        // Both of operands are not fixed. Set one of commutable
-        // operands to the tied source.
-        CommutableOpIdx1 = 1;
-      } else if (SrcOpIdx1 == CommuteAnyOperandIndex) {
-        // Only one of the operands is not fixed.
-        CommutableOpIdx1 = SrcOpIdx2;
-      }
-
-      // CommutableOpIdx1 is well defined now. Let's choose another commutable
-      // operand and assign its index to CommutableOpIdx2.
-      unsigned CommutableOpIdx2;
-      if (CommutableOpIdx1 != 1) {
-        // If we haven't already used the tied source, we must use it now.
-        CommutableOpIdx2 = 1;
-      } else {
-        Register Op1Reg = MI.getOperand(CommutableOpIdx1).getReg();
-
-        // The commuted operands should have different registers.
-        // Otherwise, the commute transformation does not change anything and
-        // is useless. We use this as a hint to make our decision.
-        if (Op1Reg != MI.getOperand(2).getReg())
-          CommutableOpIdx2 = 2;
-        else
-          CommutableOpIdx2 = 3;
-      }
-
-      // Assign the found pair of commutable indices to SrcOpIdx1 and
-      // SrcOpIdx2 to return those values.
-      if (!fixCommutedOpIndices(SrcOpIdx1, SrcOpIdx2, CommutableOpIdx1,
-                                CommutableOpIdx2))
-        return false;
-    }
-
-    return true;
-  }
-  }
-#endif
-
   return TargetInstrInfo::findCommutedOpIndices(MI, SrcOpIdx1, SrcOpIdx2);
 }
 
-// clang-format off
-#define CASE_VMA_CHANGE_OPCODE_COMMON(OLDOP, NEWOP, TYPE, LMUL)                \
-  case YSX::PseudoV##OLDOP##_##TYPE##_##LMUL:                                \
-    Opc = YSX::PseudoV##NEWOP##_##TYPE##_##LMUL;                             \
-    break;
-
-#define CASE_VMA_CHANGE_OPCODE_LMULS(OLDOP, NEWOP, TYPE)                       \
-  CASE_VMA_CHANGE_OPCODE_COMMON(OLDOP, NEWOP, TYPE, MF8)                       \
-  CASE_VMA_CHANGE_OPCODE_COMMON(OLDOP, NEWOP, TYPE, MF4)                       \
-  CASE_VMA_CHANGE_OPCODE_COMMON(OLDOP, NEWOP, TYPE, MF2)                       \
-  CASE_VMA_CHANGE_OPCODE_COMMON(OLDOP, NEWOP, TYPE, M1)                        \
-  CASE_VMA_CHANGE_OPCODE_COMMON(OLDOP, NEWOP, TYPE, M2)                        \
-  CASE_VMA_CHANGE_OPCODE_COMMON(OLDOP, NEWOP, TYPE, M4)                        \
-  CASE_VMA_CHANGE_OPCODE_COMMON(OLDOP, NEWOP, TYPE, M8)
-
-// VFMA depends on SEW.
-#define CASE_VFMA_CHANGE_OPCODE_COMMON(OLDOP, NEWOP, TYPE, LMUL, SEW)          \
-  case YSX::PseudoV##OLDOP##_##TYPE##_##LMUL##_##SEW:                        \
-    Opc = YSX::PseudoV##NEWOP##_##TYPE##_##LMUL##_##SEW;                     \
-    break;
-
-#define CASE_VFMA_CHANGE_OPCODE_LMULS_M1(OLDOP, NEWOP, TYPE, SEW)              \
-  CASE_VFMA_CHANGE_OPCODE_COMMON(OLDOP, NEWOP, TYPE, M1, SEW)                  \
-  CASE_VFMA_CHANGE_OPCODE_COMMON(OLDOP, NEWOP, TYPE, M2, SEW)                  \
-  CASE_VFMA_CHANGE_OPCODE_COMMON(OLDOP, NEWOP, TYPE, M4, SEW)                  \
-  CASE_VFMA_CHANGE_OPCODE_COMMON(OLDOP, NEWOP, TYPE, M8, SEW)
-
-#define CASE_VFMA_CHANGE_OPCODE_LMULS_MF2(OLDOP, NEWOP, TYPE, SEW)             \
-  CASE_VFMA_CHANGE_OPCODE_COMMON(OLDOP, NEWOP, TYPE, MF2, SEW)                 \
-  CASE_VFMA_CHANGE_OPCODE_LMULS_M1(OLDOP, NEWOP, TYPE, SEW)
-
-#define CASE_VFMA_CHANGE_OPCODE_LMULS_MF4(OLDOP, NEWOP, TYPE, SEW)             \
-  CASE_VFMA_CHANGE_OPCODE_COMMON(OLDOP, NEWOP, TYPE, MF4, SEW)                 \
-  CASE_VFMA_CHANGE_OPCODE_LMULS_MF2(OLDOP, NEWOP, TYPE, SEW)
-
-#define CASE_VFMA_CHANGE_OPCODE_VV(OLDOP, NEWOP)                               \
-  CASE_VFMA_CHANGE_OPCODE_LMULS_MF4(OLDOP, NEWOP, VV, E16)                     \
-  CASE_VFMA_CHANGE_OPCODE_LMULS_MF4(OLDOP##_ALT, NEWOP##_ALT, VV, E16)         \
-  CASE_VFMA_CHANGE_OPCODE_LMULS_MF2(OLDOP, NEWOP, VV, E32)                     \
-  CASE_VFMA_CHANGE_OPCODE_LMULS_M1(OLDOP, NEWOP, VV, E64)
-
-#define CASE_VFMA_CHANGE_OPCODE_SPLATS(OLDOP, NEWOP)                           \
-  CASE_VFMA_CHANGE_OPCODE_LMULS_MF4(OLDOP, NEWOP, VFPR16, E16)                 \
-  CASE_VFMA_CHANGE_OPCODE_LMULS_MF4(OLDOP##_ALT, NEWOP##_ALT, VFPR16, E16)     \
-  CASE_VFMA_CHANGE_OPCODE_LMULS_MF2(OLDOP, NEWOP, VFPR32, E32)                 \
-  CASE_VFMA_CHANGE_OPCODE_LMULS_M1(OLDOP, NEWOP, VFPR64, E64)
-// clang-format on
-
-MachineInstr *YSXInstrInfo::commuteInstructionImpl(MachineInstr &MI,
-                                                     bool NewMI,
-                                                     unsigned OpIdx1,
-                                                     unsigned OpIdx2) const {
+MachineInstr *YSXInstrInfo::commuteInstructionImpl(MachineInstr &MI, bool NewMI,
+                                                   unsigned OpIdx1,
+                                                   unsigned OpIdx2) const {
   return TargetInstrInfo::commuteInstructionImpl(MI, NewMI, OpIdx1, OpIdx2);
-
-#if 0
-  auto cloneIfNew = [NewMI](MachineInstr &MI) -> MachineInstr & {
-    if (NewMI)
-      return *MI.getParent()->getParent()->CloneMachineInstr(&MI);
-    return MI;
-  };
-
-  switch (MI.getOpcode()) {
-  case YSX::TH_MVEQZ:
-  case YSX::TH_MVNEZ: {
-    auto &WorkingMI = cloneIfNew(MI);
-    WorkingMI.setDesc(get(MI.getOpcode() == YSX::TH_MVEQZ ? YSX::TH_MVNEZ
-                                                            : YSX::TH_MVEQZ));
-    return TargetInstrInfo::commuteInstructionImpl(WorkingMI, false, OpIdx1,
-                                                   OpIdx2);
-  }
-  case YSX::QC_SELECTIEQ:
-  case YSX::QC_SELECTINE:
-  case YSX::QC_SELECTIIEQ:
-  case YSX::QC_SELECTIINE:
-    return TargetInstrInfo::commuteInstructionImpl(MI, NewMI, OpIdx1, OpIdx2);
-  case YSX::QC_MVEQ:
-  case YSX::QC_MVNE:
-  case YSX::QC_MVLT:
-  case YSX::QC_MVGE:
-  case YSX::QC_MVLTU:
-  case YSX::QC_MVGEU:
-  case YSX::QC_MVEQI:
-  case YSX::QC_MVNEI:
-  case YSX::QC_MVLTI:
-  case YSX::QC_MVGEI:
-  case YSX::QC_MVLTUI:
-  case YSX::QC_MVGEUI: {
-    auto &WorkingMI = cloneIfNew(MI);
-    WorkingMI.setDesc(get(getInverseXRemovedQcicmOpcode(MI.getOpcode())));
-    return TargetInstrInfo::commuteInstructionImpl(WorkingMI, false, OpIdx1,
-                                                   OpIdx2);
-  }
-  case YSX::PseudoCCMOVGPRNoX0:
-  case YSX::PseudoCCMOVGPR: {
-    // CCMOV can be commuted by inverting the condition.
-    auto CC = static_cast<YSXCC::CondCode>(MI.getOperand(3).getImm());
-    CC = YSXCC::getInverseBranchCondition(CC);
-    auto &WorkingMI = cloneIfNew(MI);
-    WorkingMI.getOperand(3).setImm(CC);
-    return TargetInstrInfo::commuteInstructionImpl(WorkingMI, /*NewMI*/ false,
-                                                   OpIdx1, OpIdx2);
-  }
-  case CASE_VFMA_SPLATS(FMACC):
-  case CASE_VFMA_SPLATS(FMADD):
-  case CASE_VFMA_SPLATS(FMSAC):
-  case CASE_VFMA_SPLATS(FMSUB):
-  case CASE_VFMA_SPLATS(FNMACC):
-  case CASE_VFMA_SPLATS(FNMADD):
-  case CASE_VFMA_SPLATS(FNMSAC):
-  case CASE_VFMA_SPLATS(FNMSUB):
-  case CASE_VFMA_OPCODE_VV(FMACC):
-  case CASE_VFMA_OPCODE_VV(FMSAC):
-  case CASE_VFMA_OPCODE_VV(FNMACC):
-  case CASE_VFMA_OPCODE_VV(FNMSAC):
-  case CASE_VMA_OPCODE_LMULS(MADD, VX):
-  case CASE_VMA_OPCODE_LMULS(NMSUB, VX):
-  case CASE_VMA_OPCODE_LMULS(MACC, VX):
-  case CASE_VMA_OPCODE_LMULS(NMSAC, VX):
-  case CASE_VMA_OPCODE_LMULS(MACC, VV):
-  case CASE_VMA_OPCODE_LMULS(NMSAC, VV): {
-    // It only make sense to toggle these between clobbering the
-    // addend/subtrahend/minuend one of the multiplicands.
-    assert((OpIdx1 == 1 || OpIdx2 == 1) && "Unexpected opcode index");
-    assert((OpIdx1 == 3 || OpIdx2 == 3) && "Unexpected opcode index");
-    unsigned Opc;
-    switch (MI.getOpcode()) {
-      default:
-        llvm_unreachable("Unexpected opcode");
-      CASE_VFMA_CHANGE_OPCODE_SPLATS(FMACC, FMADD)
-      CASE_VFMA_CHANGE_OPCODE_SPLATS(FMADD, FMACC)
-      CASE_VFMA_CHANGE_OPCODE_SPLATS(FMSAC, FMSUB)
-      CASE_VFMA_CHANGE_OPCODE_SPLATS(FMSUB, FMSAC)
-      CASE_VFMA_CHANGE_OPCODE_SPLATS(FNMACC, FNMADD)
-      CASE_VFMA_CHANGE_OPCODE_SPLATS(FNMADD, FNMACC)
-      CASE_VFMA_CHANGE_OPCODE_SPLATS(FNMSAC, FNMSUB)
-      CASE_VFMA_CHANGE_OPCODE_SPLATS(FNMSUB, FNMSAC)
-      CASE_VFMA_CHANGE_OPCODE_VV(FMACC, FMADD)
-      CASE_VFMA_CHANGE_OPCODE_VV(FMSAC, FMSUB)
-      CASE_VFMA_CHANGE_OPCODE_VV(FNMACC, FNMADD)
-      CASE_VFMA_CHANGE_OPCODE_VV(FNMSAC, FNMSUB)
-      CASE_VMA_CHANGE_OPCODE_LMULS(MACC, MADD, VX)
-      CASE_VMA_CHANGE_OPCODE_LMULS(MADD, MACC, VX)
-      CASE_VMA_CHANGE_OPCODE_LMULS(NMSAC, NMSUB, VX)
-      CASE_VMA_CHANGE_OPCODE_LMULS(NMSUB, NMSAC, VX)
-      CASE_VMA_CHANGE_OPCODE_LMULS(MACC, MADD, VV)
-      CASE_VMA_CHANGE_OPCODE_LMULS(NMSAC, NMSUB, VV)
-    }
-
-    auto &WorkingMI = cloneIfNew(MI);
-    WorkingMI.setDesc(get(Opc));
-    return TargetInstrInfo::commuteInstructionImpl(WorkingMI, /*NewMI=*/false,
-                                                   OpIdx1, OpIdx2);
-  }
-  case CASE_VFMA_OPCODE_VV(FMADD):
-  case CASE_VFMA_OPCODE_VV(FMSUB):
-  case CASE_VFMA_OPCODE_VV(FNMADD):
-  case CASE_VFMA_OPCODE_VV(FNMSUB):
-  case CASE_VMA_OPCODE_LMULS(MADD, VV):
-  case CASE_VMA_OPCODE_LMULS(NMSUB, VV): {
-    assert((OpIdx1 == 1 || OpIdx2 == 1) && "Unexpected opcode index");
-    // If one of the operands, is the addend we need to change opcode.
-    // Otherwise we're just swapping 2 of the multiplicands.
-    if (OpIdx1 == 3 || OpIdx2 == 3) {
-      unsigned Opc;
-      switch (MI.getOpcode()) {
-        default:
-          llvm_unreachable("Unexpected opcode");
-        CASE_VFMA_CHANGE_OPCODE_VV(FMADD, FMACC)
-        CASE_VFMA_CHANGE_OPCODE_VV(FMSUB, FMSAC)
-        CASE_VFMA_CHANGE_OPCODE_VV(FNMADD, FNMACC)
-        CASE_VFMA_CHANGE_OPCODE_VV(FNMSUB, FNMSAC)
-        CASE_VMA_CHANGE_OPCODE_LMULS(MADD, MACC, VV)
-        CASE_VMA_CHANGE_OPCODE_LMULS(NMSUB, NMSAC, VV)
-      }
-
-      auto &WorkingMI = cloneIfNew(MI);
-      WorkingMI.setDesc(get(Opc));
-      return TargetInstrInfo::commuteInstructionImpl(WorkingMI, /*NewMI=*/false,
-                                                     OpIdx1, OpIdx2);
-    }
-    // Let the default code handle it.
-    break;
-  }
-  }
-
-  return TargetInstrInfo::commuteInstructionImpl(MI, NewMI, OpIdx1, OpIdx2);
-#endif
 }
-
-#undef CASE_VMA_CHANGE_OPCODE_COMMON
-#undef CASE_VMA_CHANGE_OPCODE_LMULS
-#undef CASE_VFMA_CHANGE_OPCODE_COMMON
-#undef CASE_VFMA_CHANGE_OPCODE_LMULS_M1
-#undef CASE_VFMA_CHANGE_OPCODE_LMULS_MF2
-#undef CASE_VFMA_CHANGE_OPCODE_LMULS_MF4
-#undef CASE_VFMA_CHANGE_OPCODE_VV
-#undef CASE_VFMA_CHANGE_OPCODE_SPLATS
-
-#undef CASE_YSXVec_OPCODE_UNMASK_LMUL
-#undef CASE_YSXVec_OPCODE_MASK_LMUL
-#undef CASE_YSXVec_OPCODE_LMUL
-#undef CASE_YSXVec_OPCODE_UNMASK_WIDEN
-#undef CASE_YSXVec_OPCODE_UNMASK
-#undef CASE_YSXVec_OPCODE_MASK_WIDEN
-#undef CASE_YSXVec_OPCODE_MASK
-#undef CASE_YSXVec_OPCODE_WIDEN
-#undef CASE_YSXVec_OPCODE
-
-#undef CASE_VMA_OPCODE_COMMON
-#undef CASE_VMA_OPCODE_LMULS
-#undef CASE_VFMA_OPCODE_COMMON
-#undef CASE_VFMA_OPCODE_LMULS_M1
-#undef CASE_VFMA_OPCODE_LMULS_MF2
-#undef CASE_VFMA_OPCODE_LMULS_MF4
-#undef CASE_VFMA_OPCODE_VV
-#undef CASE_VFMA_SPLATS
 
 bool YSXInstrInfo::simplifyInstruction(MachineInstr &MI) const {
   switch (MI.getOpcode()) {
@@ -3551,198 +2233,16 @@ bool YSXInstrInfo::simplifyInstruction(MachineInstr &MI) const {
   return false;
 }
 
-// clang-format off
-#define CASE_WIDEOP_OPCODE_COMMON(OP, LMUL)                                    \
-  YSX::PseudoV##OP##_##LMUL##_TIED
-
-#define CASE_WIDEOP_OPCODE_LMULS(OP)                                           \
-  CASE_WIDEOP_OPCODE_COMMON(OP, MF8):                                          \
-  case CASE_WIDEOP_OPCODE_COMMON(OP, MF4):                                     \
-  case CASE_WIDEOP_OPCODE_COMMON(OP, MF2):                                     \
-  case CASE_WIDEOP_OPCODE_COMMON(OP, M1):                                      \
-  case CASE_WIDEOP_OPCODE_COMMON(OP, M2):                                      \
-  case CASE_WIDEOP_OPCODE_COMMON(OP, M4)
-
-#define CASE_WIDEOP_CHANGE_OPCODE_COMMON(OP, LMUL)                             \
-  case YSX::PseudoV##OP##_##LMUL##_TIED:                                     \
-    NewOpc = YSX::PseudoV##OP##_##LMUL;                                      \
-    break;
-
-#define CASE_WIDEOP_CHANGE_OPCODE_LMULS(OP)                                    \
-  CASE_WIDEOP_CHANGE_OPCODE_COMMON(OP, MF8)                                    \
-  CASE_WIDEOP_CHANGE_OPCODE_COMMON(OP, MF4)                                    \
-  CASE_WIDEOP_CHANGE_OPCODE_COMMON(OP, MF2)                                    \
-  CASE_WIDEOP_CHANGE_OPCODE_COMMON(OP, M1)                                     \
-  CASE_WIDEOP_CHANGE_OPCODE_COMMON(OP, M2)                                     \
-  CASE_WIDEOP_CHANGE_OPCODE_COMMON(OP, M4)
-
-// FP Widening Ops may by SEW aware. Create SEW aware cases for these cases.
-#define CASE_FP_WIDEOP_OPCODE_COMMON(OP, LMUL, SEW)                            \
-  YSX::PseudoV##OP##_##LMUL##_##SEW##_TIED
-
-#define CASE_FP_WIDEOP_OPCODE_LMULS(OP)                                        \
-  CASE_FP_WIDEOP_OPCODE_COMMON(OP, MF4, E16):                                  \
-  case CASE_FP_WIDEOP_OPCODE_COMMON(OP, MF2, E16):                             \
-  case CASE_FP_WIDEOP_OPCODE_COMMON(OP, MF2, E32):                             \
-  case CASE_FP_WIDEOP_OPCODE_COMMON(OP, M1, E16):                              \
-  case CASE_FP_WIDEOP_OPCODE_COMMON(OP, M1, E32):                              \
-  case CASE_FP_WIDEOP_OPCODE_COMMON(OP, M2, E16):                              \
-  case CASE_FP_WIDEOP_OPCODE_COMMON(OP, M2, E32):                              \
-  case CASE_FP_WIDEOP_OPCODE_COMMON(OP, M4, E16):                              \
-  case CASE_FP_WIDEOP_OPCODE_COMMON(OP, M4, E32)                               \
-
-#define CASE_FP_WIDEOP_CHANGE_OPCODE_COMMON(OP, LMUL, SEW)                     \
-  case YSX::PseudoV##OP##_##LMUL##_##SEW##_TIED:                             \
-    NewOpc = YSX::PseudoV##OP##_##LMUL##_##SEW;                              \
-    break;
-
-#define CASE_FP_WIDEOP_CHANGE_OPCODE_LMULS(OP)                                 \
-  CASE_FP_WIDEOP_CHANGE_OPCODE_COMMON(OP, MF4, E16)                            \
-  CASE_FP_WIDEOP_CHANGE_OPCODE_COMMON(OP, MF2, E16)                            \
-  CASE_FP_WIDEOP_CHANGE_OPCODE_COMMON(OP, MF2, E32)                            \
-  CASE_FP_WIDEOP_CHANGE_OPCODE_COMMON(OP, M1, E16)                             \
-  CASE_FP_WIDEOP_CHANGE_OPCODE_COMMON(OP, M1, E32)                             \
-  CASE_FP_WIDEOP_CHANGE_OPCODE_COMMON(OP, M2, E16)                             \
-  CASE_FP_WIDEOP_CHANGE_OPCODE_COMMON(OP, M2, E32)                             \
-  CASE_FP_WIDEOP_CHANGE_OPCODE_COMMON(OP, M4, E16)                             \
-  CASE_FP_WIDEOP_CHANGE_OPCODE_COMMON(OP, M4, E32)                             \
-
-#define CASE_FP_WIDEOP_OPCODE_LMULS_ALT(OP)                                    \
-  CASE_FP_WIDEOP_OPCODE_COMMON(OP, MF4, E16):                                  \
-  case CASE_FP_WIDEOP_OPCODE_COMMON(OP, MF2, E16):                             \
-  case CASE_FP_WIDEOP_OPCODE_COMMON(OP, M1, E16):                              \
-  case CASE_FP_WIDEOP_OPCODE_COMMON(OP, M2, E16):                              \
-  case CASE_FP_WIDEOP_OPCODE_COMMON(OP, M4, E16)
-
-#define CASE_FP_WIDEOP_CHANGE_OPCODE_LMULS_ALT(OP)                             \
-  CASE_FP_WIDEOP_CHANGE_OPCODE_COMMON(OP, MF4, E16)                            \
-  CASE_FP_WIDEOP_CHANGE_OPCODE_COMMON(OP, MF2, E16)                            \
-  CASE_FP_WIDEOP_CHANGE_OPCODE_COMMON(OP, M1, E16)                             \
-  CASE_FP_WIDEOP_CHANGE_OPCODE_COMMON(OP, M2, E16)                             \
-  CASE_FP_WIDEOP_CHANGE_OPCODE_COMMON(OP, M4, E16)
-// clang-format on
-
 MachineInstr *YSXInstrInfo::convertToThreeAddress(MachineInstr &MI,
-                                                    LiveVariables *LV,
-                                                    LiveIntervals *LIS) const {
-#if 0
-  MachineInstrBuilder MIB;
-  switch (MI.getOpcode()) {
-  default:
-    return nullptr;
-  case CASE_FP_WIDEOP_OPCODE_LMULS_ALT(FWADD_ALT_WV):
-  case CASE_FP_WIDEOP_OPCODE_LMULS_ALT(FWSUB_ALT_WV):
-  case CASE_FP_WIDEOP_OPCODE_LMULS(FWADD_WV):
-  case CASE_FP_WIDEOP_OPCODE_LMULS(FWSUB_WV): {
-    assert(YSXII::hasVecPolicyOp(MI.getDesc().TSFlags) &&
-           MI.getNumExplicitOperands() == 7 &&
-           "Expect 7 explicit operands rd, rs2, rs1, rm, vl, sew, policy");
-    // If the tail policy is undisturbed we can't convert.
-    if ((MI.getOperand(YSXII::getVecPolicyOpNum(MI.getDesc())).getImm() &
-         1) == 0)
-      return nullptr;
-    // clang-format off
-    unsigned NewOpc;
-    switch (MI.getOpcode()) {
-    default:
-      llvm_unreachable("Unexpected opcode");
-    CASE_FP_WIDEOP_CHANGE_OPCODE_LMULS(FWADD_WV)
-    CASE_FP_WIDEOP_CHANGE_OPCODE_LMULS(FWSUB_WV)
-    CASE_FP_WIDEOP_CHANGE_OPCODE_LMULS_ALT(FWADD_ALT_WV)
-    CASE_FP_WIDEOP_CHANGE_OPCODE_LMULS_ALT(FWSUB_ALT_WV)
-    }
-    // clang-format on
-
-    MachineBasicBlock &MBB = *MI.getParent();
-    MIB = BuildMI(MBB, MI, MI.getDebugLoc(), get(NewOpc))
-              .add(MI.getOperand(0))
-              .addReg(MI.getOperand(0).getReg(), RegState::Undef)
-              .add(MI.getOperand(1))
-              .add(MI.getOperand(2))
-              .add(MI.getOperand(3))
-              .add(MI.getOperand(4))
-              .add(MI.getOperand(5))
-              .add(MI.getOperand(6));
-    break;
-  }
-  case CASE_WIDEOP_OPCODE_LMULS(WADD_WV):
-  case CASE_WIDEOP_OPCODE_LMULS(WADDU_WV):
-  case CASE_WIDEOP_OPCODE_LMULS(WSUB_WV):
-  case CASE_WIDEOP_OPCODE_LMULS(WSUBU_WV): {
-    // If the tail policy is undisturbed we can't convert.
-    assert(YSXII::hasVecPolicyOp(MI.getDesc().TSFlags) &&
-           MI.getNumExplicitOperands() == 6);
-    if ((MI.getOperand(YSXII::getVecPolicyOpNum(MI.getDesc())).getImm() &
-         1) == 0)
-      return nullptr;
-
-    // clang-format off
-    unsigned NewOpc;
-    switch (MI.getOpcode()) {
-    default:
-      llvm_unreachable("Unexpected opcode");
-    CASE_WIDEOP_CHANGE_OPCODE_LMULS(WADD_WV)
-    CASE_WIDEOP_CHANGE_OPCODE_LMULS(WADDU_WV)
-    CASE_WIDEOP_CHANGE_OPCODE_LMULS(WSUB_WV)
-    CASE_WIDEOP_CHANGE_OPCODE_LMULS(WSUBU_WV)
-    }
-    // clang-format on
-
-    MachineBasicBlock &MBB = *MI.getParent();
-    MIB = BuildMI(MBB, MI, MI.getDebugLoc(), get(NewOpc))
-              .add(MI.getOperand(0))
-              .addReg(MI.getOperand(0).getReg(), RegState::Undef)
-              .add(MI.getOperand(1))
-              .add(MI.getOperand(2))
-              .add(MI.getOperand(3))
-              .add(MI.getOperand(4))
-              .add(MI.getOperand(5));
-    break;
-  }
-  }
-  MIB.copyImplicitOps(MI);
-
-  if (LV) {
-    unsigned NumOps = MI.getNumOperands();
-    for (unsigned I = 1; I < NumOps; ++I) {
-      MachineOperand &Op = MI.getOperand(I);
-      if (Op.isReg() && Op.isKill())
-        LV->replaceKillInstruction(Op.getReg(), MI, *MIB);
-    }
-  }
-
-  if (LIS) {
-    SlotIndex Idx = LIS->ReplaceMachineInstrInMaps(MI, *MIB);
-
-    if (MI.getOperand(0).isEarlyClobber()) {
-      // Use operand 1 was tied to early-clobber def operand 0, so its live
-      // interval could have ended at an early-clobber slot. Now they are not
-      // tied we need to update it to the normal register slot.
-      LiveInterval &LI = LIS->getInterval(MI.getOperand(1).getReg());
-      LiveRange::Segment *S = LI.getSegmentContaining(Idx);
-      if (S->end == Idx.getRegSlot(true))
-        S->end = Idx.getRegSlot();
-    }
-  }
-
-  return MIB;
-#endif
+                                                  LiveVariables *LV,
+                                                  LiveIntervals *LIS) const {
   return nullptr;
 }
 
-#undef CASE_WIDEOP_OPCODE_COMMON
-#undef CASE_WIDEOP_OPCODE_LMULS
-#undef CASE_WIDEOP_CHANGE_OPCODE_COMMON
-#undef CASE_WIDEOP_CHANGE_OPCODE_LMULS
-#undef CASE_FP_WIDEOP_OPCODE_COMMON
-#undef CASE_FP_WIDEOP_OPCODE_LMULS
-#undef CASE_FP_WIDEOP_CHANGE_OPCODE_COMMON
-#undef CASE_FP_WIDEOP_CHANGE_OPCODE_LMULS
-
 void YSXInstrInfo::mulImm(MachineFunction &MF, MachineBasicBlock &MBB,
-                            MachineBasicBlock::iterator II, const DebugLoc &DL,
-                            Register DestReg, uint32_t Amount,
-                            MachineInstr::MIFlag Flag) const {
+                          MachineBasicBlock::iterator II, const DebugLoc &DL,
+                          Register DestReg, uint32_t Amount,
+                          MachineInstr::MIFlag Flag) const {
   MachineRegisterInfo &MRI = MF.getRegInfo();
   if (llvm::has_single_bit<uint32_t>(Amount)) {
     uint32_t ShiftAmount = Log2_32(Amount);
@@ -3830,77 +2330,7 @@ unsigned YSXInstrInfo::getTailDuplicateSize(CodeGenOptLevel OptLevel) const {
              : 2;
 }
 
-bool YSX::isYSXVecSpill(const MachineInstr &MI) {
-  return false;
-}
-
-/// Return true if \p MI is a copy that will be lowered to one or more vmvNr.vs.
-bool YSX::isVectorCopy(const TargetRegisterInfo *TRI,
-                         const MachineInstr &MI) {
-  return false;
-}
-
-std::optional<std::pair<unsigned, unsigned>>
-YSX::isYSXVecSpillForZvlsseg(unsigned Opcode) {
-  return std::nullopt;
-}
-
-bool YSX::hasEqualFRM(const MachineInstr &MI1, const MachineInstr &MI2) {
-  return false;
-}
-
-std::optional<unsigned>
-YSX::getVectorLowDemandedScalarBits(unsigned Opcode, unsigned Log2SEW) {
-  return std::nullopt;
-}
-
-unsigned YSX::getYSXVecMCOpcode(unsigned YSXVecPseudoOpcode) {
-  return 0;
-}
-
-unsigned YSX::getDestLog2EEW(const MCInstrDesc &Desc, unsigned Log2SEW) {
-  unsigned DestEEW =
-      (Desc.TSFlags & YSXII::DestEEWMask) >> YSXII::DestEEWShift;
-  // EEW = 1
-  if (DestEEW == 0)
-    return 0;
-  // EEW = SEW * n
-  unsigned Scaled = Log2SEW + (DestEEW - 1);
-  assert(Scaled >= 3 && Scaled <= 6);
-  return Scaled;
-}
-
-static std::optional<int64_t> getEffectiveImm(const MachineOperand &MO) {
-  assert(MO.isImm() || MO.getReg().isVirtual());
-  if (MO.isImm())
-    return MO.getImm();
-  const MachineInstr *Def =
-      MO.getParent()->getMF()->getRegInfo().getVRegDef(MO.getReg());
-  int64_t Imm;
-  if (isLoadImm(Def, Imm))
-    return Imm;
-  return std::nullopt;
-}
-
-/// Given two VL operands, do we know that LHS <= RHS? Must be used in SSA form.
-bool YSX::isVLKnownLE(const MachineOperand &LHS, const MachineOperand &RHS) {
-  assert((LHS.isImm() || LHS.getParent()->getMF()->getRegInfo().isSSA()) &&
-         (RHS.isImm() || RHS.getParent()->getMF()->getRegInfo().isSSA()));
-  if (LHS.isReg() && RHS.isReg() && LHS.getReg().isVirtual() &&
-      LHS.getReg() == RHS.getReg())
-    return true;
-  if (RHS.isImm() && RHS.getImm() == YSX::VLMaxSentinel)
-    return true;
-  if (LHS.isImm() && LHS.getImm() == 0)
-    return true;
-  if (LHS.isImm() && LHS.getImm() == YSX::VLMaxSentinel)
-    return false;
-  std::optional<int64_t> LHSImm = getEffectiveImm(LHS),
-                         RHSImm = getEffectiveImm(RHS);
-  if (!LHSImm || !RHSImm)
-    return false;
-  return LHSImm <= RHSImm;
-}
+bool YSX::isYSXVecSpill(const MachineInstr &MI) { return false; }
 
 namespace {
 class YSXPipelinerLoopInfo : public TargetInstrInfo::PipelinerLoopInfo {
@@ -3910,7 +2340,7 @@ class YSXPipelinerLoopInfo : public TargetInstrInfo::PipelinerLoopInfo {
 
 public:
   YSXPipelinerLoopInfo(const MachineInstr *LHS, const MachineInstr *RHS,
-                         const SmallVectorImpl<MachineOperand> &Cond)
+                       const SmallVectorImpl<MachineOperand> &Cond)
       : LHS(LHS), RHS(RHS), Cond(Cond.begin(), Cond.end()) {}
 
   bool shouldIgnoreForPipelining(const MachineInstr *MI) const override {
@@ -3996,21 +2426,4 @@ bool YSXInstrInfo::isHighLatencyDef(int Opc) const {
   case YSX::REMUW:
     return true;
   }
-}
-
-bool YSXInstrInfo::isVRegCopy(const MachineInstr *MI, unsigned LMul) const {
-  if (MI->getOpcode() != TargetOpcode::COPY)
-    return false;
-  const MachineRegisterInfo &MRI = MI->getMF()->getRegInfo();
-  const TargetRegisterInfo *TRI = MRI.getTargetRegisterInfo();
-
-  Register DstReg = MI->getOperand(0).getReg();
-  const TargetRegisterClass *RC = DstReg.isVirtual()
-                                      ? MRI.getRegClass(DstReg)
-                                      : TRI->getMinimalPhysRegClass(DstReg);
-
-  if (!YSXRegisterInfo::isYSXVecRegClass(RC))
-    return false;
-
-  return !LMul;
 }
