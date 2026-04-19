@@ -310,8 +310,11 @@ std::string riscv::getRISCVArch(const llvm::opt::ArgList &Args,
   assert(Triple.isRISCV() && "Unexpected triple");
 
   if (Triple.isYSX64()) {
-    if (const Arg *A = Args.getLastArg(options::OPT_march_EQ))
-      return A->getValue();
+    if (const Arg *A = Args.getLastArg(options::OPT_march_EQ)) {
+      StringRef MArch = A->getValue();
+      if (MArch != "unset")
+        return MArch.str();
+    }
     return "rv64ima";
   }
 

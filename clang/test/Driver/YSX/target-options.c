@@ -2,6 +2,7 @@
 // RUN: %clang --target=ysx64-unknown-elf -dM -E -x c /dev/null | FileCheck %s --check-prefix=DEFS --implicit-check-not=__riscv_v_intrinsic --implicit-check-not=__riscv_vector
 // RUN: %clang --target=ysx64-unknown-elf -c %s -o %t-default.o
 // RUN: %clang --target=ysx64-unknown-elf -march=rv64ima -c %s -o %t-rv64ima.o
+// RUN: %clang --target=ysx64 -march=rv64gc -march=unset -### -c %s 2>&1 | FileCheck %s --check-prefix=UNSET --implicit-check-not="+f" --implicit-check-not="+d" --implicit-check-not="+c" --implicit-check-not="+v"
 // RUN: %clang --target=ysx64-unknown-elf -mno-save-restore -c %s -o %t-no-save-restore.o
 // RUN: %clang --target=ysx64-unknown-elf -Xclang -target-feature -Xclang -v -c %s -o %t-disable-v.o
 // RUN: touch %t-link.o
@@ -60,6 +61,16 @@
 // CHECK-NOT: "-target-feature" "-zvl128b"
 // CHECK-NOT: "-target-feature" "-xventanacondops"
 // CHECK: "-target-abi" "lp64"
+
+// UNSET: "-target-cpu" "generic-rv64"
+// UNSET: "-target-feature" "+i"
+// UNSET: "-target-feature" "+m"
+// UNSET: "-target-feature" "+a"
+// UNSET: "-target-feature" "+zmmul"
+// UNSET: "-target-feature" "+zaamo"
+// UNSET: "-target-feature" "+zalrsc"
+// UNSET: "-target-feature" "+relax"
+// UNSET: "-target-abi" "lp64"
 
 // FIXED: "-target-feature" "+reserve-x5"
 
