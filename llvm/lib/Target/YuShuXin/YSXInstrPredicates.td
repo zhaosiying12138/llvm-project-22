@@ -12,7 +12,7 @@
 
 // This predicate is true when the rs2 operand of vlse or vsse is x0, false
 // otherwise.
-// Note: in our pseudo RVV MachinInstr, rs2 is the fourth operand. However,
+// Note: in our pseudo YSXVec MachinInstr, rs2 is the fourth operand. However,
 // it's the third operand of its MCInst form, so this predicate will not
 // be triggered by llvm-mca, which checks against MCInst.
 def VLDSX0Pred

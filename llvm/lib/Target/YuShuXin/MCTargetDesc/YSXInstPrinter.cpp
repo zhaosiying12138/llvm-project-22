@@ -223,7 +223,7 @@ void YSXInstPrinter::printVTypeI(const MCInst *MI, unsigned OpNo,
       (YSXVType::isAltFmt(Imm) &&
        !(STI.hasFeature(YSX::FeatureStdExtZvfbfa) ||
          STI.hasFeature(YSX::FeatureStdExtZvfofp8min) ||
-         STI.hasFeature(YSX::FeatureVendorXSfvfbfexp16e))) ||
+         STI.hasFeature(YSX::YSXDisabledVendorFeatureXRemovedSfvfbfexp16e))) ||
       (Imm >> 9) != 0) {
     O << formatImm(Imm);
     return;
@@ -232,17 +232,19 @@ void YSXInstPrinter::printVTypeI(const MCInst *MI, unsigned OpNo,
   YSXVType::printVType(Imm, O);
 }
 
-void YSXInstPrinter::printXSfmmVType(const MCInst *MI, unsigned OpNo,
+void YSXInstPrinter::printXRemovedSfmmVType(const MCInst *MI, unsigned OpNo,
                                        const MCSubtargetInfo &STI,
                                        raw_ostream &O) {
   unsigned Imm = MI->getOperand(OpNo).getImm();
-  assert(YSXVType::isValidXSfmmVType(Imm));
+  assert(YSXVType::isValidXRemovedSfmmVType(Imm));
   unsigned SEW = YSXVType::getSEW(Imm);
   O << "e" << SEW;
   bool AltFmt = YSXVType::isAltFmt(Imm);
   if (AltFmt)
     O << "alt";
-  unsigned Widen = YSXVType::getXSfmmWiden(Imm);
+  unsigned TWiden = (Imm >> 9) & 0x3;
+  assert(TWiden != 0 && "Invalid widen value");
+  unsigned Widen = 1 << (TWiden - 1);
   O << ", w" << Widen;
 }
 

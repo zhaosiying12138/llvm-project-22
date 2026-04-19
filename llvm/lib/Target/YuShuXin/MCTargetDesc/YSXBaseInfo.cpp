@@ -34,12 +34,6 @@ namespace YSXInsnOpcode {
 #include "YSXGenSearchableTables.inc"
 } // namespace YSXInsnOpcode
 
-namespace YSXVInversePseudosTable {
-using namespace YSX;
-#define GET_YSXVInversePseudosTable_IMPL
-#include "YSXGenSearchableTables.inc"
-} // namespace YSXVInversePseudosTable
-
 namespace YSX {
 #define GET_YSXVSSEGTable_IMPL
 #define GET_YSXVLSEGTable_IMPL
@@ -183,19 +177,14 @@ parseFeatureBits(bool IsRV64, const FeatureBitset &FeatureBits) {
 
 } // namespace YSXFeatures
 
-// Include the auto-generated portion of the compress emitter.
-#define GEN_UNCOMPRESS_INSTR
-#define GEN_COMPRESS_INSTR
-#include "YSXGenCompressInstEmitter.inc"
-
 bool YSXRVC::compress(MCInst &OutInst, const MCInst &MI,
                         const MCSubtargetInfo &STI) {
-  return compressInst(OutInst, MI, STI);
+  return false;
 }
 
 bool YSXRVC::uncompress(MCInst &OutInst, const MCInst &MI,
                           const MCSubtargetInfo &STI) {
-  return uncompressInst(OutInst, MI, STI);
+  return false;
 }
 
 // Lookup table for fli.s for entries 2-31.

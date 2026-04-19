@@ -48,7 +48,7 @@ public:
                             const MCSubtargetInfo &STI, raw_ostream &O);
   void printVTypeI(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
                    raw_ostream &O);
-  void printXSfmmVType(const MCInst *MI, unsigned OpNo,
+  void printXRemovedSfmmVType(const MCInst *MI, unsigned OpNo,
                        const MCSubtargetInfo &STI, raw_ostream &O);
   void printVMaskReg(const MCInst *MI, unsigned OpNo,
                      const MCSubtargetInfo &STI, raw_ostream &O);

@@ -348,10 +348,10 @@ public:
                                       unsigned MinSize) {
     // Original equation:
     //   VLMAX = (VectorBits / EltSize) * LMUL
-    //   where LMUL = MinSize / YSX::RVVBitsPerBlock
+    //   where LMUL = MinSize / YSX::YSXVecBitsPerBlock
     // The following equations have been reordered to prevent loss of precision
     // when calculating fractional LMUL.
-    return ((VectorBits / EltSize) * MinSize) / YSX::RVVBitsPerBlock;
+    return ((VectorBits / EltSize) * MinSize) / YSX::YSXVecBitsPerBlock;
   }
 
   // Return inclusive (low, high) bounds on the value of VLMAX for the
@@ -363,9 +363,9 @@ public:
   /// corresponding to a vector register (i.e. an m1 register group).
   static MVT getM1VT(MVT VT) {
     unsigned EltSizeInBits = VT.getVectorElementType().getSizeInBits();
-    assert(EltSizeInBits <= YSX::RVVBitsPerBlock && "Unexpected vector MVT");
+    assert(EltSizeInBits <= YSX::YSXVecBitsPerBlock && "Unexpected vector MVT");
     return MVT::getScalableVectorVT(VT.getVectorElementType(),
-                                    YSX::RVVBitsPerBlock / EltSizeInBits);
+                                    YSX::YSXVecBitsPerBlock / EltSizeInBits);
   }
 
   static unsigned getRegClassIDForLMUL(YSXVType::VLMUL LMul);
@@ -379,7 +379,7 @@ public:
 
   bool shouldRemoveExtendFromGSIndex(SDValue Extend, EVT DataVT) const override;
 
-  bool isLegalElementTypeForRVV(EVT ScalarTy) const;
+  bool isLegalElementTypeForYSXVec(EVT ScalarTy) const;
 
   bool shouldConvertFpToSat(unsigned Op, EVT FPVT, EVT VT) const override;
 
@@ -544,12 +544,12 @@ private:
   SDValue lowerLoadFF(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerMaskedStore(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerVectorCompress(SDValue Op, SelectionDAG &DAG) const;
-  SDValue lowerFixedLengthVectorFCOPYSIGNToRVV(SDValue Op,
+  SDValue lowerFixedLengthVectorFCOPYSIGNToYSXVec(SDValue Op,
                                                SelectionDAG &DAG) const;
   SDValue lowerMaskedGather(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerMaskedScatter(SDValue Op, SelectionDAG &DAG) const;
-  SDValue lowerFixedLengthVectorLoadToRVV(SDValue Op, SelectionDAG &DAG) const;
-  SDValue lowerFixedLengthVectorStoreToRVV(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerFixedLengthVectorLoadToYSXVec(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerFixedLengthVectorStoreToYSXVec(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerToScalableOp(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerIS_FPCLASS(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerVPOp(SDValue Op, SelectionDAG &DAG) const;
@@ -581,8 +581,8 @@ private:
 
   SDValue lowerDYNAMIC_STACKALLOC(SDValue Op, SelectionDAG &DAG) const;
 
-  SDValue expandUnalignedRVVLoad(SDValue Op, SelectionDAG &DAG) const;
-  SDValue expandUnalignedRVVStore(SDValue Op, SelectionDAG &DAG) const;
+  SDValue expandUnalignedYSXVecLoad(SDValue Op, SelectionDAG &DAG) const;
+  SDValue expandUnalignedYSXVecStore(SDValue Op, SelectionDAG &DAG) const;
 
   SDValue expandUnalignedVPLoad(SDValue Op, SelectionDAG &DAG) const;
   SDValue expandUnalignedVPStore(SDValue Op, SelectionDAG &DAG) const;
@@ -604,14 +604,14 @@ private:
       const SmallVectorImpl<std::pair<llvm::Register, llvm::SDValue>> &Regs,
       MachineFunction &MF) const;
 
-  bool useRVVForFixedLengthVectorVT(MVT VT) const;
+  bool useYSXVecForFixedLengthVectorVT(MVT VT) const;
 
   MVT getVPExplicitVectorLengthTy() const override;
 
   bool shouldExpandGetVectorLength(EVT TripCountVT, unsigned VF,
                                    bool IsScalable) const override;
 
-  /// RVV code generation for fixed length vectors does not lower all
+  /// YSXVec code generation for fixed length vectors does not lower all
   /// BUILD_VECTORs. This makes BUILD_VECTOR legalisation a source of stores to
   /// merge. However, merging them creates a BUILD_VECTOR that is just as
   /// illegal as the original, thus leading to an infinite legalisation loop.

@@ -57,12 +57,12 @@ private:
   int BranchRelaxationScratchFrameIndex = -1;
   /// Size of any opaque stack adjustment due to save/restore libcalls.
   unsigned LibCallStackSize = 0;
-  /// Size of RVV stack.
-  uint64_t RVVStackSize = 0;
-  /// Alignment of RVV stack.
-  Align RVVStackAlign;
-  /// Padding required to keep RVV stack aligned within the main stack.
-  uint64_t RVVPadding = 0;
+  /// Size of YSXVec stack.
+  uint64_t YSXVecStackSize = 0;
+  /// Alignment of YSXVec stack.
+  Align YSXVecStackAlign;
+  /// Padding required to keep YSXVec stack aligned within the main stack.
+  uint64_t YSXVecPadding = 0;
   /// Size of stack frame to save callee saved registers
   unsigned CalleeSavedStackSize = 0;
   /// Is there any vector argument or return?
@@ -130,14 +130,14 @@ public:
            !MF.getFunction().hasFnAttribute("interrupt");
   }
 
-  uint64_t getRVVStackSize() const { return RVVStackSize; }
-  void setRVVStackSize(uint64_t Size) { RVVStackSize = Size; }
+  uint64_t getYSXVecStackSize() const { return YSXVecStackSize; }
+  void setYSXVecStackSize(uint64_t Size) { YSXVecStackSize = Size; }
 
-  Align getRVVStackAlign() const { return RVVStackAlign; }
-  void setRVVStackAlign(Align StackAlign) { RVVStackAlign = StackAlign; }
+  Align getYSXVecStackAlign() const { return YSXVecStackAlign; }
+  void setYSXVecStackAlign(Align StackAlign) { YSXVecStackAlign = StackAlign; }
 
-  uint64_t getRVVPadding() const { return RVVPadding; }
-  void setRVVPadding(uint64_t Padding) { RVVPadding = Padding; }
+  uint64_t getYSXVecPadding() const { return YSXVecPadding; }
+  void setYSXVecPadding(uint64_t Padding) { YSXVecPadding = Padding; }
 
   unsigned getCalleeSavedStackSize() const { return CalleeSavedStackSize; }
   void setCalleeSavedStackSize(unsigned Size) { CalleeSavedStackSize = Size; }

@@ -238,7 +238,7 @@ static void emitSiFiveCLICStackSwap(MachineFunction &MF, MachineBasicBlock &MBB,
   const auto &STI = MF.getSubtarget<YSXSubtarget>();
   const YSXInstrInfo *TII = STI.getInstrInfo();
 
-  assert(STI.hasVendorXSfmclic() && "Stack Swapping Requires XSfmclic");
+  assert(STI.hasVendorXRemovedSfmclic() && "Stack Swapping Requires XRemovedSfmclic");
 
   BuildMI(MBB, MBBI, DL, TII->get(YSX::CSRRW))
       .addReg(SPReg, RegState::Define)
@@ -529,26 +529,26 @@ void YSXFrameLowering::determineFrameLayout(MachineFunction &MF) const {
   MFI.setStackSize(FrameSize);
 
   // When using SP or BP to access stack objects, we may require extra padding
-  // to ensure the bottom of the RVV stack is correctly aligned within the main
+  // to ensure the bottom of the YSXVec stack is correctly aligned within the main
   // stack. We calculate this as the amount required to align the scalar local
-  // variable section up to the RVV alignment.
+  // variable section up to the YSXVec alignment.
   const TargetRegisterInfo *TRI = STI.getRegisterInfo();
-  if (RVFI->getRVVStackSize() && (!hasFP(MF) || TRI->hasStackRealignment(MF))) {
+  if (RVFI->getYSXVecStackSize() && (!hasFP(MF) || TRI->hasStackRealignment(MF))) {
     int ScalarLocalVarSize = FrameSize - RVFI->getCalleeSavedStackSize() -
                              RVFI->getVarArgsSaveSize();
-    if (auto RVVPadding =
-            offsetToAlignment(ScalarLocalVarSize, RVFI->getRVVStackAlign()))
-      RVFI->setRVVPadding(RVVPadding);
+    if (auto YSXVecPadding =
+            offsetToAlignment(ScalarLocalVarSize, RVFI->getYSXVecStackAlign()))
+      RVFI->setYSXVecPadding(YSXVecPadding);
   }
 }
 
-// Returns the stack size including RVV padding (when required), rounded back
+// Returns the stack size including YSXVec padding (when required), rounded back
 // up to the required stack alignment.
-uint64_t YSXFrameLowering::getStackSizeWithRVVPadding(
+uint64_t YSXFrameLowering::getStackSizeWithYSXVecPadding(
     const MachineFunction &MF) const {
   const MachineFrameInfo &MFI = MF.getFrameInfo();
   auto *RVFI = MF.getInfo<YSXMachineFunctionInfo>();
-  return alignTo(MFI.getStackSize() + RVFI->getRVVPadding(), getStackAlign());
+  return alignTo(MFI.getStackSize() + RVFI->getYSXVecPadding(), getStackAlign());
 }
 
 static SmallVector<CalleeSavedInfo, 8>
@@ -567,18 +567,18 @@ getUnmanagedCSI(const MachineFunction &MF,
 }
 
 static SmallVector<CalleeSavedInfo, 8>
-getRVVCalleeSavedInfo(const MachineFunction &MF,
+getYSXVecCalleeSavedInfo(const MachineFunction &MF,
                       const std::vector<CalleeSavedInfo> &CSI) {
   const MachineFrameInfo &MFI = MF.getFrameInfo();
-  SmallVector<CalleeSavedInfo, 8> RVVCSI;
+  SmallVector<CalleeSavedInfo, 8> YSXVecCSI;
 
   for (auto &CS : CSI) {
     int FI = CS.getFrameIdx();
     if (FI >= 0 && MFI.getStackID(FI) == TargetStackID::ScalableVector)
-      RVVCSI.push_back(CS);
+      YSXVecCSI.push_back(CS);
   }
 
-  return RVVCSI;
+  return YSXVecCSI;
 }
 
 static SmallVector<CalleeSavedInfo, 8>
@@ -626,20 +626,20 @@ getQCISavedInfo(const MachineFunction &MF,
   return QCIInterruptCSI;
 }
 
-void YSXFrameLowering::allocateAndProbeStackForRVV(
+void YSXFrameLowering::allocateAndProbeStackForYSXVec(
     MachineFunction &MF, MachineBasicBlock &MBB,
     MachineBasicBlock::iterator MBBI, const DebugLoc &DL, int64_t Amount,
     MachineInstr::MIFlag Flag, bool EmitCFI, bool DynAllocation) const {
-  llvm_unreachable("YSX rv64ima does not support RVV stack probing");
+  llvm_unreachable("YSX rv64ima does not support YSXVec stack probing");
 #if 0
-  assert(Amount != 0 && "Did not need to adjust stack pointer for RVV.");
+  assert(Amount != 0 && "Did not need to adjust stack pointer for YSXVec.");
 
   // Emit a variable-length allocation probing loop.
 
   // Get VLEN in TargetReg
   const YSXInstrInfo *TII = STI.getInstrInfo();
   Register TargetReg = YSX::X6;
-  uint32_t NumOfVReg = Amount / YSX::RVVBytesPerBlock;
+  uint32_t NumOfVReg = Amount / YSX::YSXVecBytesPerBlock;
   BuildMI(MBB, MBBI, DL, TII->get(YSX::PseudoReadVLENB), TargetReg)
       .setMIFlag(Flag);
   TII->mulImm(MF, MBB, MBBI, DL, TargetReg, NumOfVReg, Flag);
@@ -651,7 +651,7 @@ void YSXFrameLowering::allocateAndProbeStackForRVV(
   }
 
   // It will be expanded to a probe loop in `inlineStackProbe`.
-  BuildMI(MBB, MBBI, DL, TII->get(YSX::PROBED_STACKALLOC_RVV))
+  BuildMI(MBB, MBBI, DL, TII->get(YSX::PROBED_STACKALLOC_YSXVec))
       .addReg(TargetReg);
 
   if (EmitCFI) {
@@ -707,7 +707,7 @@ static void appendScalableVectorExpression(const TargetRegisterInfo &TRI,
 static MCCFIInstruction createDefCFAExpression(const TargetRegisterInfo &TRI,
                                                Register Reg,
                                                StackOffset Offset) {
-  assert(Offset.getScalable() != 0 && "Did not need to adjust CFA for RVV");
+  assert(Offset.getScalable() != 0 && "Did not need to adjust CFA for YSXVec");
   SmallString<64> Expr;
   std::string CommentBuffer;
   llvm::raw_string_ostream Comment(CommentBuffer);
@@ -733,7 +733,7 @@ static MCCFIInstruction createDefCFAExpression(const TargetRegisterInfo &TRI,
 
 static MCCFIInstruction createDefCFAOffset(const TargetRegisterInfo &TRI,
                                            Register Reg, StackOffset Offset) {
-  assert(Offset.getScalable() != 0 && "Did not need to adjust CFA for RVV");
+  assert(Offset.getScalable() != 0 && "Did not need to adjust CFA for YSXVec");
   SmallString<64> Expr;
   std::string CommentBuffer;
   llvm::raw_string_ostream Comment(CommentBuffer);
@@ -932,7 +932,7 @@ void YSXFrameLowering::emitPrologue(MachineFunction &MF,
   // Skip to before the spills of scalar callee-saved registers
   // FIXME: assumes exactly one instruction is used to restore each
   // callee-saved register.
-  MBBI = std::prev(MBBI, getRVVCalleeSavedInfo(MF, CSI).size() +
+  MBBI = std::prev(MBBI, getYSXVecCalleeSavedInfo(MF, CSI).size() +
                              getUnmanagedCSI(MF, CSI).size());
   CFIInstBuilder CFIBuilder(MBB, MBBI, MachineInstr::FrameSetup);
   bool NeedsDwarfCFI = needsDwarfCFI(MF);
@@ -973,12 +973,12 @@ void YSXFrameLowering::emitPrologue(MachineFunction &MF,
 
   // FIXME (note copied from Lanai): This appears to be overallocating.  Needs
   // investigation. Get the number of bytes to allocate from the FrameInfo.
-  uint64_t RealStackSize = getStackSizeWithRVVPadding(MF);
+  uint64_t RealStackSize = getStackSizeWithYSXVecPadding(MF);
   uint64_t StackSize = RealStackSize - RVFI->getReservedSpillsSize();
-  uint64_t RVVStackSize = RVFI->getRVVStackSize();
+  uint64_t YSXVecStackSize = RVFI->getYSXVecStackSize();
 
   // Early exit if there is no need to allocate on the stack
-  if (RealStackSize == 0 && !MFI.adjustsStack() && RVVStackSize == 0)
+  if (RealStackSize == 0 && !MFI.adjustsStack() && YSXVecStackSize == 0)
     return;
 
   // If the stack pointer has been marked as reserved, then produce an error if
@@ -1086,39 +1086,39 @@ void YSXFrameLowering::emitPrologue(MachineFunction &MF,
   uint64_t SecondSPAdjustAmount = 0;
   // Emit the second SP adjustment after saving callee saved registers.
   if (FirstSPAdjustAmount) {
-    SecondSPAdjustAmount = getStackSizeWithRVVPadding(MF) - FirstSPAdjustAmount;
+    SecondSPAdjustAmount = getStackSizeWithYSXVecPadding(MF) - FirstSPAdjustAmount;
     assert(SecondSPAdjustAmount > 0 &&
            "SecondSPAdjustAmount should be greater than zero");
 
     allocateStack(MBB, MBBI, MF, SecondSPAdjustAmount,
-                  getStackSizeWithRVVPadding(MF), NeedsDwarfCFI && !hasFP(MF),
+                  getStackSizeWithYSXVecPadding(MF), NeedsDwarfCFI && !hasFP(MF),
                   NeedProbe, ProbeSize, DynAllocation,
                   MachineInstr::FrameSetup);
   }
 
-  if (RVVStackSize) {
+  if (YSXVecStackSize) {
     if (NeedProbe) {
-      allocateAndProbeStackForRVV(MF, MBB, MBBI, DL, RVVStackSize,
+      allocateAndProbeStackForYSXVec(MF, MBB, MBBI, DL, YSXVecStackSize,
                                   MachineInstr::FrameSetup,
                                   NeedsDwarfCFI && !hasFP(MF), DynAllocation);
     } else {
       // We must keep the stack pointer aligned through any intermediate
       // updates.
       RI->adjustReg(MBB, MBBI, DL, SPReg, SPReg,
-                    StackOffset::getScalable(-RVVStackSize),
+                    StackOffset::getScalable(-YSXVecStackSize),
                     MachineInstr::FrameSetup, getStackAlign());
     }
 
     if (NeedsDwarfCFI && !hasFP(MF)) {
-      // Emit .cfi_def_cfa_expression "sp + StackSize + RVVStackSize * vlenb".
+      // Emit .cfi_def_cfa_expression "sp + StackSize + YSXVecStackSize * vlenb".
       CFIBuilder.insertCFIInst(createDefCFAExpression(
           *RI, SPReg,
-          StackOffset::get(getStackSizeWithRVVPadding(MF), RVVStackSize / 8)));
+          StackOffset::get(getStackSizeWithYSXVecPadding(MF), YSXVecStackSize / 8)));
     }
 
-    std::advance(MBBI, getRVVCalleeSavedInfo(MF, CSI).size());
+    std::advance(MBBI, getYSXVecCalleeSavedInfo(MF, CSI).size());
     if (NeedsDwarfCFI)
-      emitCalleeSavedRVVPrologCFI(MBB, MBBI, hasFP(MF));
+      emitCalleeSavedYSXVecPrologCFI(MBB, MBBI, hasFP(MF));
   }
 
   if (hasFP(MF)) {
@@ -1146,7 +1146,7 @@ void YSXFrameLowering::emitPrologue(MachineFunction &MF,
             .addImm(ShiftAmount)
             .setMIFlag(MachineInstr::FrameSetup);
       }
-      if (NeedProbe && RVVStackSize == 0) {
+      if (NeedProbe && YSXVecStackSize == 0) {
         // Do a probe if the align + size allocated just passed the probe size
         // and was not yet probed.
         if (SecondSPAdjustAmount < ProbeSize &&
@@ -1224,40 +1224,40 @@ void YSXFrameLowering::emitEpilogue(MachineFunction &MF,
   // FIXME: assumes exactly one instruction is used to restore each
   // callee-saved register.
   auto FirstScalarCSRRestoreInsn =
-      std::next(MBBI, getRVVCalleeSavedInfo(MF, CSI).size());
+      std::next(MBBI, getYSXVecCalleeSavedInfo(MF, CSI).size());
   CFIInstBuilder CFIBuilder(MBB, FirstScalarCSRRestoreInsn,
                             MachineInstr::FrameDestroy);
   bool NeedsDwarfCFI = needsDwarfCFI(MF);
 
   uint64_t FirstSPAdjustAmount = getFirstSPAdjustAmount(MF);
   uint64_t RealStackSize = FirstSPAdjustAmount ? FirstSPAdjustAmount
-                                               : getStackSizeWithRVVPadding(MF);
+                                               : getStackSizeWithYSXVecPadding(MF);
   uint64_t StackSize = FirstSPAdjustAmount ? FirstSPAdjustAmount
-                                           : getStackSizeWithRVVPadding(MF) -
+                                           : getStackSizeWithYSXVecPadding(MF) -
                                                  RVFI->getReservedSpillsSize();
   uint64_t FPOffset = RealStackSize - RVFI->getVarArgsSaveSize();
-  uint64_t RVVStackSize = RVFI->getRVVStackSize();
+  uint64_t YSXVecStackSize = RVFI->getYSXVecStackSize();
 
   bool RestoreSPFromFP = RI->hasStackRealignment(MF) ||
                          MFI.hasVarSizedObjects() || !hasReservedCallFrame(MF);
-  if (RVVStackSize) {
+  if (YSXVecStackSize) {
     // If RestoreSPFromFP the stack pointer will be restored using the frame
     // pointer value.
     if (!RestoreSPFromFP)
       RI->adjustReg(MBB, FirstScalarCSRRestoreInsn, DL, SPReg, SPReg,
-                    StackOffset::getScalable(RVVStackSize),
+                    StackOffset::getScalable(YSXVecStackSize),
                     MachineInstr::FrameDestroy, getStackAlign());
 
     if (NeedsDwarfCFI) {
       if (!hasFP(MF))
         CFIBuilder.buildDefCFA(SPReg, RealStackSize);
-      emitCalleeSavedRVVEpilogCFI(MBB, FirstScalarCSRRestoreInsn);
+      emitCalleeSavedYSXVecEpilogCFI(MBB, FirstScalarCSRRestoreInsn);
     }
   }
 
   if (FirstSPAdjustAmount) {
     uint64_t SecondSPAdjustAmount =
-        getStackSizeWithRVVPadding(MF) - FirstSPAdjustAmount;
+        getStackSizeWithYSXVecPadding(MF) - FirstSPAdjustAmount;
     assert(SecondSPAdjustAmount > 0 &&
            "SecondSPAdjustAmount should be greater than zero");
 
@@ -1403,7 +1403,7 @@ YSXFrameLowering::getFrameIndexReference(const MachineFunction &MF, int FI,
     if (FirstSPAdjustAmount)
       Offset += StackOffset::getFixed(FirstSPAdjustAmount);
     else
-      Offset += StackOffset::getFixed(getStackSizeWithRVVPadding(MF));
+      Offset += StackOffset::getFixed(getStackSizeWithYSXVecPadding(MF));
     return Offset;
   }
 
@@ -1421,20 +1421,20 @@ YSXFrameLowering::getFrameIndexReference(const MachineFunction &MF, int FI,
     // | this area is not counted | |      |
     // | in MFI.getStackSize())   | |      |
     // |--------------------------| --     |-- MFI.getStackSize()
-    // | RVV alignment padding    | |      |
+    // | YSXVec alignment padding    | |      |
     // | (not counted in          | |      |
     // | MFI.getStackSize() but   | |      |
     // | counted in               | |      |
-    // | RVFI.getRVVStackSize())  | |      |
+    // | RVFI.getYSXVecStackSize())  | |      |
     // |--------------------------| --     |
-    // | RVV objects              | |      |
+    // | YSXVec objects              | |      |
     // | (not counted in          | |      |
     // | MFI.getStackSize())      | |      |
     // |--------------------------| --     |
-    // | padding before RVV       | |      |
+    // | padding before YSXVec       | |      |
     // | (not counted in          | |      |
     // | MFI.getStackSize() or in | |      |
-    // | RVFI.getRVVStackSize())  | |      |
+    // | RVFI.getYSXVecStackSize())  | |      |
     // |--------------------------| --     |
     // | scalar local variables   | | <----'
     // |--------------------------| -- <-- BP (if var sized objects present)
@@ -1463,18 +1463,18 @@ YSXFrameLowering::getFrameIndexReference(const MachineFunction &MF, int FI,
     // | callee-saved registers   | |
     // |--------------------------| | MFI.getStackSize()
     // | scalar local variables   | |
-    // |--------------------------| -- (Offset of RVV objects is from here.)
-    // | RVV objects              |
+    // |--------------------------| -- (Offset of YSXVec objects is from here.)
+    // | YSXVec objects              |
     // |--------------------------|
     // | VarSize objects          |
     // |--------------------------| <-- SP
     if (StackID == TargetStackID::ScalableVector) {
       assert(!RI->hasStackRealignment(MF) &&
              "Can't index across variable sized realign");
-      // We don't expect any extra RVV alignment padding, as the stack size
-      // and RVV object sections should be correct aligned in their own
+      // We don't expect any extra YSXVec alignment padding, as the stack size
+      // and YSXVec object sections should be correct aligned in their own
       // right.
-      assert(MFI.getStackSize() == getStackSizeWithRVVPadding(MF) &&
+      assert(MFI.getStackSize() == getStackSizeWithYSXVecPadding(MF) &&
              "Inconsistent stack layout");
       Offset -= StackOffset::getFixed(MFI.getStackSize());
     }
@@ -1485,7 +1485,7 @@ YSXFrameLowering::getFrameIndexReference(const MachineFunction &MF, int FI,
   // If indexing off SP, there must not be any var sized objects
   assert(FrameReg == YSXABI::getBPReg() || !MFI.hasVarSizedObjects());
 
-  // When using SP to access frame objects, we need to add RVV stack size.
+  // When using SP to access frame objects, we need to add YSXVec stack size.
   //
   // |--------------------------| -- <-- FP
   // | callee-allocated save    | | <----|
@@ -1493,17 +1493,17 @@ YSXFrameLowering::getFrameIndexReference(const MachineFunction &MF, int FI,
   // |--------------------------| |      |
   // | callee-saved registers   | |      |
   // |--------------------------| --     |
-  // | RVV alignment padding    | |      |
+  // | YSXVec alignment padding    | |      |
   // | (not counted in          | |      |
   // | MFI.getStackSize() but   | |      |
   // | counted in               | |      |
-  // | RVFI.getRVVStackSize())  | |      |
+  // | RVFI.getYSXVecStackSize())  | |      |
   // |--------------------------| --     |
-  // | RVV objects              | |      |-- MFI.getStackSize()
+  // | YSXVec objects              | |      |-- MFI.getStackSize()
   // | (not counted in          | |      |
   // | MFI.getStackSize())      | |      |
   // |--------------------------| --     |
-  // | padding before RVV       | |      |
+  // | padding before YSXVec       | |      |
   // | (not counted in          | |      |
   // | MFI.getStackSize())      | |      |
   // |--------------------------| --     |
@@ -1512,30 +1512,30 @@ YSXFrameLowering::getFrameIndexReference(const MachineFunction &MF, int FI,
   // | VarSize objects          | |
   // |--------------------------| -- <-- SP
   //
-  // The total amount of padding surrounding RVV objects is described by
-  // RVV->getRVVPadding() and it can be zero. It allows us to align the RVV
+  // The total amount of padding surrounding YSXVec objects is described by
+  // YSXVec->getYSXVecPadding() and it can be zero. It allows us to align the YSXVec
   // objects to the required alignment.
   if (MFI.getStackID(FI) == TargetStackID::Default) {
     if (MFI.isFixedObjectIndex(FI)) {
       assert(!RI->hasStackRealignment(MF) &&
              "Can't index across variable sized realign");
-      Offset += StackOffset::get(getStackSizeWithRVVPadding(MF),
-                                 RVFI->getRVVStackSize());
+      Offset += StackOffset::get(getStackSizeWithYSXVecPadding(MF),
+                                 RVFI->getYSXVecStackSize());
     } else {
       Offset += StackOffset::getFixed(MFI.getStackSize());
     }
   } else if (MFI.getStackID(FI) == TargetStackID::ScalableVector) {
-    // Ensure the base of the RVV stack is correctly aligned: add on the
+    // Ensure the base of the YSXVec stack is correctly aligned: add on the
     // alignment padding.
     int ScalarLocalVarSize = MFI.getStackSize() -
                              RVFI->getCalleeSavedStackSize() -
-                             RVFI->getVarArgsSaveSize() + RVFI->getRVVPadding();
-    Offset += StackOffset::get(ScalarLocalVarSize, RVFI->getRVVStackSize());
+                             RVFI->getVarArgsSaveSize() + RVFI->getYSXVecPadding();
+    Offset += StackOffset::get(ScalarLocalVarSize, RVFI->getYSXVecStackSize());
   }
   return Offset;
 }
 
-static MCRegister getRVVBaseRegister(const YSXRegisterInfo &TRI,
+static MCRegister getYSXVecBaseRegister(const YSXRegisterInfo &TRI,
                                      const Register &Reg) {
   MCRegister BaseReg = TRI.getSubReg(Reg, YSX::sub_vrm1_0);
   // If it's not a grouped vector register, it doesn't have subregister, so
@@ -1563,7 +1563,7 @@ void YSXFrameLowering::determineCalleeSaves(MachineFunction &MF,
   for (unsigned i = 0; CSRegs[i]; ++i) {
     unsigned CSReg = CSRegs[i];
     // Only vector registers need special care.
-    if (!YSX::VRRegClass.contains(getRVVBaseRegister(TRI, CSReg)))
+    if (!YSX::VRRegClass.contains(getYSXVecBaseRegister(TRI, CSReg)))
       continue;
 
     SavedRegs.reset(CSReg);
@@ -1603,11 +1603,11 @@ void YSXFrameLowering::determineCalleeSaves(MachineFunction &MF,
 }
 
 std::pair<int64_t, Align>
-YSXFrameLowering::assignRVVStackObjectOffsets(MachineFunction &MF) const {
+YSXFrameLowering::assignYSXVecStackObjectOffsets(MachineFunction &MF) const {
   MachineFrameInfo &MFI = MF.getFrameInfo();
-  // Create a buffer of RVV objects to allocate.
+  // Create a buffer of YSXVec objects to allocate.
   SmallVector<int, 8> ObjectsToAllocate;
-  auto pushRVVObjects = [&](int FIBegin, int FIEnd) {
+  auto pushYSXVecObjects = [&](int FIBegin, int FIEnd) {
     for (int I = FIBegin, E = FIEnd; I != E; ++I) {
       unsigned StackID = MFI.getStackID(I);
       if (StackID != TargetStackID::ScalableVector)
@@ -1618,96 +1618,96 @@ YSXFrameLowering::assignRVVStackObjectOffsets(MachineFunction &MF) const {
       ObjectsToAllocate.push_back(I);
     }
   };
-  // First push RVV Callee Saved object, then push RVV stack object
+  // First push YSXVec Callee Saved object, then push YSXVec stack object
   std::vector<CalleeSavedInfo> &CSI = MF.getFrameInfo().getCalleeSavedInfo();
-  const auto &RVVCSI = getRVVCalleeSavedInfo(MF, CSI);
-  if (!RVVCSI.empty())
-    pushRVVObjects(RVVCSI[0].getFrameIdx(),
-                   RVVCSI[RVVCSI.size() - 1].getFrameIdx() + 1);
-  pushRVVObjects(0, MFI.getObjectIndexEnd() - RVVCSI.size());
+  const auto &YSXVecCSI = getYSXVecCalleeSavedInfo(MF, CSI);
+  if (!YSXVecCSI.empty())
+    pushYSXVecObjects(YSXVecCSI[0].getFrameIdx(),
+                   YSXVecCSI[YSXVecCSI.size() - 1].getFrameIdx() + 1);
+  pushYSXVecObjects(0, MFI.getObjectIndexEnd() - YSXVecCSI.size());
 
   // The minimum alignment is 16 bytes.
-  Align RVVStackAlign(16);
+  Align YSXVecStackAlign(16);
   const auto &ST = MF.getSubtarget<YSXSubtarget>();
 
   if (!ST.hasVInstructions()) {
     assert(ObjectsToAllocate.empty() &&
            "Can't allocate scalable-vector objects without V instructions");
-    return std::make_pair(0, RVVStackAlign);
+    return std::make_pair(0, YSXVecStackAlign);
   }
 
-  // Allocate all RVV locals and spills
+  // Allocate all YSXVec locals and spills
   int64_t Offset = 0;
   for (int FI : ObjectsToAllocate) {
     // ObjectSize in bytes.
     int64_t ObjectSize = MFI.getObjectSize(FI);
     auto ObjectAlign =
-        std::max(Align(YSX::RVVBytesPerBlock), MFI.getObjectAlign(FI));
+        std::max(Align(YSX::YSXVecBytesPerBlock), MFI.getObjectAlign(FI));
     // If the data type is the fractional vector type, reserve one vector
     // register for it.
-    if (ObjectSize < YSX::RVVBytesPerBlock)
-      ObjectSize = YSX::RVVBytesPerBlock;
+    if (ObjectSize < YSX::YSXVecBytesPerBlock)
+      ObjectSize = YSX::YSXVecBytesPerBlock;
     Offset = alignTo(Offset + ObjectSize, ObjectAlign);
     MFI.setObjectOffset(FI, -Offset);
-    // Update the maximum alignment of the RVV stack section
-    RVVStackAlign = std::max(RVVStackAlign, ObjectAlign);
+    // Update the maximum alignment of the YSXVec stack section
+    YSXVecStackAlign = std::max(YSXVecStackAlign, ObjectAlign);
   }
 
   uint64_t StackSize = Offset;
 
-  // Ensure the alignment of the RVV stack. Since we want the most-aligned
+  // Ensure the alignment of the YSXVec stack. Since we want the most-aligned
   // object right at the bottom (i.e., any padding at the top of the frame),
-  // readjust all RVV objects down by the alignment padding.
+  // readjust all YSXVec objects down by the alignment padding.
   // Stack size and offsets are multiples of vscale, stack alignment is in
   // bytes, we can divide stack alignment by minimum vscale to get a maximum
   // stack alignment multiple of vscale.
   auto VScale =
-      std::max<uint64_t>(ST.getRealMinVLen() / YSX::RVVBitsPerBlock, 1);
-  if (auto RVVStackAlignVScale = RVVStackAlign.value() / VScale) {
+      std::max<uint64_t>(ST.getRealMinVLen() / YSX::YSXVecBitsPerBlock, 1);
+  if (auto YSXVecStackAlignVScale = YSXVecStackAlign.value() / VScale) {
     if (auto AlignmentPadding =
-            offsetToAlignment(StackSize, Align(RVVStackAlignVScale))) {
+            offsetToAlignment(StackSize, Align(YSXVecStackAlignVScale))) {
       StackSize += AlignmentPadding;
       for (int FI : ObjectsToAllocate)
         MFI.setObjectOffset(FI, MFI.getObjectOffset(FI) - AlignmentPadding);
     }
   }
 
-  return std::make_pair(StackSize, RVVStackAlign);
+  return std::make_pair(StackSize, YSXVecStackAlign);
 }
 
-static unsigned getScavSlotsNumForRVV(MachineFunction &MF) {
-  // For RVV spill, scalable stack offsets computing requires up to two scratch
+static unsigned getScavSlotsNumForYSXVec(MachineFunction &MF) {
+  // For YSXVec spill, scalable stack offsets computing requires up to two scratch
   // registers
-  static constexpr unsigned ScavSlotsNumRVVSpillScalableObject = 2;
+  static constexpr unsigned ScavSlotsNumYSXVecSpillScalableObject = 2;
 
-  // For RVV spill, non-scalable stack offsets computing requires up to one
+  // For YSXVec spill, non-scalable stack offsets computing requires up to one
   // scratch register.
-  static constexpr unsigned ScavSlotsNumRVVSpillNonScalableObject = 1;
+  static constexpr unsigned ScavSlotsNumYSXVecSpillNonScalableObject = 1;
 
   // ADDI instruction's destination register can be used for computing
   // offsets. So Scalable stack offsets require up to one scratch register.
   static constexpr unsigned ScavSlotsADDIScalableObject = 1;
 
   static constexpr unsigned MaxScavSlotsNumKnown =
-      std::max({ScavSlotsADDIScalableObject, ScavSlotsNumRVVSpillScalableObject,
-                ScavSlotsNumRVVSpillNonScalableObject});
+      std::max({ScavSlotsADDIScalableObject, ScavSlotsNumYSXVecSpillScalableObject,
+                ScavSlotsNumYSXVecSpillNonScalableObject});
 
   unsigned MaxScavSlotsNum = 0;
   if (!MF.getSubtarget<YSXSubtarget>().hasVInstructions())
     return false;
   for (const MachineBasicBlock &MBB : MF)
     for (const MachineInstr &MI : MBB) {
-      bool IsRVVSpill = YSX::isRVVSpill(MI);
+      bool IsYSXVecSpill = YSX::isYSXVecSpill(MI);
       for (auto &MO : MI.operands()) {
         if (!MO.isFI())
           continue;
         bool IsScalableVectorID = MF.getFrameInfo().getStackID(MO.getIndex()) ==
                                   TargetStackID::ScalableVector;
-        if (IsRVVSpill) {
+        if (IsYSXVecSpill) {
           MaxScavSlotsNum = std::max(
               MaxScavSlotsNum, IsScalableVectorID
-                                   ? ScavSlotsNumRVVSpillScalableObject
-                                   : ScavSlotsNumRVVSpillNonScalableObject);
+                                   ? ScavSlotsNumYSXVecSpillScalableObject
+                                   : ScavSlotsNumYSXVecSpillNonScalableObject);
         } else if (MI.getOpcode() == YSX::ADDI && IsScalableVectorID) {
           MaxScavSlotsNum =
               std::max(MaxScavSlotsNum, ScavSlotsADDIScalableObject);
@@ -1719,12 +1719,12 @@ static unsigned getScavSlotsNumForRVV(MachineFunction &MF) {
   return MaxScavSlotsNum;
 }
 
-static bool hasRVVFrameObject(const MachineFunction &MF) {
+static bool hasYSXVecFrameObject(const MachineFunction &MF) {
   // Originally, the function will scan all the stack objects to check whether
   // if there is any scalable vector object on the stack or not. However, it
   // causes errors in the register allocator. In issue 53016, it returns false
-  // before RA because there is no RVV stack objects. After RA, it returns true
-  // because there are spilling slots for RVV values during RA. It will not
+  // before RA because there is no YSXVec stack objects. After RA, it returns true
+  // because there are spilling slots for YSXVec values during RA. It will not
   // reserve BP during register allocation and generate BP access in the PEI
   // pass due to the inconsistent behavior of the function.
   //
@@ -1785,18 +1785,18 @@ void YSXFrameLowering::processFunctionBeforeFrameFinalized(
   const TargetRegisterClass *RC = &YSX::GPRRegClass;
   auto *RVFI = MF.getInfo<YSXMachineFunctionInfo>();
 
-  int64_t RVVStackSize;
-  Align RVVStackAlign;
-  std::tie(RVVStackSize, RVVStackAlign) = assignRVVStackObjectOffsets(MF);
+  int64_t YSXVecStackSize;
+  Align YSXVecStackAlign;
+  std::tie(YSXVecStackSize, YSXVecStackAlign) = assignYSXVecStackObjectOffsets(MF);
 
-  RVFI->setRVVStackSize(RVVStackSize);
-  RVFI->setRVVStackAlign(RVVStackAlign);
+  RVFI->setYSXVecStackSize(YSXVecStackSize);
+  RVFI->setYSXVecStackAlign(YSXVecStackAlign);
 
-  if (hasRVVFrameObject(MF)) {
-    // Ensure the entire stack is aligned to at least the RVV requirement: some
+  if (hasYSXVecFrameObject(MF)) {
+    // Ensure the entire stack is aligned to at least the YSXVec requirement: some
     // scalable-vector object alignments are not considered by the
     // target-independent code.
-    MFI.ensureMaxAlignment(RVVStackAlign);
+    MFI.ensureMaxAlignment(YSXVecStackAlign);
   }
 
   unsigned ScavSlotsNum = 0;
@@ -1812,10 +1812,10 @@ void YSXFrameLowering::processFunctionBeforeFrameFinalized(
   if (IsLargeFunction)
     ScavSlotsNum = std::max(ScavSlotsNum, 1u);
 
-  // RVV loads & stores have no capacity to hold the immediate address offsets
+  // YSXVec loads & stores have no capacity to hold the immediate address offsets
   // so we must always reserve an emergency spill slot if the MachineFunction
-  // contains any RVV spills.
-  ScavSlotsNum = std::max(ScavSlotsNum, getScavSlotsNumForRVV(MF));
+  // contains any YSXVec spills.
+  ScavSlotsNum = std::max(ScavSlotsNum, getScavSlotsNumForYSXVec(MF));
 
   for (unsigned I = 0; I < ScavSlotsNum; I++) {
     int FI = MFI.CreateSpillStackObject(RegInfo->getSpillSize(*RC),
@@ -1843,7 +1843,7 @@ void YSXFrameLowering::processFunctionBeforeFrameFinalized(
 // Let eliminateCallFramePseudoInstr preserve stack space for it.
 bool YSXFrameLowering::hasReservedCallFrame(const MachineFunction &MF) const {
   return !MF.getFrameInfo().hasVarSizedObjects() &&
-         !(hasFP(MF) && hasRVVFrameObject(MF));
+         !(hasFP(MF) && hasYSXVecFrameObject(MF));
 }
 
 // Eliminate ADJCALLSTACKDOWN, ADJCALLSTACKUP pseudo instructions.
@@ -1907,7 +1907,7 @@ YSXFrameLowering::getFirstSPAdjustAmount(const MachineFunction &MF) const {
   const auto *RVFI = MF.getInfo<YSXMachineFunctionInfo>();
   const MachineFrameInfo &MFI = MF.getFrameInfo();
   const std::vector<CalleeSavedInfo> &CSI = MFI.getCalleeSavedInfo();
-  uint64_t StackSize = getStackSizeWithRVVPadding(MF);
+  uint64_t StackSize = getStackSizeWithYSXVecPadding(MF);
 
   // Disable SplitSPAdjust if save-restore libcall, push/pop or QCI interrupts
   // are used. The callee-saved registers will be pushed by the save-restore
@@ -2059,7 +2059,7 @@ bool YSXFrameLowering::assignCalleeSavedSpillSlots(
     int FrameIdx = MFI.CreateStackObject(Size, Alignment, true);
     MFI.setIsCalleeSavedObjectIndex(FrameIdx, true);
     CS.setFrameIdx(FrameIdx);
-    if (YSXRegisterInfo::isRVVRegClass(RC))
+    if (YSXRegisterInfo::isYSXVecRegClass(RC))
       MFI.setStackID(FrameIdx, TargetStackID::ScalableVector);
   }
 
@@ -2143,7 +2143,7 @@ bool YSXFrameLowering::spillCalleeSavedRegisters(
 
   // Manually spill values not spilled by libcall & Push/Pop.
   const auto &UnmanagedCSI = getUnmanagedCSI(*MF, CSI);
-  const auto &RVVCSI = getRVVCalleeSavedInfo(*MF, CSI);
+  const auto &YSXVecCSI = getYSXVecCalleeSavedInfo(*MF, CSI);
 
   auto storeRegsToStackSlots = [&](decltype(UnmanagedCSI) CSInfo) {
     for (auto &CS : CSInfo) {
@@ -2156,43 +2156,43 @@ bool YSXFrameLowering::spillCalleeSavedRegisters(
     }
   };
   storeRegsToStackSlots(UnmanagedCSI);
-  storeRegsToStackSlots(RVVCSI);
+  storeRegsToStackSlots(YSXVecCSI);
 
   return true;
 }
 
-static unsigned getCalleeSavedRVVNumRegs(const Register &BaseReg) {
+static unsigned getCalleeSavedYSXVecNumRegs(const Register &BaseReg) {
   return YSX::VRRegClass.contains(BaseReg)     ? 1
          : YSX::VRM2RegClass.contains(BaseReg) ? 2
          : YSX::VRM4RegClass.contains(BaseReg) ? 4
                                                  : 8;
 }
 
-void YSXFrameLowering::emitCalleeSavedRVVPrologCFI(
+void YSXFrameLowering::emitCalleeSavedYSXVecPrologCFI(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MI, bool HasFP) const {
   MachineFunction *MF = MBB.getParent();
   const MachineFrameInfo &MFI = MF->getFrameInfo();
   YSXMachineFunctionInfo *RVFI = MF->getInfo<YSXMachineFunctionInfo>();
   const YSXRegisterInfo &TRI = *STI.getRegisterInfo();
 
-  const auto &RVVCSI = getRVVCalleeSavedInfo(*MF, MFI.getCalleeSavedInfo());
-  if (RVVCSI.empty())
+  const auto &YSXVecCSI = getYSXVecCalleeSavedInfo(*MF, MFI.getCalleeSavedInfo());
+  if (YSXVecCSI.empty())
     return;
 
-  uint64_t FixedSize = getStackSizeWithRVVPadding(*MF);
+  uint64_t FixedSize = getStackSizeWithYSXVecPadding(*MF);
   if (!HasFP) {
     uint64_t ScalarLocalVarSize =
         MFI.getStackSize() - RVFI->getCalleeSavedStackSize() -
-        RVFI->getVarArgsSaveSize() + RVFI->getRVVPadding();
+        RVFI->getVarArgsSaveSize() + RVFI->getYSXVecPadding();
     FixedSize -= ScalarLocalVarSize;
   }
 
   CFIInstBuilder CFIBuilder(MBB, MI, MachineInstr::FrameSetup);
-  for (auto &CS : RVVCSI) {
+  for (auto &CS : YSXVecCSI) {
     // Insert the spill to the stack frame.
     int FI = CS.getFrameIdx();
-    MCRegister BaseReg = getRVVBaseRegister(TRI, CS.getReg());
-    unsigned NumRegs = getCalleeSavedRVVNumRegs(CS.getReg());
+    MCRegister BaseReg = getYSXVecBaseRegister(TRI, CS.getReg());
+    unsigned NumRegs = getCalleeSavedYSXVecNumRegs(CS.getReg());
     for (unsigned i = 0; i < NumRegs; ++i) {
       CFIBuilder.insertCFIInst(createDefCFAOffset(
           TRI, BaseReg + i,
@@ -2201,17 +2201,17 @@ void YSXFrameLowering::emitCalleeSavedRVVPrologCFI(
   }
 }
 
-void YSXFrameLowering::emitCalleeSavedRVVEpilogCFI(
+void YSXFrameLowering::emitCalleeSavedYSXVecEpilogCFI(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MI) const {
   MachineFunction *MF = MBB.getParent();
   const MachineFrameInfo &MFI = MF->getFrameInfo();
   const YSXRegisterInfo &TRI = *STI.getRegisterInfo();
 
   CFIInstBuilder CFIHelper(MBB, MI, MachineInstr::FrameDestroy);
-  const auto &RVVCSI = getRVVCalleeSavedInfo(*MF, MFI.getCalleeSavedInfo());
-  for (auto &CS : RVVCSI) {
-    MCRegister BaseReg = getRVVBaseRegister(TRI, CS.getReg());
-    unsigned NumRegs = getCalleeSavedRVVNumRegs(CS.getReg());
+  const auto &YSXVecCSI = getYSXVecCalleeSavedInfo(*MF, MFI.getCalleeSavedInfo());
+  for (auto &CS : YSXVecCSI) {
+    MCRegister BaseReg = getYSXVecBaseRegister(TRI, CS.getReg());
+    unsigned NumRegs = getCalleeSavedYSXVecNumRegs(CS.getReg());
     for (unsigned i = 0; i < NumRegs; ++i)
       CFIHelper.buildRestore(BaseReg + i);
   }
@@ -2236,7 +2236,7 @@ bool YSXFrameLowering::restoreCalleeSavedRegisters(
   // loading RA and return by RA.  loadRegFromStackSlot can insert
   // multiple instructions.
   const auto &UnmanagedCSI = getUnmanagedCSI(*MF, CSI);
-  const auto &RVVCSI = getRVVCalleeSavedInfo(*MF, CSI);
+  const auto &YSXVecCSI = getYSXVecCalleeSavedInfo(*MF, CSI);
 
   auto loadRegFromStackSlot = [&](decltype(UnmanagedCSI) CSInfo) {
     for (auto &CS : CSInfo) {
@@ -2249,7 +2249,7 @@ bool YSXFrameLowering::restoreCalleeSavedRegisters(
              "loadRegFromStackSlot didn't insert any code!");
     }
   };
-  loadRegFromStackSlot(RVVCSI);
+  loadRegFromStackSlot(YSXVecCSI);
   loadRegFromStackSlot(UnmanagedCSI);
 
   YSXMachineFunctionInfo *RVFI = MF->getInfo<YSXMachineFunctionInfo>();
@@ -2385,7 +2385,7 @@ TargetStackID::Value YSXFrameLowering::getStackIDForScalableVectors() const {
 
 // Synthesize the probe loop.
 static void emitStackProbeInline(MachineBasicBlock::iterator MBBI, DebugLoc DL,
-                                 Register TargetReg, bool IsRVV) {
+                                 Register TargetReg, bool IsYSXVec) {
   assert(TargetReg != YSX::X2 && "New top of stack cannot already be in SP");
 
   MachineBasicBlock &MBB = *MBBI->getParent();
@@ -2425,7 +2425,7 @@ static void emitStackProbeInline(MachineBasicBlock::iterator MBBI, DebugLoc DL,
       .addImm(0)
       .setMIFlags(Flags);
 
-  if (IsRVV) {
+  if (IsYSXVec) {
     //  SUB TargetReg, TargetReg, ProbeSize
     BuildMI(*LoopTestMBB, LoopTestMBB->end(), DL, TII->get(YSX::SUB),
             TargetReg)
@@ -2468,19 +2468,19 @@ void YSXFrameLowering::inlineStackProbe(MachineFunction &MF,
   for (MachineInstr &MI : MBB) {
     unsigned Opc = MI.getOpcode();
     if (Opc == YSX::PROBED_STACKALLOC ||
-        Opc == YSX::PROBED_STACKALLOC_RVV) {
+        Opc == YSX::PROBED_STACKALLOC_YSXVec) {
       ToReplace.push_back(&MI);
     }
   }
 
   for (MachineInstr *MI : ToReplace) {
     if (MI->getOpcode() == YSX::PROBED_STACKALLOC ||
-        MI->getOpcode() == YSX::PROBED_STACKALLOC_RVV) {
+        MI->getOpcode() == YSX::PROBED_STACKALLOC_YSXVec) {
       MachineBasicBlock::iterator MBBI = MI->getIterator();
       DebugLoc DL = MBB.findDebugLoc(MBBI);
       Register TargetReg = MI->getOperand(0).getReg();
       emitStackProbeInline(MBBI, DL, TargetReg,
-                           (MI->getOpcode() == YSX::PROBED_STACKALLOC_RVV));
+                           (MI->getOpcode() == YSX::PROBED_STACKALLOC_YSXVec));
       MBBI->eraseFromParent();
     }
   }

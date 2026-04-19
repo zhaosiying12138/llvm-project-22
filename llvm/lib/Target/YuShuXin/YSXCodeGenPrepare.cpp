@@ -122,7 +122,7 @@ bool YSXCodeGenPrepare::visitAnd(BinaryOperator &BO) {
 // middle:
 //   %res = call i1 @llvm.vector.reduce.or(<vscale x 4 x i1> %rec)
 //
-// However RVV doesn't have any tail undisturbed mask instructions and so we
+// However YSXVec doesn't have any tail undisturbed mask instructions and so we
 // need a convoluted sequence of mask instructions to lower the i1 vp.merge: see
 // llvm/test/CodeGen/YSX/rvv/vpmerge-sdnode.ll.
 //

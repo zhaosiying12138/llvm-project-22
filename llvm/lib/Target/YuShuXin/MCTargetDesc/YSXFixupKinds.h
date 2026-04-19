@@ -49,7 +49,7 @@ enum Fixups {
   fixup_ysx_call_plt,
 
   // Qualcomm specific fixups
-  // 12-bit fixup for symbol references in the 48-bit Xqcibi branch immediate
+  // 12-bit fixup for symbol references in the 48-bit XRemovedQcibi branch immediate
   // instructions
   fixup_ysx_qc_e_branch,
   // 32-bit fixup for symbol references in the 48-bit qc.e.li instruction

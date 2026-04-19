@@ -14,7 +14,7 @@
 // extension. Extensions have a version and may be experimental.
 // NOTE: The extension name must start with
 //       - "FeatureStdExt" for standard extensions
-//       - "FeatureVendor" for vendor-specific extensions
+//       - "YSXDisabledVendorFeature" for vendor-specific extensions
 //
 // major     - Major version of extension.
 // minor     - Minor version of extension.
@@ -31,7 +31,7 @@ class YSXExtension<int major, int minor, string desc,
                      string fieldname = !subst("Feature", "Has", NAME),
                      string value = "true", bit IsExperimental = false>
     : SubtargetFeature<"", fieldname, value, "", implies> {
-  defvar extName = !subst("FeatureVendor", "", !subst("FeatureStdExt", "", NAME));
+  defvar extName = !subst("YSXDisabledVendorFeature", "", !subst("FeatureStdExt", "", NAME));
 
   // Name - Name of the extension in lower case.
   let Name = !if(IsExperimental, "experimental-", "") # !tolower(extName);
@@ -286,17 +286,17 @@ def HasStdExtZawrs : Predicate<"Subtarget->hasStdExtZawrs()">,
 
 // Floating Point Extensions
 
-def FeatureStdExtF
+def YSXDisabledStdExtF
     : YSXExtension<2, 2, "Single-Precision Floating-Point",
                      [FeatureStdExtZicsr]>,
       YSXExtensionBitmask<0, 5>;
 def HasStdExtF : Predicate<"Subtarget->hasStdExtF()">,
-                 AssemblerPredicate<(all_of FeatureStdExtF),
+                 AssemblerPredicate<(all_of YSXDisabledStdExtF),
                                     "'F' (Single-Precision Floating-Point)">;
 
 def FeatureStdExtD
     : YSXExtension<2, 2, "Double-Precision Floating-Point",
-                     [FeatureStdExtF]>,
+                     [YSXDisabledStdExtF]>,
       YSXExtensionBitmask<0, 3>;
 def HasStdExtD : Predicate<"Subtarget->hasStdExtD()">,
                  AssemblerPredicate<(all_of FeatureStdExtD),
@@ -311,7 +311,7 @@ def HasStdExtQ : Predicate<"Subtarget->hasStdExtQ()">,
 
 def FeatureStdExtZfhmin
     : YSXExtension<1, 0, "Half-Precision Floating-Point Minimal",
-                     [FeatureStdExtF]>,
+                     [YSXDisabledStdExtF]>,
       YSXExtensionBitmask<0, 36>;
 def HasStdExtZfhmin : Predicate<"Subtarget->hasStdExtZfhmin()">,
                       AssemblerPredicate<(all_of FeatureStdExtZfhmin),
@@ -328,7 +328,7 @@ def HasStdExtZfh : Predicate<"Subtarget->hasStdExtZfh()">,
 def NoStdExtZfh : Predicate<"!Subtarget->hasStdExtZfh()">;
 
 def FeatureStdExtZfbfmin
-    : YSXExtension<1, 0, "Scalar BF16 Converts", [FeatureStdExtF]>;
+    : YSXExtension<1, 0, "Scalar BF16 Converts", [YSXDisabledStdExtF]>;
 def HasStdExtZfbfmin : Predicate<"Subtarget->hasStdExtZfbfmin()">,
                        AssemblerPredicate<(all_of FeatureStdExtZfbfmin),
                                           "'Zfbfmin' (Scalar BF16 Converts)">;
@@ -342,7 +342,7 @@ def HasHalfFPLoadStoreMove
                                     "'Zfbfmin' (Scalar BF16 Converts)">;
 
 def FeatureStdExtZfa
-    : YSXExtension<1, 0, "Additional Floating-Point", [FeatureStdExtF]>,
+    : YSXExtension<1, 0, "Additional Floating-Point", [YSXDisabledStdExtF]>,
       YSXExtensionBitmask<0, 34>;
 def HasStdExtZfa : Predicate<"Subtarget->hasStdExtZfa()">,
                    AssemblerPredicate<(all_of FeatureStdExtZfa),
@@ -355,7 +355,7 @@ def HasStdExtZfinx : Predicate<"Subtarget->hasStdExtZfinx()">,
                      AssemblerPredicate<(all_of FeatureStdExtZfinx),
                                         "'Zfinx' (Float in Integer)">;
 def HasStdExtFOrZfinx : Predicate<"Subtarget->hasStdExtFOrZfinx()">,
-                        AssemblerPredicate<(any_of FeatureStdExtF,
+                        AssemblerPredicate<(any_of YSXDisabledStdExtF,
                                                    FeatureStdExtZfinx),
                             "'F' (Single-Precision Floating-Point) or "
                             "'Zfinx' (Float in Integer)">;
@@ -395,11 +395,11 @@ def HasStdExtZca
                          "'Zca' (part of the C extension, excluding "
                          "compressed floating point loads/stores)">;
 
-def FeatureStdExtC
+def YSXDisabledStdExtC
     : YSXExtension<2, 0, "Compressed Instructions", [FeatureStdExtZca]>,
       YSXExtensionBitmask<0, 2>;
 def HasStdExtC : Predicate<"Subtarget->hasStdExtC()">,
-                 AssemblerPredicate<(all_of FeatureStdExtC),
+                 AssemblerPredicate<(all_of YSXDisabledStdExtC),
                                     "'C' (Compressed Instructions)">;
 
 def FeatureStdExtZcb
@@ -418,14 +418,14 @@ def FeatureStdExtZcd
 
 def HasStdExtCOrZcd
     : Predicate<"Subtarget->hasStdExtCOrZcd()">,
-      AssemblerPredicate<(any_of FeatureStdExtC, FeatureStdExtZcd),
+      AssemblerPredicate<(any_of YSXDisabledStdExtC, FeatureStdExtZcd),
                          "'C' (Compressed Instructions) or "
                          "'Zcd' (Compressed Double-Precision Floating-Point Instructions)">;
 
 def FeatureStdExtZcf
     : YSXExtension<1, 0,
                      "Compressed Single-Precision Floating-Point Instructions",
-                     [FeatureStdExtF, FeatureStdExtZca]>,
+                     [YSXDisabledStdExtF, FeatureStdExtZca]>,
       YSXExtensionBitmask<1, 5>;
 
 def FeatureStdExtZclsd
@@ -463,7 +463,7 @@ def FeatureStdExtZce
 def HasStdExtCOrZcfOrZce
     : Predicate<"Subtarget->hasStdExtC() || Subtarget->hasStdExtZcf() ||"
                 "Subtarget->hasStdExtZce()">,
-      AssemblerPredicate<(any_of FeatureStdExtC, FeatureStdExtZcf,
+      AssemblerPredicate<(any_of YSXDisabledStdExtC, FeatureStdExtZcf,
                                  FeatureStdExtZce),
                          "'C' (Compressed Instructions) or "
                          "'Zcf' (Compressed Single-Precision Floating-Point Instructions)">;
@@ -661,7 +661,7 @@ def FeatureStdExtZve32f
     : YSXExtension<1, 0,
                      "Vector Extensions for Embedded Processors "
                      "with maximal 32 EEW and F extension",
-                     [FeatureStdExtZve32x, FeatureStdExtF]>,
+                     [FeatureStdExtZve32x, YSXDisabledStdExtF]>,
       YSXExtensionBitmask<0, 61>;
 
 def FeatureStdExtZve64x
@@ -685,7 +685,7 @@ def FeatureStdExtZve64d
                      [FeatureStdExtZve64f, FeatureStdExtD]>,
       YSXExtensionBitmask<1, 0>;
 
-def FeatureStdExtV
+def YSXDisabledStdExtV
     : YSXExtension<1, 0,
                      "Vector Extension for Application Processors",
                      [FeatureStdExtZvl128b, FeatureStdExtZve64d]>,
@@ -1125,608 +1125,608 @@ def HasStdExtZbkbOrP
 
 // Ventana Extensions
 
-def FeatureVendorXVentanaCondOps
+def YSXDisabledVendorFeatureXVentanaCondOps
     : YSXExtension<1, 0, "Ventana Conditional Ops">;
 def HasVendorXVentanaCondOps : Predicate<"Subtarget->hasVendorXVentanaCondOps()">,
-                               AssemblerPredicate<(all_of FeatureVendorXVentanaCondOps),
+                               AssemblerPredicate<(all_of YSXDisabledVendorFeatureXVentanaCondOps),
                                    "'XVentanaCondOps' (Ventana Conditional Ops)">;
 
 // T-Head Extensions
 
-def FeatureVendorXTHeadBa
+def YSXDisabledVendorFeatureXRemovedTHeadBa
     : YSXExtension<1, 0,
                      "T-Head address calculation instructions">;
-def HasVendorXTHeadBa : Predicate<"Subtarget->hasVendorXTHeadBa()">,
-                        AssemblerPredicate<(all_of FeatureVendorXTHeadBa),
-                            "'XTHeadBa' (T-Head address calculation instructions)">;
+def HasVendorXRemovedTHeadBa : Predicate<"Subtarget->hasVendorXRemovedTHeadBa()">,
+                        AssemblerPredicate<(all_of YSXDisabledVendorFeatureXRemovedTHeadBa),
+                            "'XRemovedTHeadBa' (T-Head address calculation instructions)">;
 
-def FeatureVendorXTHeadBb
+def YSXDisabledVendorFeatureXRemovedTHeadBb
     : YSXExtension<1, 0,
                      "T-Head basic bit-manipulation instructions">;
-def HasVendorXTHeadBb : Predicate<"Subtarget->hasVendorXTHeadBb()">,
-                        AssemblerPredicate<(all_of FeatureVendorXTHeadBb),
-                            "'XTHeadBb' (T-Head basic bit-manipulation instructions)">;
+def HasVendorXRemovedTHeadBb : Predicate<"Subtarget->hasVendorXRemovedTHeadBb()">,
+                        AssemblerPredicate<(all_of YSXDisabledVendorFeatureXRemovedTHeadBb),
+                            "'XRemovedTHeadBb' (T-Head basic bit-manipulation instructions)">;
 
-def FeatureVendorXTHeadBs
+def YSXDisabledVendorFeatureXRemovedTHeadBs
     : YSXExtension<1, 0,
                      "T-Head single-bit instructions">;
-def HasVendorXTHeadBs : Predicate<"Subtarget->hasVendorXTHeadBs()">,
-                        AssemblerPredicate<(all_of FeatureVendorXTHeadBs),
-                            "'XTHeadBs' (T-Head single-bit instructions)">;
+def HasVendorXRemovedTHeadBs : Predicate<"Subtarget->hasVendorXRemovedTHeadBs()">,
+                        AssemblerPredicate<(all_of YSXDisabledVendorFeatureXRemovedTHeadBs),
+                            "'XRemovedTHeadBs' (T-Head single-bit instructions)">;
 
-def FeatureVendorXTHeadCondMov
+def YSXDisabledVendorFeatureXRemovedTHeadCondMov
     : YSXExtension<1, 0,
                      "T-Head conditional move instructions">;
-def HasVendorXTHeadCondMov : Predicate<"Subtarget->hasVendorXTHeadCondMov()">,
-                             AssemblerPredicate<(all_of FeatureVendorXTHeadCondMov),
-                                 "'XTHeadCondMov' (T-Head conditional move instructions)">;
+def HasVendorXRemovedTHeadCondMov : Predicate<"Subtarget->hasVendorXRemovedTHeadCondMov()">,
+                             AssemblerPredicate<(all_of YSXDisabledVendorFeatureXRemovedTHeadCondMov),
+                                 "'XRemovedTHeadCondMov' (T-Head conditional move instructions)">;
 
-def FeatureVendorXTHeadCmo
+def YSXDisabledVendorFeatureXRemovedTHeadCmo
     : YSXExtension<1, 0,
                      "T-Head cache management instructions">;
-def HasVendorXTHeadCmo : Predicate<"Subtarget->hasVendorXTHeadCmo()">,
-                         AssemblerPredicate<(all_of FeatureVendorXTHeadCmo),
-                             "'XTHeadCmo' (T-Head cache management instructions)">;
+def HasVendorXRemovedTHeadCmo : Predicate<"Subtarget->hasVendorXRemovedTHeadCmo()">,
+                         AssemblerPredicate<(all_of YSXDisabledVendorFeatureXRemovedTHeadCmo),
+                             "'XRemovedTHeadCmo' (T-Head cache management instructions)">;
 
-def FeatureVendorXTHeadFMemIdx
+def YSXDisabledVendorFeatureXRemovedTHeadFMemIdx
     : YSXExtension<1, 0,
                      "T-Head FP Indexed Memory Operations">;
-def HasVendorXTHeadFMemIdx : Predicate<"Subtarget->hasVendorXTHeadFMemIdx()">,
-                             AssemblerPredicate<(all_of FeatureVendorXTHeadFMemIdx),
-                                 "'XTHeadFMemIdx' (T-Head FP Indexed Memory Operations)">;
+def HasVendorXRemovedTHeadFMemIdx : Predicate<"Subtarget->hasVendorXRemovedTHeadFMemIdx()">,
+                             AssemblerPredicate<(all_of YSXDisabledVendorFeatureXRemovedTHeadFMemIdx),
+                                 "'XRemovedTHeadFMemIdx' (T-Head FP Indexed Memory Operations)">;
 
-def FeatureVendorXTHeadMac
+def YSXDisabledVendorFeatureXRemovedTHeadMac
     : YSXExtension<1, 0,
                      "T-Head Multiply-Accumulate Instructions">;
-def HasVendorXTHeadMac : Predicate<"Subtarget->hasVendorXTHeadMac()">,
-                         AssemblerPredicate<(all_of FeatureVendorXTHeadMac),
-                             "'XTHeadMac' (T-Head Multiply-Accumulate Instructions)">;
+def HasVendorXRemovedTHeadMac : Predicate<"Subtarget->hasVendorXRemovedTHeadMac()">,
+                         AssemblerPredicate<(all_of YSXDisabledVendorFeatureXRemovedTHeadMac),
+                             "'XRemovedTHeadMac' (T-Head Multiply-Accumulate Instructions)">;
 
-def FeatureVendorXTHeadMemIdx
+def YSXDisabledVendorFeatureXRemovedTHeadMemIdx
     : YSXExtension<1, 0,
                      "T-Head Indexed Memory Operations">;
-def HasVendorXTHeadMemIdx : Predicate<"Subtarget->hasVendorXTHeadMemIdx()">,
-                            AssemblerPredicate<(all_of FeatureVendorXTHeadMemIdx),
-                                "'XTHeadMemIdx' (T-Head Indexed Memory Operations)">;
+def HasVendorXRemovedTHeadMemIdx : Predicate<"Subtarget->hasVendorXRemovedTHeadMemIdx()">,
+                            AssemblerPredicate<(all_of YSXDisabledVendorFeatureXRemovedTHeadMemIdx),
+                                "'XRemovedTHeadMemIdx' (T-Head Indexed Memory Operations)">;
 
-def FeatureVendorXTHeadMemPair
+def YSXDisabledVendorFeatureXRemovedTHeadMemPair
     : YSXExtension<1, 0,
                      "T-Head two-GPR Memory Operations">;
-def HasVendorXTHeadMemPair : Predicate<"Subtarget->hasVendorXTHeadMemPair()">,
-                             AssemblerPredicate<(all_of FeatureVendorXTHeadMemPair),
-                                 "'XTHeadMemPair' (T-Head two-GPR Memory Operations)">;
+def HasVendorXRemovedTHeadMemPair : Predicate<"Subtarget->hasVendorXRemovedTHeadMemPair()">,
+                             AssemblerPredicate<(all_of YSXDisabledVendorFeatureXRemovedTHeadMemPair),
+                                 "'XRemovedTHeadMemPair' (T-Head two-GPR Memory Operations)">;
 
-def FeatureVendorXTHeadSync
+def YSXDisabledVendorFeatureXRemovedTHeadSync
     : YSXExtension<1, 0,
                      "T-Head multicore synchronization instructions">;
-def HasVendorXTHeadSync : Predicate<"Subtarget->hasVendorXTHeadSync()">,
-                          AssemblerPredicate<(all_of FeatureVendorXTHeadSync),
-                              "'XTHeadSync' (T-Head multicore synchronization instructions)">;
+def HasVendorXRemovedTHeadSync : Predicate<"Subtarget->hasVendorXRemovedTHeadSync()">,
+                          AssemblerPredicate<(all_of YSXDisabledVendorFeatureXRemovedTHeadSync),
+                              "'XRemovedTHeadSync' (T-Head multicore synchronization instructions)">;
 
-def FeatureVendorXTHeadVdot
+def YSXDisabledVendorFeatureXRemovedTHeadVdot
     : YSXExtension<1, 0,
                      "T-Head Vector Extensions for Dot",
-                     [FeatureStdExtV]>;
-def HasVendorXTHeadVdot : Predicate<"Subtarget->hasVendorXTHeadVdot()">,
-                          AssemblerPredicate<(all_of FeatureVendorXTHeadVdot),
-                              "'XTHeadVdot' (T-Head Vector Extensions for Dot)">;
+                     [YSXDisabledStdExtV]>;
+def HasVendorXRemovedTHeadVdot : Predicate<"Subtarget->hasVendorXRemovedTHeadVdot()">,
+                          AssemblerPredicate<(all_of YSXDisabledVendorFeatureXRemovedTHeadVdot),
+                              "'XRemovedTHeadVdot' (T-Head Vector Extensions for Dot)">;
 
 // SiFive Extensions
 
-def FeatureVendorXSfvcp
+def YSXDisabledVendorFeatureXRemovedSfvcp
     : YSXExtension<1, 0,
                      "SiFive Custom Vector Coprocessor Interface Instructions",
                      [FeatureStdExtZve32x]>;
-def HasVendorXSfvcp : Predicate<"Subtarget->hasVendorXSfvcp()">,
-                      AssemblerPredicate<(all_of FeatureVendorXSfvcp),
-                          "'XSfvcp' (SiFive Custom Vector Coprocessor Interface Instructions)">;
+def HasVendorXRemovedSfvcp : Predicate<"Subtarget->hasVendorXRemovedSfvcp()">,
+                      AssemblerPredicate<(all_of YSXDisabledVendorFeatureXRemovedSfvcp),
+                          "'XRemovedSfvcp' (SiFive Custom Vector Coprocessor Interface Instructions)">;
 
-def FeatureVendorXSfmmbase
+def YSXDisabledVendorFeatureXRemovedSfmmbase
     : YSXExtension<0, 6,
                      "All non arithmetic instructions for all TEWs and sf.vtzero",
                      [FeatureStdExtZve32x]>;
-def HasVendorXSfmmbase : Predicate<"Subtarget->hasVendorXSfmmbase()">,
-                         AssemblerPredicate<(all_of FeatureVendorXSfmmbase),
-                             "'XSfmmbase' (All non arithmetic instructions for all TEWs and sf.vtzero)">;
+def HasVendorXRemovedSfmmbase : Predicate<"Subtarget->hasVendorXRemovedSfmmbase()">,
+                         AssemblerPredicate<(all_of YSXDisabledVendorFeatureXRemovedSfmmbase),
+                             "'XRemovedSfmmbase' (All non arithmetic instructions for all TEWs and sf.vtzero)">;
 
-def FeatureVendorXSfmm32a8f
+def YSXDisabledVendorFeatureXRemovedSfmm32a8f
     : YSXExtension<0, 6,
                      "TEW=32-bit accumulation, operands - float: fp8",
-                     [FeatureVendorXSfmmbase, FeatureStdExtZve32f]>;
-def HasVendorXSfmm32a8f : Predicate<"Subtarget->hasVendorXSfmm32a8f()">,
-                          AssemblerPredicate<(all_of FeatureVendorXSfmm32a8f),
-                              "'XSfmm32a8f' (TEW=32-bit accumulation, operands - float: fp8)">;
+                     [YSXDisabledVendorFeatureXRemovedSfmmbase, FeatureStdExtZve32f]>;
+def HasVendorXRemovedSfmm32a8f : Predicate<"Subtarget->hasVendorXRemovedSfmm32a8f()">,
+                          AssemblerPredicate<(all_of YSXDisabledVendorFeatureXRemovedSfmm32a8f),
+                              "'XRemovedSfmm32a8f' (TEW=32-bit accumulation, operands - float: fp8)">;
 
-def FeatureVendorXSfmm32a16f
+def YSXDisabledVendorFeatureXRemovedSfmm32a16f
     : YSXExtension<0, 6,
                      "TEW=32-bit accumulation, operands - float: 16b, widen=2 (IEEE, BF)",
-                     [FeatureVendorXSfmmbase, FeatureStdExtZve32f]>;
+                     [YSXDisabledVendorFeatureXRemovedSfmmbase, FeatureStdExtZve32f]>;
 
-def FeatureVendorXSfmm32a32f
+def YSXDisabledVendorFeatureXRemovedSfmm32a32f
     : YSXExtension<0, 6,
                      "TEW=32-bit accumulation, operands - float: 32b",
-                     [FeatureVendorXSfmmbase, FeatureStdExtZve32f]>;
+                     [YSXDisabledVendorFeatureXRemovedSfmmbase, FeatureStdExtZve32f]>;
 
-def FeatureVendorXSfmm32a8i
+def YSXDisabledVendorFeatureXRemovedSfmm32a8i
     : YSXExtension<0, 6,
                      "TEW=32-bit accumulation, operands - int: 8b",
-                     [FeatureVendorXSfmmbase]>;
-def HasVendorXSfmm32a8i : Predicate<"Subtarget->hasVendorXSfmm32a8i()">,
-                          AssemblerPredicate<(all_of FeatureVendorXSfmm32a8i),
-                              "'XSfmm32a8i' (TEW=32-bit accumulation, operands - int: 8b)">;
+                     [YSXDisabledVendorFeatureXRemovedSfmmbase]>;
+def HasVendorXRemovedSfmm32a8i : Predicate<"Subtarget->hasVendorXRemovedSfmm32a8i()">,
+                          AssemblerPredicate<(all_of YSXDisabledVendorFeatureXRemovedSfmm32a8i),
+                              "'XRemovedSfmm32a8i' (TEW=32-bit accumulation, operands - int: 8b)">;
 
-def FeatureVendorXSfmm64a64f
+def YSXDisabledVendorFeatureXRemovedSfmm64a64f
     : YSXExtension<0, 6,
                      "TEW=64-bit accumulation, operands - float: fp64",
-                     [FeatureVendorXSfmmbase, FeatureStdExtZve64d]>;
-def HasVendorXSfmm32a16fOrXSfmm32a32fOrXSfmm64a64f
-    : Predicate<"Subtarget->hasVendorXSfmm32a16fOrXSfmm32a32fOrXSfmm64a64f()">,
-                AssemblerPredicate<(any_of FeatureVendorXSfmm32a16f,
-                                           FeatureVendorXSfmm32a32f,
-                                           FeatureVendorXSfmm64a64f),
-                    "'XSfmm32a16f' (TEW=32-bit accumulation, operands - float: 16b, widen=2 (IEEE, BF)), or "
-                    "'XSfmm32a32f' (TEW=32-bit accumulation, operands - float: 32b), or "
-                    "'XSfmm64a64f' (TEW=64-bit accumulation, operands - float: fp64)">;
+                     [YSXDisabledVendorFeatureXRemovedSfmmbase, FeatureStdExtZve64d]>;
+def HasVendorXRemovedSfmm32a16fOrXRemovedSfmm32a32fOrXRemovedSfmm64a64f
+    : Predicate<"Subtarget->hasVendorXRemovedSfmm32a16fOrXRemovedSfmm32a32fOrXRemovedSfmm64a64f()">,
+                AssemblerPredicate<(any_of YSXDisabledVendorFeatureXRemovedSfmm32a16f,
+                                           YSXDisabledVendorFeatureXRemovedSfmm32a32f,
+                                           YSXDisabledVendorFeatureXRemovedSfmm64a64f),
+                    "'XRemovedSfmm32a16f' (TEW=32-bit accumulation, operands - float: 16b, widen=2 (IEEE, BF)), or "
+                    "'XRemovedSfmm32a32f' (TEW=32-bit accumulation, operands - float: 32b), or "
+                    "'XRemovedSfmm64a64f' (TEW=64-bit accumulation, operands - float: fp64)">;
 
-def FeatureVendorXSfmm16t
+def YSXDisabledVendorFeatureXRemovedSfmm16t
     : YSXExtension<0, 6,
                      "TE=16 configuration",
-                     [FeatureVendorXSfmmbase, FeatureStdExtZvl64b], "XSfmmTE", "16">;
+                     [YSXDisabledVendorFeatureXRemovedSfmmbase, FeatureStdExtZvl64b], "XRemovedSfmmTE", "16">;
 
-def FeatureVendorXSfmm32t
+def YSXDisabledVendorFeatureXRemovedSfmm32t
     : YSXExtension<0, 6,
                      "TE=32 configuration",
-                     [FeatureVendorXSfmmbase, FeatureStdExtZvl128b], "XSfmmTE", "32">;
+                     [YSXDisabledVendorFeatureXRemovedSfmmbase, FeatureStdExtZvl128b], "XRemovedSfmmTE", "32">;
 
-def FeatureVendorXSfmm64t
+def YSXDisabledVendorFeatureXRemovedSfmm64t
     : YSXExtension<0, 6,
                      "TE=64 configuration",
-                     [FeatureVendorXSfmmbase, FeatureStdExtZvl256b], "XSfmmTE", "64">;
+                     [YSXDisabledVendorFeatureXRemovedSfmmbase, FeatureStdExtZvl256b], "XRemovedSfmmTE", "64">;
 
-def FeatureVendorXSfmm128t
+def YSXDisabledVendorFeatureXRemovedSfmm128t
     : YSXExtension<0, 6,
                      "TE=128 configuration",
-                     [FeatureVendorXSfmmbase, FeatureStdExtZvl512b], "XSfmmTE", "128">;
+                     [YSXDisabledVendorFeatureXRemovedSfmmbase, FeatureStdExtZvl512b], "XRemovedSfmmTE", "128">;
 
-def FeatureVendorXSfvqmaccdod
+def YSXDisabledVendorFeatureXRemovedSfvqmaccdod
     : YSXExtension<1, 0,
                      "SiFive Int8 Matrix Multiplication Instructions (2-by-8 and 8-by-2)",
                      [FeatureStdExtZve32x, FeatureStdExtZvl128b]>;
-def HasVendorXSfvqmaccdod
-    : Predicate<"Subtarget->hasVendorXSfvqmaccdod()">,
-      AssemblerPredicate<(all_of FeatureVendorXSfvqmaccdod),
-                         "'XSfvqmaccdod' (SiFive Int8 Matrix Multiplication Instructions (2-by-8 and 8-by-2))">;
+def HasVendorXRemovedSfvqmaccdod
+    : Predicate<"Subtarget->hasVendorXRemovedSfvqmaccdod()">,
+      AssemblerPredicate<(all_of YSXDisabledVendorFeatureXRemovedSfvqmaccdod),
+                         "'XRemovedSfvqmaccdod' (SiFive Int8 Matrix Multiplication Instructions (2-by-8 and 8-by-2))">;
 
-def FeatureVendorXSfvqmaccqoq
+def YSXDisabledVendorFeatureXRemovedSfvqmaccqoq
     : YSXExtension<1, 0,
                      "SiFive Int8 Matrix Multiplication Instructions (4-by-8 and 8-by-4)",
                      [FeatureStdExtZve32x, FeatureStdExtZvl256b]>;
-def HasVendorXSfvqmaccqoq
-    : Predicate<"Subtarget->hasVendorXSfvqmaccqoq()">,
-      AssemblerPredicate<(all_of FeatureVendorXSfvqmaccqoq),
-                         "'XSfvqmaccqoq' (SiFive Int8 Matrix Multiplication Instructions (4-by-8 and 8-by-4))">;
+def HasVendorXRemovedSfvqmaccqoq
+    : Predicate<"Subtarget->hasVendorXRemovedSfvqmaccqoq()">,
+      AssemblerPredicate<(all_of YSXDisabledVendorFeatureXRemovedSfvqmaccqoq),
+                         "'XRemovedSfvqmaccqoq' (SiFive Int8 Matrix Multiplication Instructions (4-by-8 and 8-by-4))">;
 
-def FeatureVendorXSfvfwmaccqqq
+def YSXDisabledVendorFeatureXRemovedSfvfwmaccqqq
     : YSXExtension<1, 0,
                      "SiFive Matrix Multiply Accumulate Instruction (4-by-4)",
                      [FeatureStdExtZvfbfmin, FeatureStdExtZvl128b]>;
-def HasVendorXSfvfwmaccqqq
-    : Predicate<"Subtarget->hasVendorXSfvfwmaccqqq()">,
-      AssemblerPredicate<(all_of FeatureVendorXSfvfwmaccqqq),
-                         "'XSfvfwmaccqqq' (SiFive Matrix Multiply Accumulate Instruction (4-by-4))">;
+def HasVendorXRemovedSfvfwmaccqqq
+    : Predicate<"Subtarget->hasVendorXRemovedSfvfwmaccqqq()">,
+      AssemblerPredicate<(all_of YSXDisabledVendorFeatureXRemovedSfvfwmaccqqq),
+                         "'XRemovedSfvfwmaccqqq' (SiFive Matrix Multiply Accumulate Instruction (4-by-4))">;
 
-def FeatureVendorXSfvfnrclipxfqf
+def YSXDisabledVendorFeatureXRemovedSfvfnrclipxfqf
     : YSXExtension<1, 0,
                      "SiFive FP32-to-int8 Ranged Clip Instructions",
                      [FeatureStdExtZve32f]>;
-def HasVendorXSfvfnrclipxfqf
-    : Predicate<"Subtarget->hasVendorXSfvfnrclipxfqf()">,
-      AssemblerPredicate<(all_of FeatureVendorXSfvfnrclipxfqf),
-                         "'XSfvfnrclipxfqf' (SiFive FP32-to-int8 Ranged Clip Instructions)">;
+def HasVendorXRemovedSfvfnrclipxfqf
+    : Predicate<"Subtarget->hasVendorXRemovedSfvfnrclipxfqf()">,
+      AssemblerPredicate<(all_of YSXDisabledVendorFeatureXRemovedSfvfnrclipxfqf),
+                         "'XRemovedSfvfnrclipxfqf' (SiFive FP32-to-int8 Ranged Clip Instructions)">;
 
-// Note: XSfvfbfexp16e depends on either Zvfbfmin _or_ Zvfbfa, which cannot be expressed here in
+// Note: XRemovedSfvfbfexp16e depends on either Zvfbfmin _or_ Zvfbfa, which cannot be expressed here in
 // TableGen. Instead, we check that in YSXISAInfo.
-def FeatureVendorXSfvfbfexp16e
+def YSXDisabledVendorFeatureXRemovedSfvfbfexp16e
     : YSXExtension<0, 5,
                      "SiFive Vector Floating-Point Exponential Function Instruction, BFloat16">;
-def HasVendorXSfvfbfexp16e : Predicate<"Subtarget->hasVendorXSfvfbfexp16e()">;
+def HasVendorXRemovedSfvfbfexp16e : Predicate<"Subtarget->hasVendorXRemovedSfvfbfexp16e()">;
 
-def FeatureVendorXSfvfexp16e
+def YSXDisabledVendorFeatureXRemovedSfvfexp16e
     : YSXExtension<0, 5,
                      "SiFive Vector Floating-Point Exponential Function Instruction, Half Precision",
                      [FeatureStdExtZvfh]>;
-def HasVendorXSfvfexp16e : Predicate<"Subtarget->hasVendorXSfvfexp16e()">;
+def HasVendorXRemovedSfvfexp16e : Predicate<"Subtarget->hasVendorXRemovedSfvfexp16e()">;
 
-def FeatureVendorXSfvfexp32e
+def YSXDisabledVendorFeatureXRemovedSfvfexp32e
     : YSXExtension<0, 5,
                      "SiFive Vector Floating-Point Exponential Function Instruction, Single Precision",
                      [FeatureStdExtZve32f]>;
-def HasVendorXSfvfexp32e : Predicate<"Subtarget->hasVendorXSfvfexp32e()">;
+def HasVendorXRemovedSfvfexp32e : Predicate<"Subtarget->hasVendorXRemovedSfvfexp32e()">;
 
-def HasVendorXSfvfexpAnyFloat : Predicate<"Subtarget->hasVendorXSfvfexp16e() || Subtarget->hasVendorXSfvfexp32e()">;
-def HasVendorXSfvfexpAny : Predicate<"Subtarget->hasVendorXSfvfbfexp16e() || Subtarget->hasVendorXSfvfexp16e() || Subtarget->hasVendorXSfvfexp32e()">,
-                           AssemblerPredicate<(any_of FeatureVendorXSfvfbfexp16e, FeatureVendorXSfvfexp16e, FeatureVendorXSfvfexp32e),
+def HasVendorXRemovedSfvfexpAnyFloat : Predicate<"Subtarget->hasVendorXRemovedSfvfexp16e() || Subtarget->hasVendorXRemovedSfvfexp32e()">;
+def HasVendorXRemovedSfvfexpAny : Predicate<"Subtarget->hasVendorXRemovedSfvfbfexp16e() || Subtarget->hasVendorXRemovedSfvfexp16e() || Subtarget->hasVendorXRemovedSfvfexp32e()">,
+                           AssemblerPredicate<(any_of YSXDisabledVendorFeatureXRemovedSfvfbfexp16e, YSXDisabledVendorFeatureXRemovedSfvfexp16e, YSXDisabledVendorFeatureXRemovedSfvfexp32e),
                            "'Xsfvfbfexp16e', 'Xsfvfexp16e', or 'Xsfvfexp32e' (SiFive Vector Floating-Point Exponential Function Instruction)">;
 
-def FeatureVendorXSfvfexpa
+def YSXDisabledVendorFeatureXRemovedSfvfexpa
     : YSXExtension<0, 2,
                      "SiFive Vector Floating-Point Exponential Approximation Instruction",
                      [FeatureStdExtZve32f]>;
-def HasVendorXSfvfexpa : Predicate<"Subtarget->hasVendorXSfvfexpa()">,
-                         AssemblerPredicate<(all_of FeatureVendorXSfvfexpa),
+def HasVendorXRemovedSfvfexpa : Predicate<"Subtarget->hasVendorXRemovedSfvfexpa()">,
+                         AssemblerPredicate<(all_of YSXDisabledVendorFeatureXRemovedSfvfexpa),
                          "'Xsfvfexpa' (SiFive Vector Floating-Point Exponential Approximation Instruction)">;
 
-def FeatureVendorXSfvfexpa64e
+def YSXDisabledVendorFeatureXRemovedSfvfexpa64e
     : YSXExtension<0, 2,
                      "SiFive Vector Floating-Point Exponential Approximation Instruction with Double-Precision",
-                     [FeatureVendorXSfvfexpa, FeatureStdExtZve64d]>;
-def HasVendorXSfvfexpa64e : Predicate<"Subtarget->hasVendorXSfvfexpa64e()">;
+                     [YSXDisabledVendorFeatureXRemovedSfvfexpa, FeatureStdExtZve64d]>;
+def HasVendorXRemovedSfvfexpa64e : Predicate<"Subtarget->hasVendorXRemovedSfvfexpa64e()">;
 
-def FeatureVendorXSiFivecdiscarddlone
+def YSXDisabledVendorFeatureXSiFivecdiscarddlone
     : YSXExtension<1, 0,
                      "SiFive sf.cdiscard.d.l1 Instruction", []>;
 def HasVendorXSiFivecdiscarddlone
     : Predicate<"Subtarget->hasVendorXSiFivecdiscarddlone()">,
-      AssemblerPredicate<(all_of FeatureVendorXSiFivecdiscarddlone),
+      AssemblerPredicate<(all_of YSXDisabledVendorFeatureXSiFivecdiscarddlone),
                          "'XSiFivecdiscarddlone' (SiFive sf.cdiscard.d.l1 Instruction)">;
 
-def FeatureVendorXSiFivecflushdlone
+def YSXDisabledVendorFeatureXSiFivecflushdlone
     : YSXExtension<1, 0,
                      "SiFive sf.cflush.d.l1 Instruction", []>;
 def HasVendorXSiFivecflushdlone
     : Predicate<"Subtarget->hasVendorXSiFivecflushdlone()">,
-      AssemblerPredicate<(all_of FeatureVendorXSiFivecflushdlone),
+      AssemblerPredicate<(all_of YSXDisabledVendorFeatureXSiFivecflushdlone),
                          "'XSiFivecflushdlone' (SiFive sf.cflush.d.l1 Instruction)">;
 
-def FeatureVendorXSfcease
+def YSXDisabledVendorFeatureXRemovedSfcease
     : YSXExtension<1, 0,
                      "SiFive sf.cease Instruction", []>;
-def HasVendorXSfcease
-    : Predicate<"Subtarget->hasVendorXSfcease()">,
-      AssemblerPredicate<(all_of FeatureVendorXSfcease),
-                         "'XSfcease' (SiFive sf.cease Instruction)">;
+def HasVendorXRemovedSfcease
+    : Predicate<"Subtarget->hasVendorXRemovedSfcease()">,
+      AssemblerPredicate<(all_of YSXDisabledVendorFeatureXRemovedSfcease),
+                         "'XRemovedSfcease' (SiFive sf.cease Instruction)">;
 
-def FeatureVendorXSfmclic
+def YSXDisabledVendorFeatureXRemovedSfmclic
     : YSXExperimentalExtension<0, 1,
                                  "SiFive CLIC Machine-mode CSRs">;
 
-def FeatureVendorXSfsclic
+def YSXDisabledVendorFeatureXRemovedSfsclic
     : YSXExperimentalExtension<0, 1,
                                  "SiFive CLIC Supervisor-mode CSRs">;
 
 // Core-V Extensions
 
-def FeatureVendorXCVelw
+def YSXDisabledVendorFeatureXCVelw
    : YSXExtension<1, 0, "CORE-V Event Load Word">;
 def HasVendorXCVelw
    : Predicate<"Subtarget->hasVendorXCVelw()">,
-     AssemblerPredicate<(any_of FeatureVendorXCVelw),
+     AssemblerPredicate<(any_of YSXDisabledVendorFeatureXCVelw),
                         "'XCVelw' (CORE-V Event Load Word)">;
 
-def FeatureVendorXCVbitmanip
+def YSXDisabledVendorFeatureXCVbitmanip
     : YSXExtension<1, 0, "CORE-V Bit Manipulation">;
 def HasVendorXCVbitmanip
     : Predicate<"Subtarget->hasVendorXCVbitmanip()">,
-      AssemblerPredicate<(all_of FeatureVendorXCVbitmanip),
+      AssemblerPredicate<(all_of YSXDisabledVendorFeatureXCVbitmanip),
                          "'XCVbitmanip' (CORE-V Bit Manipulation)">;
 
-def FeatureVendorXCVmac
+def YSXDisabledVendorFeatureXCVmac
     : YSXExtension<1, 0, "CORE-V Multiply-Accumulate">;
 def HasVendorXCVmac
     : Predicate<"Subtarget->hasVendorXCVmac()">,
-      AssemblerPredicate<(all_of FeatureVendorXCVmac),
+      AssemblerPredicate<(all_of YSXDisabledVendorFeatureXCVmac),
                          "'XCVmac' (CORE-V Multiply-Accumulate)">;
 
-def FeatureVendorXCVmem
+def YSXDisabledVendorFeatureXCVmem
     : YSXExtension<1, 0, "CORE-V Post-incrementing Load & Store">;
 def HasVendorXCVmem
     : Predicate<"Subtarget->hasVendorXCVmem()">,
-      AssemblerPredicate<(any_of FeatureVendorXCVmem),
+      AssemblerPredicate<(any_of YSXDisabledVendorFeatureXCVmem),
                          "'XCVmem' (CORE-V Post-incrementing Load & Store)">;
 
-def FeatureVendorXCValu
+def YSXDisabledVendorFeatureXCValu
     : YSXExtension<1, 0, "CORE-V ALU Operations">;
 def HasVendorXCValu
     : Predicate<"Subtarget->hasVendorXCValu()">,
-      AssemblerPredicate<(all_of FeatureVendorXCValu),
+      AssemblerPredicate<(all_of YSXDisabledVendorFeatureXCValu),
                          "'XCValu' (CORE-V ALU Operations)">;
 
-def FeatureVendorXCVsimd
+def YSXDisabledVendorFeatureXCVsimd
     : YSXExtension<1, 0, "CORE-V SIMD ALU">;
 def HasVendorXCVsimd
     : Predicate<"Subtarget->hasVendorXCVsimd()">,
-      AssemblerPredicate<(any_of FeatureVendorXCVsimd),
+      AssemblerPredicate<(any_of YSXDisabledVendorFeatureXCVsimd),
                          "'XCVsimd' (CORE-V SIMD ALU)">;
 
-def FeatureVendorXCVbi
+def YSXDisabledVendorFeatureXCVbi
     : YSXExtension<1, 0, "CORE-V Immediate Branching">;
 def HasVendorXCVbi
     : Predicate<"Subtarget->hasVendorXCVbi()">,
-      AssemblerPredicate<(all_of FeatureVendorXCVbi),
+      AssemblerPredicate<(all_of YSXDisabledVendorFeatureXCVbi),
                          "'XCVbi' (CORE-V Immediate Branching)">;
 // MIPS Extensions
 
-def FeatureVendorXMIPSCMov
+def YSXDisabledVendorFeatureXMIPSCMov
     : YSXExtension<1, 0, "MIPS conditional move instruction (mips.ccmov)">;
 def HasVendorXMIPSCMov
     : Predicate<"Subtarget->hasVendorXMIPSCMov()">,
-      AssemblerPredicate<(all_of FeatureVendorXMIPSCMov),
+      AssemblerPredicate<(all_of YSXDisabledVendorFeatureXMIPSCMov),
                          "'Xmipscmov' ('mips.ccmov' instruction)">;
 def UseMIPSCCMovInsn : Predicate<"Subtarget->useMIPSCCMovInsn()">;
 
-def FeatureVendorXMIPSLSP
+def YSXDisabledVendorFeatureXMIPSLSP
     : YSXExtension<1, 0, "MIPS optimization for hardware load-store bonding">;
 def HasVendorXMIPSLSP
     : Predicate<"Subtarget->hasVendorXMIPSLSP()">,
-      AssemblerPredicate<(all_of FeatureVendorXMIPSLSP),
+      AssemblerPredicate<(all_of YSXDisabledVendorFeatureXMIPSLSP),
                          "'Xmipslsp' (load and store pair instructions)">;
 
-def FeatureVendorXMIPSCBOP : YSXExtension<1, 0, "MIPS Software Prefetch">;
+def YSXDisabledVendorFeatureXMIPSCBOP : YSXExtension<1, 0, "MIPS Software Prefetch">;
 def HasVendorXMIPSCBOP
     : Predicate<"Subtarget->hasVendorXMIPSCBOP()">,
-      AssemblerPredicate<(all_of FeatureVendorXMIPSCBOP),
+      AssemblerPredicate<(all_of YSXDisabledVendorFeatureXMIPSCBOP),
                          "'Xmipscbop' (MIPS hardware prefetch)">;
 def NoVendorXMIPSCBOP : Predicate<"!Subtarget->hasVendorXMIPSCBOP()">;
 
-def FeatureVendorXMIPSEXECTL : YSXExtension<1, 0, "MIPS execution control">;
+def YSXDisabledVendorFeatureXMIPSEXECTL : YSXExtension<1, 0, "MIPS execution control">;
 def HasVendorXMIPSEXECTL
     : Predicate<"Subtarget->hasVendorXMIPSEXECTL()">,
-      AssemblerPredicate<(all_of FeatureVendorXMIPSEXECTL),
+      AssemblerPredicate<(all_of YSXDisabledVendorFeatureXMIPSEXECTL),
                          "'Xmipsexectl' (MIPS execution control)">;
 
 // WCH / Nanjing Qinheng Microelectronics Extension(s)
 
-def FeatureVendorXwchc
+def YSXDisabledVendorFeatureXwchc
     : YSXExtension<2, 2,
                      "WCH/QingKe additional compressed opcodes",
                      [FeatureStdExtZca]>;
 def HasVendorXwchc
     : Predicate<"Subtarget->hasVendorXwchc()">,
-      AssemblerPredicate<(all_of FeatureVendorXwchc),
+      AssemblerPredicate<(all_of YSXDisabledVendorFeatureXwchc),
                          "'Xwchc' (WCH/QingKe additional compressed opcodes)">;
 
 // Qualcomm Extensions
 
-def FeatureVendorXqccmp
+def YSXDisabledVendorFeatureXqccmp
     : YSXExtension<0, 3, "Qualcomm 16-bit Push/Pop and Double Moves",
                      [FeatureStdExtZca]>;
 def HasVendorXqccmp
     : Predicate<"Subtarget->hasVendorXqccmp()">,
-      AssemblerPredicate<(all_of FeatureVendorXqccmp),
+      AssemblerPredicate<(all_of YSXDisabledVendorFeatureXqccmp),
                          "'Xqccmp' (Qualcomm 16-bit Push/Pop and Double Moves)">;
 
-def FeatureVendorXqcia
+def YSXDisabledVendorFeatureXRemovedQcia
     : YSXExtension<0, 7, "Qualcomm uC Arithmetic Extension">;
-def HasVendorXqcia
-    : Predicate<"Subtarget->hasVendorXqcia()">,
-      AssemblerPredicate<(all_of FeatureVendorXqcia),
-                         "'Xqcia' (Qualcomm uC Arithmetic Extension)">;
+def HasVendorXRemovedQcia
+    : Predicate<"Subtarget->hasVendorXRemovedQcia()">,
+      AssemblerPredicate<(all_of YSXDisabledVendorFeatureXRemovedQcia),
+                         "'XRemovedQcia' (Qualcomm uC Arithmetic Extension)">;
 
-def FeatureVendorXqciac
+def YSXDisabledVendorFeatureXRemovedQciac
     : YSXExtension<0, 3, "Qualcomm uC Load-Store Address Calculation Extension",
                      [FeatureStdExtZca]>;
-def HasVendorXqciac
-    : Predicate<"Subtarget->hasVendorXqciac()">,
-      AssemblerPredicate<(all_of FeatureVendorXqciac),
-                         "'Xqciac' (Qualcomm uC Load-Store Address Calculation Extension)">;
+def HasVendorXRemovedQciac
+    : Predicate<"Subtarget->hasVendorXRemovedQciac()">,
+      AssemblerPredicate<(all_of YSXDisabledVendorFeatureXRemovedQciac),
+                         "'XRemovedQciac' (Qualcomm uC Load-Store Address Calculation Extension)">;
 
-def FeatureVendorXqcibi
+def YSXDisabledVendorFeatureXRemovedQcibi
     : YSXExtension<0, 2, "Qualcomm uC Branch Immediate Extension",
                      [FeatureStdExtZca]>;
-def HasVendorXqcibi
-    : Predicate<"Subtarget->hasVendorXqcibi()">,
-      AssemblerPredicate<(all_of FeatureVendorXqcibi),
-                         "'Xqcibi' (Qualcomm uC Branch Immediate Extension)">;
+def HasVendorXRemovedQcibi
+    : Predicate<"Subtarget->hasVendorXRemovedQcibi()">,
+      AssemblerPredicate<(all_of YSXDisabledVendorFeatureXRemovedQcibi),
+                         "'XRemovedQcibi' (Qualcomm uC Branch Immediate Extension)">;
 
-def FeatureVendorXqcibm
+def YSXDisabledVendorFeatureXRemovedQcibm
     : YSXExtension<0, 8, "Qualcomm uC Bit Manipulation Extension",
                      [FeatureStdExtZca]>;
-def HasVendorXqcibm
-    : Predicate<"Subtarget->hasVendorXqcibm()">,
-      AssemblerPredicate<(all_of FeatureVendorXqcibm),
-                         "'Xqcibm' (Qualcomm uC Bit Manipulation Extension)">;
+def HasVendorXRemovedQcibm
+    : Predicate<"Subtarget->hasVendorXRemovedQcibm()">,
+      AssemblerPredicate<(all_of YSXDisabledVendorFeatureXRemovedQcibm),
+                         "'XRemovedQcibm' (Qualcomm uC Bit Manipulation Extension)">;
 
-def FeatureVendorXqcicli
+def YSXDisabledVendorFeatureXRemovedQcicli
     : YSXExtension<0, 3, "Qualcomm uC Conditional Load Immediate Extension">;
-def HasVendorXqcicli
-    : Predicate<"Subtarget->hasVendorXqcicli()">,
-      AssemblerPredicate<(all_of FeatureVendorXqcicli),
-                         "'Xqcicli' (Qualcomm uC Conditional Load Immediate Extension)">;
+def HasVendorXRemovedQcicli
+    : Predicate<"Subtarget->hasVendorXRemovedQcicli()">,
+      AssemblerPredicate<(all_of YSXDisabledVendorFeatureXRemovedQcicli),
+                         "'XRemovedQcicli' (Qualcomm uC Conditional Load Immediate Extension)">;
 
-def FeatureVendorXqcicm
+def YSXDisabledVendorFeatureXRemovedQcicm
     : YSXExtension<0, 2, "Qualcomm uC Conditional Move Extension",
                      [FeatureStdExtZca]>;
-def HasVendorXqcicm
-    : Predicate<"Subtarget->hasVendorXqcicm()">,
-      AssemblerPredicate<(all_of FeatureVendorXqcicm),
-                         "'Xqcicm' (Qualcomm uC Conditional Move Extension)">;
-def NoVendorXqcicm
-    : Predicate<"!Subtarget->hasVendorXqcicm()">;
+def HasVendorXRemovedQcicm
+    : Predicate<"Subtarget->hasVendorXRemovedQcicm()">,
+      AssemblerPredicate<(all_of YSXDisabledVendorFeatureXRemovedQcicm),
+                         "'XRemovedQcicm' (Qualcomm uC Conditional Move Extension)">;
+def NoVendorXRemovedQcicm
+    : Predicate<"!Subtarget->hasVendorXRemovedQcicm()">;
 
-def FeatureVendorXqcics
+def YSXDisabledVendorFeatureXRemovedQcics
     : YSXExtension<0, 2, "Qualcomm uC Conditional Select Extension">;
-def HasVendorXqcics
-    : Predicate<"Subtarget->hasVendorXqcics()">,
-      AssemblerPredicate<(all_of FeatureVendorXqcics),
-                         "'Xqcics' (Qualcomm uC Conditional Select Extension)">;
-def NoVendorXqcics
-    : Predicate<"!Subtarget->hasVendorXqcics()">;
+def HasVendorXRemovedQcics
+    : Predicate<"Subtarget->hasVendorXRemovedQcics()">,
+      AssemblerPredicate<(all_of YSXDisabledVendorFeatureXRemovedQcics),
+                         "'XRemovedQcics' (Qualcomm uC Conditional Select Extension)">;
+def NoVendorXRemovedQcics
+    : Predicate<"!Subtarget->hasVendorXRemovedQcics()">;
 
-def FeatureVendorXqcicsr
+def YSXDisabledVendorFeatureXRemovedQcicsr
     : YSXExtension<0, 4, "Qualcomm uC CSR Extension">;
-def HasVendorXqcicsr
-    : Predicate<"Subtarget->hasVendorXqcicsr()">,
-      AssemblerPredicate<(all_of FeatureVendorXqcicsr),
-                         "'Xqcicsr' (Qualcomm uC CSR Extension)">;
+def HasVendorXRemovedQcicsr
+    : Predicate<"Subtarget->hasVendorXRemovedQcicsr()">,
+      AssemblerPredicate<(all_of YSXDisabledVendorFeatureXRemovedQcicsr),
+                         "'XRemovedQcicsr' (Qualcomm uC CSR Extension)">;
 
-def FeatureVendorXqciint
+def YSXDisabledVendorFeatureXRemovedQciint
     : YSXExtension<0, 10, "Qualcomm uC Interrupts Extension",
                      [FeatureStdExtZca]>;
-def HasVendorXqciint
-    : Predicate<"Subtarget->hasVendorXqciint()">,
-      AssemblerPredicate<(all_of FeatureVendorXqciint),
-                         "'Xqciint' (Qualcomm uC Interrupts Extension)">;
+def HasVendorXRemovedQciint
+    : Predicate<"Subtarget->hasVendorXRemovedQciint()">,
+      AssemblerPredicate<(all_of YSXDisabledVendorFeatureXRemovedQciint),
+                         "'XRemovedQciint' (Qualcomm uC Interrupts Extension)">;
 
-def FeatureVendorXqciio
+def YSXDisabledVendorFeatureXRemovedQciio
     : YSXExtension<0, 1, "Qualcomm uC External Input Output Extension">;
-def HasVendorXqciio
-    : Predicate<"Subtarget->hasVendorXqciio()">,
-      AssemblerPredicate<(all_of FeatureVendorXqciio),
-                         "'Xqciio' (Qualcomm uC External Input Output Extension)">;
+def HasVendorXRemovedQciio
+    : Predicate<"Subtarget->hasVendorXRemovedQciio()">,
+      AssemblerPredicate<(all_of YSXDisabledVendorFeatureXRemovedQciio),
+                         "'XRemovedQciio' (Qualcomm uC External Input Output Extension)">;
 
-def FeatureVendorXqcilb
+def YSXDisabledVendorFeatureXRemovedQcilb
     : YSXExtension<0, 2, "Qualcomm uC Long Branch Extension",
                      [FeatureStdExtZca]>;
-def HasVendorXqcilb
-    : Predicate<"Subtarget->hasVendorXqcilb()">,
-      AssemblerPredicate<(all_of FeatureVendorXqcilb),
-                         "'Xqcilb' (Qualcomm uC Long Branch Extension)">;
+def HasVendorXRemovedQcilb
+    : Predicate<"Subtarget->hasVendorXRemovedQcilb()">,
+      AssemblerPredicate<(all_of YSXDisabledVendorFeatureXRemovedQcilb),
+                         "'XRemovedQcilb' (Qualcomm uC Long Branch Extension)">;
 
-def FeatureVendorXqcili
+def YSXDisabledVendorFeatureXRemovedQcili
     : YSXExtension<0, 2, "Qualcomm uC Load Large Immediate Extension",
                      [FeatureStdExtZca]>;
-def HasVendorXqcili
-    : Predicate<"Subtarget->hasVendorXqcili()">,
-      AssemblerPredicate<(all_of FeatureVendorXqcili),
-                         "'Xqcili' (Qualcomm uC Load Large Immediate Extension)">;
+def HasVendorXRemovedQcili
+    : Predicate<"Subtarget->hasVendorXRemovedQcili()">,
+      AssemblerPredicate<(all_of YSXDisabledVendorFeatureXRemovedQcili),
+                         "'XRemovedQcili' (Qualcomm uC Load Large Immediate Extension)">;
 
-def FeatureVendorXqcilia
+def YSXDisabledVendorFeatureXRemovedQcilia
     : YSXExtension<0, 2, "Qualcomm uC Large Immediate Arithmetic Extension",
                      [FeatureStdExtZca]>;
-def HasVendorXqcilia
-    : Predicate<"Subtarget->hasVendorXqcilia()">,
-      AssemblerPredicate<(all_of FeatureVendorXqcilia),
-                         "'Xqcilia' (Qualcomm uC Large Immediate Arithmetic Extension)">;
+def HasVendorXRemovedQcilia
+    : Predicate<"Subtarget->hasVendorXRemovedQcilia()">,
+      AssemblerPredicate<(all_of YSXDisabledVendorFeatureXRemovedQcilia),
+                         "'XRemovedQcilia' (Qualcomm uC Large Immediate Arithmetic Extension)">;
 
-def FeatureVendorXqcilo
+def YSXDisabledVendorFeatureXRemovedQcilo
     : YSXExtension<0, 3, "Qualcomm uC Large Offset Load Store Extension",
                      [FeatureStdExtZca]>;
-def HasVendorXqcilo
-    : Predicate<"Subtarget->hasVendorXqcilo()">,
-      AssemblerPredicate<(all_of FeatureVendorXqcilo),
-                         "'Xqcilo' (Qualcomm uC Large Offset Load Store Extension)">;
+def HasVendorXRemovedQcilo
+    : Predicate<"Subtarget->hasVendorXRemovedQcilo()">,
+      AssemblerPredicate<(all_of YSXDisabledVendorFeatureXRemovedQcilo),
+                         "'XRemovedQcilo' (Qualcomm uC Large Offset Load Store Extension)">;
 
-def FeatureVendorXqcilsm
+def YSXDisabledVendorFeatureXRemovedQcilsm
     : YSXExtension<0, 6, "Qualcomm uC Load Store Multiple Extension">;
-def HasVendorXqcilsm
-    : Predicate<"Subtarget->hasVendorXqcilsm()">,
-      AssemblerPredicate<(all_of FeatureVendorXqcilsm),
-                         "'Xqcilsm' (Qualcomm uC Load Store Multiple Extension)">;
+def HasVendorXRemovedQcilsm
+    : Predicate<"Subtarget->hasVendorXRemovedQcilsm()">,
+      AssemblerPredicate<(all_of YSXDisabledVendorFeatureXRemovedQcilsm),
+                         "'XRemovedQcilsm' (Qualcomm uC Load Store Multiple Extension)">;
 
-def FeatureVendorXqcisim
+def YSXDisabledVendorFeatureXRemovedQcisim
     : YSXExtension<0, 2, "Qualcomm uC Simulation Hint Extension",
                      [FeatureStdExtZca]>;
-def HasVendorXqcisim
-    : Predicate<"Subtarget->hasVendorXqcisim()">,
-      AssemblerPredicate<(all_of FeatureVendorXqcisim),
-                         "'Xqcisim' (Qualcomm uC Simulation Hint Extension)">;
+def HasVendorXRemovedQcisim
+    : Predicate<"Subtarget->hasVendorXRemovedQcisim()">,
+      AssemblerPredicate<(all_of YSXDisabledVendorFeatureXRemovedQcisim),
+                         "'XRemovedQcisim' (Qualcomm uC Simulation Hint Extension)">;
 
-def FeatureVendorXqcisls
+def YSXDisabledVendorFeatureXRemovedQcisls
     : YSXExtension<0, 2, "Qualcomm uC Scaled Load Store Extension">;
-def HasVendorXqcisls
-    : Predicate<"Subtarget->hasVendorXqcisls()">,
-      AssemblerPredicate<(all_of FeatureVendorXqcisls),
-                         "'Xqcisls' (Qualcomm uC Scaled Load Store Extension)">;
+def HasVendorXRemovedQcisls
+    : Predicate<"Subtarget->hasVendorXRemovedQcisls()">,
+      AssemblerPredicate<(all_of YSXDisabledVendorFeatureXRemovedQcisls),
+                         "'XRemovedQcisls' (Qualcomm uC Scaled Load Store Extension)">;
 
-def FeatureVendorXqcisync
+def YSXDisabledVendorFeatureXRemovedQcisync
     : YSXExtension<0, 3, "Qualcomm uC Sync Delay Extension",
                      [FeatureStdExtZca]>;
-def HasVendorXqcisync
-    : Predicate<"Subtarget->hasVendorXqcisync()">,
-      AssemblerPredicate<(all_of FeatureVendorXqcisync),
-                         "'Xqcisync' (Qualcomm uC Sync Delay Extension)">;
+def HasVendorXRemovedQcisync
+    : Predicate<"Subtarget->hasVendorXRemovedQcisync()">,
+      AssemblerPredicate<(all_of YSXDisabledVendorFeatureXRemovedQcisync),
+                         "'XRemovedQcisync' (Qualcomm uC Sync Delay Extension)">;
 
-def FeatureVendorXqci
+def YSXDisabledVendorFeatureXRemovedQci
     : YSXExtension<0, 13, "Qualcomm uC Extension",
-                     [FeatureVendorXqcia, FeatureVendorXqciac,
-                      FeatureVendorXqcibi, FeatureVendorXqcibm,
-                      FeatureVendorXqcicli, FeatureVendorXqcicm,
-                      FeatureVendorXqcics, FeatureVendorXqcicsr,
-                      FeatureVendorXqciint, FeatureVendorXqciio,
-                      FeatureVendorXqcilb, FeatureVendorXqcili,
-                      FeatureVendorXqcilia, FeatureVendorXqcilo,
-                      FeatureVendorXqcilsm, FeatureVendorXqcisim,
-                      FeatureVendorXqcisls, FeatureVendorXqcisync]>;
+                     [YSXDisabledVendorFeatureXRemovedQcia, YSXDisabledVendorFeatureXRemovedQciac,
+                      YSXDisabledVendorFeatureXRemovedQcibi, YSXDisabledVendorFeatureXRemovedQcibm,
+                      YSXDisabledVendorFeatureXRemovedQcicli, YSXDisabledVendorFeatureXRemovedQcicm,
+                      YSXDisabledVendorFeatureXRemovedQcics, YSXDisabledVendorFeatureXRemovedQcicsr,
+                      YSXDisabledVendorFeatureXRemovedQciint, YSXDisabledVendorFeatureXRemovedQciio,
+                      YSXDisabledVendorFeatureXRemovedQcilb, YSXDisabledVendorFeatureXRemovedQcili,
+                      YSXDisabledVendorFeatureXRemovedQcilia, YSXDisabledVendorFeatureXRemovedQcilo,
+                      YSXDisabledVendorFeatureXRemovedQcilsm, YSXDisabledVendorFeatureXRemovedQcisim,
+                      YSXDisabledVendorFeatureXRemovedQcisls, YSXDisabledVendorFeatureXRemovedQcisync]>;
 
 // Rivos Extension(s)
 
-def FeatureVendorXRivosVisni
+def YSXDisabledVendorFeatureXRivosVisni
     :  YSXExperimentalExtension<0, 1, "Rivos Vector Integer Small New">;
 def HasVendorXRivosVisni
     : Predicate<"Subtarget->hasVendorXRivosVisni()">,
-      AssemblerPredicate<(all_of FeatureVendorXRivosVisni),
+      AssemblerPredicate<(all_of YSXDisabledVendorFeatureXRivosVisni),
                          "'XRivosVisni' (Rivos Vector Integer Small New)">;
 
-def FeatureVendorXRivosVizip
+def YSXDisabledVendorFeatureXRivosVizip
     :  YSXExperimentalExtension<0, 1, "Rivos Vector Register Zips">;
 def HasVendorXRivosVizip
     : Predicate<"Subtarget->hasVendorXRivosVizip()">,
-      AssemblerPredicate<(all_of FeatureVendorXRivosVizip),
+      AssemblerPredicate<(all_of YSXDisabledVendorFeatureXRivosVizip),
                          "'XRivosVizip' (Rivos Vector Register Zips)">;
 
 // Andes Extension(s)
 
-def FeatureVendorXAndesPerf
+def YSXDisabledVendorFeatureXAndesPerf
     : YSXExtension<5, 0, "Andes Performance Extension">;
 def HasVendorXAndesPerf
     : Predicate<"Subtarget->hasVendorXAndesPerf()">,
-      AssemblerPredicate<(all_of FeatureVendorXAndesPerf),
+      AssemblerPredicate<(all_of YSXDisabledVendorFeatureXAndesPerf),
                          "'XAndesPerf' (Andes Performance Extension)">;
 
-def FeatureVendorXAndesBFHCvt
+def YSXDisabledVendorFeatureXAndesBFHCvt
     : YSXExtension<5, 0, "Andes Scalar BFLOAT16 Conversion Extension",
-                     [FeatureStdExtF]>;
+                     [YSXDisabledStdExtF]>;
 def HasVendorXAndesBFHCvt
     : Predicate<"Subtarget->hasVendorXAndesBFHCvt()">,
-      AssemblerPredicate<(all_of FeatureVendorXAndesBFHCvt),
+      AssemblerPredicate<(all_of YSXDisabledVendorFeatureXAndesBFHCvt),
                          "'XAndesBFHCvt' (Andes Scalar BFLOAT16 Conversion Extension)">;
 
-def FeatureVendorXAndesVBFHCvt
+def YSXDisabledVendorFeatureXAndesVBFHCvt
     : YSXExtension<5, 0, "Andes Vector BFLOAT16 Conversion Extension",
                      [FeatureStdExtZve32f]>;
 def HasVendorXAndesVBFHCvt
     : Predicate<"Subtarget->hasVendorXAndesVBFHCvt()">,
-      AssemblerPredicate<(all_of FeatureVendorXAndesVBFHCvt),
+      AssemblerPredicate<(all_of YSXDisabledVendorFeatureXAndesVBFHCvt),
                          "'XAndesVBFHCvt' (Andes Vector BFLOAT16 Conversion Extension)">;
 
-def FeatureVendorXAndesVSIntH
+def YSXDisabledVendorFeatureXAndesVSIntH
     : YSXExtension<5, 0, "Andes Vector Small INT Handling Extension",
                      [FeatureStdExtZve32x]>;
 def HasVendorXAndesVSIntH
     : Predicate<"Subtarget->hasVendorXAndesVSIntH()">,
-      AssemblerPredicate<(all_of FeatureVendorXAndesVSIntH),
+      AssemblerPredicate<(all_of YSXDisabledVendorFeatureXAndesVSIntH),
                          "'XAndesVSIntH' (Andes Vector Small INT Handling Extension)">;
 
-def FeatureVendorXAndesVSIntLoad
+def YSXDisabledVendorFeatureXAndesVSIntLoad
     : YSXExtension<5, 0, "Andes Vector INT4 Load Extension",
                      [FeatureStdExtZve32x]>;
 def HasVendorXAndesVSIntLoad
     : Predicate<"Subtarget->hasVendorXAndesVSIntLoad()">,
-      AssemblerPredicate<(all_of FeatureVendorXAndesVSIntLoad),
+      AssemblerPredicate<(all_of YSXDisabledVendorFeatureXAndesVSIntLoad),
                          "'XAndesVSIntLoad' (Andes Vector INT4 Load Extension)">;
 
-def FeatureVendorXAndesVPackFPH
+def YSXDisabledVendorFeatureXAndesVPackFPH
     : YSXExtension<5, 0,
-                     "Andes Vector Packed FP16 Extension", [FeatureStdExtF]>;
+                     "Andes Vector Packed FP16 Extension", [YSXDisabledStdExtF]>;
 def HasVendorXAndesVPackFPH
     : Predicate<"Subtarget->hasVendorXAndesVPackFPH()">,
-      AssemblerPredicate<(all_of FeatureVendorXAndesVPackFPH),
+      AssemblerPredicate<(all_of YSXDisabledVendorFeatureXAndesVPackFPH),
                          "'XAndesVPackFPH' (Andes Vector Packed FP16 Extension)">;
 
-def FeatureVendorXAndesVDot
+def YSXDisabledVendorFeatureXAndesVDot
     : YSXExtension<5, 0, "Andes Vector Dot Product Extension",
                      [FeatureStdExtZve32x]>;
 def HasVendorXAndesVDot
     : Predicate<"Subtarget->hasVendorXAndesVDot()">,
-      AssemblerPredicate<(all_of FeatureVendorXAndesVDot),
+      AssemblerPredicate<(all_of YSXDisabledVendorFeatureXAndesVDot),
                          "'XAndesVDot' (Andes Vector Dot Product Extension)">;
 
-def FeatureVendorXSMTVDot
+def YSXDisabledVendorFeatureXSMTVDot
     : YSXExtension<1, 0, "SpacemiT Vector Dot Product Extension",
                      [FeatureStdExtZve32f]>;
 def HasVendorXSMTVDot
     : Predicate<"Subtarget->hasVendorXSMTVDot()">,
-      AssemblerPredicate<(all_of FeatureVendorXSMTVDot),
+      AssemblerPredicate<(all_of YSXDisabledVendorFeatureXSMTVDot),
                          "'XSMTVDot' (SpacemiT Vector Dot Product Extension)">;
 
 //===----------------------------------------------------------------------===//

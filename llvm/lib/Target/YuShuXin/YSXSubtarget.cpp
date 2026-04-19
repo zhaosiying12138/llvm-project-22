@@ -15,6 +15,7 @@
 #include "YSXFrameLowering.h"
 #include "YSXSelectionDAGInfo.h"
 #include "YSXTargetMachine.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/ErrorHandling.h"
 
@@ -28,6 +29,20 @@ using namespace llvm;
 
 #define GET_YSX_MACRO_FUSION_PRED_IMPL
 #include "YSXGenMacroFusion.inc"
+
+static void validateYSXFeatureString(StringRef FS) {
+  SmallVector<StringRef, 8> Features;
+  FS.split(Features, ",", /*MaxSplit=*/-1, /*KeepEmpty=*/false);
+  for (StringRef Feature : Features) {
+    Feature = Feature.trim();
+    Feature.consume_front("+") || Feature.consume_front("-");
+    if (Feature == "64bit" || Feature == "i" || Feature == "m" ||
+        Feature == "a" || Feature == "zmmul" || Feature == "zaamo" ||
+        Feature == "zalrsc" || Feature == "relax")
+      continue;
+    reportFatalUsageError("YSX only supports the rv64ima ISA");
+  }
+}
 
 namespace llvm::YSXTuneInfoTable {
 
@@ -73,6 +88,7 @@ YSXSubtarget::initializeSubtargetDependencies(const Triple &TT, StringRef CPU,
 
   if (FS.empty())
     FS = "+m,+a";
+  validateYSXFeatureString(FS);
 
   if (!ABIName.empty() && ABIName != "lp64")
     reportFatalUsageError("YSX only supports the lp64 ABI");
@@ -125,11 +141,11 @@ unsigned YSXSubtarget::getMaxBuildIntsCost() const {
              : std::max<unsigned>(2, YSXMaxBuildIntsCost);
 }
 
-unsigned YSXSubtarget::getMaxRVVVectorSizeInBits() const {
+unsigned YSXSubtarget::getMaxYSXVecVectorSizeInBits() const {
   return 0;
 }
 
-unsigned YSXSubtarget::getMinRVVVectorSizeInBits() const {
+unsigned YSXSubtarget::getMinYSXVecVectorSizeInBits() const {
   return 0;
 }
 
@@ -137,7 +153,7 @@ unsigned YSXSubtarget::getMaxLMULForFixedLengthVectors() const {
   return 1;
 }
 
-bool YSXSubtarget::useRVVForFixedLengthVectors() const {
+bool YSXSubtarget::useYSXVecForFixedLengthVectors() const {
   return false;
 }
 

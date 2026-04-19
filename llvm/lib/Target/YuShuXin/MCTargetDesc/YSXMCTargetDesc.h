@@ -49,7 +49,6 @@ createYSXMachObjectWriter(uint32_t CPUType, uint32_t CPUSubtype);
 #define GET_INSTRINFO_ENUM
 #define GET_INSTRINFO_MC_HELPER_DECLS
 #include "YSXGenInstrInfo.inc"
-#include "MCTargetDesc/YSXUnsupportedOpcodes.h"
 
 #define GET_SUBTARGETINFO_ENUM
 #include "YSXGenSubtargetInfo.inc"

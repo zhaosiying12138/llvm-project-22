@@ -896,7 +896,7 @@ def : YSXRegisterClass<[XLenVT], 32, (add SF_VCIX_STATE)> {
 }
 
 //===----------------------------------------------------------------------===//
-// XSfmmbase tiles
+// XRemovedSfmmbase tiles
 //===----------------------------------------------------------------------===//
 foreach Index = 0-15 in
   def T#Index : YSXReg<Index, "mt"#Index, []>,

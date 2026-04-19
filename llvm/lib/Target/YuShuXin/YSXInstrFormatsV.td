@@ -121,7 +121,7 @@ class RVInstVV<bits<6> funct6, YSXVFormat opv, dag outs, dag ins,
   let Inst{6-0} = OPC_OP_V.Value;
 
   let Uses = [VL, VTYPE];
-  let RVVConstraint = VMConstraint;
+  let YSXVecConstraint = VMConstraint;
 }
 
 class RVInstVX<bits<6> funct6, YSXVFormat opv, dag outs, dag ins,
@@ -141,7 +141,7 @@ class RVInstVX<bits<6> funct6, YSXVFormat opv, dag outs, dag ins,
   let Inst{6-0} = OPC_OP_V.Value;
 
   let Uses = [VL, VTYPE];
-  let RVVConstraint = VMConstraint;
+  let YSXVecConstraint = VMConstraint;
 }
 
 class RVInstV2<bits<6> funct6, bits<5> vs2, YSXVFormat opv, dag outs, dag ins,
@@ -160,7 +160,7 @@ class RVInstV2<bits<6> funct6, bits<5> vs2, YSXVFormat opv, dag outs, dag ins,
   let Inst{6-0} = OPC_OP_V.Value;
 
   let Uses = [VL, VTYPE];
-  let RVVConstraint = VMConstraint;
+  let YSXVecConstraint = VMConstraint;
 }
 
 class RVInstIVI<bits<6> funct6, dag outs, dag ins, string opcodestr,
@@ -180,7 +180,7 @@ class RVInstIVI<bits<6> funct6, dag outs, dag ins, string opcodestr,
   let Inst{6-0} = OPC_OP_V.Value;
 
   let Uses = [VL, VTYPE];
-  let RVVConstraint = VMConstraint;
+  let YSXVecConstraint = VMConstraint;
 }
 
 class RVInstV<bits<6> funct6, bits<5> vs1, YSXVFormat opv, dag outs,
@@ -199,7 +199,7 @@ class RVInstV<bits<6> funct6, bits<5> vs1, YSXVFormat opv, dag outs,
   let Inst{6-0} = OPC_OP_V.Value;
 
   let Uses = [VL, VTYPE];
-  let RVVConstraint = VMConstraint;
+  let YSXVecConstraint = VMConstraint;
 }
 
 class RVInstVLU<bits<3> nf, bit mew, YSXLSUMOP lumop,
@@ -221,7 +221,7 @@ class RVInstVLU<bits<3> nf, bit mew, YSXLSUMOP lumop,
   let Inst{6-0} = OPC_LOAD_FP.Value;
 
   let Uses = [VL, VTYPE];
-  let RVVConstraint = VMConstraint;
+  let YSXVecConstraint = VMConstraint;
 }
 
 class RVInstVLS<bits<3> nf, bit mew, bits<3> width,
@@ -243,7 +243,7 @@ class RVInstVLS<bits<3> nf, bit mew, bits<3> width,
   let Inst{6-0} = OPC_LOAD_FP.Value;
 
   let Uses = [VL, VTYPE];
-  let RVVConstraint = VMConstraint;
+  let YSXVecConstraint = VMConstraint;
 }
 
 class RVInstVLX<bits<3> nf, bit mew, YSXMOP mop, bits<3> width,
@@ -265,7 +265,7 @@ class RVInstVLX<bits<3> nf, bit mew, YSXMOP mop, bits<3> width,
   let Inst{6-0} = OPC_LOAD_FP.Value;
 
   let Uses = [VL, VTYPE];
-  let RVVConstraint = VMConstraint;
+  let YSXVecConstraint = VMConstraint;
 }
 
 class RVInstVSU<bits<3> nf, bit mew, YSXLSUMOP sumop,

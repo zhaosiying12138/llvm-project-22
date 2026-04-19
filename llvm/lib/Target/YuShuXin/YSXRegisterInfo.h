@@ -165,7 +165,7 @@ struct YSXRegisterInfo : public YSXGenRegisterInfo {
     return YSXRI::isVRegClass(RC->TSFlags) && YSXRI::getNF(RC->TSFlags) > 1;
   }
 
-  static bool isRVVRegClass(const TargetRegisterClass *RC) {
+  static bool isYSXVecRegClass(const TargetRegisterClass *RC) {
     return YSXRI::isVRegClass(RC->TSFlags);
   }
 };

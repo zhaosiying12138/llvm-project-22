@@ -576,7 +576,7 @@ uint64_t YSXMCCodeEmitter::getImmOpValue(const MCInst &MI, unsigned OpNo,
     } else if (MIFrm == YSXII::InstFormatCI) {
       FixupKind = YSX::fixup_ysx_rvc_imm;
       // Relaxes to `QC.E.LI` with fixup_ysx_qc_e_32
-      if (STI.hasFeature(YSX::FeatureVendorXqcili))
+      if (STI.hasFeature(YSX::YSXDisabledVendorFeatureXRemovedQcili))
         AsmRelaxToLinkerRelaxable();
     } else if (MIFrm == YSXII::InstFormatI) {
       FixupKind = YSX::fixup_ysx_12_i;

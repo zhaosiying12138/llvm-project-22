@@ -188,22 +188,22 @@ YSXTargetLowering::YSXTargetLowering(const TargetMachine &TM,
       MVT::riscv_nxv16i8x4, MVT::riscv_nxv32i8x2};
 
   if (Subtarget.hasVInstructions()) {
-    auto addRegClassForRVV = [this](MVT VT) {
+    auto addRegClassForYSXVec = [this](MVT VT) {
       // Disable the smallest fractional LMUL types if ELEN is less than
-      // RVVBitsPerBlock.
-      unsigned MinElts = YSX::RVVBitsPerBlock / Subtarget.getELen();
+      // YSXVecBitsPerBlock.
+      unsigned MinElts = YSX::YSXVecBitsPerBlock / Subtarget.getELen();
       if (VT.getVectorMinNumElements() < MinElts)
         return;
 
       unsigned Size = VT.getSizeInBits().getKnownMinValue();
       const TargetRegisterClass *RC;
-      if (Size <= YSX::RVVBitsPerBlock)
+      if (Size <= YSX::YSXVecBitsPerBlock)
         RC = &YSX::VRRegClass;
-      else if (Size == 2 * YSX::RVVBitsPerBlock)
+      else if (Size == 2 * YSX::YSXVecBitsPerBlock)
         RC = &YSX::VRM2RegClass;
-      else if (Size == 4 * YSX::RVVBitsPerBlock)
+      else if (Size == 4 * YSX::YSXVecBitsPerBlock)
         RC = &YSX::VRM4RegClass;
-      else if (Size == 8 * YSX::RVVBitsPerBlock)
+      else if (Size == 8 * YSX::YSXVecBitsPerBlock)
         RC = &YSX::VRM8RegClass;
       else
         llvm_unreachable("Unexpected size");
@@ -212,33 +212,33 @@ YSXTargetLowering::YSXTargetLowering(const TargetMachine &TM,
     };
 
     for (MVT VT : BoolVecVTs)
-      addRegClassForRVV(VT);
+      addRegClassForYSXVec(VT);
     for (MVT VT : IntVecVTs) {
       if (VT.getVectorElementType() == MVT::i64 &&
           !Subtarget.hasVInstructionsI64())
         continue;
-      addRegClassForRVV(VT);
+      addRegClassForYSXVec(VT);
     }
 
     if (Subtarget.hasVInstructionsF16Minimal() ||
         Subtarget.hasVendorXAndesVPackFPH())
       for (MVT VT : F16VecVTs)
-        addRegClassForRVV(VT);
+        addRegClassForYSXVec(VT);
 
     if (Subtarget.hasVInstructionsBF16Minimal() ||
         Subtarget.hasVendorXAndesVBFHCvt())
       for (MVT VT : BF16VecVTs)
-        addRegClassForRVV(VT);
+        addRegClassForYSXVec(VT);
 
     if (Subtarget.hasVInstructionsF32())
       for (MVT VT : F32VecVTs)
-        addRegClassForRVV(VT);
+        addRegClassForYSXVec(VT);
 
     if (Subtarget.hasVInstructionsF64())
       for (MVT VT : F64VecVTs)
-        addRegClassForRVV(VT);
+        addRegClassForYSXVec(VT);
 
-    if (Subtarget.useRVVForFixedLengthVectors()) {
+    if (Subtarget.useYSXVecForFixedLengthVectors()) {
       auto addRegClassForFixedVectors = [this](MVT VT) {
         MVT ContainerVT = getContainerForFixedLengthVector(VT);
         unsigned RCID = getRegClassIDForVecVT(ContainerVT);
@@ -246,11 +246,11 @@ YSXTargetLowering::YSXTargetLowering(const TargetMachine &TM,
         addRegisterClass(VT, TRI.getRegClass(RCID));
       };
       for (MVT VT : MVT::integer_fixedlen_vector_valuetypes())
-        if (useRVVForFixedLengthVectorVT(VT))
+        if (useYSXVecForFixedLengthVectorVT(VT))
           addRegClassForFixedVectors(VT);
 
       for (MVT VT : MVT::fp_fixedlen_vector_valuetypes())
-        if (useRVVForFixedLengthVectorVT(VT))
+        if (useYSXVecForFixedLengthVectorVT(VT))
           addRegClassForFixedVectors(VT);
     }
 
@@ -333,14 +333,14 @@ YSXTargetLowering::YSXTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::VASTART, MVT::Other, Custom);
   setOperationAction({ISD::VAARG, ISD::VACOPY, ISD::VAEND}, MVT::Other, Expand);
 
-  if (!Subtarget.hasVendorXTHeadBb() && !Subtarget.hasVendorXqcibm() &&
+  if (!Subtarget.hasVendorXRemovedTHeadBb() && !Subtarget.hasVendorXRemovedQcibm() &&
       !Subtarget.hasVendorXAndesPerf())
     setOperationAction(ISD::SIGN_EXTEND_INREG, MVT::i1, Expand);
 
   setOperationAction(ISD::EH_DWARF_CFA, MVT::i32, Custom);
 
-  if (!Subtarget.hasStdExtZbb() && !Subtarget.hasVendorXTHeadBb() &&
-      !Subtarget.hasVendorXqcibm() && !Subtarget.hasVendorXAndesPerf() &&
+  if (!Subtarget.hasStdExtZbb() && !Subtarget.hasVendorXRemovedTHeadBb() &&
+      !Subtarget.hasVendorXRemovedQcibm() && !Subtarget.hasVendorXAndesPerf() &&
       !(Subtarget.hasVendorXCValu() && !Subtarget.is64Bit()))
     setOperationAction(ISD::SIGN_EXTEND_INREG, {MVT::i8, MVT::i16}, Expand);
 
@@ -385,7 +385,7 @@ YSXTargetLowering::YSXTargetLowering(const TargetMachine &TM,
   if (Subtarget.hasStdExtZbb() || Subtarget.hasStdExtZbkb()) {
     if (Subtarget.is64Bit())
       setOperationAction({ISD::ROTL, ISD::ROTR}, MVT::i32, Custom);
-  } else if (Subtarget.hasVendorXTHeadBb()) {
+  } else if (Subtarget.hasVendorXRemovedTHeadBb()) {
     if (Subtarget.is64Bit())
       setOperationAction({ISD::ROTL, ISD::ROTR}, MVT::i32, Custom);
     setOperationAction({ISD::ROTL, ISD::ROTR}, XLenVT, Custom);
@@ -401,7 +401,7 @@ YSXTargetLowering::YSXTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::BSWAP, XLenVT,
                      Subtarget.hasREV8Like() ? Legal : Expand);
 
-  if ((Subtarget.hasVendorXCVbitmanip() || Subtarget.hasVendorXqcibm()) &&
+  if ((Subtarget.hasVendorXCVbitmanip() || Subtarget.hasVendorXRemovedQcibm()) &&
       !Subtarget.is64Bit()) {
     setOperationAction(ISD::BITREVERSE, XLenVT, Legal);
   } else {
@@ -464,10 +464,10 @@ YSXTargetLowering::YSXTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::ABS, MVT::i32, Custom);
   }
 
-  if (!Subtarget.useMIPSCCMovInsn() && !Subtarget.hasVendorXTHeadCondMov())
+  if (!Subtarget.useMIPSCCMovInsn() && !Subtarget.hasVendorXRemovedTHeadCondMov())
     setOperationAction(ISD::SELECT, XLenVT, Custom);
 
-  if ((Subtarget.hasStdExtP() || Subtarget.hasVendorXqcia()) &&
+  if ((Subtarget.hasStdExtP() || Subtarget.hasVendorXRemovedQcia()) &&
       !Subtarget.is64Bit()) {
     // FIXME: Support i32 on RV64+P by inserting into a v2i32 vector, doing
     // the vector operation and extracting.
@@ -478,11 +478,11 @@ YSXTargetLowering::YSXTargetLowering(const TargetMachine &TM,
                        MVT::i32, Custom);
   }
 
-  if (Subtarget.hasVendorXqcia() && !Subtarget.is64Bit()) {
+  if (Subtarget.hasVendorXRemovedQcia() && !Subtarget.is64Bit()) {
     setOperationAction(ISD::USHLSAT, MVT::i32, Legal);
   }
 
-  if ((Subtarget.hasStdExtP() || Subtarget.hasVendorXqcia()) &&
+  if ((Subtarget.hasStdExtP() || Subtarget.hasVendorXRemovedQcia()) &&
       !Subtarget.is64Bit()) {
     // FIXME: Support i32 on RV64+P by inserting into a v2i32 vector, doing
     // pssha.w and extracting.
@@ -810,7 +810,7 @@ YSXTargetLowering::YSXTargetLowering(const TargetMachine &TM,
 
     setOperationAction(ISD::VSCALE, XLenVT, Custom);
 
-    // RVV intrinsics may have illegal operands.
+    // YSXVec intrinsics may have illegal operands.
     // We also need to custom legalize vmv.x.s.
     setOperationAction({ISD::INTRINSIC_WO_CHAIN, ISD::INTRINSIC_W_CHAIN,
                         ISD::INTRINSIC_VOID},
@@ -917,7 +917,7 @@ YSXTargetLowering::YSXTargetLowering(const TargetMachine &TM,
           {ISD::VP_REDUCE_AND, ISD::VP_REDUCE_OR, ISD::VP_REDUCE_XOR}, VT,
           Custom);
 
-      // RVV has native int->float & float->int conversions where the
+      // YSXVec has native int->float & float->int conversions where the
       // element type sizes are within one power-of-two of each other. Any
       // wider distances between type sizes have to be lowered as sequences
       // which progressively narrow the gap in stages.
@@ -977,7 +977,7 @@ YSXTargetLowering::YSXTargetLowering(const TargetMachine &TM,
       setOperationAction({ISD::ANY_EXTEND, ISD::SIGN_EXTEND, ISD::ZERO_EXTEND},
                          VT, Custom);
 
-      // RVV has native int->float & float->int conversions where the
+      // YSXVec has native int->float & float->int conversions where the
       // element type sizes are within one power-of-two of each other. Any
       // wider distances between type sizes have to be lowered as sequences
       // which progressively narrow the gap in stages.
@@ -1083,7 +1083,7 @@ YSXTargetLowering::YSXTargetLowering(const TargetMachine &TM,
       setOperationAction({ISD::LOAD, ISD::STORE}, VT, Custom);
     }
 
-    // Expand various CCs to best match the RVV ISA, which natively supports UNE
+    // Expand various CCs to best match the YSXVec ISA, which natively supports UNE
     // but no other unordered comparisons, and supports all ordered comparisons
     // except ONE. Additionally, we expand GT,OGT,GE,OGE for optimization
     // purposes; they are expanded to their swapped-operand CCs (LT,OLT,LE,OLE),
@@ -1178,10 +1178,10 @@ YSXTargetLowering::YSXTargetLowering(const TargetMachine &TM,
         ISD::VP_REDUCE_FMINIMUM,
         ISD::VP_REDUCE_FMAXIMUM};
 
-    // Sets common operation actions on RVV floating-point vector types.
+    // Sets common operation actions on YSXVec floating-point vector types.
     const auto SetCommonVFPActions = [&](MVT VT) {
       setOperationAction(ISD::SPLAT_VECTOR, VT, Legal);
-      // RVV has native FP_ROUND & FP_EXTEND conversions where the element type
+      // YSXVec has native FP_ROUND & FP_EXTEND conversions where the element type
       // sizes are within one power-of-two of each other. Therefore conversions
       // between vXf16 and vXf64 must be lowered as sequences which convert via
       // vXf32.
@@ -1254,7 +1254,7 @@ YSXTargetLowering::YSXTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::VECTOR_COMPRESS, VT, Custom);
     };
 
-    // Sets common extload/truncstore actions on RVV floating-point vector
+    // Sets common extload/truncstore actions on YSXVec floating-point vector
     // types.
     const auto SetCommonVFPExtLoadTruncStoreActions =
         [&](MVT VT, ArrayRef<MVT::SimpleValueType> SmallerVTs) {
@@ -1419,9 +1419,9 @@ YSXTargetLowering::YSXTargetLowering(const TargetMachine &TM,
       }
     }
 
-    if (Subtarget.useRVVForFixedLengthVectors()) {
+    if (Subtarget.useYSXVecForFixedLengthVectors()) {
       for (MVT VT : MVT::integer_fixedlen_vector_valuetypes()) {
-        if (!useRVVForFixedLengthVectorVT(VT))
+        if (!useYSXVecForFixedLengthVectorVT(VT))
           continue;
 
         // By default everything must be expanded.
@@ -1590,7 +1590,7 @@ YSXTargetLowering::YSXTargetLowering(const TargetMachine &TM,
           setTruncStoreAction(VT, InnerVT, Expand);
         }
 
-        if (!useRVVForFixedLengthVectorVT(VT))
+        if (!useYSXVecForFixedLengthVectorVT(VT))
           continue;
 
         // By default everything must be expanded.
@@ -1755,7 +1755,7 @@ YSXTargetLowering::YSXTargetLowering(const TargetMachine &TM,
         XLenVT, LibCall);
   }
 
-  if (Subtarget.hasVendorXTHeadMemIdx()) {
+  if (Subtarget.hasVendorXRemovedTHeadMemIdx()) {
     for (unsigned im : {ISD::PRE_INC, ISD::POST_INC}) {
       setIndexedLoadAction(im, MVT::i8, Legal);
       setIndexedStoreAction(im, MVT::i8, Legal);
@@ -1792,10 +1792,10 @@ YSXTargetLowering::YSXTargetLowering(const TargetMachine &TM,
     setPartialReduceMLAAction(MLAOps, MVT::nxv8i32, MVT::nxv32i8, Custom);
     setPartialReduceMLAAction(MLAOps, MVT::nxv16i32, MVT::nxv64i8, Custom);
 
-    if (Subtarget.useRVVForFixedLengthVectors()) {
+    if (Subtarget.useYSXVecForFixedLengthVectors()) {
       for (MVT VT : MVT::integer_fixedlen_vector_valuetypes()) {
         if (VT.getVectorElementType() != MVT::i32 ||
-            !useRVVForFixedLengthVectorVT(VT))
+            !useYSXVecForFixedLengthVectorVT(VT))
           continue;
         ElementCount EC = VT.getVectorElementCount();
         MVT ArgVT = MVT::getVectorVT(MVT::i8, EC.multiplyCoefficientBy(4));
@@ -1851,9 +1851,9 @@ YSXTargetLowering::YSXTargetLowering(const TargetMachine &TM,
          ISD::ABS,          ISD::CTPOP,        ISD::VECTOR_SHUFFLE,
          ISD::FMA,          ISD::VSELECT,      ISD::VECREDUCE_ADD});
 
-  if (Subtarget.hasVendorXTHeadMemPair())
+  if (Subtarget.hasVendorXRemovedTHeadMemPair())
     setTargetDAGCombine({ISD::LOAD, ISD::STORE});
-  if (Subtarget.useRVVForFixedLengthVectors())
+  if (Subtarget.useYSXVecForFixedLengthVectors())
     setTargetDAGCombine(ISD::BITCAST);
 
   setMaxDivRemBitWidthSupported(Subtarget.is64Bit() ? 128 : 64);
@@ -1897,7 +1897,7 @@ EVT YSXTargetLowering::getSetCCResultType(const DataLayout &DL,
   if (!VT.isVector())
     return getPointerTy(DL);
   if (Subtarget.hasVInstructions() &&
-      (VT.isScalableVector() || Subtarget.useRVVForFixedLengthVectors()))
+      (VT.isScalableVector() || Subtarget.useYSXVecForFixedLengthVectors()))
     return EVT::getVectorVT(Context, MVT::i1, VT.getVectorElementCount());
   return VT.changeVectorElementTypeToInteger();
 }
@@ -1920,16 +1920,16 @@ bool YSXTargetLowering::shouldExpandGetVectorLength(EVT TripCountVT,
     return true;
 
   // Don't allow VF=1 if those types are't legal.
-  if (VF < YSX::RVVBitsPerBlock / Subtarget.getELen())
+  if (VF < YSX::YSXVecBitsPerBlock / Subtarget.getELen())
     return true;
 
   // VLEN=32 support is incomplete.
-  if (Subtarget.getRealMinVLen() < YSX::RVVBitsPerBlock)
+  if (Subtarget.getRealMinVLen() < YSX::YSXVecBitsPerBlock)
     return true;
 
   // The maximum VF is for the smallest element width with LMUL=8.
   // VF must be a power of 2.
-  unsigned MaxVF = YSX::RVVBytesPerBlock * 8;
+  unsigned MaxVF = YSX::YSXVecBytesPerBlock * 8;
   return VF > MaxVF || !isPowerOf2_32(VF);
 }
 
@@ -1944,7 +1944,7 @@ bool YSXTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
                                              unsigned Intrinsic) const {
   auto &DL = I.getDataLayout();
 
-  auto SetRVVLoadStoreInfo = [&](unsigned PtrOp, bool IsStore,
+  auto SetYSXVecLoadStoreInfo = [&](unsigned PtrOp, bool IsStore,
                                  bool IsUnitStrided, bool UsePtrVal = false) {
     Info.opc = IsStore ? ISD::INTRINSIC_VOID : ISD::INTRINSIC_W_CHAIN;
     // We can't use ptrVal if the intrinsic can access memory before the
@@ -2028,7 +2028,7 @@ bool YSXTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
   case Intrinsic::riscv_sseg6_load_mask:
   case Intrinsic::riscv_sseg7_load_mask:
   case Intrinsic::riscv_sseg8_load_mask:
-    return SetRVVLoadStoreInfo(/*PtrOp*/ 0, /*IsStore*/ false,
+    return SetYSXVecLoadStoreInfo(/*PtrOp*/ 0, /*IsStore*/ false,
                                /*IsUnitStrided*/ false, /*UsePtrVal*/ true);
   case Intrinsic::riscv_seg2_store_mask:
   case Intrinsic::riscv_seg3_store_mask:
@@ -2038,7 +2038,7 @@ bool YSXTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
   case Intrinsic::riscv_seg7_store_mask:
   case Intrinsic::riscv_seg8_store_mask:
     // Operands are (vec, ..., vec, ptr, mask, vl)
-    return SetRVVLoadStoreInfo(/*PtrOp*/ I.arg_size() - 3,
+    return SetYSXVecLoadStoreInfo(/*PtrOp*/ I.arg_size() - 3,
                                /*IsStore*/ true,
                                /*IsUnitStrided*/ false, /*UsePtrVal*/ true);
   case Intrinsic::riscv_sseg2_store_mask:
@@ -2049,11 +2049,11 @@ bool YSXTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
   case Intrinsic::riscv_sseg7_store_mask:
   case Intrinsic::riscv_sseg8_store_mask:
     // Operands are (vec, ..., vec, ptr, offset, mask, vl)
-    return SetRVVLoadStoreInfo(/*PtrOp*/ I.arg_size() - 4,
+    return SetYSXVecLoadStoreInfo(/*PtrOp*/ I.arg_size() - 4,
                                /*IsStore*/ true,
                                /*IsUnitStrided*/ false, /*UsePtrVal*/ true);
   case Intrinsic::riscv_vlm:
-    return SetRVVLoadStoreInfo(/*PtrOp*/ 0,
+    return SetYSXVecLoadStoreInfo(/*PtrOp*/ 0,
                                /*IsStore*/ false,
                                /*IsUnitStrided*/ true,
                                /*UsePtrVal*/ true);
@@ -2061,14 +2061,14 @@ bool YSXTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
   case Intrinsic::riscv_vle_mask:
   case Intrinsic::riscv_vleff:
   case Intrinsic::riscv_vleff_mask:
-    return SetRVVLoadStoreInfo(/*PtrOp*/ 1,
+    return SetYSXVecLoadStoreInfo(/*PtrOp*/ 1,
                                /*IsStore*/ false,
                                /*IsUnitStrided*/ true,
                                /*UsePtrVal*/ true);
   case Intrinsic::riscv_vsm:
   case Intrinsic::riscv_vse:
   case Intrinsic::riscv_vse_mask:
-    return SetRVVLoadStoreInfo(/*PtrOp*/ 1,
+    return SetYSXVecLoadStoreInfo(/*PtrOp*/ 1,
                                /*IsStore*/ true,
                                /*IsUnitStrided*/ true,
                                /*UsePtrVal*/ true);
@@ -2078,7 +2078,7 @@ bool YSXTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
   case Intrinsic::riscv_vloxei_mask:
   case Intrinsic::riscv_vluxei:
   case Intrinsic::riscv_vluxei_mask:
-    return SetRVVLoadStoreInfo(/*PtrOp*/ 1,
+    return SetYSXVecLoadStoreInfo(/*PtrOp*/ 1,
                                /*IsStore*/ false,
                                /*IsUnitStrided*/ false);
   case Intrinsic::riscv_vsse:
@@ -2087,7 +2087,7 @@ bool YSXTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
   case Intrinsic::riscv_vsoxei_mask:
   case Intrinsic::riscv_vsuxei:
   case Intrinsic::riscv_vsuxei_mask:
-    return SetRVVLoadStoreInfo(/*PtrOp*/ 1,
+    return SetYSXVecLoadStoreInfo(/*PtrOp*/ 1,
                                /*IsStore*/ true,
                                /*IsUnitStrided*/ false);
   case Intrinsic::riscv_vlseg2:
@@ -2104,7 +2104,7 @@ bool YSXTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
   case Intrinsic::riscv_vlseg6ff:
   case Intrinsic::riscv_vlseg7ff:
   case Intrinsic::riscv_vlseg8ff:
-    return SetRVVLoadStoreInfo(/*PtrOp*/ I.arg_size() - 3,
+    return SetYSXVecLoadStoreInfo(/*PtrOp*/ I.arg_size() - 3,
                                /*IsStore*/ false,
                                /*IsUnitStrided*/ false, /*UsePtrVal*/ true);
   case Intrinsic::riscv_vlseg2_mask:
@@ -2121,7 +2121,7 @@ bool YSXTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
   case Intrinsic::riscv_vlseg6ff_mask:
   case Intrinsic::riscv_vlseg7ff_mask:
   case Intrinsic::riscv_vlseg8ff_mask:
-    return SetRVVLoadStoreInfo(/*PtrOp*/ I.arg_size() - 5,
+    return SetYSXVecLoadStoreInfo(/*PtrOp*/ I.arg_size() - 5,
                                /*IsStore*/ false,
                                /*IsUnitStrided*/ false, /*UsePtrVal*/ true);
   case Intrinsic::riscv_vlsseg2:
@@ -2145,7 +2145,7 @@ bool YSXTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
   case Intrinsic::riscv_vluxseg6:
   case Intrinsic::riscv_vluxseg7:
   case Intrinsic::riscv_vluxseg8:
-    return SetRVVLoadStoreInfo(/*PtrOp*/ I.arg_size() - 4,
+    return SetYSXVecLoadStoreInfo(/*PtrOp*/ I.arg_size() - 4,
                                /*IsStore*/ false,
                                /*IsUnitStrided*/ false);
   case Intrinsic::riscv_vlsseg2_mask:
@@ -2169,7 +2169,7 @@ bool YSXTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
   case Intrinsic::riscv_vluxseg6_mask:
   case Intrinsic::riscv_vluxseg7_mask:
   case Intrinsic::riscv_vluxseg8_mask:
-    return SetRVVLoadStoreInfo(/*PtrOp*/ I.arg_size() - 6,
+    return SetYSXVecLoadStoreInfo(/*PtrOp*/ I.arg_size() - 6,
                                /*IsStore*/ false,
                                /*IsUnitStrided*/ false);
   case Intrinsic::riscv_vsseg2:
@@ -2179,7 +2179,7 @@ bool YSXTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
   case Intrinsic::riscv_vsseg6:
   case Intrinsic::riscv_vsseg7:
   case Intrinsic::riscv_vsseg8:
-    return SetRVVLoadStoreInfo(/*PtrOp*/ I.arg_size() - 3,
+    return SetYSXVecLoadStoreInfo(/*PtrOp*/ I.arg_size() - 3,
                                /*IsStore*/ true,
                                /*IsUnitStrided*/ false);
   case Intrinsic::riscv_vsseg2_mask:
@@ -2189,7 +2189,7 @@ bool YSXTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
   case Intrinsic::riscv_vsseg6_mask:
   case Intrinsic::riscv_vsseg7_mask:
   case Intrinsic::riscv_vsseg8_mask:
-    return SetRVVLoadStoreInfo(/*PtrOp*/ I.arg_size() - 4,
+    return SetYSXVecLoadStoreInfo(/*PtrOp*/ I.arg_size() - 4,
                                /*IsStore*/ true,
                                /*IsUnitStrided*/ false);
   case Intrinsic::riscv_vssseg2:
@@ -2213,7 +2213,7 @@ bool YSXTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
   case Intrinsic::riscv_vsuxseg6:
   case Intrinsic::riscv_vsuxseg7:
   case Intrinsic::riscv_vsuxseg8:
-    return SetRVVLoadStoreInfo(/*PtrOp*/ I.arg_size() - 4,
+    return SetYSXVecLoadStoreInfo(/*PtrOp*/ I.arg_size() - 4,
                                /*IsStore*/ true,
                                /*IsUnitStrided*/ false);
   case Intrinsic::riscv_vssseg2_mask:
@@ -2237,7 +2237,7 @@ bool YSXTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
   case Intrinsic::riscv_vsuxseg6_mask:
   case Intrinsic::riscv_vsuxseg7_mask:
   case Intrinsic::riscv_vsuxseg8_mask:
-    return SetRVVLoadStoreInfo(/*PtrOp*/ I.arg_size() - 5,
+    return SetYSXVecLoadStoreInfo(/*PtrOp*/ I.arg_size() - 5,
                                /*IsStore*/ true,
                                /*IsUnitStrided*/ false);
   case Intrinsic::riscv_sf_vlte8:
@@ -2309,7 +2309,7 @@ bool YSXTargetLowering::isLegalAddressingMode(const DataLayout &DL,
   if (AM.ScalableOffset)
     return false;
 
-  // RVV instructions only support register addressing.
+  // YSXVec instructions only support register addressing.
   if (Subtarget.hasVInstructions() && isa<VectorType>(Ty))
     return AM.HasBaseReg && AM.Scale == 0 && !AM.BaseOffs;
 
@@ -2450,7 +2450,7 @@ bool YSXTargetLowering::hasBitTest(SDValue X, SDValue Y) const {
     return X.getValueType().isScalarInteger();
   auto *C = dyn_cast<ConstantSDNode>(Y);
   // XTheadBs provides th.tst (similar to bexti), if Y is a constant
-  if (Subtarget.hasVendorXTHeadBs())
+  if (Subtarget.hasVendorXRemovedTHeadBs())
     return C != nullptr;
   // We can use ANDI+SEQZ/SNEZ as a bit test. Y contains the bit position.
   return C && C->getAPIntValue().ule(10);
@@ -2743,7 +2743,7 @@ static void translateSetCCForBranch(const SDLoc &DL, SDValue &LHS, SDValue &RHS,
         CC = ISD::SETGE;
         return;
       }
-      if ((Subtarget.hasVendorXqcicm() || Subtarget.hasVendorXqcicli()) &&
+      if ((Subtarget.hasVendorXRemovedQcicm() || Subtarget.hasVendorXRemovedQcicli()) &&
           C != INT64_MAX && isInt<5>(C + 1)) {
         // We have a conditional move instruction for SETGE but not SETGT.
         // Convert X > C to X >= C + 1, if (C + 1) is a 5-bit signed immediate.
@@ -2751,7 +2751,7 @@ static void translateSetCCForBranch(const SDLoc &DL, SDValue &LHS, SDValue &RHS,
         CC = ISD::SETGE;
         return;
       }
-      if (Subtarget.hasVendorXqcibi() && C != INT64_MAX && isInt<16>(C + 1)) {
+      if (Subtarget.hasVendorXRemovedQcibi() && C != INT64_MAX && isInt<16>(C + 1)) {
         // We have a branch immediate instruction for SETGE but not SETGT.
         // Convert X > C to X >= C + 1, if (C + 1) is a 16-bit signed immediate.
         RHS = DAG.getSignedConstant(C + 1, DL, RHS.getValueType());
@@ -2769,7 +2769,7 @@ static void translateSetCCForBranch(const SDLoc &DL, SDValue &LHS, SDValue &RHS,
       }
       break;
     case ISD::SETUGT:
-      if ((Subtarget.hasVendorXqcicm() || Subtarget.hasVendorXqcicli()) &&
+      if ((Subtarget.hasVendorXRemovedQcicm() || Subtarget.hasVendorXRemovedQcicli()) &&
           C != INT64_MAX && isUInt<5>(C + 1)) {
         // We have a conditional move instruction for SETUGE but not SETUGT.
         // Convert X > C to X >= C + 1, if (C + 1) is a 5-bit signed immediate.
@@ -2777,7 +2777,7 @@ static void translateSetCCForBranch(const SDLoc &DL, SDValue &LHS, SDValue &RHS,
         CC = ISD::SETUGE;
         return;
       }
-      if (Subtarget.hasVendorXqcibi() && C != INT64_MAX && isUInt<16>(C + 1)) {
+      if (Subtarget.hasVendorXRemovedQcibi() && C != INT64_MAX && isUInt<16>(C + 1)) {
         // We have a branch immediate instruction for SETUGE but not SETUGT.
         // Convert X > C to X >= C + 1, if (C + 1) is a 16-bit unsigned
         // immediate.
@@ -2893,7 +2893,7 @@ unsigned YSXTargetLowering::getRegClassIDForVecVT(MVT VT) {
     unsigned NF = VT.getRISCVVectorTupleNumFields();
     unsigned RegsPerField =
         std::max(1U, (unsigned)VT.getSizeInBits().getKnownMinValue() /
-                         (NF * YSX::RVVBitsPerBlock));
+                         (NF * YSX::YSXVecBitsPerBlock));
     switch (RegsPerField) {
     case 1:
       if (NF == 2)
@@ -2987,11 +2987,11 @@ YSXTargetLowering::decomposeSubvectorInsertExtractToSubRegs(
 // Permit combining of mask vectors as BUILD_VECTOR never expands to scalar
 // stores for those types.
 bool YSXTargetLowering::mergeStoresAfterLegalization(EVT VT) const {
-  return !Subtarget.useRVVForFixedLengthVectors() ||
+  return !Subtarget.useYSXVecForFixedLengthVectors() ||
          (VT.isFixedLengthVector() && VT.getVectorElementType() == MVT::i1);
 }
 
-bool YSXTargetLowering::isLegalElementTypeForRVV(EVT ScalarTy) const {
+bool YSXTargetLowering::isLegalElementTypeForYSXVec(EVT ScalarTy) const {
   if (!ScalarTy.isSimple())
     return false;
   switch (ScalarTy.getSimpleVT().SimpleTy) {
@@ -3034,10 +3034,10 @@ static SDValue getVLOperand(SDValue Op) {
   return Op.getOperand(II->VLOperand + 1 + HasChain);
 }
 
-static bool useRVVForFixedLengthVectorVT(MVT VT,
+static bool useYSXVecForFixedLengthVectorVT(MVT VT,
                                          const YSXSubtarget &Subtarget) {
   assert(VT.isFixedLengthVector() && "Expected a fixed length vector type!");
-  if (!Subtarget.useRVVForFixedLengthVectors())
+  if (!Subtarget.useYSXVecForFixedLengthVectors())
     return false;
 
   // We only support a set of vector types with a consistent maximum fixed size
@@ -3051,7 +3051,7 @@ static bool useRVVForFixedLengthVectorVT(MVT VT,
 
   MVT EltVT = VT.getVectorElementType();
 
-  // Don't use RVV for vectors we cannot scalarize if required.
+  // Don't use YSXVec for vectors we cannot scalarize if required.
   switch (EltVT.SimpleTy) {
   // i1 is supported but has different rules.
   default:
@@ -3093,20 +3093,20 @@ static bool useRVVForFixedLengthVectorVT(MVT VT,
     return false;
 
   unsigned LMul = divideCeil(VT.getSizeInBits(), MinVLen);
-  // Don't use RVV for types that don't fit.
+  // Don't use YSXVec for types that don't fit.
   if (LMul > Subtarget.getMaxLMULForFixedLengthVectors())
     return false;
 
   // TODO: Perhaps an artificial restriction, but worth having whilst getting
-  // the base fixed length RVV support in place.
+  // the base fixed length YSXVec support in place.
   if (!VT.isPow2VectorType())
     return false;
 
   return true;
 }
 
-bool YSXTargetLowering::useRVVForFixedLengthVectorVT(MVT VT) const {
-  return ::useRVVForFixedLengthVectorVT(VT, Subtarget);
+bool YSXTargetLowering::useYSXVecForFixedLengthVectorVT(MVT VT) const {
+  return ::useYSXVecForFixedLengthVectorVT(VT, Subtarget);
 }
 
 // Return the largest legal scalable vector type that matches VT's element type.
@@ -3114,7 +3114,7 @@ static MVT getContainerForFixedLengthVector(const TargetLowering &TLI, MVT VT,
                                             const YSXSubtarget &Subtarget) {
   // This may be called before legal types are setup.
   assert(((VT.isFixedLengthVector() && TLI.isTypeLegal(VT)) ||
-          useRVVForFixedLengthVectorVT(VT, Subtarget)) &&
+          useYSXVecForFixedLengthVectorVT(VT, Subtarget)) &&
          "Expected legal fixed length vector!");
 
   unsigned MinVLen = Subtarget.getRealMinVLen();
@@ -3123,7 +3123,7 @@ static MVT getContainerForFixedLengthVector(const TargetLowering &TLI, MVT VT,
   MVT EltVT = VT.getVectorElementType();
   switch (EltVT.SimpleTy) {
   default:
-    llvm_unreachable("unexpected element type for RVV container");
+    llvm_unreachable("unexpected element type for YSXVec container");
   case MVT::i1:
   case MVT::i8:
   case MVT::i16:
@@ -3137,8 +3137,8 @@ static MVT getContainerForFixedLengthVector(const TargetLowering &TLI, MVT VT,
     // narrower types. The smallest fractional LMUL we support is 8/ELEN. Within
     // each fractional LMUL we support SEW between 8 and LMUL*ELEN.
     unsigned NumElts =
-        (VT.getVectorNumElements() * YSX::RVVBitsPerBlock) / MinVLen;
-    NumElts = std::max(NumElts, YSX::RVVBitsPerBlock / MaxELen);
+        (VT.getVectorNumElements() * YSX::YSXVecBitsPerBlock) / MinVLen;
+    NumElts = std::max(NumElts, YSX::YSXVecBitsPerBlock / MaxELen);
     assert(isPowerOf2_32(NumElts) && "Expected power of 2 NumElts");
     return MVT::getScalableVectorVT(EltVT, NumElts);
   }
@@ -3155,7 +3155,7 @@ MVT YSXTargetLowering::getContainerForFixedLengthVector(MVT VT) const {
   return ::getContainerForFixedLengthVector(*this, VT, getSubtarget());
 }
 
-// Grow V to consume an entire RVV register.
+// Grow V to consume an entire YSXVec register.
 static SDValue convertToScalableVector(EVT VT, SDValue V, SelectionDAG &DAG,
                                        const YSXSubtarget &Subtarget) {
   assert(VT.isScalableVector() &&
@@ -3252,7 +3252,7 @@ YSXTargetLowering::computeVLMAXBounds(MVT VecVT,
   return std::make_pair(MinVLMAX, MaxVLMAX);
 }
 
-// The state of RVV BUILD_VECTOR and VECTOR_SHUFFLE lowering is that very few
+// The state of YSXVec BUILD_VECTOR and VECTOR_SHUFFLE lowering is that very few
 // of either is (currently) supported. This can get us into an infinite loop
 // where we try to lower a BUILD_VECTOR as a VECTOR_SHUFFLE as a BUILD_VECTOR
 // as a ..., etc.
@@ -3442,9 +3442,9 @@ static SDValue lowerFP_TO_INT_SAT(SDValue Op, SelectionDAG &DAG,
     CvtContainerVT = CvtContainerVT.changeVectorElementType(CvtEltVT);
   }
 
-  unsigned RVVOpc =
+  unsigned YSXVecOpc =
       IsSigned ? YSXISD::VFCVT_RTZ_X_F_VL : YSXISD::VFCVT_RTZ_XU_F_VL;
-  SDValue Res = DAG.getNode(RVVOpc, DL, CvtContainerVT, Src, Mask, VL);
+  SDValue Res = DAG.getNode(YSXVecOpc, DL, CvtContainerVT, Src, Mask, VL);
 
   while (CvtContainerVT != DstContainerVT) {
     CvtEltVT = MVT::getIntegerVT(CvtEltVT.getSizeInBits() / 2);
@@ -3866,7 +3866,7 @@ static std::optional<APInt> getExactInteger(const APFloat &APF,
 
 // Try to match an arithmetic-sequence BUILD_VECTOR [X,X+S,X+2*S,...,X+(N-1)*S]
 // to the (non-zero) step S and start value X. This can be then lowered as the
-// RVV sequence (VID * S) + X, for example.
+// YSXVec sequence (VID * S) + X, for example.
 // The step S is represented as an integer numerator divided by a positive
 // denominator. Note that the implementation currently only identifies
 // sequences in which either the numerator is +/- 1 or the denominator is 1. It
@@ -4067,7 +4067,7 @@ static SDValue lowerBuildVectorViaVID(SDValue Op, SelectionDAG &DAG,
     }
 
     // Only emit VIDs with suitably-small steps. We use imm5 as a threshold
-    // since it's the immediate value many RVV instructions accept. There is
+    // since it's the immediate value many YSXVec instructions accept. There is
     // no vmul.vi instruction so ensure multiply constant can fit in a
     // single addi instruction.  For the addend, we allow up to 32 bits..
     if (((StepOpcode == ISD::MUL && isInt<12>(SplatStepVal)) ||
@@ -4416,7 +4416,7 @@ static SDValue lowerBuildVectorOfConstants(SDValue Op, SelectionDAG &DAG,
 
     // Since we can't introduce illegal i64 types at this stage, we can only
     // perform an i64 splat on RV32 if it is its own sign-extended value. That
-    // way we can use RVV instructions to splat.
+    // way we can use YSXVec instructions to splat.
     assert((ViaIntVT.bitsLE(XLenVT) ||
             (!Subtarget.is64Bit() && ViaIntVT == MVT::i64)) &&
            "Unexpected bitcast sequence");
@@ -4926,7 +4926,7 @@ static SDValue splatPartsI64WithVL(const SDLoc &DL, MVT VT, SDValue Passthru,
     int32_t LoC = cast<ConstantSDNode>(Lo)->getSExtValue();
     int32_t HiC = cast<ConstantSDNode>(Hi)->getSExtValue();
     // If Hi constant is all the same sign bit as Lo, lower this as a custom
-    // node in order to try and match RVV vector/scalar instructions.
+    // node in order to try and match YSXVec vector/scalar instructions.
     if ((LoC >> 31) == HiC)
       return DAG.getNode(YSXISD::VMV_V_X_VL, DL, VT, Passthru, Lo, VL);
 
@@ -6909,11 +6909,11 @@ SDValue YSXTargetLowering::lowerVPCttzElements(SDValue Op,
   return DAG.getNode(ISD::TRUNCATE, DL, Op.getValueType(), Res);
 }
 
-// While RVV has alignment restrictions, we should always be able to load as a
+// While YSXVec has alignment restrictions, we should always be able to load as a
 // legal equivalently-sized byte-typed vector instead. This method is
 // responsible for re-expressing a ISD::LOAD via a correctly-aligned type. If
 // the load is already correctly-aligned, it returns SDValue().
-SDValue YSXTargetLowering::expandUnalignedRVVLoad(SDValue Op,
+SDValue YSXTargetLowering::expandUnalignedYSXVecLoad(SDValue Op,
                                                     SelectionDAG &DAG) const {
   auto *Load = cast<LoadSDNode>(Op);
   assert(Load && Load->getMemoryVT().isVector() && "Expected vector load");
@@ -6927,22 +6927,22 @@ SDValue YSXTargetLowering::expandUnalignedRVVLoad(SDValue Op,
   MVT VT = Op.getSimpleValueType();
   unsigned EltSizeBits = VT.getScalarSizeInBits();
   assert((EltSizeBits == 16 || EltSizeBits == 32 || EltSizeBits == 64) &&
-         "Unexpected unaligned RVV load type");
+         "Unexpected unaligned YSXVec load type");
   MVT NewVT =
       MVT::getVectorVT(MVT::i8, VT.getVectorElementCount() * (EltSizeBits / 8));
   assert(NewVT.isValid() &&
-         "Expecting equally-sized RVV vector types to be legal");
+         "Expecting equally-sized YSXVec vector types to be legal");
   SDValue L = DAG.getLoad(NewVT, DL, Load->getChain(), Load->getBasePtr(),
                           Load->getPointerInfo(), Load->getBaseAlign(),
                           Load->getMemOperand()->getFlags());
   return DAG.getMergeValues({DAG.getBitcast(VT, L), L.getValue(1)}, DL);
 }
 
-// While RVV has alignment restrictions, we should always be able to store as a
+// While YSXVec has alignment restrictions, we should always be able to store as a
 // legal equivalently-sized byte-typed vector instead. This method is
 // responsible for re-expressing a ISD::STORE via a correctly-aligned type. It
 // returns SDValue() if the store is already correctly aligned.
-SDValue YSXTargetLowering::expandUnalignedRVVStore(SDValue Op,
+SDValue YSXTargetLowering::expandUnalignedYSXVecStore(SDValue Op,
                                                      SelectionDAG &DAG) const {
   auto *Store = cast<StoreSDNode>(Op);
   assert(Store && Store->getValue().getValueType().isVector() &&
@@ -6958,18 +6958,18 @@ SDValue YSXTargetLowering::expandUnalignedRVVStore(SDValue Op,
   MVT VT = StoredVal.getSimpleValueType();
   unsigned EltSizeBits = VT.getScalarSizeInBits();
   assert((EltSizeBits == 16 || EltSizeBits == 32 || EltSizeBits == 64) &&
-         "Unexpected unaligned RVV store type");
+         "Unexpected unaligned YSXVec store type");
   MVT NewVT =
       MVT::getVectorVT(MVT::i8, VT.getVectorElementCount() * (EltSizeBits / 8));
   assert(NewVT.isValid() &&
-         "Expecting equally-sized RVV vector types to be legal");
+         "Expecting equally-sized YSXVec vector types to be legal");
   StoredVal = DAG.getBitcast(NewVT, StoredVal);
   return DAG.getStore(Store->getChain(), DL, StoredVal, Store->getBasePtr(),
                       Store->getPointerInfo(), Store->getBaseAlign(),
                       Store->getMemOperand()->getFlags());
 }
 
-// While RVV has alignment restrictions, we should always be able to load as a
+// While YSXVec has alignment restrictions, we should always be able to load as a
 // legal equivalently-sized byte-typed vector instead. This method is
 // responsible for re-expressing a ISD::VP_LOAD via a correctly-aligned type. If
 // the load is already correctly-aligned, it returns SDValue().
@@ -6993,11 +6993,11 @@ SDValue YSXTargetLowering::expandUnalignedVPLoad(SDValue Op,
   MVT VT = Op.getSimpleValueType();
   unsigned EltSizeBits = VT.getScalarSizeInBits();
   assert((EltSizeBits == 16 || EltSizeBits == 32 || EltSizeBits == 64) &&
-         "Unexpected unaligned RVV load type");
+         "Unexpected unaligned YSXVec load type");
   MVT NewVT =
       MVT::getVectorVT(MVT::i8, VT.getVectorElementCount() * (EltSizeBits / 8));
   assert(NewVT.isValid() &&
-         "Expecting equally-sized RVV vector types to be legal");
+         "Expecting equally-sized YSXVec vector types to be legal");
 
   SDValue VL = Load->getVectorLength();
   VL = DAG.getNode(ISD::MUL, DL, VL.getValueType(), VL,
@@ -7011,7 +7011,7 @@ SDValue YSXTargetLowering::expandUnalignedVPLoad(SDValue Op,
   return DAG.getMergeValues({DAG.getBitcast(VT, L), L.getValue(1)}, DL);
 }
 
-// While RVV has alignment restrictions, we should always be able to store as a
+// While YSXVec has alignment restrictions, we should always be able to store as a
 // legal equivalently-sized byte-typed vector instead. This method is
 // responsible for re-expressing a ISD::VP STORE via a correctly-aligned type.
 // It returns SDValue() if the store is already correctly aligned.
@@ -7037,11 +7037,11 @@ SDValue YSXTargetLowering::expandUnalignedVPStore(SDValue Op,
   MVT VT = StoredVal.getSimpleValueType();
   unsigned EltSizeBits = VT.getScalarSizeInBits();
   assert((EltSizeBits == 16 || EltSizeBits == 32 || EltSizeBits == 64) &&
-         "Unexpected unaligned RVV store type");
+         "Unexpected unaligned YSXVec store type");
   MVT NewVT =
       MVT::getVectorVT(MVT::i8, VT.getVectorElementCount() * (EltSizeBits / 8));
   assert(NewVT.isValid() &&
-         "Expecting equally-sized RVV vector types to be legal");
+         "Expecting equally-sized YSXVec vector types to be legal");
 
   SDValue VL = Store->getVectorLength();
   VL = DAG.getNode(ISD::MUL, DL, VL.getValueType(), VL,
@@ -7807,10 +7807,10 @@ SDValue YSXTargetLowering::LowerOperation(SDValue Op,
       assert(Subtarget.hasStdExtZvkb());
       return lowerToScalableOp(Op, DAG);
     }
-    assert(Subtarget.hasVendorXTHeadBb() &&
+    assert(Subtarget.hasVendorXRemovedTHeadBb() &&
            !(Subtarget.hasStdExtZbb() || Subtarget.hasStdExtZbkb()) &&
            "Unexpected custom legalization");
-    // XTHeadBb only supports rotate by constant.
+    // XRemovedTHeadBb only supports rotate by constant.
     if (!isa<ConstantSDNode>(Op.getOperand(1)))
       return SDValue();
     return Op;
@@ -7975,8 +7975,8 @@ SDValue YSXTargetLowering::LowerOperation(SDValue Op,
     // We define our scalable vector types for lmul=1 to use a 64 bit known
     // minimum size. e.g. <vscale x 2 x i32>. VLENB is in bytes so we calculate
     // vscale as VLENB / 8.
-    static_assert(YSX::RVVBitsPerBlock == 64, "Unexpected bits per block!");
-    if (Subtarget.getRealMinVLen() < YSX::RVVBitsPerBlock)
+    static_assert(YSX::YSXVecBitsPerBlock == 64, "Unexpected bits per block!");
+    if (Subtarget.getRealMinVLen() < YSX::YSXVecBitsPerBlock)
       reportFatalInternalError("Support for VLEN==32 is incomplete.");
     // We assume VLENB is a multiple of 8. We manually choose the best shift
     // here because SimplifyDemandedBits isn't always able to simplify it.
@@ -8074,7 +8074,7 @@ SDValue YSXTargetLowering::LowerOperation(SDValue Op,
   case ISD::STRICT_FP_TO_UINT:
   case ISD::STRICT_SINT_TO_FP:
   case ISD::STRICT_UINT_TO_FP: {
-    // RVV can only do fp<->int conversions to types half/double the size as
+    // YSXVec can only do fp<->int conversions to types half/double the size as
     // the source. We custom-lower any conversions that do two hops into
     // sequences.
     MVT VT = Op.getSimpleValueType();
@@ -8164,33 +8164,33 @@ SDValue YSXTargetLowering::LowerOperation(SDValue Op,
       return Op;
 
     // For fixed-length vectors we lower to a custom "VL" node.
-    unsigned RVVOpc = 0;
+    unsigned YSXVecOpc = 0;
     switch (Op.getOpcode()) {
     default:
       llvm_unreachable("Impossible opcode");
     case ISD::FP_TO_SINT:
-      RVVOpc = YSXISD::VFCVT_RTZ_X_F_VL;
+      YSXVecOpc = YSXISD::VFCVT_RTZ_X_F_VL;
       break;
     case ISD::FP_TO_UINT:
-      RVVOpc = YSXISD::VFCVT_RTZ_XU_F_VL;
+      YSXVecOpc = YSXISD::VFCVT_RTZ_XU_F_VL;
       break;
     case ISD::SINT_TO_FP:
-      RVVOpc = YSXISD::SINT_TO_FP_VL;
+      YSXVecOpc = YSXISD::SINT_TO_FP_VL;
       break;
     case ISD::UINT_TO_FP:
-      RVVOpc = YSXISD::UINT_TO_FP_VL;
+      YSXVecOpc = YSXISD::UINT_TO_FP_VL;
       break;
     case ISD::STRICT_FP_TO_SINT:
-      RVVOpc = YSXISD::STRICT_VFCVT_RTZ_X_F_VL;
+      YSXVecOpc = YSXISD::STRICT_VFCVT_RTZ_X_F_VL;
       break;
     case ISD::STRICT_FP_TO_UINT:
-      RVVOpc = YSXISD::STRICT_VFCVT_RTZ_XU_F_VL;
+      YSXVecOpc = YSXISD::STRICT_VFCVT_RTZ_XU_F_VL;
       break;
     case ISD::STRICT_SINT_TO_FP:
-      RVVOpc = YSXISD::STRICT_SINT_TO_FP_VL;
+      YSXVecOpc = YSXISD::STRICT_SINT_TO_FP_VL;
       break;
     case ISD::STRICT_UINT_TO_FP:
-      RVVOpc = YSXISD::STRICT_UINT_TO_FP_VL;
+      YSXVecOpc = YSXISD::STRICT_UINT_TO_FP_VL;
       break;
     }
 
@@ -8203,12 +8203,12 @@ SDValue YSXTargetLowering::LowerOperation(SDValue Op,
 
     Src = convertToScalableVector(SrcContainerVT, Src, DAG, Subtarget);
     if (IsStrict) {
-      Src = DAG.getNode(RVVOpc, DL, DAG.getVTList(ContainerVT, MVT::Other),
+      Src = DAG.getNode(YSXVecOpc, DL, DAG.getVTList(ContainerVT, MVT::Other),
                         Op.getOperand(0), Src, Mask, VL);
       SDValue SubVec = convertFromScalableVector(VT, Src, DAG, Subtarget);
       return DAG.getMergeValues({SubVec, Src.getValue(1)}, DL);
     }
-    Src = DAG.getNode(RVVOpc, DL, ContainerVT, Src, Mask, VL);
+    Src = DAG.getNode(YSXVecOpc, DL, ContainerVT, Src, Mask, VL);
     return convertFromScalableVector(VT, Src, DAG, Subtarget);
   }
   case ISD::FP_TO_SINT_SAT:
@@ -8518,10 +8518,10 @@ SDValue YSXTargetLowering::LowerOperation(SDValue Op,
           {Ret, DAG.getNode(ISD::TokenFactor, DL, MVT::Other, OutChains)}, DL);
     }
 
-    if (auto V = expandUnalignedRVVLoad(Op, DAG))
+    if (auto V = expandUnalignedYSXVecLoad(Op, DAG))
       return V;
     if (Op.getValueType().isFixedLengthVector())
-      return lowerFixedLengthVectorLoadToRVV(Op, DAG);
+      return lowerFixedLengthVectorLoadToYSXVec(Op, DAG);
     return Op;
   }
   case ISD::STORE: {
@@ -8625,10 +8625,10 @@ SDValue YSXTargetLowering::LowerOperation(SDValue Op,
       return Ret;
     }
 
-    if (auto V = expandUnalignedRVVStore(Op, DAG))
+    if (auto V = expandUnalignedYSXVecStore(Op, DAG))
       return V;
     if (Op.getOperand(1).getValueType().isFixedLengthVector())
-      return lowerFixedLengthVectorStoreToRVV(Op, DAG);
+      return lowerFixedLengthVectorStoreToYSXVec(Op, DAG);
     return Op;
   }
   case ISD::VP_LOAD:
@@ -9333,7 +9333,7 @@ SDValue YSXTargetLowering::getAddr(NodeTy *N, SelectionDAG &DAG,
   case CodeModel::Small: {
     // Generate a sequence for accessing addresses within the first 2 GiB of
     // address space.
-    if (Subtarget.hasVendorXqcili()) {
+    if (Subtarget.hasVendorXRemovedQcili()) {
       // Use QC.E.LI to generate the address, as this is easier to relax than
       // LUI/ADDI.
       SDValue Addr = getTargetNode(N, DL, Ty, DAG, 0);
@@ -10396,7 +10396,7 @@ SDValue YSXTargetLowering::lowerVectorTruncLike(SDValue Op,
   if (VT.getVectorElementType() == MVT::i1)
     return lowerVectorMaskTruncLike(Op, DAG);
 
-  // RVV only has truncates which operate from SEW*2->SEW, so lower arbitrary
+  // YSXVec only has truncates which operate from SEW*2->SEW, so lower arbitrary
   // truncates as a series of "YSXISD::TRUNCATE_VECTOR_VL" nodes which
   // truncate by one power of two at a time.
   MVT DstEltVT = VT.getVectorElementType();
@@ -10468,7 +10468,7 @@ YSXTargetLowering::lowerStrictFPExtendOrRoundLike(SDValue Op,
 
   auto [Mask, VL] = getDefaultVLOps(SrcVT, ContainerVT, DL, DAG, Subtarget);
 
-  // RVV can only widen/truncate fp to types double/half the size as the source.
+  // YSXVec can only widen/truncate fp to types double/half the size as the source.
   if ((VT.getVectorElementType() == MVT::f64 &&
        (SrcVT.getVectorElementType() == MVT::f16 ||
         SrcVT.getVectorElementType() == MVT::bf16)) ||
@@ -10506,8 +10506,8 @@ YSXTargetLowering::lowerVectorFPExtendOrRoundLike(SDValue Op,
       Op.getOpcode() == ISD::VP_FP_ROUND || Op.getOpcode() == ISD::VP_FP_EXTEND;
   bool IsExtend =
       Op.getOpcode() == ISD::VP_FP_EXTEND || Op.getOpcode() == ISD::FP_EXTEND;
-  // RVV can only do truncate fp to types half the size as the source. We
-  // custom-lower f64->f16 rounds via RVV's round-to-odd float
+  // YSXVec can only do truncate fp to types half the size as the source. We
+  // custom-lower f64->f16 rounds via YSXVec's round-to-odd float
   // conversion instruction.
   SDLoc DL(Op);
   MVT VT = Op.getSimpleValueType();
@@ -10976,7 +10976,7 @@ SDValue YSXTargetLowering::lowerEXTRACT_VECTOR_ELT(SDValue Op,
   return DAG.getNode(ISD::TRUNCATE, DL, EltVT, Elt0);
 }
 
-// Some RVV intrinsics may claim that they want an integer operand to be
+// Some YSXVec intrinsics may claim that they want an integer operand to be
 // promoted or expanded.
 static SDValue lowerVectorIntrinsicScalars(SDValue Op, SelectionDAG &DAG,
                                            const YSXSubtarget &Subtarget) {
@@ -11156,7 +11156,7 @@ static SDValue lowerVectorIntrinsicScalars(SDValue Op, SelectionDAG &DAG,
 // (vscale * VF). The vscale and VF are independent of element width. We use
 // SEW=8 for the vsetvli because it is the only element width that supports all
 // fractional LMULs. The LMUL is chosen so that with SEW=8 the VLMax is
-// (vscale * VF). Where vscale is defined as VLEN/RVVBitsPerBlock. The
+// (vscale * VF). Where vscale is defined as VLEN/YSXVecBitsPerBlock. The
 // InsertVSETVLI pass can fix up the vtype of the vsetvli if a different
 // SEW and LMUL are better for the surrounding vector instructions.
 static SDValue lowerGetVectorLength(SDNode *N, SelectionDAG &DAG,
@@ -11167,10 +11167,10 @@ static SDValue lowerGetVectorLength(SDNode *N, SelectionDAG &DAG,
   const unsigned ElementWidth = 8;
 
   // Determine the VF that corresponds to LMUL 1 for ElementWidth.
-  unsigned LMul1VF = YSX::RVVBitsPerBlock / ElementWidth;
+  unsigned LMul1VF = YSX::YSXVecBitsPerBlock / ElementWidth;
   // We don't support VF==1 with ELEN==32.
   [[maybe_unused]] unsigned MinVF =
-      YSX::RVVBitsPerBlock / Subtarget.getELen();
+      YSX::YSXVecBitsPerBlock / Subtarget.getELen();
 
   [[maybe_unused]] unsigned VF = N->getConstantOperandVal(2);
   assert(VF >= MinVF && VF <= (LMul1VF * 8) && isPowerOf2_32(VF) &&
@@ -11279,7 +11279,7 @@ static void processVCIXOperands(SDValue OrigOp,
 static inline bool isValidEGW(int EGS, EVT VT,
                               const YSXSubtarget &Subtarget) {
   return (Subtarget.getRealMinVLen() *
-             VT.getSizeInBits().getKnownMinValue()) / YSX::RVVBitsPerBlock >=
+             VT.getSizeInBits().getKnownMinValue()) / YSX::YSXVecBitsPerBlock >=
          EGS * VT.getScalarSizeInBits();
 }
 
@@ -11849,7 +11849,7 @@ SDValue YSXTargetLowering::LowerINTRINSIC_VOID(SDValue Op,
   return lowerVectorIntrinsicScalars(Op, DAG, Subtarget);
 }
 
-static unsigned getRVVReductionOp(unsigned ISDOpcode) {
+static unsigned getYSXVecReductionOp(unsigned ISDOpcode) {
   switch (ISDOpcode) {
   default:
     llvm_unreachable("Unhandled reduction");
@@ -11981,7 +11981,7 @@ static bool isNonZeroAVL(SDValue AVL) {
 
 /// Helper to lower a reduction sequence of the form:
 /// scalar = reduce_op vec, scalar_start
-static SDValue lowerReductionSeq(unsigned RVVOpcode, MVT ResVT,
+static SDValue lowerReductionSeq(unsigned YSXVecOpcode, MVT ResVT,
                                  SDValue StartValue, SDValue Vec, SDValue Mask,
                                  SDValue VL, const SDLoc &DL, SelectionDAG &DAG,
                                  const YSXSubtarget &Subtarget) {
@@ -12005,7 +12005,7 @@ static SDValue lowerReductionSeq(unsigned RVVOpcode, MVT ResVT,
   SDValue PassThru = NonZeroAVL ? DAG.getUNDEF(M1VT) : InitialValue;
   SDValue Policy = DAG.getTargetConstant(YSXVType::TAIL_AGNOSTIC, DL, XLenVT);
   SDValue Ops[] = {PassThru, Vec, InitialValue, Mask, VL, Policy};
-  SDValue Reduction = DAG.getNode(RVVOpcode, DL, M1VT, Ops);
+  SDValue Reduction = DAG.getNode(YSXVecOpcode, DL, M1VT, Ops);
   return DAG.getExtractVectorElt(DL, ResVT, Reduction, 0);
 }
 
@@ -12033,7 +12033,7 @@ SDValue YSXTargetLowering::lowerVECREDUCE(SDValue Op,
 
   MVT VecVT = VecEVT.getSimpleVT();
   MVT VecEltVT = VecVT.getVectorElementType();
-  unsigned RVVOpcode = getRVVReductionOp(Op.getOpcode());
+  unsigned YSXVecOpcode = getYSXVecReductionOp(Op.getOpcode());
 
   MVT ContainerVT = VecVT;
   if (VecVT.isFixedLengthVector()) {
@@ -12053,7 +12053,7 @@ SDValue YSXTargetLowering::lowerVECREDUCE(SDValue Op,
   case ISD::SMIN:
     StartV = DAG.getExtractVectorElt(DL, VecEltVT, Vec, 0);
   }
-  return lowerReductionSeq(RVVOpcode, Op.getSimpleValueType(), StartV, Vec,
+  return lowerReductionSeq(YSXVecOpcode, Op.getSimpleValueType(), StartV, Vec,
                            Mask, VL, DL, DAG, Subtarget);
 }
 
@@ -12061,7 +12061,7 @@ SDValue YSXTargetLowering::lowerVECREDUCE(SDValue Op,
 // the vector SDValue and the scalar SDValue required to lower this to a
 // YSXISD node.
 static std::tuple<unsigned, SDValue, SDValue>
-getRVVFPReductionOpAndOperands(SDValue Op, SelectionDAG &DAG, EVT EltVT,
+getYSXVecFPReductionOpAndOperands(SDValue Op, SelectionDAG &DAG, EVT EltVT,
                                const YSXSubtarget &Subtarget) {
   SDLoc DL(Op);
   auto Flags = Op->getFlags();
@@ -12083,11 +12083,11 @@ getRVVFPReductionOpAndOperands(SDValue Op, SelectionDAG &DAG, EVT EltVT,
   case ISD::VECREDUCE_FMIN:
   case ISD::VECREDUCE_FMAX: {
     SDValue Front = DAG.getExtractVectorElt(DL, EltVT, Op.getOperand(0), 0);
-    unsigned RVVOpc =
+    unsigned YSXVecOpc =
         (Opcode == ISD::VECREDUCE_FMIN || Opcode == ISD::VECREDUCE_FMINIMUM)
             ? YSXISD::VECREDUCE_FMIN_VL
             : YSXISD::VECREDUCE_FMAX_VL;
-    return std::make_tuple(RVVOpc, Op.getOperand(0), Front);
+    return std::make_tuple(YSXVecOpc, Op.getOperand(0), Front);
   }
   }
 }
@@ -12097,10 +12097,10 @@ SDValue YSXTargetLowering::lowerFPVECREDUCE(SDValue Op,
   SDLoc DL(Op);
   MVT VecEltVT = Op.getSimpleValueType();
 
-  unsigned RVVOpcode;
+  unsigned YSXVecOpcode;
   SDValue VectorVal, ScalarVal;
-  std::tie(RVVOpcode, VectorVal, ScalarVal) =
-      getRVVFPReductionOpAndOperands(Op, DAG, VecEltVT, Subtarget);
+  std::tie(YSXVecOpcode, VectorVal, ScalarVal) =
+      getYSXVecFPReductionOpAndOperands(Op, DAG, VecEltVT, Subtarget);
   MVT VecVT = VectorVal.getSimpleValueType();
 
   MVT ContainerVT = VecVT;
@@ -12111,7 +12111,7 @@ SDValue YSXTargetLowering::lowerFPVECREDUCE(SDValue Op,
 
   MVT ResVT = Op.getSimpleValueType();
   auto [Mask, VL] = getDefaultVLOps(VecVT, ContainerVT, DL, DAG, Subtarget);
-  SDValue Res = lowerReductionSeq(RVVOpcode, ResVT, ScalarVal, VectorVal, Mask,
+  SDValue Res = lowerReductionSeq(YSXVecOpcode, ResVT, ScalarVal, VectorVal, Mask,
                                   VL, DL, DAG, Subtarget);
   if (Op.getOpcode() != ISD::VECREDUCE_FMINIMUM &&
       Op.getOpcode() != ISD::VECREDUCE_FMAXIMUM)
@@ -12149,7 +12149,7 @@ SDValue YSXTargetLowering::lowerVPREDUCE(SDValue Op,
     return SDValue();
 
   MVT VecVT = VecEVT.getSimpleVT();
-  unsigned RVVOpcode = getRVVReductionOp(Opc);
+  unsigned YSXVecOpcode = getYSXVecReductionOp(Opc);
 
   if (VecVT.isFixedLengthVector()) {
     auto ContainerVT = getContainerForFixedLengthVector(VecVT);
@@ -12159,7 +12159,7 @@ SDValue YSXTargetLowering::lowerVPREDUCE(SDValue Op,
   SDValue VL = Op.getOperand(3);
   SDValue Mask = Op.getOperand(2);
   SDValue Res =
-      lowerReductionSeq(RVVOpcode, Op.getSimpleValueType(), Op.getOperand(0),
+      lowerReductionSeq(YSXVecOpcode, Op.getSimpleValueType(), Op.getOperand(0),
                         Vec, Mask, VL, DL, DAG, Subtarget);
   if ((Opc != ISD::VP_REDUCE_FMINIMUM && Opc != ISD::VP_REDUCE_FMAXIMUM) ||
       Op->getFlags().hasNoNaNs())
@@ -12296,7 +12296,7 @@ SDValue YSXTargetLowering::lowerINSERT_SUBVECTOR(SDValue Op,
   // we have a fixed length subvector, we need to adjust the index by 1/vscale.
   if (SubVecVT.isFixedLengthVector()) {
     assert(VLen);
-    unsigned Vscale = *VLen / YSX::RVVBitsPerBlock;
+    unsigned Vscale = *VLen / YSX::YSXVecBitsPerBlock;
     auto Decompose =
         YSXTargetLowering::decomposeSubvectorInsertExtractToSubRegs(
             ContainerVecVT, ContainerSubVecVT, OrigIdx / Vscale, TRI);
@@ -12311,7 +12311,7 @@ SDValue YSXTargetLowering::lowerINSERT_SUBVECTOR(SDValue Op,
     RemIdx = ElementCount::getScalable(Decompose.second);
   }
 
-  TypeSize VecRegSize = TypeSize::getScalable(YSX::RVVBitsPerBlock);
+  TypeSize VecRegSize = TypeSize::getScalable(YSX::YSXVecBitsPerBlock);
   assert(isPowerOf2_64(
       Subtarget.expandVScale(SubVecVT.getSizeInBits()).getKnownMinValue()));
   bool ExactlyVecRegSized =
@@ -12342,7 +12342,7 @@ SDValue YSXTargetLowering::lowerINSERT_SUBVECTOR(SDValue Op,
 
       // Use a insert_subvector that will resolve to an insert subreg.
       assert(VLen);
-      unsigned Vscale = *VLen / YSX::RVVBitsPerBlock;
+      unsigned Vscale = *VLen / YSX::YSXVecBitsPerBlock;
       SDValue Insert =
           DAG.getInsertSubvector(DL, Vec, SubVec, OrigIdx / Vscale);
       if (VecVT.isFixedLengthVector())
@@ -12362,7 +12362,7 @@ SDValue YSXTargetLowering::lowerINSERT_SUBVECTOR(SDValue Op,
   unsigned AlignedIdx = OrigIdx - RemIdx.getKnownMinValue();
   if (SubVecVT.isFixedLengthVector()) {
     assert(VLen);
-    AlignedIdx /= *VLen / YSX::RVVBitsPerBlock;
+    AlignedIdx /= *VLen / YSX::YSXVecBitsPerBlock;
   }
   if (ContainerVecVT.bitsGT(YSXTargetLowering::getM1VT(ContainerVecVT))) {
     InterSubVT = YSXTargetLowering::getM1VT(ContainerVecVT);
@@ -12517,7 +12517,7 @@ SDValue YSXTargetLowering::lowerEXTRACT_SUBVECTOR(SDValue Op,
   // we have a fixed length subvector, we need to adjust the index by 1/vscale.
   if (SubVecVT.isFixedLengthVector()) {
     assert(VLen);
-    unsigned Vscale = *VLen / YSX::RVVBitsPerBlock;
+    unsigned Vscale = *VLen / YSX::YSXVecBitsPerBlock;
     auto Decompose =
         YSXTargetLowering::decomposeSubvectorInsertExtractToSubRegs(
             VecVT, ContainerSubVecVT, OrigIdx / Vscale, TRI);
@@ -12539,7 +12539,7 @@ SDValue YSXTargetLowering::lowerEXTRACT_SUBVECTOR(SDValue Op,
   if (RemIdx.isZero()) {
     if (SubVecVT.isFixedLengthVector()) {
       assert(VLen);
-      unsigned Vscale = *VLen / YSX::RVVBitsPerBlock;
+      unsigned Vscale = *VLen / YSX::YSXVecBitsPerBlock;
       Vec =
           DAG.getExtractSubvector(DL, ContainerSubVecVT, Vec, OrigIdx / Vscale);
       return convertFromScalableVector(SubVecVT, Vec, DAG, Subtarget);
@@ -12565,7 +12565,7 @@ SDValue YSXTargetLowering::lowerEXTRACT_SUBVECTOR(SDValue Op,
     unsigned Idx = OrigIdx - RemIdx.getKnownMinValue();
     if (SubVecVT.isFixedLengthVector()) {
       assert(VLen);
-      Idx /= *VLen / YSX::RVVBitsPerBlock;
+      Idx /= *VLen / YSX::YSXVecBitsPerBlock;
     }
     InterSubVT = YSXTargetLowering::getM1VT(VecVT);
     Vec = DAG.getExtractSubvector(DL, InterSubVT, Vec, Idx);
@@ -12654,7 +12654,7 @@ SDValue YSXTargetLowering::lowerVECTOR_DEINTERLEAVE(SDValue Op,
 
   // If concatenating would exceed LMUL=8, we need to split.
   if ((VecVT.getSizeInBits().getKnownMinValue() * Factor) >
-      (8 * YSX::RVVBitsPerBlock)) {
+      (8 * YSX::YSXVecBitsPerBlock)) {
     SmallVector<SDValue, 8> Ops(Factor * 2);
     for (unsigned i = 0; i != Factor; ++i) {
       auto [OpLo, OpHi] = DAG.SplitVectorOperand(Op.getNode(), i);
@@ -12850,7 +12850,7 @@ SDValue YSXTargetLowering::lowerVECTOR_INTERLEAVE(SDValue Op,
 
   // If the VT is larger than LMUL=8, we need to split and reassemble.
   if ((VecVT.getSizeInBits().getKnownMinValue() * Factor) >
-      (8 * YSX::RVVBitsPerBlock)) {
+      (8 * YSX::YSXVecBitsPerBlock)) {
     SmallVector<SDValue, 8> Ops(Factor * 2);
     for (unsigned i = 0; i != Factor; ++i) {
       auto [OpLo, OpHi] = DAG.SplitVectorOperand(Op.getNode(), i);
@@ -13115,7 +13115,7 @@ SDValue YSXTargetLowering::lowerVECTOR_REVERSE(SDValue Op,
     // Reverse each half, then reassemble them in reverse order.
     // NOTE: It's also possible that after splitting that VLMAX no longer
     // requires vrgatherei16.vv.
-    if (MinSize == (8 * YSX::RVVBitsPerBlock)) {
+    if (MinSize == (8 * YSX::YSXVecBitsPerBlock)) {
       auto [Lo, Hi] = DAG.SplitVectorOperand(Op.getNode(), 0);
       auto [LoVT, HiVT] = DAG.GetSplitDestVTs(VecVT);
       Lo = DAG.getNode(ISD::VECTOR_REVERSE, DL, LoVT, Lo);
@@ -13201,7 +13201,7 @@ SDValue YSXTargetLowering::lowerVECTOR_SPLICE(SDValue Op,
 }
 
 SDValue
-YSXTargetLowering::lowerFixedLengthVectorLoadToRVV(SDValue Op,
+YSXTargetLowering::lowerFixedLengthVectorLoadToYSXVec(SDValue Op,
                                                      SelectionDAG &DAG) const {
   SDLoc DL(Op);
   auto *Load = cast<LoadSDNode>(Op);
@@ -13250,7 +13250,7 @@ YSXTargetLowering::lowerFixedLengthVectorLoadToRVV(SDValue Op,
 }
 
 SDValue
-YSXTargetLowering::lowerFixedLengthVectorStoreToRVV(SDValue Op,
+YSXTargetLowering::lowerFixedLengthVectorStoreToYSXVec(SDValue Op,
                                                       SelectionDAG &DAG) const {
   SDLoc DL(Op);
   auto *Store = cast<StoreSDNode>(Op);
@@ -13553,7 +13553,7 @@ SDValue YSXTargetLowering::lowerVectorStrictFSetcc(SDValue Op,
   MVT VT = Op.getSimpleValueType();
   MVT InVT = Op1.getSimpleValueType();
 
-  // RVV VMFEQ/VMFNE ignores qNan, so we expand strict_fsetccs with OEQ/UNE
+  // YSXVec VMFEQ/VMFNE ignores qNan, so we expand strict_fsetccs with OEQ/UNE
   // condition code.
   if (Opc == ISD::STRICT_FSETCCS) {
     // Expand strict_fsetccs(x, oeq) to
@@ -13616,9 +13616,9 @@ SDValue YSXTargetLowering::lowerVectorStrictFSetcc(SDValue Op,
                       DAG.getVTList(MaskVT, MVT::Other),
                       {Chain, Op1, Op2, CC, Mask, Mask, VL});
   } else {
-    unsigned RVVOpc = Opc == ISD::STRICT_FSETCC ? YSXISD::STRICT_FSETCC_VL
+    unsigned YSXVecOpc = Opc == ISD::STRICT_FSETCC ? YSXISD::STRICT_FSETCC_VL
                                                 : YSXISD::STRICT_FSETCCS_VL;
-    Res = DAG.getNode(RVVOpc, DL, DAG.getVTList(MaskVT, MVT::Other),
+    Res = DAG.getNode(YSXVecOpc, DL, DAG.getVTList(MaskVT, MVT::Other),
                       {Chain, Op1, Op2, CC, DAG.getUNDEF(MaskVT), Mask, VL});
   }
 
@@ -13691,7 +13691,7 @@ SDValue YSXTargetLowering::lowerToScalableOp(SDValue Op,
     }
 
     // "cast" fixed length vector to a scalable vector.
-    assert(useRVVForFixedLengthVectorVT(V.getSimpleValueType()) &&
+    assert(useYSXVecForFixedLengthVectorVT(V.getSimpleValueType()) &&
            "Only fixed length vectors are supported!");
     MVT VContainerVT = ContainerVT.changeVectorElementType(
         V.getSimpleValueType().getVectorElementType());
@@ -13776,7 +13776,7 @@ SDValue YSXTargetLowering::lowerVPOp(SDValue Op, SelectionDAG &DAG) const {
     // "cast" fixed length vector to a scalable vector.
     MVT OpVT = V.getSimpleValueType();
     MVT ContainerVT = getContainerForFixedLengthVector(OpVT);
-    assert(useRVVForFixedLengthVectorVT(OpVT) &&
+    assert(useYSXVecForFixedLengthVectorVT(OpVT) &&
            "Only fixed length vectors are supported!");
     Ops.push_back(convertToScalableVector(ContainerVT, V, DAG, Subtarget));
   }
@@ -14269,7 +14269,7 @@ YSXTargetLowering::lowerVPReverseExperimental(SDValue Op,
     // reverse.
     // Swap the halves and concatenate them.
     // Slide the concatenated result by (VLMax - VL).
-    if (MinSize == (8 * YSX::RVVBitsPerBlock)) {
+    if (MinSize == (8 * YSX::YSXVecBitsPerBlock)) {
       auto [LoVT, HiVT] = DAG.GetSplitDestVTs(GatherVT);
       auto [Lo, Hi] = DAG.SplitVector(Op1, DL);
 
@@ -14444,8 +14444,8 @@ SDValue YSXTargetLowering::lowerVPStridedStore(SDValue Op,
                                  VPNode->getMemOperand());
 }
 
-// Custom lower MGATHER/VP_GATHER to a legalized form for RVV. It will then be
-// matched to a RVV indexed load. The RVV indexed load instructions only
+// Custom lower MGATHER/VP_GATHER to a legalized form for YSXVec. It will then be
+// matched to a YSXVec indexed load. The YSXVec indexed load instructions only
 // support the "unsigned unscaled" addressing mode; indices are implicitly
 // zero-extended or truncated to XLEN and are treated as byte offsets. Any
 // signed or scaled indexing is extended to the XLEN value type and scaled
@@ -14543,8 +14543,8 @@ SDValue YSXTargetLowering::lowerMaskedGather(SDValue Op,
   return DAG.getMergeValues({Result, Chain}, DL);
 }
 
-// Custom lower MSCATTER/VP_SCATTER to a legalized form for RVV. It will then be
-// matched to a RVV indexed store. The RVV indexed store instructions only
+// Custom lower MSCATTER/VP_SCATTER to a legalized form for YSXVec. It will then be
+// matched to a YSXVec indexed store. The YSXVec indexed store instructions only
 // support the "unsigned unscaled" addressing mode; indices are implicitly
 // zero-extended or truncated to XLEN and are treated as byte offsets. Any
 // signed or scaled indexing is extended to the XLEN value type and scaled
@@ -14981,7 +14981,7 @@ void YSXTargetLowering::ReplaceNodeResults(SDNode *N,
 
       SDLoc DL(N);
       SDValue Result = DAG.getMemIntrinsicNode(
-          YSXISD::LD_RV32, DL,
+          YSXISD::YSXRemovedLDRv32, DL,
           DAG.getVTList({MVT::i32, MVT::i32, MVT::Other}),
           {Ld->getChain(), Ld->getBasePtr()}, MVT::i64, Ld->getMemOperand());
       SDValue Lo = Result.getValue(0);
@@ -15082,7 +15082,7 @@ void YSXTargetLowering::ReplaceNodeResults(SDNode *N,
     assert(N->getValueType(0) == MVT::i32 && Subtarget.is64Bit() &&
            "Unexpected custom legalisation");
     assert((Subtarget.hasStdExtZbb() || Subtarget.hasStdExtZbkb() ||
-            Subtarget.hasVendorXTHeadBb()) &&
+            Subtarget.hasVendorXRemovedTHeadBb()) &&
            "Unexpected custom legalization");
     if (!isa<ConstantSDNode>(N->getOperand(1)) &&
         !(Subtarget.hasStdExtZbb() || Subtarget.hasStdExtZbkb()))
@@ -15771,7 +15771,7 @@ combineBinOpOfExtractToReduceTree(SDNode *N, SelectionDAG &DAG,
 // Try to fold (<bop> x, (reduction.<bop> vec, start))
 static SDValue combineBinOpToReduce(SDNode *N, SelectionDAG &DAG,
                                     const YSXSubtarget &Subtarget) {
-  auto BinOpToRVVReduce = [](unsigned Opc) {
+  auto BinOpToYSXVecReduce = [](unsigned Opc) {
     switch (Opc) {
     default:
       llvm_unreachable("Unhandled binary to transform reduction");
@@ -15800,10 +15800,10 @@ static SDValue combineBinOpToReduce(SDNode *N, SelectionDAG &DAG,
     }
   };
 
-  auto IsReduction = [&BinOpToRVVReduce](SDValue V, unsigned Opc) {
+  auto IsReduction = [&BinOpToYSXVecReduce](SDValue V, unsigned Opc) {
     return V.getOpcode() == ISD::EXTRACT_VECTOR_ELT &&
            isNullConstant(V.getOperand(1)) &&
-           V.getOperand(0).getOpcode() == BinOpToRVVReduce(Opc);
+           V.getOperand(0).getOpcode() == BinOpToYSXVecReduce(Opc);
   };
 
   unsigned Opc = N->getOpcode();
@@ -16625,7 +16625,7 @@ static SDValue performTRUNCATECombine(SDNode *N, SelectionDAG &DAG,
 }
 
 // InstCombinerImpl::transformZExtICmp will narrow a zext of an icmp with a
-// truncation. But RVV doesn't have truncation instructions for more than twice
+// truncation. But YSXVec doesn't have truncation instructions for more than twice
 // the bitwidth.
 //
 // E.g. trunc <vscale x 1 x i64> %x to <vscale x 1 x i8> will generate:
@@ -16897,7 +16897,7 @@ static SDValue combineOrOfCZERO(SDNode *N, SDValue N0, SDValue N1,
 // qc_insb might become qc.insb or qc.insbi depending on the operands.
 static SDValue combineXorToBitfieldInsert(SDNode *N, SelectionDAG &DAG,
                                           const YSXSubtarget &Subtarget) {
-  if (!Subtarget.hasVendorXqcibm())
+  if (!Subtarget.hasVendorXRemovedQcibm())
     return SDValue();
 
   using namespace SDPatternMatch;
@@ -16933,7 +16933,7 @@ static SDValue combineXorToBitfieldInsert(SDNode *N, SelectionDAG &DAG,
 
 static SDValue combineOrToBitfieldInsert(SDNode *N, SelectionDAG &DAG,
                                          const YSXSubtarget &Subtarget) {
-  if (!Subtarget.hasVendorXqcibm())
+  if (!Subtarget.hasVendorXRemovedQcibm())
     return SDValue();
 
   using namespace SDPatternMatch;
@@ -16951,7 +16951,7 @@ static SDValue combineOrToBitfieldInsert(SDNode *N, SelectionDAG &DAG,
     return SDValue();
 
   // If Zbs is enabled and it is a single bit set we can use BSETI which
-  // can be compressed to C_BSETI when Xqcibm in enabled.
+  // can be compressed to C_BSETI when XRemovedQcibm in enabled.
   if (Width == 1 && Subtarget.hasStdExtZbs())
     return SDValue();
 
@@ -16971,8 +16971,8 @@ static SDValue combineOrToBitfieldInsert(SDNode *N, SelectionDAG &DAG,
 // being inserted only sets known zero bits.
 static SDValue combineOrAndToBitfieldInsert(SDNode *N, SelectionDAG &DAG,
                                             const YSXSubtarget &Subtarget) {
-  // Supported only in Xqcibm for now.
-  if (!Subtarget.hasVendorXqcibm())
+  // Supported only in XRemovedQcibm for now.
+  if (!Subtarget.hasVendorXRemovedQcibm())
     return SDValue();
 
   using namespace SDPatternMatch;
@@ -17262,8 +17262,8 @@ static SDValue expandMul(SDNode *N, SelectionDAG &DAG,
     return SDValue();
   uint64_t MulAmt = CNode->getZExtValue();
 
-  // Don't do this if the Xqciac extension is enabled and the MulAmt in simm12.
-  if (Subtarget.hasVendorXqciac() && isInt<12>(CNode->getSExtValue()))
+  // Don't do this if the XRemovedQciac extension is enabled and the MulAmt in simm12.
+  if (Subtarget.hasVendorXRemovedQciac() && isInt<12>(CNode->getSExtValue()))
     return SDValue();
 
   // WARNING: The code below is knowingly incorrect with regards to undef
@@ -18774,7 +18774,7 @@ static SDValue tryMemPairCombine(SelectionDAG &DAG, LSBaseSDNode *LSNode1,
 }
 
 // Try to combine two adjacent loads/stores to a single pair instruction from
-// the XTHeadMemPair vendor extension.
+// the XRemovedTHeadMemPair vendor extension.
 static SDValue performMemPairCombine(SDNode *N,
                                      TargetLowering::DAGCombinerInfo &DCI) {
   SelectionDAG &DAG = DCI.DAG;
@@ -18782,7 +18782,7 @@ static SDValue performMemPairCombine(SDNode *N,
   const YSXSubtarget &Subtarget = MF.getSubtarget<YSXSubtarget>();
 
   // Target does not support load/store pair.
-  if (!Subtarget.hasVendorXTHeadMemPair())
+  if (!Subtarget.hasVendorXRemovedTHeadMemPair())
     return SDValue();
 
   LSBaseSDNode *LSNode1 = cast<LSBaseSDNode>(N);
@@ -18828,7 +18828,7 @@ static SDValue performMemPairCombine(SDNode *N,
       if (Base1 != Base2)
         continue;
 
-      // Check if the offsets match the XTHeadMemPair encoding constraints.
+      // Check if the offsets match the XRemovedTHeadMemPair encoding constraints.
       bool Valid = false;
       if (MemVT == MVT::i32) {
         // Check for adjacent i32 values and a 2-bit index.
@@ -19249,7 +19249,7 @@ static SDValue performVP_TRUNCATECombine(SDNode *N, SelectionDAG &DAG,
 
 // Convert from one FMA opcode to another based on whether we are negating the
 // multiply result and/or the accumulator.
-// NOTE: Only supports RVV operations with VL.
+// NOTE: Only supports YSXVec operations with VL.
 static unsigned negateFMAOpcode(unsigned Opcode, bool NegMul, bool NegAcc) {
   // Negating the multiply result changes ADD<->SUB and toggles 'N'.
   if (NegMul) {
@@ -19796,7 +19796,7 @@ static SDValue useInversedSetcc(SDNode *N, SelectionDAG &DAG,
   // Replace (setcc eq (and x, C)) with (setcc ne (and x, C))) to generate
   // BEXTI, where C is power of 2.
   if (Subtarget.hasBEXTILike() && VT.isScalarInteger() &&
-      (Subtarget.hasCZEROLike() || Subtarget.hasVendorXTHeadCondMov())) {
+      (Subtarget.hasCZEROLike() || Subtarget.hasVendorXRemovedTHeadCondMov())) {
     SDValue LHS = Cond.getOperand(0);
     SDValue RHS = Cond.getOperand(1);
     ISD::CondCode CC = cast<CondCodeSDNode>(Cond.getOperand(2))->get();
@@ -20564,7 +20564,7 @@ static bool matchIndexAsWiderOp(EVT VT, SDValue Index, SDValue Mask,
 // trunc (sra sext (X), zext (Y)) -> sra (X, smin (Y, scalarsize(Y) - 1))
 // This would be benefit for the cases where X and Y are both the same value
 // type of low precision vectors. Since the truncate would be lowered into
-// n-levels TRUNCATE_VECTOR_VL to satisfy RVV's SEW*2->SEW truncate
+// n-levels TRUNCATE_VECTOR_VL to satisfy YSXVec's SEW*2->SEW truncate
 // restriction, such pattern would be expanded into a series of "vsetvli"
 // and "vnsrl" instructions later to reach this point.
 static SDValue combineTruncOfSraSext(SDNode *N, SelectionDAG &DAG) {
@@ -21961,7 +21961,7 @@ SDValue YSXTargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::VP_STORE:
     return performVP_STORECombine(N, DAG, Subtarget);
   case ISD::BITCAST: {
-    assert(Subtarget.useRVVForFixedLengthVectors());
+    assert(Subtarget.useYSXVecForFixedLengthVectors());
     SDValue N0 = N->getOperand(0);
     EVT VT = N->getValueType(0);
     EVT SrcVT = N0.getValueType();
@@ -23843,13 +23843,13 @@ SDValue YSXTargetLowering::LowerFormalArguments(
       reportFatalUsageError(
           "Function interrupt attribute argument not supported!");
 
-    if (Kind.starts_with("qci-") && !Subtarget.hasVendorXqciint())
+    if (Kind.starts_with("qci-") && !Subtarget.hasVendorXRemovedQciint())
       reportFatalUsageError(
-          "'qci-*' interrupt kinds require Xqciint extension");
+          "'qci-*' interrupt kinds require XRemovedQciint extension");
 
-    if (Kind.starts_with("SiFive-CLIC-") && !Subtarget.hasVendorXSfmclic())
+    if (Kind.starts_with("SiFive-CLIC-") && !Subtarget.hasVendorXRemovedSfmclic())
       reportFatalUsageError(
-          "'SiFive-CLIC-*' interrupt kinds require XSfmclic extension");
+          "'SiFive-CLIC-*' interrupt kinds require XRemovedSfmclic extension");
 
     if (Kind == "rnmi" && !Subtarget.hasStdExtSmrnmi())
       reportFatalUsageError("'rnmi' interrupt kind requires Srnmi extension");
@@ -24517,8 +24517,8 @@ YSXTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
              "Need Smrnmi extension for rnmi");
       RetOpc = YSXISD::MNRET_GLUE;
     } else if (Kind == "qci-nest" || Kind == "qci-nonest") {
-      assert(Subtarget.hasFeature(YSX::FeatureVendorXqciint) &&
-             "Need Xqciint for qci-(no)nest");
+      assert(Subtarget.hasFeature(YSX::YSXDisabledVendorFeatureXRemovedQciint) &&
+             "Need XRemovedQciint for qci-(no)nest");
       RetOpc = YSXISD::QC_C_MILEAVERET_GLUE;
     } else
       RetOpc = YSXISD::MRET_GLUE;
@@ -24675,7 +24675,7 @@ YSXTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
       if (TRI->isTypeLegalForClass(*RC, VT.SimpleTy))
         return std::make_pair(0U, RC);
 
-      if (VT.isFixedLengthVector() && useRVVForFixedLengthVectorVT(VT)) {
+      if (VT.isFixedLengthVector() && useYSXVecForFixedLengthVectorVT(VT)) {
         MVT ContainerVT = getContainerForFixedLengthVector(VT);
         if (TRI->isTypeLegalForClass(*RC, ContainerVT))
           return std::make_pair(0U, RC);
@@ -24698,7 +24698,7 @@ YSXTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
       if (TRI->isTypeLegalForClass(*RC, VT.SimpleTy))
         return std::make_pair(0U, RC);
 
-      if (VT.isFixedLengthVector() && useRVVForFixedLengthVectorVT(VT)) {
+      if (VT.isFixedLengthVector() && useYSXVecForFixedLengthVectorVT(VT)) {
         MVT ContainerVT = getContainerForFixedLengthVector(VT);
         if (TRI->isTypeLegalForClass(*RC, ContainerVT))
           return std::make_pair(0U, RC);
@@ -24708,7 +24708,7 @@ YSXTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
     if (TRI->isTypeLegalForClass(YSX::VMV0RegClass, VT.SimpleTy))
       return std::make_pair(0U, &YSX::VMV0RegClass);
 
-    if (VT.isFixedLengthVector() && useRVVForFixedLengthVectorVT(VT)) {
+    if (VT.isFixedLengthVector() && useYSXVecForFixedLengthVectorVT(VT)) {
       MVT ContainerVT = getContainerForFixedLengthVector(VT);
       // VT here might be coerced to vector with i8 elements, so we need to
       // check if this is a M1 register here instead of checking VMV0RegClass.
@@ -25183,14 +25183,14 @@ const MCExpr *YSXTargetLowering::LowerCustomJumpTableEntry(
 }
 
 bool YSXTargetLowering::isVScaleKnownToBeAPowerOfTwo() const {
-  // We define vscale to be VLEN/RVVBitsPerBlock.  VLEN is always a power
-  // of two >= 64, and RVVBitsPerBlock is 64.  Thus, vscale must be
+  // We define vscale to be VLEN/YSXVecBitsPerBlock.  VLEN is always a power
+  // of two >= 64, and YSXVecBitsPerBlock is 64.  Thus, vscale must be
   // a power of two as well.
   // FIXME: This doesn't work for zve32, but that's already broken
   // elsewhere for the same reason.
   assert(Subtarget.getRealMinVLen() >= 64 && "zve32* unsupported");
-  static_assert(YSX::RVVBitsPerBlock == 64,
-                "RVVBitsPerBlock changed, audit needed");
+  static_assert(YSX::YSXVecBitsPerBlock == 64,
+                "YSXVecBitsPerBlock changed, audit needed");
   return true;
 }
 
@@ -25199,7 +25199,7 @@ bool YSXTargetLowering::getIndexedAddressParts(SDNode *Op, SDValue &Base,
                                                  ISD::MemIndexedMode &AM,
                                                  SelectionDAG &DAG) const {
   // Target does not support indexed loads.
-  if (!Subtarget.hasVendorXTHeadMemIdx())
+  if (!Subtarget.hasVendorXRemovedTHeadMemIdx())
     return false;
 
   if (Op->getOpcode() != ISD::ADD && Op->getOpcode() != ISD::SUB)
@@ -25388,8 +25388,8 @@ bool YSXTargetLowering::decomposeMulByConstant(LLVMContext &Context, EVT VT,
   auto *ConstNode = cast<ConstantSDNode>(C);
   const APInt &Imm = ConstNode->getAPIntValue();
 
-  // Don't do this if the Xqciac extension is enabled and the Imm in simm12.
-  if (Subtarget.hasVendorXqciac() && Imm.isSignedIntN(12))
+  // Don't do this if the XRemovedQciac extension is enabled and the Imm in simm12.
+  if (Subtarget.hasVendorXRemovedQciac() && Imm.isSignedIntN(12))
     return false;
 
   // Break the MUL to a SLLI and an ADD/SUB.
@@ -25491,9 +25491,9 @@ EVT YSXTargetLowering::getOptimalMemOpType(
     // which ends up using scalar sequences.
     return MVT::Other;
 
-  // If the minimum VLEN is less than YSX::RVVBitsPerBlock we don't support
+  // If the minimum VLEN is less than YSX::YSXVecBitsPerBlock we don't support
   // fixed vectors.
-  if (MinVLenInBytes <= YSX::RVVBytesPerBlock)
+  if (MinVLenInBytes <= YSX::YSXVecBytesPerBlock)
     return MVT::Other;
 
   // Prefer i8 for non-zero memset as it allows us to avoid materializing
@@ -25556,11 +25556,11 @@ bool YSXTargetLowering::splitValueIntoRegisterParts(
     unsigned ValNF = ValueVT.getRISCVVectorTupleNumFields();
     [[maybe_unused]] unsigned ValLMUL =
         divideCeil(ValueVT.getSizeInBits().getKnownMinValue(),
-                   ValNF * YSX::RVVBitsPerBlock);
+                   ValNF * YSX::YSXVecBitsPerBlock);
     unsigned PartNF = PartVT.getRISCVVectorTupleNumFields();
     [[maybe_unused]] unsigned PartLMUL =
         divideCeil(PartVT.getSizeInBits().getKnownMinValue(),
-                   PartNF * YSX::RVVBitsPerBlock);
+                   PartNF * YSX::YSXVecBitsPerBlock);
     assert(ValNF == PartNF && ValLMUL == PartLMUL &&
            "RISC-V vector tuple type only accepts same register class type "
            "TUPLE_INSERT");
@@ -25738,11 +25738,11 @@ bool YSXTargetLowering::isLegalStridedLoadStore(EVT DataType,
     return false;
 
   // Only support fixed vectors if we know the minimum vector size.
-  if (DataType.isFixedLengthVector() && !Subtarget.useRVVForFixedLengthVectors())
+  if (DataType.isFixedLengthVector() && !Subtarget.useYSXVecForFixedLengthVectors())
     return false;
 
   EVT ScalarType = DataType.getScalarType();
-  if (!isLegalElementTypeForRVV(ScalarType))
+  if (!isLegalElementTypeForYSXVec(ScalarType))
     return false;
 
   if (!Subtarget.enableUnalignedVectorMem() &&
@@ -25758,7 +25758,7 @@ bool YSXTargetLowering::isLegalFirstFaultLoad(EVT DataType,
     return false;
 
   EVT ScalarType = DataType.getScalarType();
-  if (!isLegalElementTypeForRVV(ScalarType))
+  if (!isLegalElementTypeForYSXVec(ScalarType))
     return false;
 
   if (!Subtarget.enableUnalignedVectorMem() &&
@@ -25859,7 +25859,7 @@ bool YSXTargetLowering::isCtpopFast(EVT VT) const {
   if (VT.isVector()) {
     EVT SVT = VT.getVectorElementType();
     // If the element type is legal we can use cpop.v if it is enabled.
-    if (isLegalElementTypeForRVV(SVT))
+    if (isLegalElementTypeForYSXVec(SVT))
       return Subtarget.hasStdExtZvbb();
     // Don't consider it fast if the type needs to be legalized or scalarized.
     return false;
@@ -25914,7 +25914,7 @@ bool YSXTargetLowering::fallBackToDAGISel(const Instruction &Inst) const {
     return false;
 
   if (auto *II = dyn_cast<IntrinsicInst>(&Inst)) {
-    // Mark RVV intrinsic as supported.
+    // Mark YSXVec intrinsic as supported.
     if (YSXVIntrinsicsTable::getYSXVIntrinsicInfo(II->getIntrinsicID())) {
       // GISel doesn't support tuple types yet. It also doesn't suport returning
       // a struct containing a scalable vector like vleff.
@@ -25971,7 +25971,7 @@ YSXTargetLowering::BuildSDIVPow2(SDNode *N, const APInt &Divisor,
 
 bool YSXTargetLowering::shouldFoldSelectWithSingleBitTest(
     EVT VT, const APInt &AndMask) const {
-  if (Subtarget.hasCZEROLike() || Subtarget.hasVendorXTHeadCondMov())
+  if (Subtarget.hasCZEROLike() || Subtarget.hasVendorXRemovedTHeadCondMov())
     return !Subtarget.hasBEXTILike() && AndMask.ugt(1024);
   return TargetLowering::shouldFoldSelectWithSingleBitTest(VT, AndMask);
 }

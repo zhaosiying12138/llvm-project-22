@@ -1558,7 +1558,7 @@ def PROBED_STACKALLOC : Pseudo<(outs),
                                (ins GPR:$target),
                                []>,
                                Sched<[]>;
-def PROBED_STACKALLOC_RVV : Pseudo<(outs),
+def PROBED_STACKALLOC_YSXVec : Pseudo<(outs),
                                    (ins GPR:$target),
                                    []>,
                                    Sched<[]>;

@@ -26,6 +26,7 @@
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCStreamer.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/ADT/STLExtras.h"
@@ -46,6 +47,20 @@
 #include "YSXGenSubtargetInfo.inc"
 
 using namespace llvm;
+
+static void validateYSXFeatureString(StringRef FS) {
+  SmallVector<StringRef, 8> Features;
+  FS.split(Features, ",", /*MaxSplit=*/-1, /*KeepEmpty=*/false);
+  for (StringRef Feature : Features) {
+    Feature = Feature.trim();
+    Feature.consume_front("+") || Feature.consume_front("-");
+    if (Feature == "64bit" || Feature == "i" || Feature == "m" ||
+        Feature == "a" || Feature == "zmmul" || Feature == "zaamo" ||
+        Feature == "zalrsc" || Feature == "relax")
+      continue;
+    reportFatalUsageError("YSX only supports the rv64ima ISA");
+  }
+}
 
 static const SubtargetFeatureKV &findYSXFeature(StringRef Name) {
   auto Features = ArrayRef(YSXFeatureKV);
@@ -156,6 +171,7 @@ static MCSubtargetInfo *createYSXMCSubtargetInfo(const Triple &TT,
 
   if (FS.empty())
     FS = "+m,+a";
+  validateYSXFeatureString(FS);
 
   MCSubtargetInfo *X =
       createYSXMCSubtargetInfoImpl(TT, CPU, /*TuneCPU*/ CPU, FS);

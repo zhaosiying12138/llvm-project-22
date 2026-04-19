@@ -29,7 +29,7 @@ public:
   void emitPrologue(MachineFunction &MF, MachineBasicBlock &MBB) const override;
   void emitEpilogue(MachineFunction &MF, MachineBasicBlock &MBB) const override;
 
-  uint64_t getStackSizeWithRVVPadding(const MachineFunction &MF) const;
+  uint64_t getStackSizeWithYSXVecPadding(const MachineFunction &MF) const;
 
   StackOffset getFrameIndexReference(const MachineFunction &MF, int FI,
                                      Register &FrameReg) const override;
@@ -93,10 +93,10 @@ protected:
 
 private:
   void determineFrameLayout(MachineFunction &MF) const;
-  void emitCalleeSavedRVVPrologCFI(MachineBasicBlock &MBB,
+  void emitCalleeSavedYSXVecPrologCFI(MachineBasicBlock &MBB,
                                    MachineBasicBlock::iterator MI,
                                    bool HasFP) const;
-  void emitCalleeSavedRVVEpilogCFI(MachineBasicBlock &MBB,
+  void emitCalleeSavedYSXVecEpilogCFI(MachineBasicBlock &MBB,
                                    MachineBasicBlock::iterator MI) const;
   template <typename Emitter>
   void emitCFIForCSI(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
@@ -106,11 +106,11 @@ private:
                        uint64_t &StackSize, int64_t CFAOffset) const;
 
   std::pair<int64_t, Align>
-  assignRVVStackObjectOffsets(MachineFunction &MF) const;
+  assignYSXVecStackObjectOffsets(MachineFunction &MF) const;
   // Replace a StackProbe stub (if any) with the actual probe code inline
   void inlineStackProbe(MachineFunction &MF,
                         MachineBasicBlock &PrologueMBB) const override;
-  void allocateAndProbeStackForRVV(MachineFunction &MF, MachineBasicBlock &MBB,
+  void allocateAndProbeStackForYSXVec(MachineFunction &MF, MachineBasicBlock &MBB,
                                    MachineBasicBlock::iterator MBBI,
                                    const DebugLoc &DL, int64_t Amount,
                                    MachineInstr::MIFlag Flag, bool EmitCFI,

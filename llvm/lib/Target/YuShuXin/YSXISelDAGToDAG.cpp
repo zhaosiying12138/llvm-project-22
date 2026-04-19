@@ -161,7 +161,7 @@ void YSXDAGToDAGISel::PostprocessISelDAG() {
     // FIXME: This is here only because the VMerge transform doesn't
     // know how to handle masked true inputs.  Once that has been moved
     // to post-ISEL, this can be deleted as well.
-    MadeChange |= doPeepholeMaskedRVV(cast<MachineSDNode>(N));
+    MadeChange |= doPeepholeMaskedYSXVec(cast<MachineSDNode>(N));
   }
 
   CurDAG->setRoot(Dummy.getValue());
@@ -359,8 +359,8 @@ void YSXDAGToDAGISel::selectVLXSEG(SDNode *Node, unsigned NF, bool IsMasked,
                              /*IsLoad=*/true, &IndexVT);
 
 #ifndef NDEBUG
-  // Number of element = RVVBitsPerBlock * LMUL / SEW
-  unsigned ContainedTyNumElts = YSX::RVVBitsPerBlock >> Log2SEW;
+  // Number of element = YSXVecBitsPerBlock * LMUL / SEW
+  unsigned ContainedTyNumElts = YSX::YSXVecBitsPerBlock >> Log2SEW;
   auto DecodedLMUL = YSXVType::decodeVLMUL(LMUL);
   if (DecodedLMUL.second)
     ContainedTyNumElts /= DecodedLMUL.first;
@@ -432,8 +432,8 @@ void YSXDAGToDAGISel::selectVSXSEG(SDNode *Node, unsigned NF, bool IsMasked,
                              /*IsLoad=*/false, &IndexVT);
 
 #ifndef NDEBUG
-  // Number of element = RVVBitsPerBlock * LMUL / SEW
-  unsigned ContainedTyNumElts = YSX::RVVBitsPerBlock >> Log2SEW;
+  // Number of element = YSXVecBitsPerBlock * LMUL / SEW
+  unsigned ContainedTyNumElts = YSX::YSXVecBitsPerBlock >> Log2SEW;
   auto DecodedLMUL = YSXVType::decodeVLMUL(LMUL);
   if (DecodedLMUL.second)
     ContainedTyNumElts /= DecodedLMUL.first;
@@ -461,6 +461,8 @@ void YSXDAGToDAGISel::selectVSXSEG(SDNode *Node, unsigned NF, bool IsMasked,
 }
 
 void YSXDAGToDAGISel::selectVSETVLI(SDNode *Node) {
+  return;
+#if 0
   if (!Subtarget->hasVInstructions())
     return;
 
@@ -516,10 +518,13 @@ void YSXDAGToDAGISel::selectVSETVLI(SDNode *Node) {
 
   ReplaceNode(Node,
               CurDAG->getMachineNode(Opcode, DL, XLenVT, VLOperand, VTypeIOp));
+#endif
 }
 
-void YSXDAGToDAGISel::selectXSfmmVSET(SDNode *Node) {
-  if (!Subtarget->hasVendorXSfmmbase())
+void YSXDAGToDAGISel::selectXRemovedSfmmVSET(SDNode *Node) {
+  return;
+#if 0
+  if (!Subtarget->hasVendorXRemovedSfmmbase())
     return;
 
   assert(Node->getOpcode() == ISD::INTRINSIC_WO_CHAIN && "Unexpected opcode");
@@ -532,7 +537,7 @@ void YSXDAGToDAGISel::selectXSfmmVSET(SDNode *Node) {
   assert((IntNo == Intrinsic::riscv_sf_vsettnt ||
           IntNo == Intrinsic::riscv_sf_vsettm ||
           IntNo == Intrinsic::riscv_sf_vsettk) &&
-         "Unexpected XSfmm vset intrinsic");
+         "Unexpected XRemovedSfmm vset intrinsic");
 
   unsigned SEW = YSXVType::decodeVSEW(Node->getConstantOperandVal(2));
   unsigned Widen = YSXVType::decodeTWiden(Node->getConstantOperandVal(3));
@@ -542,7 +547,7 @@ void YSXDAGToDAGISel::selectXSfmmVSET(SDNode *Node) {
                                             : YSX::PseudoSF_VSETTK;
 
   if (IntNo == Intrinsic::riscv_sf_vsettnt) {
-    unsigned VTypeI = YSXVType::encodeXSfmmVType(SEW, Widen, 0);
+    unsigned VTypeI = YSXVType::encodeXRemovedSfmmVType(SEW, Widen, 0);
     SDValue VTypeIOp = CurDAG->getTargetConstant(VTypeI, DL, XLenVT);
 
     ReplaceNode(Node, CurDAG->getMachineNode(PseudoOpCode, DL, XLenVT,
@@ -554,6 +559,7 @@ void YSXDAGToDAGISel::selectXSfmmVSET(SDNode *Node) {
                 CurDAG->getMachineNode(PseudoOpCode, DL, XLenVT,
                                        Node->getOperand(1), Log2SEW, TWiden));
   }
+#endif
 }
 
 bool YSXDAGToDAGISel::tryShrinkShlLogicImm(SDNode *Node) {
@@ -635,16 +641,18 @@ bool YSXDAGToDAGISel::tryShrinkShlLogicImm(SDNode *Node) {
 }
 
 bool YSXDAGToDAGISel::trySignedBitfieldExtract(SDNode *Node) {
+  return false;
+#if 0
   unsigned Opc;
 
-  if (Subtarget->hasVendorXTHeadBb())
+  if (Subtarget->hasVendorXRemovedTHeadBb())
     Opc = YSX::TH_EXT;
   else if (Subtarget->hasVendorXAndesPerf())
     Opc = YSX::NDS_BFOS;
-  else if (Subtarget->hasVendorXqcibm())
+  else if (Subtarget->hasVendorXRemovedQcibm())
     Opc = YSX::QC_EXT;
   else
-    // Only supported with XTHeadBb/XAndesPerf/Xqcibm at the moment.
+    // Only supported with XRemovedTHeadBb/XAndesPerf/XRemovedQcibm at the moment.
     return false;
 
   auto *N1C = dyn_cast<ConstantSDNode>(Node->getOperand(1));
@@ -715,9 +723,12 @@ bool YSXDAGToDAGISel::trySignedBitfieldExtract(SDNode *Node) {
   }
 
   return false;
+#endif
 }
 
 bool YSXDAGToDAGISel::trySignedBitfieldInsertInSign(SDNode *Node) {
+  return false;
+#if 0
   // Only supported with XAndesPerf at the moment.
   if (!Subtarget->hasVendorXAndesPerf())
     return false;
@@ -768,26 +779,29 @@ bool YSXDAGToDAGISel::trySignedBitfieldInsertInSign(SDNode *Node) {
   }
 
   return false;
+#endif
 }
 
 bool YSXDAGToDAGISel::tryUnsignedBitfieldExtract(SDNode *Node,
                                                    const SDLoc &DL, MVT VT,
                                                    SDValue X, unsigned Msb,
                                                    unsigned Lsb) {
+  return false;
+#if 0
   unsigned Opc;
 
-  if (Subtarget->hasVendorXTHeadBb()) {
+  if (Subtarget->hasVendorXRemovedTHeadBb()) {
     Opc = YSX::TH_EXTU;
   } else if (Subtarget->hasVendorXAndesPerf()) {
     Opc = YSX::NDS_BFOZ;
-  } else if (Subtarget->hasVendorXqcibm()) {
+  } else if (Subtarget->hasVendorXRemovedQcibm()) {
     Opc = YSX::QC_EXTU;
     // QC.EXTU X, width, shamt
     // shamt is the same as Lsb
     // width is the number of bits to extract from the Lsb
     Msb = Msb - Lsb + 1;
   } else {
-    // Only supported with XTHeadBb/XAndesPerf/Xqcibm at the moment.
+    // Only supported with XRemovedTHeadBb/XAndesPerf/XRemovedQcibm at the moment.
     return false;
   }
 
@@ -796,12 +810,15 @@ bool YSXDAGToDAGISel::tryUnsignedBitfieldExtract(SDNode *Node,
                                        CurDAG->getTargetConstant(Lsb, DL, VT));
   ReplaceNode(Node, Ube);
   return true;
+#endif
 }
 
 bool YSXDAGToDAGISel::tryUnsignedBitfieldInsertInZero(SDNode *Node,
                                                         const SDLoc &DL, MVT VT,
                                                         SDValue X, unsigned Msb,
                                                         unsigned Lsb) {
+  return false;
+#if 0
   // Only supported with XAndesPerf at the moment.
   if (!Subtarget->hasVendorXAndesPerf())
     return false;
@@ -816,13 +833,14 @@ bool YSXDAGToDAGISel::tryUnsignedBitfieldInsertInZero(SDNode *Node,
                                        CurDAG->getTargetConstant(Msb, DL, VT));
   ReplaceNode(Node, Ubi);
   return true;
+#endif
 }
 
 bool YSXDAGToDAGISel::tryIndexedLoad(SDNode *Node) {
   return false;
 #if 0
   // Target does not support indexed loads.
-  if (!Subtarget->hasVendorXTHeadMemIdx())
+  if (!Subtarget->hasVendorXRemovedTHeadMemIdx())
     return false;
 
   LoadSDNode *Ld = cast<LoadSDNode>(Node);
@@ -979,8 +997,6 @@ void YSXDAGToDAGISel::Select(SDNode *Node) {
   SDLoc DL(Node);
   MVT VT = Node->getSimpleValueType(0);
 
-  bool HasBitTest = Subtarget->hasBEXTILike();
-
   switch (Opcode) {
   case ISD::Constant: {
     assert(VT == Subtarget->getXLenVT() && "Unexpected VT");
@@ -1019,6 +1035,7 @@ void YSXDAGToDAGISel::Select(SDNode *Node) {
     ReplaceNode(Node, selectImm(CurDAG, DL, VT, Imm, *Subtarget).getNode());
     return;
   }
+  #if 0
   case ISD::ConstantFP: {
     const APFloat &APF = cast<ConstantFPSDNode>(Node)->getValueAPF();
 
@@ -1090,6 +1107,7 @@ void YSXDAGToDAGISel::Select(SDNode *Node) {
     ReplaceNode(Node, Res);
     return;
   }
+  #endif
   case YSXISD::BuildGPRPair:
   case YSXISD::BuildPairF64: {
     if (Opcode == YSXISD::BuildPairF64 && !Subtarget->hasStdExtZdinx())
@@ -1132,28 +1150,7 @@ void YSXDAGToDAGISel::Select(SDNode *Node) {
       return;
     }
 
-    assert(Opcode != YSXISD::SplitGPRPair &&
-           "SplitGPRPair should already be handled");
-
-    if (!Subtarget->hasStdExtZfa())
-      break;
-    assert(Subtarget->hasStdExtD() && !Subtarget->is64Bit() &&
-           "Unexpected subtarget");
-
-    // With Zfa, lower to fmv.x.w and fmvh.x.d.
-    if (!SDValue(Node, 0).use_empty()) {
-      SDNode *Lo = CurDAG->getMachineNode(YSX::FMV_X_W_FPR64, DL, VT,
-                                          Node->getOperand(0));
-      ReplaceUses(SDValue(Node, 0), SDValue(Lo, 0));
-    }
-    if (!SDValue(Node, 1).use_empty()) {
-      SDNode *Hi = CurDAG->getMachineNode(YSX::FMVH_X_D, DL, VT,
-                                          Node->getOperand(0));
-      ReplaceUses(SDValue(Node, 1), SDValue(Hi, 0));
-    }
-
-    CurDAG->RemoveDeadNode(Node);
-    return;
+    llvm_unreachable("YSX does not support SplitF64 selection");
   }
   case ISD::SHL: {
     auto *N1C = dyn_cast<ConstantSDNode>(Node->getOperand(1));
@@ -1257,15 +1254,6 @@ void YSXDAGToDAGISel::Select(SDNode *Node) {
     // Only do the remaining transforms if the AND has one use.
     if (!N0.hasOneUse())
       break;
-
-    // If C2 is (1 << ShAmt) use bexti or th.tst if possible.
-    if (HasBitTest && ShAmt + 1 == TrailingOnes) {
-      SDNode *BEXTI = CurDAG->getMachineNode(
-          Subtarget->hasStdExtZbs() ? YSX::BEXTI : YSX::TH_TST, DL, VT,
-          N0.getOperand(0), CurDAG->getTargetConstant(ShAmt, DL, VT));
-      ReplaceNode(Node, BEXTI);
-      return;
-    }
 
     const unsigned Msb = TrailingOnes - 1;
     const unsigned Lsb = ShAmt;
@@ -1416,8 +1404,6 @@ void YSXDAGToDAGISel::Select(SDNode *Node) {
           bool Skip = Subtarget->hasStdExtZba() && Leading == 32 &&
                       X.getOpcode() == ISD::SIGN_EXTEND_INREG &&
                       cast<VTSDNode>(X.getOperand(1))->getVT() == MVT::i32;
-          // Also Skip if we can use bexti or th.tst.
-          Skip |= HasBitTest && Leading == XLen - 1;
           if (OneUseOrZExtW && !Skip) {
             SDNode *SLLI = CurDAG->getMachineNode(
                 YSX::SLLI, DL, VT, X,
@@ -1439,6 +1425,7 @@ void YSXDAGToDAGISel::Select(SDNode *Node) {
         if (C2 + Leading < XLen &&
             C1 == (maskTrailingOnes<uint64_t>(XLen - (C2 + Leading)) << C2)) {
           // Use slli.uw when possible.
+#if 0
           if ((XLen - (C2 + Leading)) == 32 && Subtarget->hasStdExtZba()) {
             SDNode *SLLI_UW =
                 CurDAG->getMachineNode(YSX::SLLI_UW, DL, VT, X,
@@ -1446,6 +1433,7 @@ void YSXDAGToDAGISel::Select(SDNode *Node) {
             ReplaceNode(Node, SLLI_UW);
             return;
           }
+#endif
 
           // Try to use an unsigned bitfield insert (e.g., nds.bfoz) if
           // available.
@@ -1462,6 +1450,7 @@ void YSXDAGToDAGISel::Select(SDNode *Node) {
 
           if (OneUseOrZExtW && !IsCANDI) {
             // (packh x0, X)
+#if 0
             if (Subtarget->hasStdExtZbkb() && C1 == 0xff00 && C2 == 8) {
               SDNode *PACKH = CurDAG->getMachineNode(
                   YSX::PACKH, DL, VT,
@@ -1469,6 +1458,7 @@ void YSXDAGToDAGISel::Select(SDNode *Node) {
               ReplaceNode(Node, PACKH);
               return;
             }
+#endif
             // (srli (slli c2+c3), c3)
             SDNode *SLLI = CurDAG->getMachineNode(
                 YSX::SLLI, DL, VT, X,
@@ -1519,6 +1509,7 @@ void YSXDAGToDAGISel::Select(SDNode *Node) {
           return;
         }
         // If we have 32 bits in the mask, we can use SLLI_UW instead of SLLI.
+#if 0
         if (Trailing > 0 && Leading + Trailing == 32 && C2 + Trailing < XLen &&
             OneUseOrZExtW && Subtarget->hasStdExtZba()) {
           SDNode *SRLI = CurDAG->getMachineNode(
@@ -1530,6 +1521,7 @@ void YSXDAGToDAGISel::Select(SDNode *Node) {
           ReplaceNode(Node, SLLI_UW);
           return;
         }
+#endif
       }
 
       // Turn (and (shl x, c2), c1) -> (slli (srli x, c3-c2), c3) if c1 is a
@@ -1560,6 +1552,7 @@ void YSXDAGToDAGISel::Select(SDNode *Node) {
         }
 
         // If we have 32 bits in the mask, we can use SLLI_UW instead of SLLI.
+#if 0
         if (C2 < Trailing && Leading + Trailing == 32 && OneUseOrZExtW &&
             Subtarget->hasStdExtZba()) {
           SDNode *SRLI = CurDAG->getMachineNode(
@@ -1571,6 +1564,7 @@ void YSXDAGToDAGISel::Select(SDNode *Node) {
           ReplaceNode(Node, SLLI_UW);
           return;
         }
+#endif
       }
     }
 
@@ -1676,15 +1670,15 @@ void YSXDAGToDAGISel::Select(SDNode *Node) {
     bool IsANDIOrZExt =
         isInt<12>(C2) ||
         (C2 == UINT64_C(0xFFFF) && Subtarget->hasStdExtZbb());
-    // With XTHeadBb, we can use TH.EXTU.
-    IsANDIOrZExt |= C2 == UINT64_C(0xFFFF) && Subtarget->hasVendorXTHeadBb();
+    // With XRemovedTHeadBb, we can use TH.EXTU.
+    IsANDIOrZExt |= C2 == UINT64_C(0xFFFF) && Subtarget->hasVendorXRemovedTHeadBb();
     if (IsANDIOrZExt && (isInt<12>(N1C->getSExtValue()) || !N0.hasOneUse()))
       break;
     // If this can be a ZEXT.w, don't do this if the ZEXT has multiple users or
     // the constant is a simm32.
     bool IsZExtW = C2 == UINT64_C(0xFFFFFFFF) && Subtarget->hasStdExtZba();
-    // With XTHeadBb, we can use TH.EXTU.
-    IsZExtW |= C2 == UINT64_C(0xFFFFFFFF) && Subtarget->hasVendorXTHeadBb();
+    // With XRemovedTHeadBb, we can use TH.EXTU.
+    IsZExtW |= C2 == UINT64_C(0xFFFFFFFF) && Subtarget->hasVendorXRemovedTHeadBb();
     if (IsZExtW && (isInt<32>(N1C->getSExtValue()) || !N0.hasOneUse()))
       break;
 
@@ -1784,8 +1778,9 @@ void YSXDAGToDAGISel::Select(SDNode *Node) {
     }
     break;
   }
-  case YSXISD::LD_RV32: {
-    assert(Subtarget->hasStdExtZilsd() && "LD_RV32 is only used with Zilsd");
+  #if 0
+  case YSXISD::YSXRemovedLDRv32: {
+    assert(Subtarget->hasStdExtZilsd() && "YSXRemovedLDRv32 is only used with Zilsd");
 
     SDValue Base, Offset;
     SDValue Chain = Node->getOperand(0);
@@ -1794,7 +1789,7 @@ void YSXDAGToDAGISel::Select(SDNode *Node) {
 
     SDValue Ops[] = {Base, Offset, Chain};
     MachineSDNode *New = CurDAG->getMachineNode(
-        YSX::LD_RV32, DL, {MVT::Untyped, MVT::Other}, Ops);
+        YSX::YSXRemovedLDRv32, DL, {MVT::Untyped, MVT::Other}, Ops);
     SDValue Lo = CurDAG->getTargetExtractSubreg(YSX::sub_gpr_even, DL,
                                                 MVT::i32, SDValue(New, 0));
     SDValue Hi = CurDAG->getTargetExtractSubreg(YSX::sub_gpr_odd, DL,
@@ -1806,36 +1801,9 @@ void YSXDAGToDAGISel::Select(SDNode *Node) {
     CurDAG->RemoveDeadNode(Node);
     return;
   }
+  #endif
   case YSXISD::SD_RV32: {
-    SDValue Base, Offset;
-    SDValue Chain = Node->getOperand(0);
-    SDValue Addr = Node->getOperand(3);
-    SelectAddrRegImm(Addr, Base, Offset);
-
-    SDValue Lo = Node->getOperand(1);
-    SDValue Hi = Node->getOperand(2);
-
-    SDValue RegPair;
-    // Peephole to use X0_Pair for storing zero.
-    if (isNullConstant(Lo) && isNullConstant(Hi)) {
-      RegPair = CurDAG->getRegister(YSX::X0_Pair, MVT::Untyped);
-    } else {
-      SDValue Ops[] = {
-          CurDAG->getTargetConstant(YSX::GPRPairRegClassID, DL, MVT::i32), Lo,
-          CurDAG->getTargetConstant(YSX::sub_gpr_even, DL, MVT::i32), Hi,
-          CurDAG->getTargetConstant(YSX::sub_gpr_odd, DL, MVT::i32)};
-
-      RegPair = SDValue(CurDAG->getMachineNode(TargetOpcode::REG_SEQUENCE, DL,
-                                               MVT::Untyped, Ops),
-                        0);
-    }
-
-    MachineSDNode *New = CurDAG->getMachineNode(YSX::SD_RV32, DL, MVT::Other,
-                                                {RegPair, Base, Offset, Chain});
-    CurDAG->setNodeMemRefs(New, {cast<MemSDNode>(Node)->getMemOperand()});
-    ReplaceUses(SDValue(Node, 0), SDValue(New, 0));
-    CurDAG->RemoveDeadNode(Node);
-    return;
+    llvm_unreachable("YSX does not support RV32 pair stores");
   }
   case YSXISD::PPACK_DH: {
     llvm_unreachable("YSX does not support packed-SIMD selection");
@@ -2114,7 +2082,7 @@ void YSXDAGToDAGISel::Select(SDNode *Node) {
     case Intrinsic::riscv_sf_vsettnt:
     case Intrinsic::riscv_sf_vsettm:
     case Intrinsic::riscv_sf_vsettk:
-      return selectXSfmmVSET(Node);
+      return selectXRemovedSfmmVSET(Node);
 #endif
     }
     break;
@@ -2735,7 +2703,7 @@ void YSXDAGToDAGISel::Select(SDNode *Node) {
     // Establish the correct scalable-vector types for any fixed-length type.
     if (SubVecVT.isFixedLengthVector()) {
       SubVecContainerVT = TLI.getContainerForFixedLengthVector(SubVecVT);
-      TypeSize VecRegSize = TypeSize::getScalable(YSX::RVVBitsPerBlock);
+      TypeSize VecRegSize = TypeSize::getScalable(YSX::YSXVecBitsPerBlock);
       [[maybe_unused]] bool ExactlyVecRegSized =
           Subtarget->expandVScale(SubVecVT.getSizeInBits())
               .isKnownMultipleOf(Subtarget->expandVScale(VecRegSize));
@@ -3033,8 +3001,6 @@ static bool selectConstantAddr(SelectionDAG *CurDAG, const SDLoc &DL,
 static bool isWorthFoldingAdd(SDValue Add) {
   for (auto *User : Add->users()) {
     if (User->getOpcode() != ISD::LOAD && User->getOpcode() != ISD::STORE &&
-        User->getOpcode() != YSXISD::LD_RV32 &&
-        User->getOpcode() != YSXISD::SD_RV32 &&
         User->getOpcode() != ISD::ATOMIC_LOAD &&
         User->getOpcode() != ISD::ATOMIC_STORE)
       return false;
@@ -3049,9 +3015,6 @@ static bool isWorthFoldingAdd(SDValue Add) {
     if (User->getOpcode() == ISD::ATOMIC_STORE &&
         cast<AtomicSDNode>(User)->getVal() == Add)
       return false;
-    if (User->getOpcode() == YSXISD::SD_RV32 &&
-        (User->getOperand(0) == Add || User->getOperand(1) == Add))
-      return false;
     if (isStrongerThanMonotonic(cast<MemSDNode>(User)->getSuccessOrdering()))
       return false;
   }
@@ -3064,17 +3027,11 @@ static bool isRegImmLoadOrStore(SDNode *User, SDValue Add) {
   default:
     return false;
   case ISD::LOAD:
-  case YSXISD::LD_RV32:
   case ISD::ATOMIC_LOAD:
     break;
   case ISD::STORE:
     // Don't allow stores of Add. It must only be used as the address.
     if (cast<StoreSDNode>(User)->getValue() == Add)
-      return false;
-    break;
-  case YSXISD::SD_RV32:
-    // Don't allow stores of Add. It must only be used as the address.
-    if (User->getOperand(0) == Add || User->getOperand(1) == Add)
       return false;
     break;
   case ISD::ATOMIC_STORE:
@@ -3322,9 +3279,9 @@ static bool isRegRegScaleLoadOrStore(SDNode *User, SDValue Add,
     return false;
   EVT VT = cast<MemSDNode>(User)->getMemoryVT();
   if (!(VT.isScalarInteger() &&
-        (Subtarget.hasVendorXTHeadMemIdx() || Subtarget.hasVendorXqcisls())) &&
+        (Subtarget.hasVendorXRemovedTHeadMemIdx() || Subtarget.hasVendorXRemovedQcisls())) &&
       !((VT == MVT::f32 || VT == MVT::f64) &&
-        Subtarget.hasVendorXTHeadFMemIdx()))
+        Subtarget.hasVendorXRemovedTHeadFMemIdx()))
     return false;
   // Don't allow stores of the value. It must be used as the address.
   if (User->getOpcode() == ISD::STORE &&
@@ -3618,6 +3575,7 @@ bool YSXDAGToDAGISel::selectSETCC(SDValue N, ISD::CondCode ExpectedCCVal,
                     0);
       return true;
     }
+#if 0
     if (isPowerOf2_64(CVal) && Subtarget->hasStdExtZbs()) {
       Val = SDValue(
           CurDAG->getMachineNode(
@@ -3626,10 +3584,12 @@ bool YSXDAGToDAGISel::selectSETCC(SDValue N, ISD::CondCode ExpectedCCVal,
           0);
       return true;
     }
+#endif
     // Same as the addi case above but for larger immediates (signed 26-bit) use
-    // the QC_E_ADDI instruction from the Xqcilia extension, if available. Avoid
+    // the QC_E_ADDI instruction from the XRemovedQcilia extension, if available. Avoid
     // anything which can be done with a single lui as it might be compressible.
-    if (Subtarget->hasVendorXqcilia() && isInt<26>(CVal) &&
+#if 0
+    if (Subtarget->hasVendorXRemovedQcilia() && isInt<26>(CVal) &&
         (CVal & 0xFFF) != 0) {
       Val = SDValue(
           CurDAG->getMachineNode(
@@ -3638,6 +3598,7 @@ bool YSXDAGToDAGISel::selectSETCC(SDValue N, ISD::CondCode ExpectedCCVal,
           0);
       return true;
     }
+#endif
   }
 
   // If nothing else we can XOR the LHS and RHS to produce zero if they are
@@ -3973,34 +3934,6 @@ bool YSXDAGToDAGISel::selectInvLogicImm(SDValue N, SDValue &Val) {
   return selectImm64IfCheaper(~Imm, Imm, N, Val);
 }
 
-static bool vectorPseudoHasAllNBitUsers(SDNode *User, unsigned UserOpNo,
-                                        unsigned Bits,
-                                        const TargetInstrInfo *TII) {
-  unsigned MCOpcode = YSX::getRVVMCOpcode(User->getMachineOpcode());
-
-  if (!MCOpcode)
-    return false;
-
-  const MCInstrDesc &MCID = TII->get(User->getMachineOpcode());
-  const uint64_t TSFlags = MCID.TSFlags;
-  if (!YSXII::hasSEWOp(TSFlags))
-    return false;
-  assert(YSXII::hasVLOp(TSFlags));
-
-  unsigned ChainOpIdx = User->getNumOperands() - 1;
-  bool HasChainOp = User->getOperand(ChainOpIdx).getValueType() == MVT::Other;
-  bool HasVecPolicyOp = YSXII::hasVecPolicyOp(TSFlags);
-  unsigned VLIdx = User->getNumOperands() - HasVecPolicyOp - HasChainOp - 2;
-  const unsigned Log2SEW = User->getConstantOperandVal(VLIdx + 1);
-
-  if (UserOpNo == VLIdx)
-    return false;
-
-  auto NumDemandedBits =
-      YSX::getVectorLowDemandedScalarBits(MCOpcode, Log2SEW);
-  return NumDemandedBits && Bits >= *NumDemandedBits;
-}
-
 // Return true if all users of this SDNode* only consume the lower \p Bits.
 // This can be used to form W instructions for add/sub/mul/shl even when the
 // root isn't a sext_inreg. This can allow the ADDW/SUBW/MULW/SLLIW to CSE if
@@ -4037,8 +3970,6 @@ bool YSXDAGToDAGISel::hasAllNBitUsers(SDNode *Node, unsigned Bits,
     // TODO: Add more opcodes?
     switch (User->getMachineOpcode()) {
     default:
-      if (vectorPseudoHasAllNBitUsers(User, Use.getOperandNo(), Bits, TII))
-        break;
       return false;
     case YSX::ADDW:
     case YSX::ADDIW:
@@ -4054,41 +3985,12 @@ bool YSXDAGToDAGISel::hasAllNBitUsers(SDNode *Node, unsigned Bits,
     case YSX::DIVUW:
     case YSX::REMW:
     case YSX::REMUW:
-    case YSX::ROLW:
-    case YSX::RORW:
-    case YSX::RORIW:
-    case YSX::CLSW:
-    case YSX::CLZW:
-    case YSX::CTZW:
-    case YSX::CPOPW:
-    case YSX::SLLI_UW:
-    case YSX::ABSW:
-    case YSX::FMV_W_X:
-    case YSX::FCVT_H_W:
-    case YSX::FCVT_H_W_INX:
-    case YSX::FCVT_H_WU:
-    case YSX::FCVT_H_WU_INX:
-    case YSX::FCVT_S_W:
-    case YSX::FCVT_S_W_INX:
-    case YSX::FCVT_S_WU:
-    case YSX::FCVT_S_WU_INX:
-    case YSX::FCVT_D_W:
-    case YSX::FCVT_D_W_INX:
-    case YSX::FCVT_D_WU:
-    case YSX::FCVT_D_WU_INX:
-    case YSX::TH_REVW:
-    case YSX::TH_SRRIW:
       if (Bits >= 32)
         break;
       return false;
     case YSX::SLL:
     case YSX::SRA:
     case YSX::SRL:
-    case YSX::ROL:
-    case YSX::ROR:
-    case YSX::BSET:
-    case YSX::BCLR:
-    case YSX::BINV:
       // Shift amount operands only use log2(Xlen) bits.
       if (Use.getOperandNo() == 1 && Bits >= Log2_32(Subtarget->getXLen()))
         break;
@@ -4112,12 +4014,6 @@ bool YSXDAGToDAGISel::hasAllNBitUsers(SDNode *Node, unsigned Bits,
     case YSX::OR:
     case YSX::XOR:
     case YSX::XORI:
-    case YSX::ANDN:
-    case YSX::ORN:
-    case YSX::XNOR:
-    case YSX::SH1ADD:
-    case YSX::SH2ADD:
-    case YSX::SH3ADD:
     RecCheck:
       if (hasAllNBitUsers(User, Bits, Depth + 1))
         break;
@@ -4131,32 +4027,6 @@ bool YSXDAGToDAGISel::hasAllNBitUsers(SDNode *Node, unsigned Bits,
         break;
       return false;
     }
-    case YSX::SEXT_B:
-    case YSX::PACKH:
-      if (Bits >= 8)
-        break;
-      return false;
-    case YSX::SEXT_H:
-    case YSX::FMV_H_X:
-    case YSX::ZEXT_H_RV32:
-    case YSX::ZEXT_H_RV64:
-    case YSX::PACKW:
-      if (Bits >= 16)
-        break;
-      return false;
-    case YSX::PACK:
-      if (Bits >= (Subtarget->getXLen() / 2))
-        break;
-      return false;
-    case YSX::ADD_UW:
-    case YSX::SH1ADD_UW:
-    case YSX::SH2ADD_UW:
-    case YSX::SH3ADD_UW:
-      // The first operand to add.uw/shXadd.uw is implicitly zero extended from
-      // 32 bits.
-      if (Use.getOperandNo() == 0 && Bits >= 32)
-        break;
-      return false;
     case YSX::SB:
       if (Use.getOperandNo() == 0 && Bits >= 8)
         break;
@@ -4169,15 +4039,6 @@ bool YSXDAGToDAGISel::hasAllNBitUsers(SDNode *Node, unsigned Bits,
       if (Use.getOperandNo() == 0 && Bits >= 32)
         break;
       return false;
-    case YSX::TH_EXT:
-    case YSX::TH_EXTU: {
-      unsigned Msb = User->getConstantOperandVal(1);
-      unsigned Lsb = User->getConstantOperandVal(2);
-      // Behavior of Msb < Lsb is not well documented.
-      if (Msb >= Lsb && Bits > Msb)
-        break;
-      return false;
-    }
     }
   }
 
@@ -4390,7 +4251,7 @@ bool YSXDAGToDAGISel::selectScalarFPAsInt(SDValue N, SDValue &Imm) {
   return true;
 }
 
-bool YSXDAGToDAGISel::selectRVVSimm5(SDValue N, unsigned Width,
+bool YSXDAGToDAGISel::selectYSXVecSimm5(SDValue N, unsigned Width,
                                        SDValue &Imm) {
   if (auto *C = dyn_cast<ConstantSDNode>(N)) {
     int64_t ImmVal = SignExtend64(C->getSExtValue(), Width);
@@ -4458,11 +4319,6 @@ bool YSXDAGToDAGISel::doPeepholeSExtW(SDNode *N) {
   case YSX::SUBW:
   case YSX::MULW:
   case YSX::SLLIW:
-  case YSX::PACKW:
-  case YSX::TH_MULAW:
-  case YSX::TH_MULAH:
-  case YSX::TH_MULSW:
-  case YSX::TH_MULSH:
     if (N0.getValueType() == MVT::i32)
       break;
 
@@ -4504,9 +4360,9 @@ static bool isImplicitDef(SDValue V) {
   return V.getMachineOpcode() == TargetOpcode::IMPLICIT_DEF;
 }
 
-// Optimize masked RVV pseudo instructions with a known all-ones mask to their
+// Optimize masked YSXVec pseudo instructions with a known all-ones mask to their
 // corresponding "unmasked" pseudo versions.
-bool YSXDAGToDAGISel::doPeepholeMaskedRVV(MachineSDNode *N) {
+bool YSXDAGToDAGISel::doPeepholeMaskedYSXVec(MachineSDNode *N) {
   const YSX::YSXMaskedPseudoInfo *I =
       YSX::getMaskedPseudoInfo(N->getMachineOpcode());
   if (!I)

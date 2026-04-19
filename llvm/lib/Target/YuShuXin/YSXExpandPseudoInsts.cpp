@@ -342,7 +342,7 @@ bool YSXExpandPseudo::expandCCOpToCMov(MachineBasicBlock &MBB,
       MI.getOpcode() != YSX::PseudoCCMOVGPRNoX0)
     return false;
 
-  if (!STI->hasVendorXqcicm())
+  if (!STI->hasVendorXRemovedQcicm())
     return false;
 
   // FIXME: Would be wonderful to support LHS=X0, but not very easy.

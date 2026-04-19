@@ -278,7 +278,7 @@ static bool CC_YSXAssign2XLen(unsigned XLen, CCState &State, CCValAssign VA1,
   return false;
 }
 
-static MCRegister allocateRVVReg(MVT ValVT, unsigned ValNo, CCState &State,
+static MCRegister allocateYSXVecReg(MVT ValVT, unsigned ValNo, CCState &State,
                                  const YSXTargetLowering &TLI) {
   const TargetRegisterClass *RC = TLI.getRegClassFor(ValVT);
   if (RC == &YSX::VRRegClass) {
@@ -546,7 +546,7 @@ bool llvm::CC_YSX(unsigned ValNo, MVT ValVT, MVT LocVT,
   Align StackAlign = Align(XLen / 8);
 
   if (ValVT.isVector() || ValVT.isRISCVVectorTuple()) {
-    Reg = allocateRVVReg(ValVT, ValNo, State, TLI);
+    Reg = allocateYSXVecReg(ValVT, ValNo, State, TLI);
     if (Reg) {
       // Fixed-length vectors are located in the corresponding scalable-vector
       // container types.
@@ -699,7 +699,7 @@ bool llvm::CC_YSX_FastCC(unsigned ValNo, MVT ValVT, MVT LocVT,
   ArrayRef<MCPhysReg> ArgGPRs = getFastCCArgGPRs(ABI);
 
   if (LocVT.isVector()) {
-    if (MCRegister Reg = allocateRVVReg(ValVT, ValNo, State, TLI)) {
+    if (MCRegister Reg = allocateYSXVecReg(ValVT, ValNo, State, TLI)) {
       // Fixed-length vectors are located in the corresponding scalable-vector
       // container types.
       if (LocVT.isFixedLengthVector()) {

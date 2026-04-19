@@ -38,9 +38,6 @@
 
 using namespace llvm;
 
-#define GEN_CHECK_COMPRESS_INSTR
-#include "YSXGenCompressInstEmitter.inc"
-
 #define GET_INSTRINFO_CTOR_DTOR
 #define GET_INSTRINFO_NAMED_OPS
 #include "YSXGenInstrInfo.inc"
@@ -50,6 +47,11 @@ STATISTIC(NumVRegSpilled,
           "Number of registers within vector register groups spilled");
 STATISTIC(NumVRegReloaded,
           "Number of registers within vector register groups reloaded");
+
+static bool isCompressibleInst(const MachineInstr &MI,
+                               const YSXSubtarget &STI) {
+  return false;
+}
 
 static cl::opt<bool> PreferWholeRegisterMove(
     "ysx-prefer-whole-register-move", cl::init(false), cl::Hidden,
@@ -121,7 +123,6 @@ Register YSXInstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
     MemBytes = TypeSize::getFixed(4);
     break;
   case YSX::LD:
-  case YSX::LD_RV32:
     MemBytes = TypeSize::getFixed(8);
     break;
   }
@@ -157,7 +158,6 @@ Register YSXInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
     MemBytes = TypeSize::getFixed(4);
     break;
   case YSX::SD:
-  case YSX::SD_RV32:
     MemBytes = TypeSize::getFixed(8);
     break;
   }
@@ -290,7 +290,7 @@ static bool isConvertibleToVMV_V_V(const YSXSubtarget &STI,
           // After widening, The valid value will be 1 x e16 elements. If we
           // convert the COPY to vmv.v.v, it will only copy 1 x e8 elements.
           uint64_t TSFlags = MBBI->getDesc().TSFlags;
-          if (YSXII::isRVVWideningReduction(TSFlags))
+          if (YSXII::isYSXVecWideningReduction(TSFlags))
             return false;
 
           // If the producing instruction does not depend on vsetvli, do not
@@ -406,8 +406,8 @@ void YSXInstrInfo::copyPhysRegVector(
         RegClass, ReversedCopy ? (DstEncoding - NumCopied + 1) : DstEncoding);
 
     auto MIB = BuildMI(MBB, MBBI, DL, get(Opc), ActualDstReg);
-    bool UseVMV_V_I = YSX::getRVVMCOpcode(Opc) == YSX::VMV_V_I;
-    bool UseVMV = UseVMV_V_I || YSX::getRVVMCOpcode(Opc) == YSX::VMV_V_V;
+    bool UseVMV_V_I = YSX::getYSXVecMCOpcode(Opc) == YSX::VMV_V_I;
+    bool UseVMV = UseVMV_V_I || YSX::getYSXVecMCOpcode(Opc) == YSX::VMV_V_V;
     if (UseVMV)
       MIB.addReg(ActualDstReg, RegState::Undef);
     if (UseVMV_V_I)
@@ -576,7 +576,7 @@ void YSXInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
   // VR->VR copies.
   const TargetRegisterClass *RegClass =
       TRI->getCommonMinimalPhysRegClass(SrcReg, DstReg);
-  if (YSXRegisterInfo::isRVVRegClass(RegClass)) {
+  if (YSXRegisterInfo::isYSXVecRegClass(RegClass)) {
     copyPhysRegVector(MBB, MBBI, DL, DstReg, SrcReg, KillSrc, RegClass);
     return;
   }
@@ -850,8 +850,8 @@ static void parseCondBranch(MachineInstr &LastInst, MachineBasicBlock *&Target,
 }
 
 #if 0
-static unsigned getInverseXqcicmOpcode(unsigned Opcode) {
-  llvm_unreachable("YSX does not support Xqci conditional moves");
+static unsigned getInverseXRemovedQcicmOpcode(unsigned Opcode) {
+  llvm_unreachable("YSX does not support XRemovedQci conditional moves");
 #if 0
   switch (Opcode) {
   default:
@@ -1580,11 +1580,6 @@ static MachineInstr *canFoldAsPredicatedOp(Register Reg,
   if (!MI)
     return nullptr;
 
-  if (!STI.hasShortForwardBranchIMinMax() &&
-      (MI->getOpcode() == YSX::MAX || MI->getOpcode() == YSX::MIN ||
-       MI->getOpcode() == YSX::MINU || MI->getOpcode() == YSX::MAXU))
-    return nullptr;
-
   if (!STI.hasShortForwardBranchIMul() && MI->getOpcode() == YSX::MUL)
     return nullptr;
 
@@ -1972,7 +1967,7 @@ bool YSXInstrInfo::isVectorAssociativeAndCommutative(const MachineInstr &Inst,
   return false;
 }
 
-bool YSXInstrInfo::areRVVInstsReassociable(const MachineInstr &Root,
+bool YSXInstrInfo::areYSXVecInstsReassociable(const MachineInstr &Root,
                                              const MachineInstr &Prev) const {
   if (!areOpcodesEqualOrInverse(Root.getOpcode(), Prev.getOpcode()))
     return false;
@@ -2087,7 +2082,7 @@ bool YSXInstrInfo::areRVVInstsReassociable(const MachineInstr &Root,
   return true;
 }
 
-// Most of our RVV pseudos have passthru operand, so the real operands
+// Most of our YSXVec pseudos have passthru operand, so the real operands
 // start from index = 2.
 bool YSXInstrInfo::hasReassociableVectorSibling(const MachineInstr &Inst,
                                                   bool &Commuted) const {
@@ -2100,12 +2095,12 @@ bool YSXInstrInfo::hasReassociableVectorSibling(const MachineInstr &Inst,
 
   // If only one operand has the same or inverse opcode and it's the second
   // source operand, the operands must be commuted.
-  Commuted = !areRVVInstsReassociable(Inst, *MI1) &&
-             areRVVInstsReassociable(Inst, *MI2);
+  Commuted = !areYSXVecInstsReassociable(Inst, *MI1) &&
+             areYSXVecInstsReassociable(Inst, *MI2);
   if (Commuted)
     std::swap(MI1, MI2);
 
-  return areRVVInstsReassociable(Inst, *MI1) &&
+  return areYSXVecInstsReassociable(Inst, *MI1) &&
          (isVectorAssociativeAndCommutative(*MI1) ||
           isVectorAssociativeAndCommutative(*MI1, /* Invert */ true)) &&
          hasReassociableOperands(*MI1, MBB) &&
@@ -2139,7 +2134,7 @@ void YSXInstrInfo::getReassociateOperandIndices(
     const MachineInstr &Root, unsigned Pattern,
     std::array<unsigned, 5> &OperandIndices) const {
   TargetInstrInfo::getReassociateOperandIndices(Root, Pattern, OperandIndices);
-  if (YSX::getRVVMCOpcode(Root.getOpcode())) {
+  if (YSX::getYSXVecMCOpcode(Root.getOpcode())) {
     // Skip the passthrough operand, so increment all indices by one.
     for (unsigned I = 0; I < 5; ++I)
       ++OperandIndices[I];
@@ -2194,10 +2189,6 @@ bool YSXInstrInfo::isAssociativeAndCommutative(const MachineInstr &Inst,
   // opportunity.
   case YSX::MUL:
   case YSX::MULW:
-  case YSX::MIN:
-  case YSX::MINU:
-  case YSX::MAX:
-  case YSX::MAXU:
     return true;
   }
 
@@ -2207,7 +2198,7 @@ bool YSXInstrInfo::isAssociativeAndCommutative(const MachineInstr &Inst,
 std::optional<unsigned>
 YSXInstrInfo::getInverseOpcode(unsigned Opcode) const {
 #if 0
-#define RVV_OPC_LMUL_CASE(OPC, INV)                                            \
+#define YSXVec_OPC_LMUL_CASE(OPC, INV)                                            \
   case YSX::OPC##_M1:                                                        \
     return YSX::INV##_M1;                                                    \
   case YSX::OPC##_M2:                                                        \
@@ -2223,7 +2214,7 @@ YSXInstrInfo::getInverseOpcode(unsigned Opcode) const {
   case YSX::OPC##_MF8:                                                       \
     return YSX::INV##_MF8
 
-#define RVV_OPC_LMUL_MASK_CASE(OPC, INV)                                       \
+#define YSXVec_OPC_LMUL_MASK_CASE(OPC, INV)                                       \
   case YSX::OPC##_M1_MASK:                                                   \
     return YSX::INV##_M1_MASK;                                               \
   case YSX::OPC##_M2_MASK:                                                   \
@@ -2263,15 +2254,15 @@ YSXInstrInfo::getInverseOpcode(unsigned Opcode) const {
   case YSX::SUBW:
     return YSX::ADDW;
     // clang-format off
-  RVV_OPC_LMUL_CASE(PseudoVADD_VV, PseudoVSUB_VV);
-  RVV_OPC_LMUL_MASK_CASE(PseudoVADD_VV, PseudoVSUB_VV);
-  RVV_OPC_LMUL_CASE(PseudoVSUB_VV, PseudoVADD_VV);
-  RVV_OPC_LMUL_MASK_CASE(PseudoVSUB_VV, PseudoVADD_VV);
+  YSXVec_OPC_LMUL_CASE(PseudoVADD_VV, PseudoVSUB_VV);
+  YSXVec_OPC_LMUL_MASK_CASE(PseudoVADD_VV, PseudoVSUB_VV);
+  YSXVec_OPC_LMUL_CASE(PseudoVSUB_VV, PseudoVADD_VV);
+  YSXVec_OPC_LMUL_MASK_CASE(PseudoVSUB_VV, PseudoVADD_VV);
     // clang-format on
   }
 
-#undef RVV_OPC_LMUL_MASK_CASE
-#undef RVV_OPC_LMUL_CASE
+#undef YSXVec_OPC_LMUL_MASK_CASE
+#undef YSXVec_OPC_LMUL_CASE
 #endif
 
   switch (Opcode) {
@@ -2349,77 +2340,12 @@ static bool getFPPatterns(MachineInstr &Root,
   return getFPFusedMultiplyPatterns(Root, Patterns, DoRegPressureReduce);
 }
 
-/// Utility routine that checks if \param MO is defined by an
-/// \param CombineOpc instruction in the basic block \param MBB
-static const MachineInstr *canCombine(const MachineBasicBlock &MBB,
-                                      const MachineOperand &MO,
-                                      unsigned CombineOpc) {
-  const MachineRegisterInfo &MRI = MBB.getParent()->getRegInfo();
-  const MachineInstr *MI = nullptr;
-
-  if (MO.isReg() && MO.getReg().isVirtual())
-    MI = MRI.getUniqueVRegDef(MO.getReg());
-  // And it needs to be in the trace (otherwise, it won't have a depth).
-  if (!MI || MI->getParent() != &MBB || MI->getOpcode() != CombineOpc)
-    return nullptr;
-  // Must only used by the user we combine with.
-  if (!MRI.hasOneNonDBGUse(MI->getOperand(0).getReg()))
-    return nullptr;
-
-  return MI;
-}
-
-/// Utility routine that checks if \param MO is defined by a SLLI in \param
-/// MBB that can be combined by splitting across 2 SHXADD instructions. The
-/// first SHXADD shift amount is given by \param OuterShiftAmt.
-static bool canCombineShiftIntoShXAdd(const MachineBasicBlock &MBB,
-                                      const MachineOperand &MO,
-                                      unsigned OuterShiftAmt) {
-  const MachineInstr *ShiftMI = canCombine(MBB, MO, YSX::SLLI);
-  if (!ShiftMI)
-    return false;
-
-  unsigned InnerShiftAmt = ShiftMI->getOperand(2).getImm();
-  if (InnerShiftAmt < OuterShiftAmt || (InnerShiftAmt - OuterShiftAmt) > 3)
-    return false;
-
-  return true;
-}
-
-// Returns the shift amount from a SHXADD instruction. Returns 0 if the
-// instruction is not a SHXADD.
-static unsigned getSHXADDShiftAmount(unsigned Opc) {
-  switch (Opc) {
-  default:
-    return 0;
-  case YSX::SH1ADD:
-    return 1;
-  case YSX::SH2ADD:
-    return 2;
-  case YSX::SH3ADD:
-    return 3;
-  }
-}
-
-// Returns the shift amount from a SHXADD.UW instruction. Returns 0 if the
-// instruction is not a SHXADD.UW.
-static unsigned getSHXADDUWShiftAmount(unsigned Opc) {
-  switch (Opc) {
-  default:
-    return 0;
-  case YSX::SH1ADD_UW:
-    return 1;
-  case YSX::SH2ADD_UW:
-    return 2;
-  case YSX::SH3ADD_UW:
-    return 3;
-  }
-}
-
 // Look for opportunities to combine (sh3add Z, (add X, (slli Y, 5))) into
 // (sh3add (sh2add Y, Z), X).
 static bool getSHXADDPatterns(const MachineInstr &Root,
                               SmallVectorImpl<unsigned> &Patterns) {
+  return false;
+#if 0
   unsigned ShiftAmt = getSHXADDShiftAmount(Root.getOpcode());
   if (!ShiftAmt)
     return false;
@@ -2441,6 +2367,7 @@ static bool getSHXADDPatterns(const MachineInstr &Root,
   }
 
   return Found;
+#endif
 }
 
 CombinerObjective YSXInstrInfo::getCombinerObjective(unsigned Pattern) const {
@@ -2559,6 +2486,8 @@ genShXAddAddShift(MachineInstr &Root, unsigned AddOpIdx,
                   SmallVectorImpl<MachineInstr *> &InsInstrs,
                   SmallVectorImpl<MachineInstr *> &DelInstrs,
                   DenseMap<Register, unsigned> &InstrIdxForVirtReg) {
+  llvm_unreachable("YSX does not support Zba SHxADD combines");
+#if 0
   MachineFunction *MF = Root.getMF();
   MachineRegisterInfo &MRI = MF->getRegInfo();
   const TargetInstrInfo *TII = MF->getSubtarget().getInstrInfo();
@@ -2611,6 +2540,7 @@ genShXAddAddShift(MachineInstr &Root, unsigned AddOpIdx,
   DelInstrs.push_back(ShiftMI);
   DelInstrs.push_back(AddMI);
   DelInstrs.push_back(&Root);
+#endif
 }
 
 void YSXInstrInfo::genAlternativeCodeSequence(
@@ -2850,7 +2780,7 @@ bool YSXInstrInfo::verifyInstruction(const MachineInstr &MI,
             Ok = YSXFPRndMode::isValidRoundingMode(Imm);
           break;
         case YSXOp::OPERAND_XSFMM_VTYPE:
-          Ok = YSXVType::isValidXSfmmVType(Imm);
+          Ok = false;
           break;
         case YSXOp::OPERAND_XSFMM_TWIDEN:
           Ok = Imm == 1 || Imm == 2 || Imm == 4;
@@ -3557,8 +3487,7 @@ std::string YSXInstrInfo::createMIROperandComment(
     break;
   }
   case YSXOp::OPERAND_XSFMM_VTYPE: {
-    unsigned Imm = Op.getImm();
-    YSXVType::printXSfmmVType(Imm, OS);
+    OS << Op.getImm();
     break;
   }
   case YSXOp::OPERAND_XSFMM_TWIDEN: {
@@ -3587,47 +3516,47 @@ std::string YSXInstrInfo::createMIROperandComment(
 }
 
 // clang-format off
-#define CASE_RVV_OPCODE_UNMASK_LMUL(OP, LMUL)                                 \
+#define CASE_YSXVec_OPCODE_UNMASK_LMUL(OP, LMUL)                                 \
   YSX::Pseudo##OP##_##LMUL
 
-#define CASE_RVV_OPCODE_MASK_LMUL(OP, LMUL)                                   \
+#define CASE_YSXVec_OPCODE_MASK_LMUL(OP, LMUL)                                   \
   YSX::Pseudo##OP##_##LMUL##_MASK
 
-#define CASE_RVV_OPCODE_LMUL(OP, LMUL)                                        \
-  CASE_RVV_OPCODE_UNMASK_LMUL(OP, LMUL):                                      \
-  case CASE_RVV_OPCODE_MASK_LMUL(OP, LMUL)
+#define CASE_YSXVec_OPCODE_LMUL(OP, LMUL)                                        \
+  CASE_YSXVec_OPCODE_UNMASK_LMUL(OP, LMUL):                                      \
+  case CASE_YSXVec_OPCODE_MASK_LMUL(OP, LMUL)
 
-#define CASE_RVV_OPCODE_UNMASK_WIDEN(OP)                                      \
-  CASE_RVV_OPCODE_UNMASK_LMUL(OP, MF8):                                       \
-  case CASE_RVV_OPCODE_UNMASK_LMUL(OP, MF4):                                  \
-  case CASE_RVV_OPCODE_UNMASK_LMUL(OP, MF2):                                  \
-  case CASE_RVV_OPCODE_UNMASK_LMUL(OP, M1):                                   \
-  case CASE_RVV_OPCODE_UNMASK_LMUL(OP, M2):                                   \
-  case CASE_RVV_OPCODE_UNMASK_LMUL(OP, M4)
+#define CASE_YSXVec_OPCODE_UNMASK_WIDEN(OP)                                      \
+  CASE_YSXVec_OPCODE_UNMASK_LMUL(OP, MF8):                                       \
+  case CASE_YSXVec_OPCODE_UNMASK_LMUL(OP, MF4):                                  \
+  case CASE_YSXVec_OPCODE_UNMASK_LMUL(OP, MF2):                                  \
+  case CASE_YSXVec_OPCODE_UNMASK_LMUL(OP, M1):                                   \
+  case CASE_YSXVec_OPCODE_UNMASK_LMUL(OP, M2):                                   \
+  case CASE_YSXVec_OPCODE_UNMASK_LMUL(OP, M4)
 
-#define CASE_RVV_OPCODE_UNMASK(OP)                                            \
-  CASE_RVV_OPCODE_UNMASK_WIDEN(OP):                                           \
-  case CASE_RVV_OPCODE_UNMASK_LMUL(OP, M8)
+#define CASE_YSXVec_OPCODE_UNMASK(OP)                                            \
+  CASE_YSXVec_OPCODE_UNMASK_WIDEN(OP):                                           \
+  case CASE_YSXVec_OPCODE_UNMASK_LMUL(OP, M8)
 
-#define CASE_RVV_OPCODE_MASK_WIDEN(OP)                                        \
-  CASE_RVV_OPCODE_MASK_LMUL(OP, MF8):                                         \
-  case CASE_RVV_OPCODE_MASK_LMUL(OP, MF4):                                    \
-  case CASE_RVV_OPCODE_MASK_LMUL(OP, MF2):                                    \
-  case CASE_RVV_OPCODE_MASK_LMUL(OP, M1):                                     \
-  case CASE_RVV_OPCODE_MASK_LMUL(OP, M2):                                     \
-  case CASE_RVV_OPCODE_MASK_LMUL(OP, M4)
+#define CASE_YSXVec_OPCODE_MASK_WIDEN(OP)                                        \
+  CASE_YSXVec_OPCODE_MASK_LMUL(OP, MF8):                                         \
+  case CASE_YSXVec_OPCODE_MASK_LMUL(OP, MF4):                                    \
+  case CASE_YSXVec_OPCODE_MASK_LMUL(OP, MF2):                                    \
+  case CASE_YSXVec_OPCODE_MASK_LMUL(OP, M1):                                     \
+  case CASE_YSXVec_OPCODE_MASK_LMUL(OP, M2):                                     \
+  case CASE_YSXVec_OPCODE_MASK_LMUL(OP, M4)
 
-#define CASE_RVV_OPCODE_MASK(OP)                                              \
-  CASE_RVV_OPCODE_MASK_WIDEN(OP):                                             \
-  case CASE_RVV_OPCODE_MASK_LMUL(OP, M8)
+#define CASE_YSXVec_OPCODE_MASK(OP)                                              \
+  CASE_YSXVec_OPCODE_MASK_WIDEN(OP):                                             \
+  case CASE_YSXVec_OPCODE_MASK_LMUL(OP, M8)
 
-#define CASE_RVV_OPCODE_WIDEN(OP)                                             \
-  CASE_RVV_OPCODE_UNMASK_WIDEN(OP):                                           \
-  case CASE_RVV_OPCODE_MASK_WIDEN(OP)
+#define CASE_YSXVec_OPCODE_WIDEN(OP)                                             \
+  CASE_YSXVec_OPCODE_UNMASK_WIDEN(OP):                                           \
+  case CASE_YSXVec_OPCODE_MASK_WIDEN(OP)
 
-#define CASE_RVV_OPCODE(OP)                                                   \
-  CASE_RVV_OPCODE_UNMASK(OP):                                                 \
-  case CASE_RVV_OPCODE_MASK(OP)
+#define CASE_YSXVec_OPCODE(OP)                                                   \
+  CASE_YSXVec_OPCODE_UNMASK(OP):                                                 \
+  case CASE_YSXVec_OPCODE_MASK(OP)
 // clang-format on
 
 // clang-format off
@@ -3722,31 +3651,31 @@ bool YSXInstrInfo::findCommutedOpIndices(const MachineInstr &MI,
   case YSX::PseudoCCMOVGPR:
     // Operands 4 and 5 are commutable.
     return fixCommutedOpIndices(SrcOpIdx1, SrcOpIdx2, 4, 5);
-  case CASE_RVV_OPCODE(VADD_VV):
-  case CASE_RVV_OPCODE(VAND_VV):
-  case CASE_RVV_OPCODE(VOR_VV):
-  case CASE_RVV_OPCODE(VXOR_VV):
-  case CASE_RVV_OPCODE_MASK(VMSEQ_VV):
-  case CASE_RVV_OPCODE_MASK(VMSNE_VV):
-  case CASE_RVV_OPCODE(VMIN_VV):
-  case CASE_RVV_OPCODE(VMINU_VV):
-  case CASE_RVV_OPCODE(VMAX_VV):
-  case CASE_RVV_OPCODE(VMAXU_VV):
-  case CASE_RVV_OPCODE(VMUL_VV):
-  case CASE_RVV_OPCODE(VMULH_VV):
-  case CASE_RVV_OPCODE(VMULHU_VV):
-  case CASE_RVV_OPCODE_WIDEN(VWADD_VV):
-  case CASE_RVV_OPCODE_WIDEN(VWADDU_VV):
-  case CASE_RVV_OPCODE_WIDEN(VWMUL_VV):
-  case CASE_RVV_OPCODE_WIDEN(VWMULU_VV):
-  case CASE_RVV_OPCODE_WIDEN(VWMACC_VV):
-  case CASE_RVV_OPCODE_WIDEN(VWMACCU_VV):
-  case CASE_RVV_OPCODE_UNMASK(VADC_VVM):
-  case CASE_RVV_OPCODE(VSADD_VV):
-  case CASE_RVV_OPCODE(VSADDU_VV):
-  case CASE_RVV_OPCODE(VAADD_VV):
-  case CASE_RVV_OPCODE(VAADDU_VV):
-  case CASE_RVV_OPCODE(VSMUL_VV):
+  case CASE_YSXVec_OPCODE(VADD_VV):
+  case CASE_YSXVec_OPCODE(VAND_VV):
+  case CASE_YSXVec_OPCODE(VOR_VV):
+  case CASE_YSXVec_OPCODE(VXOR_VV):
+  case CASE_YSXVec_OPCODE_MASK(VMSEQ_VV):
+  case CASE_YSXVec_OPCODE_MASK(VMSNE_VV):
+  case CASE_YSXVec_OPCODE(VMIN_VV):
+  case CASE_YSXVec_OPCODE(VMINU_VV):
+  case CASE_YSXVec_OPCODE(VMAX_VV):
+  case CASE_YSXVec_OPCODE(VMAXU_VV):
+  case CASE_YSXVec_OPCODE(VMUL_VV):
+  case CASE_YSXVec_OPCODE(VMULH_VV):
+  case CASE_YSXVec_OPCODE(VMULHU_VV):
+  case CASE_YSXVec_OPCODE_WIDEN(VWADD_VV):
+  case CASE_YSXVec_OPCODE_WIDEN(VWADDU_VV):
+  case CASE_YSXVec_OPCODE_WIDEN(VWMUL_VV):
+  case CASE_YSXVec_OPCODE_WIDEN(VWMULU_VV):
+  case CASE_YSXVec_OPCODE_WIDEN(VWMACC_VV):
+  case CASE_YSXVec_OPCODE_WIDEN(VWMACCU_VV):
+  case CASE_YSXVec_OPCODE_UNMASK(VADC_VVM):
+  case CASE_YSXVec_OPCODE(VSADD_VV):
+  case CASE_YSXVec_OPCODE(VSADDU_VV):
+  case CASE_YSXVec_OPCODE(VAADD_VV):
+  case CASE_YSXVec_OPCODE(VAADDU_VV):
+  case CASE_YSXVec_OPCODE(VSMUL_VV):
     // Operands 2 and 3 are commutable.
     return fixCommutedOpIndices(SrcOpIdx1, SrcOpIdx2, 2, 3);
   case CASE_VFMA_SPLATS(FMADD):
@@ -3946,7 +3875,7 @@ MachineInstr *YSXInstrInfo::commuteInstructionImpl(MachineInstr &MI,
   case YSX::QC_MVLTUI:
   case YSX::QC_MVGEUI: {
     auto &WorkingMI = cloneIfNew(MI);
-    WorkingMI.setDesc(get(getInverseXqcicmOpcode(MI.getOpcode())));
+    WorkingMI.setDesc(get(getInverseXRemovedQcicmOpcode(MI.getOpcode())));
     return TargetInstrInfo::commuteInstructionImpl(WorkingMI, false, OpIdx1,
                                                    OpIdx2);
   }
@@ -4056,15 +3985,15 @@ MachineInstr *YSXInstrInfo::commuteInstructionImpl(MachineInstr &MI,
 #undef CASE_VFMA_CHANGE_OPCODE_VV
 #undef CASE_VFMA_CHANGE_OPCODE_SPLATS
 
-#undef CASE_RVV_OPCODE_UNMASK_LMUL
-#undef CASE_RVV_OPCODE_MASK_LMUL
-#undef CASE_RVV_OPCODE_LMUL
-#undef CASE_RVV_OPCODE_UNMASK_WIDEN
-#undef CASE_RVV_OPCODE_UNMASK
-#undef CASE_RVV_OPCODE_MASK_WIDEN
-#undef CASE_RVV_OPCODE_MASK
-#undef CASE_RVV_OPCODE_WIDEN
-#undef CASE_RVV_OPCODE
+#undef CASE_YSXVec_OPCODE_UNMASK_LMUL
+#undef CASE_YSXVec_OPCODE_MASK_LMUL
+#undef CASE_YSXVec_OPCODE_LMUL
+#undef CASE_YSXVec_OPCODE_UNMASK_WIDEN
+#undef CASE_YSXVec_OPCODE_UNMASK
+#undef CASE_YSXVec_OPCODE_MASK_WIDEN
+#undef CASE_YSXVec_OPCODE_MASK
+#undef CASE_YSXVec_OPCODE_WIDEN
+#undef CASE_YSXVec_OPCODE
 
 #undef CASE_VMA_OPCODE_COMMON
 #undef CASE_VMA_OPCODE_LMULS
@@ -4137,34 +4066,6 @@ bool YSXInstrInfo::simplifyInstruction(MachineInstr &MI) const {
       return true;
     }
     break;
-  case YSX::SH1ADD:
-  case YSX::SH1ADD_UW:
-  case YSX::SH2ADD:
-  case YSX::SH2ADD_UW:
-  case YSX::SH3ADD:
-  case YSX::SH3ADD_UW:
-    // shNadd[.uw] rd, zero, rs => addi rd, rs, 0
-    if (MI.getOperand(1).getReg() == YSX::X0) {
-      MI.removeOperand(1);
-      MI.addOperand(MachineOperand::CreateImm(0));
-      MI.setDesc(get(YSX::ADDI));
-      return true;
-    }
-    // shNadd[.uw] rd, rs, zero => slli[.uw] rd, rs, N
-    if (MI.getOperand(2).getReg() == YSX::X0) {
-      MI.removeOperand(2);
-      unsigned Opc = MI.getOpcode();
-      if (Opc == YSX::SH1ADD_UW || Opc == YSX::SH2ADD_UW ||
-          Opc == YSX::SH3ADD_UW) {
-        MI.addOperand(MachineOperand::CreateImm(getSHXADDUWShiftAmount(Opc)));
-        MI.setDesc(get(YSX::SLLI_UW));
-        return true;
-      }
-      MI.addOperand(MachineOperand::CreateImm(getSHXADDShiftAmount(Opc)));
-      MI.setDesc(get(YSX::SLLI));
-      return true;
-    }
-    break;
   case YSX::AND:
   case YSX::MUL:
   case YSX::MULH:
@@ -4223,7 +4124,6 @@ bool YSXInstrInfo::simplifyInstruction(MachineInstr &MI) const {
   case YSX::SLLIW:
   case YSX::SRLIW:
   case YSX::SRAIW:
-  case YSX::SLLI_UW:
     // shiftimm rd, zero, N => addi rd, zero, 0
     if (MI.getOperand(1).getReg() == YSX::X0) {
       MI.getOperand(2).setImm(0);
@@ -4232,21 +4132,12 @@ bool YSXInstrInfo::simplifyInstruction(MachineInstr &MI) const {
     }
     break;
   case YSX::SLTU:
-  case YSX::ADD_UW:
     // sltu rd, zero, zero => addi rd, zero, 0
-    // add.uw rd, zero, zero => addi rd, zero, 0
     if (MI.getOperand(1).getReg() == YSX::X0 &&
         MI.getOperand(2).getReg() == YSX::X0) {
       MI.getOperand(2).ChangeToImmediate(0);
       MI.setDesc(get(YSX::ADDI));
       return true;
-    }
-    // add.uw rd, zero, rs => addi rd, rs, 0
-    if (MI.getOpcode() == YSX::ADD_UW &&
-        MI.getOperand(1).getReg() == YSX::X0) {
-      MI.removeOperand(1);
-      MI.addOperand(MachineOperand::CreateImm(0));
-      MI.setDesc(get(YSX::ADDI));
     }
     break;
   case YSX::SLTIU:
@@ -4254,29 +4145,6 @@ bool YSXInstrInfo::simplifyInstruction(MachineInstr &MI) const {
     // sltiu rd, zero, 0 => addi rd, zero, 0
     if (MI.getOperand(1).getReg() == YSX::X0) {
       MI.getOperand(2).setImm(MI.getOperand(2).getImm() != 0);
-      MI.setDesc(get(YSX::ADDI));
-      return true;
-    }
-    break;
-  case YSX::SEXT_H:
-  case YSX::SEXT_B:
-  case YSX::ZEXT_H_RV32:
-  case YSX::ZEXT_H_RV64:
-    // sext.[hb] rd, zero => addi rd, zero, 0
-    // zext.h rd, zero => addi rd, zero, 0
-    if (MI.getOperand(1).getReg() == YSX::X0) {
-      MI.addOperand(MachineOperand::CreateImm(0));
-      MI.setDesc(get(YSX::ADDI));
-      return true;
-    }
-    break;
-  case YSX::MIN:
-  case YSX::MINU:
-  case YSX::MAX:
-  case YSX::MAXU:
-    // min|max rd, rs, rs => addi rd, rs, 0
-    if (MI.getOperand(1).getReg() == MI.getOperand(2).getReg()) {
-      MI.getOperand(2).ChangeToImmediate(0);
       MI.setDesc(get(YSX::ADDI));
       return true;
     }
@@ -4513,33 +4381,6 @@ void YSXInstrInfo::mulImm(MachineFunction &MF, MachineBasicBlock &MBB,
         .addReg(DestReg, RegState::Kill)
         .addImm(ShiftAmount)
         .setMIFlag(Flag);
-  } else if (int ShXAmount, ShiftAmount;
-             STI.hasShlAdd(3) &&
-             (ShXAmount = isShifted359(Amount, ShiftAmount)) != 0) {
-    // We can use Zba SHXADD+SLLI instructions for multiply in some cases.
-    unsigned Opc;
-    switch (ShXAmount) {
-    case 1:
-      Opc = YSX::SH1ADD;
-      break;
-    case 2:
-      Opc = YSX::SH2ADD;
-      break;
-    case 3:
-      Opc = YSX::SH3ADD;
-      break;
-    default:
-      llvm_unreachable("unexpected result of isShifted359");
-    }
-    if (ShiftAmount)
-      BuildMI(MBB, II, DL, get(YSX::SLLI), DestReg)
-          .addReg(DestReg, RegState::Kill)
-          .addImm(ShiftAmount)
-          .setMIFlag(Flag);
-    BuildMI(MBB, II, DL, get(Opc), DestReg)
-        .addReg(DestReg, RegState::Kill)
-        .addReg(DestReg)
-        .setMIFlag(Flag);
   } else if (llvm::has_single_bit<uint32_t>(Amount - 1)) {
     Register ScaledRegister = MRI.createVirtualRegister(&YSX::GPRRegClass);
     uint32_t ShiftAmount = Log2_32(Amount - 1);
@@ -4618,7 +4459,7 @@ unsigned YSXInstrInfo::getTailDuplicateSize(CodeGenOptLevel OptLevel) const {
              : 2;
 }
 
-bool YSX::isRVVSpill(const MachineInstr &MI) {
+bool YSX::isYSXVecSpill(const MachineInstr &MI) {
   return false;
 }
 
@@ -4629,7 +4470,7 @@ bool YSX::isVectorCopy(const TargetRegisterInfo *TRI,
 }
 
 std::optional<std::pair<unsigned, unsigned>>
-YSX::isRVVSpillForZvlsseg(unsigned Opcode) {
+YSX::isYSXVecSpillForZvlsseg(unsigned Opcode) {
   return std::nullopt;
 }
 
@@ -4642,7 +4483,7 @@ YSX::getVectorLowDemandedScalarBits(unsigned Opcode, unsigned Log2SEW) {
   return std::nullopt;
 }
 
-unsigned YSX::getRVVMCOpcode(unsigned RVVPseudoOpcode) {
+unsigned YSX::getYSXVecMCOpcode(unsigned YSXVecPseudoOpcode) {
   return 0;
 }
 
@@ -4797,7 +4638,7 @@ bool YSXInstrInfo::isVRegCopy(const MachineInstr *MI, unsigned LMul) const {
                                       ? MRI.getRegClass(DstReg)
                                       : TRI->getMinimalPhysRegClass(DstReg);
 
-  if (!YSXRegisterInfo::isRVVRegClass(RC))
+  if (!YSXRegisterInfo::isYSXVecRegClass(RC))
     return false;
 
   if (!LMul)

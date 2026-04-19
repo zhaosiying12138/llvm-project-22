@@ -21,7 +21,6 @@
 #define GET_INSTRINFO_HEADER
 #define GET_INSTRINFO_OPERAND_ENUM
 #include "YSXGenInstrInfo.inc"
-#include "MCTargetDesc/YSXUnsupportedOpcodes.h"
 #include "YSXGenRegisterInfo.inc"
 
 namespace llvm {
@@ -362,7 +361,7 @@ private:
 
   bool isVectorAssociativeAndCommutative(const MachineInstr &MI,
                                          bool Invert = false) const;
-  bool areRVVInstsReassociable(const MachineInstr &MI1,
+  bool areYSXVecInstsReassociable(const MachineInstr &MI1,
                                const MachineInstr &MI2) const;
   bool hasReassociableVectorSibling(const MachineInstr &Inst,
                                     bool &Commuted) const;
@@ -370,15 +369,15 @@ private:
 
 namespace YSX {
 
-// Returns true if the given MI is an RVV instruction opcode for which we may
+// Returns true if the given MI is an YSXVec instruction opcode for which we may
 // expect to see a FrameIndex operand.
-bool isRVVSpill(const MachineInstr &MI);
+bool isYSXVecSpill(const MachineInstr &MI);
 
 /// Return true if \p MI is a copy that will be lowered to one or more vmvNr.vs.
 bool isVectorCopy(const TargetRegisterInfo *TRI, const MachineInstr &MI);
 
 std::optional<std::pair<unsigned, unsigned>>
-isRVVSpillForZvlsseg(unsigned Opcode);
+isYSXVecSpillForZvlsseg(unsigned Opcode);
 
 // Return true if both input instructions have equal rounding mode. If at least
 // one of the instructions does not have rounding mode, false will be returned.
@@ -390,10 +389,10 @@ bool hasEqualFRM(const MachineInstr &MI1, const MachineInstr &MI2);
 std::optional<unsigned> getVectorLowDemandedScalarBits(unsigned Opcode,
                                                        unsigned Log2SEW);
 
-// Returns the MC opcode of RVV pseudo instruction.
-unsigned getRVVMCOpcode(unsigned RVVPseudoOpcode);
+// Returns the MC opcode of YSXVec pseudo instruction.
+unsigned getYSXVecMCOpcode(unsigned YSXVecPseudoOpcode);
 
-// For a (non-pseudo) RVV instruction \p Desc and the given \p Log2SEW, returns
+// For a (non-pseudo) YSXVec instruction \p Desc and the given \p Log2SEW, returns
 // the log2 EEW of the destination operand.
 unsigned getDestLog2EEW(const MCInstrDesc &Desc, unsigned Log2SEW);
 

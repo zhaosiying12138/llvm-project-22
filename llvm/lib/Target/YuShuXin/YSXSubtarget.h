@@ -99,7 +99,7 @@ private:
   bool ATTRIBUTE = DEFAULT;
 #include "YSXGenSubtargetInfo.inc"
 
-  unsigned XSfmmTE = 0;
+  unsigned XRemovedSfmmTE = 0;
   unsigned ZvlLen = 0;
   YSXABI::ABI TargetABI = YSXABI::ABI_Unknown;
   std::bitset<YSX::NUM_TARGET_REGS> UserReservedRegister;
@@ -175,6 +175,8 @@ public:
   bool hasStdExtZfhminOrZhinxmin() const {
     return false;
   }
+  bool hasStdExtF() const { return false; }
+  bool hasStdExtV() const { return false; }
   bool hasHalfFPLoadStoreMove() const {
     return false;
   }
@@ -193,6 +195,36 @@ public:
   }
 
   bool hasBEXTILike() const { return false; }
+
+  bool hasVendorXAndesBFHCvt() const { return false; }
+  bool hasVendorXAndesPerf() const { return false; }
+  bool hasVendorXAndesVBFHCvt() const { return false; }
+  bool hasVendorXAndesVPackFPH() const { return false; }
+  bool hasVendorXCValu() const { return false; }
+  bool hasVendorXCVbitmanip() const { return false; }
+  bool hasVendorXCVmem() const { return false; }
+  bool hasVendorXMIPSCBOP() const { return false; }
+  bool hasVendorXRemovedQcia() const { return false; }
+  bool hasVendorXRemovedQciac() const { return false; }
+  bool hasVendorXRemovedQcibi() const { return false; }
+  bool hasVendorXRemovedQcibm() const { return false; }
+  bool hasVendorXRemovedQcicli() const { return false; }
+  bool hasVendorXRemovedQcicm() const { return false; }
+  bool hasVendorXRemovedQciint() const { return false; }
+  bool hasVendorXRemovedQcili() const { return false; }
+  bool hasVendorXRemovedQcilia() const { return false; }
+  bool hasVendorXRemovedQcisls() const { return false; }
+  bool hasVendorXRemovedSfmclic() const { return false; }
+  bool hasVendorXRemovedSfmmbase() const { return false; }
+  bool hasVendorXRemovedTHeadBb() const { return false; }
+  bool hasVendorXRemovedTHeadBs() const { return false; }
+  bool hasVendorXRemovedTHeadCondMov() const { return false; }
+  bool hasVendorXRemovedTHeadFMemIdx() const { return false; }
+  bool hasVendorXRemovedTHeadMemIdx() const { return false; }
+  bool hasVendorXRemovedTHeadMemPair() const { return false; }
+  bool hasVendorXRivosVisni() const { return false; }
+  bool hasVendorXRivosVizip() const { return false; }
+  bool hasVendorXqccmp() const { return false; }
 
   bool hasCZEROLike() const {
     return false;
@@ -252,7 +284,7 @@ public:
   /// returns \p X unmodified.
   template <typename Quantity> Quantity expandVScale(Quantity X) const {
     if (auto VLen = getRealVLen(); VLen && X.isScalable()) {
-      const unsigned VScale = *VLen / YSX::RVVBitsPerBlock;
+      const unsigned VScale = *VLen / YSX::YSXVecBitsPerBlock;
       X = Quantity::getFixed(X.getKnownMinValue() * VScale);
     }
     return X;
@@ -272,7 +304,7 @@ public:
   // XRay support - require D and C extensions.
   bool isXRaySupported() const override { return false; }
 
-  // YSX intentionally has no RVV surface.
+  // YSX intentionally has no YSXVec surface.
   bool hasVInstructions() const { return false; }
   bool hasVInstructionsI64() const { return false; }
   bool hasVInstructionsF16Minimal() const { return false; }
@@ -306,9 +338,9 @@ protected:
   std::unique_ptr<const SelectionDAGTargetInfo> TSInfo;
 
   // Vector queries are retained only for copied helper code that now always
-  // sees RVV as unavailable.
-  unsigned getMaxRVVVectorSizeInBits() const;
-  unsigned getMinRVVVectorSizeInBits() const;
+  // sees YSXVec as unavailable.
+  unsigned getMaxYSXVecVectorSizeInBits() const;
+  unsigned getMinYSXVecVectorSizeInBits() const;
 
 public:
   const SelectionDAGTargetInfo *getSelectionDAGInfo() const override;
@@ -323,7 +355,7 @@ public:
   unsigned getMaxBuildIntsCost() const;
 
   unsigned getMaxLMULForFixedLengthVectors() const;
-  bool useRVVForFixedLengthVectors() const;
+  bool useYSXVecForFixedLengthVectors() const;
 
   bool enableSubRegLiveness() const override;
 

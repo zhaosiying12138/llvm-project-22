@@ -4,7 +4,6 @@ set(LLVM_TARGET_DEFINITIONS YSX.td)
 
 tablegen(LLVM YSXGenAsmMatcher.inc -gen-asm-matcher)
 tablegen(LLVM YSXGenAsmWriter.inc -gen-asm-writer)
-tablegen(LLVM YSXGenCompressInstEmitter.inc -gen-compress-inst-emitter)
 tablegen(LLVM YSXGenMacroFusion.inc -gen-macro-fusion-pred)
 tablegen(LLVM YSXGenDAGISel.inc -gen-dag-isel)
 tablegen(LLVM YSXGenDisassemblerTables.inc -gen-disassembler

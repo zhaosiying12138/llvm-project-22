@@ -524,8 +524,8 @@ def : SysReg<"minstretcfgh", 0x722>;
 // Vendor CSRs
 //===-----------------------------------------------
 
-// XSfmclic
-let FeaturesRequired = [{ {YSX::FeatureVendorXSfmclic} }] in {
+// XRemovedSfmclic
+let FeaturesRequired = [{ {YSX::YSXDisabledVendorFeatureXRemovedSfmclic} }] in {
 def : SysReg<"sf.mtvt", 0x307>;
 def : SysReg<"sf.mnxti", 0x345>;
 def : SysReg<"sf.mintstatus", 0x346>;
@@ -533,8 +533,8 @@ def : SysReg<"sf.mscratchcsw", 0x348>;
 def : SysReg<"sf.mscratchcswl", 0x349>;
 }
 
-// XSfsclic
-let FeaturesRequired = [{ {YSX::FeatureVendorXSfsclic} }] in {
+// XRemovedSfsclic
+let FeaturesRequired = [{ {YSX::YSXDisabledVendorFeatureXRemovedSfsclic} }] in {
 def : SysReg<"sf.stvt", 0x107>;
 def : SysReg<"sf.snxti", 0x145>;
 def : SysReg<"sf.sintstatus", 0x146>;
@@ -542,8 +542,8 @@ def : SysReg<"sf.sscratchcsw", 0x148>;
 def : SysReg<"sf.sscratchcswl", 0x149>;
 }
 
-// Xqciint
-let FeaturesRequired = [{ {YSX::FeatureVendorXqciint} }], isRV32Only = 1 in {
+// XRemovedQciint
+let FeaturesRequired = [{ {YSX::YSXDisabledVendorFeatureXRemovedQciint} }], isRV32Only = 1 in {
 def : SysReg<"qc.mmcr", 0x7C0>;
 def : SysReg<"qc.mntvec", 0x7C3>;
 def : SysReg<"qc.mstktopaddr", 0x7C4>;
@@ -565,4 +565,4 @@ foreach i = 0 - 3 in {
   def : SysReg<"qc.mwpstartaddr" # i, !add(0x7D0, i)>;
   def : SysReg<"qc.mwpendaddr" # i,   !add(0x7D4, i)>;
 }
-} // FeatureVendorXqciint, isRV32Only
+} // YSXDisabledVendorFeatureXRemovedQciint, isRV32Only

@@ -9,7 +9,7 @@
 // of the RISC-V instructions.
 //
 // Currently the pass implements:
-// -Writing and saving frm before an RVV floating-point instruction with a
+// -Writing and saving frm before an YSXVec floating-point instruction with a
 //  static rounding mode and restores the value after.
 //
 //===----------------------------------------------------------------------===//
@@ -138,7 +138,7 @@ bool YSXInsertReadWriteCSR::emitWriteRoundingModeOpt(MachineBasicBlock &MBB) {
   return Changed;
 }
 
-// This function also swaps frm and restores it when encountering an RVV
+// This function also swaps frm and restores it when encountering an YSXVec
 // floating point instruction with a static rounding mode.
 bool YSXInsertReadWriteCSR::emitWriteRoundingMode(MachineBasicBlock &MBB) {
   bool Changed = false;

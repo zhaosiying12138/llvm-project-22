@@ -77,31 +77,31 @@ enum {
   IsTiedPseudoMask = 1 << IsTiedPseudoShift,
 
   // Does this instruction have a SEW operand. It will be the last explicit
-  // operand unless there is a vector policy operand. Used by RVV Pseudos.
+  // operand unless there is a vector policy operand. Used by YSXVec Pseudos.
   HasSEWOpShift = IsTiedPseudoShift + 1,
   HasSEWOpMask = 1 << HasSEWOpShift,
 
   // Does this instruction have a VL operand. It will be the second to last
-  // explicit operand unless there is a vector policy operand. Used by RVV
+  // explicit operand unless there is a vector policy operand. Used by YSXVec
   // Pseudos.
   HasVLOpShift = HasSEWOpShift + 1,
   HasVLOpMask = 1 << HasVLOpShift,
 
   // Does this instruction have a vector policy operand. It will be the last
-  // explicit operand. Used by RVV Pseudos.
+  // explicit operand. Used by YSXVec Pseudos.
   HasVecPolicyOpShift = HasVLOpShift + 1,
   HasVecPolicyOpMask = 1 << HasVecPolicyOpShift,
 
-  // Is this instruction a vector widening reduction instruction. Used by RVV
+  // Is this instruction a vector widening reduction instruction. Used by YSXVec
   // Pseudos.
-  IsRVVWideningReductionShift = HasVecPolicyOpShift + 1,
-  IsRVVWideningReductionMask = 1 << IsRVVWideningReductionShift,
+  IsYSXVecWideningReductionShift = HasVecPolicyOpShift + 1,
+  IsYSXVecWideningReductionMask = 1 << IsYSXVecWideningReductionShift,
 
   // Does this instruction care about mask policy. If it is not, the mask policy
   // could be either agnostic or undisturbed. For example, unmasked, store, and
   // reduction operations result would not be affected by mask policy, so
   // compiler has free to select either one.
-  UsesMaskPolicyShift = IsRVVWideningReductionShift + 1,
+  UsesMaskPolicyShift = IsYSXVecWideningReductionShift + 1,
   UsesMaskPolicyMask = 1 << UsesMaskPolicyShift,
 
   // Indicates that the result can be considered sign extended from bit 31. Some
@@ -149,7 +149,7 @@ enum {
   AltFmtTypeShift = ReadsPastVLShift + 1,
   AltFmtTypeMask = 3ULL << AltFmtTypeShift,
 
-  // XSfmmbase
+  // XRemovedSfmmbase
   HasTWidenOpShift = AltFmtTypeShift + 2,
   HasTWidenOpMask = 1ULL << HasTWidenOpShift,
 
@@ -186,8 +186,8 @@ static inline bool hasVecPolicyOp(uint64_t TSFlags) {
   return TSFlags & HasVecPolicyOpMask;
 }
 /// \returns true if it is a vector widening reduction instruction.
-static inline bool isRVVWideningReduction(uint64_t TSFlags) {
-  return TSFlags & IsRVVWideningReductionMask;
+static inline bool isYSXVecWideningReduction(uint64_t TSFlags) {
+  return TSFlags & IsYSXVecWideningReductionMask;
 }
 /// \returns true if mask policy is valid for the instruction.
 static inline bool usesMaskPolicy(uint64_t TSFlags) {
@@ -225,7 +225,7 @@ static inline bool readsPastVL(uint64_t TSFlags) {
   return TSFlags & ReadsPastVLMask;
 }
 
-// XSfmmbase
+// XRemovedSfmmbase
 static inline bool hasTWidenOp(uint64_t TSFlags) {
   return TSFlags & HasTWidenOpMask;
 }
@@ -443,9 +443,9 @@ enum OperandType : unsigned {
   OPERAND_SEW_MASK,
   // Vector rounding mode for VXRM or FRM.
   OPERAND_VEC_RM,
-  // Vtype operand for XSfmm extension.
+  // Vtype operand for XRemovedSfmm extension.
   OPERAND_XSFMM_VTYPE,
-  // XSfmm twiden operand.
+  // XRemovedSfmm twiden operand.
   OPERAND_XSFMM_TWIDEN,
   OPERAND_LAST_YSX_IMM = OPERAND_XSFMM_TWIDEN,
 
@@ -768,21 +768,9 @@ inline static unsigned getStackAdjBase(unsigned RlistVal, bool IsRV64) {
 void printRegList(unsigned RlistEncode, raw_ostream &OS);
 } // namespace YSXZC
 
-namespace YSXVInversePseudosTable {
-struct PseudoInfo {
-  uint16_t Pseudo;
-  uint16_t BaseInstr;
-  uint8_t VLMul;
-  uint8_t SEW;
-};
-
-#define GET_YSXVInversePseudosTable_DECL
-#include "YSXGenSearchableTables.inc"
-} // namespace YSXVInversePseudosTable
-
 namespace YSX {
-static constexpr unsigned RVVBitsPerBlock = RISCV::RVVBitsPerBlock;
-static constexpr unsigned RVVBytesPerBlock = RISCV::RVVBytesPerBlock;
+static constexpr unsigned YSXVecBitsPerBlock = 64;
+static constexpr unsigned YSXVecBytesPerBlock = YSXVecBitsPerBlock / 8;
 
 struct VLSEGPseudo {
   uint16_t NF : 4;

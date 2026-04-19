@@ -206,8 +206,8 @@ class RVInstCommon<dag outs, dag ins, string opcodestr, string argstr,
   let TSFlags{4-0} = Format.Value;
 
   // Defaults
-  YSXVConstraint RVVConstraint = NoConstraint;
-  let TSFlags{7-5} = RVVConstraint.Value;
+  YSXVConstraint YSXVecConstraint = NoConstraint;
+  let TSFlags{7-5} = YSXVecConstraint.Value;
 
   bits<3> VLMul = 0;
   let TSFlags{10-8} = VLMul;
@@ -224,8 +224,8 @@ class RVInstCommon<dag outs, dag ins, string opcodestr, string argstr,
   bit HasVecPolicyOp = 0;
   let TSFlags{14} = HasVecPolicyOp;
 
-  bit IsRVVWideningReduction = 0;
-  let TSFlags{15} = IsRVVWideningReduction;
+  bit IsYSXVecWideningReduction = 0;
+  let TSFlags{15} = IsYSXVecWideningReduction;
 
   bit UsesMaskPolicy = 0;
   let TSFlags{16} = UsesMaskPolicy;
@@ -281,7 +281,7 @@ class RVInstCommon<dag outs, dag ins, string opcodestr, string argstr,
   AltFmtType AltFmtType = DONT_CARE_ALTFMT;
   let TSFlags{28-27} = AltFmtType.Value;
 
-  // XSfmmbase
+  // XRemovedSfmmbase
   bit HasTWidenOp = 0;
   let TSFlags{29} = HasTWidenOp;
 

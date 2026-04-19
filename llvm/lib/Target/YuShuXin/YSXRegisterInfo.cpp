@@ -178,7 +178,7 @@ BitVector YSXRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   // Shadow stack pointer.
   markSuperRegs(Reserved, YSX::SSP);
 
-  // XSfmmbase
+  // XRemovedSfmmbase
   for (MCPhysReg Reg = YSX::T0; Reg <= YSX::T15; Reg++)
     markSuperRegs(Reserved, Reg);
 
@@ -215,7 +215,7 @@ void YSXRegisterInfo::adjustReg(MachineBasicBlock &MBB,
     if (auto VLEN = ST.getRealVLen()) {
       // 1. Multiply the number of v-slots by the (constant) length of register
       const int64_t VLENB = *VLEN / 8;
-      assert(Offset.getScalable() % YSX::RVVBytesPerBlock == 0 &&
+      assert(Offset.getScalable() % YSX::YSXVecBytesPerBlock == 0 &&
              "Reserve the stack by the multiple of one vector size.");
       const int64_t NumOfVReg = Offset.getScalable() / 8;
       const int64_t FixedOffset = NumOfVReg * VLENB;
@@ -230,6 +230,8 @@ void YSXRegisterInfo::adjustReg(MachineBasicBlock &MBB,
   bool KillSrcReg = false;
 
   if (Offset.getScalable()) {
+    reportFatalUsageError("YSX does not support scalable stack offsets");
+#if 0
     unsigned ScalableAdjOpc = YSX::ADD;
     int64_t ScalableValue = Offset.getScalable();
     if (ScalableValue < 0) {
@@ -242,11 +244,11 @@ void YSXRegisterInfo::adjustReg(MachineBasicBlock &MBB,
       ScratchReg = MRI.createVirtualRegister(&YSX::GPRRegClass);
 
     assert(ScalableValue > 0 && "There is no need to get VLEN scaled value.");
-    assert(ScalableValue % YSX::RVVBytesPerBlock == 0 &&
+    assert(ScalableValue % YSX::YSXVecBytesPerBlock == 0 &&
            "Reserve the stack by the multiple of one vector size.");
-    assert(isInt<32>(ScalableValue / YSX::RVVBytesPerBlock) &&
+    assert(isInt<32>(ScalableValue / YSX::YSXVecBytesPerBlock) &&
            "Expect the number of vector registers within 32-bits.");
-    uint32_t NumOfVReg = ScalableValue / YSX::RVVBytesPerBlock;
+    uint32_t NumOfVReg = ScalableValue / YSX::YSXVecBytesPerBlock;
     // Only use vsetvli rather than vlenb if adjusting in the prologue or
     // epilogue, otherwise it may disturb the VTYPE and VL status.
     bool IsPrologueOrEpilogue =
@@ -292,6 +294,7 @@ void YSXRegisterInfo::adjustReg(MachineBasicBlock &MBB,
     }
     SrcReg = DestReg;
     KillSrcReg = true;
+#endif
   }
 
   int64_t Val = Offset.getFixed();
@@ -308,9 +311,10 @@ void YSXRegisterInfo::adjustReg(MachineBasicBlock &MBB,
     return;
   }
 
-  // Use the QC_E_ADDI instruction from the Xqcilia extension that can take a
+  // Use the QC_E_ADDI instruction from the XRemovedQcilia extension that can take a
   // signed 26-bit immediate.
-  if (ST.hasVendorXqcilia() && isInt<26>(Val)) {
+#if 0
+  if (ST.hasVendorXRemovedQcilia() && isInt<26>(Val)) {
     // The one case where using this instruction is sub-optimal is if Val can be
     // materialized with a single compressible LUI and following add/sub is also
     // compressible. Avoid doing this if that is the case.
@@ -331,6 +335,7 @@ void YSXRegisterInfo::adjustReg(MachineBasicBlock &MBB,
       return;
     }
   }
+#endif
 
   // Try to split the offset across two ADDIs. We need to keep the intermediate
   // result aligned after each ADDI.  We need to determine the maximum value we
@@ -359,6 +364,7 @@ void YSXRegisterInfo::adjustReg(MachineBasicBlock &MBB,
   // path.  We avoid anything which can be done with a single lui as it might
   // be compressible.  Note that the sh1add case is fully covered by the 2x addi
   // case just above and is thus omitted.
+#if 0
   if (ST.hasStdExtZba() && (Val & 0xFFF) != 0) {
     unsigned Opc = 0;
     if (isShiftedInt<12, 3>(Val)) {
@@ -378,6 +384,7 @@ void YSXRegisterInfo::adjustReg(MachineBasicBlock &MBB,
       return;
     }
   }
+#endif
 
   unsigned Opc = YSX::ADD;
   if (Val < 0) {
@@ -393,6 +400,7 @@ void YSXRegisterInfo::adjustReg(MachineBasicBlock &MBB,
       .setMIFlag(Flag);
 }
 
+#if 0
 static std::tuple<YSXVType::VLMUL, const TargetRegisterClass &, unsigned>
 getSpillReloadInfo(unsigned NumRemaining, uint16_t RegEncoding, bool IsSpill) {
   if (NumRemaining >= 8 && RegEncoding % 8 == 0)
@@ -407,11 +415,14 @@ getSpillReloadInfo(unsigned NumRemaining, uint16_t RegEncoding, bool IsSpill) {
   return {YSXVType::LMUL_1, YSX::VRRegClass,
           IsSpill ? YSX::VS1R_V : YSX::VL1RE8_V};
 }
+#endif
 
 // Split a VSPILLx_Mx/VSPILLx_Mx pseudo into multiple whole register stores
 // separated by LMUL*VLENB bytes.
 void YSXRegisterInfo::lowerSegmentSpillReload(MachineBasicBlock::iterator II,
                                                 bool IsSpill) const {
+  llvm_unreachable("YSX does not support YSXVec segment spill/reload");
+#if 0
   DebugLoc DL = II->getDebugLoc();
   MachineBasicBlock &MBB = *II->getParent();
   MachineFunction &MF = *MBB.getParent();
@@ -420,7 +431,7 @@ void YSXRegisterInfo::lowerSegmentSpillReload(MachineBasicBlock::iterator II,
   const TargetInstrInfo *TII = STI.getInstrInfo();
   const TargetRegisterInfo *TRI = STI.getRegisterInfo();
 
-  auto ZvlssegInfo = YSX::isRVVSpillForZvlsseg(II->getOpcode());
+  auto ZvlssegInfo = YSX::isYSXVecSpillForZvlsseg(II->getOpcode());
   unsigned NF = ZvlssegInfo->first;
   unsigned LMUL = ZvlssegInfo->second;
   unsigned NumRegs = NF * LMUL;
@@ -501,6 +512,7 @@ void YSXRegisterInfo::lowerSegmentSpillReload(MachineBasicBlock::iterator II,
     I += RegNumHandled;
   }
   II->eraseFromParent();
+#endif
 }
 
 bool YSXRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
@@ -517,8 +529,8 @@ bool YSXRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   Register FrameReg;
   StackOffset Offset =
       getFrameLowering(MF)->getFrameIndexReference(MF, FrameIndex, FrameReg);
-  bool IsRVVSpill = YSX::isRVVSpill(MI);
-  if (!IsRVVSpill)
+  bool IsYSXVecSpill = YSX::isYSXVecSpill(MI);
+  if (!IsYSXVecSpill)
     Offset += StackOffset::getFixed(MI.getOperand(FIOperandNum + 1).getImm());
 
   if (!isInt<32>(Offset.getFixed())) {
@@ -526,7 +538,7 @@ bool YSXRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
         "Frame offsets outside of the signed 32-bit range not supported");
   }
 
-  if (!IsRVVSpill) {
+  if (!IsYSXVecSpill) {
     int64_t Val = Offset.getFixed();
     int64_t Lo12 = SignExtend64<12>(Val);
     unsigned Opc = MI.getOpcode();
@@ -538,11 +550,13 @@ bool YSXRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
       // 32 bit immediate sequence.  We still need to clear the portion of the
       // offset encoded in the immediate.
       MI.getOperand(FIOperandNum + 1).ChangeToImmediate(0);
+#if 0
     } else if ((Opc == YSX::PREFETCH_I || Opc == YSX::PREFETCH_R ||
                 Opc == YSX::PREFETCH_W) &&
                (Lo12 & 0b11111) != 0) {
       // Prefetch instructions require the offset to be 32 byte aligned.
       MI.getOperand(FIOperandNum + 1).ChangeToImmediate(0);
+#endif
     } else {
       // We can encode an add with 12 bit signed immediate in the immediate
       // operand of our user instruction.  As a result, the remaining
@@ -946,7 +960,7 @@ bool YSXRegisterInfo::getRegAllocationHints(
     case YSX::BEXTI:
       // qc.c.bseti, qc.c.bexti
       NeedGPRC = true;
-      return Subtarget.hasVendorXqcibm() && MI.getOperand(2).getImm() != 0;
+      return Subtarget.hasVendorXRemovedQcibm() && MI.getOperand(2).getImm() != 0;
     }
 #endif
   };
@@ -970,7 +984,6 @@ bool YSXRegisterInfo::getRegAllocationHints(
     if (isCompressible(MI, NeedGPRC)) {
       if (OpIdx == 0 && MI.getOperand(1).isReg()) {
         if (!NeedGPRC || MI.getNumExplicitOperands() < 3 ||
-            MI.getOpcode() == YSX::ADD_UW ||
             isCompressibleOpnd(MI.getOperand(2)))
           tryAddHint(MO, MI.getOperand(1), NeedGPRC);
         if (MI.isCommutable() && MI.getOperand(2).isReg() &&

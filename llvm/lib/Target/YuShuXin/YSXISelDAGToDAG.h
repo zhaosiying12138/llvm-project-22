@@ -147,9 +147,9 @@ public:
   bool selectLow8BitsVSplat(SDValue N, SDValue &SplatVal);
   bool selectScalarFPAsInt(SDValue N, SDValue &Imm);
 
-  bool selectRVVSimm5(SDValue N, unsigned Width, SDValue &Imm);
-  template <unsigned Width> bool selectRVVSimm5(SDValue N, SDValue &Imm) {
-    return selectRVVSimm5(N, Width, Imm);
+  bool selectYSXVecSimm5(SDValue N, unsigned Width, SDValue &Imm);
+  template <unsigned Width> bool selectYSXVecSimm5(SDValue N, SDValue &Imm) {
+    return selectYSXVecSimm5(N, Width, Imm);
   }
 
   void addVectorLoadStoreOperands(SDNode *Node, unsigned SEWImm,
@@ -165,7 +165,7 @@ public:
   void selectVSXSEG(SDNode *Node, unsigned NF, bool IsMasked, bool IsOrdered);
 
   void selectVSETVLI(SDNode *Node);
-  void selectXSfmmVSET(SDNode *Node);
+  void selectXRemovedSfmmVSET(SDNode *Node);
 
   void selectSF_VC_X_SE(SDNode *Node);
 
@@ -197,7 +197,7 @@ public:
 
 private:
   bool doPeepholeSExtW(SDNode *Node);
-  bool doPeepholeMaskedRVV(MachineSDNode *Node);
+  bool doPeepholeMaskedYSXVec(MachineSDNode *Node);
   bool doPeepholeNoRegPassThru();
   bool performCombineVMergeAndVOps(SDNode *N);
   bool selectImm64IfCheaper(int64_t Imm, int64_t OrigImm, SDValue N,

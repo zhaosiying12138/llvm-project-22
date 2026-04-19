@@ -124,7 +124,7 @@ class YSXAsmParser : public MCTargetAsmParser {
                        bool &MaskAgnostic, bool &AltFmt);
   bool generateVTypeError(SMLoc ErrorLoc);
 
-  bool generateXSfmmVTypeError(SMLoc ErrorLoc);
+  bool generateXRemovedSfmmVTypeError(SMLoc ErrorLoc);
   // Helper to actually emit an instruction to the MCStreamer. Also, when
   // possible, compression of the instruction is performed.
   void emitToStreamer(MCStreamer &S, const MCInst &Inst);
@@ -221,7 +221,7 @@ class YSXAsmParser : public MCTargetAsmParser {
   }
 
   ParseStatus parseRegReg(OperandVector &Operands);
-  ParseStatus parseXSfmmVType(OperandVector &Operands);
+  ParseStatus parseXRemovedSfmmVType(OperandVector &Operands);
   ParseStatus parseZcmpStackAdj(OperandVector &Operands,
                                 bool ExpectNegative = false);
   ParseStatus parseZcmpNegStackAdj(OperandVector &Operands) {
@@ -308,7 +308,7 @@ public:
     setAvailableFeatures(ComputeAvailableFeatures(STI.getFeatureBits()));
 
     auto ABIName = StringRef(Options.ABIName);
-    if (ABIName.ends_with("f") && !getSTI().hasFeature(YSX::FeatureStdExtF)) {
+    if (ABIName.ends_with("f") && !getSTI().hasFeature(YSX::YSXDisabledStdExtF)) {
       errs() << "Hard-float 'f' ABI can't be used for a target that "
                 "doesn't support the F instruction set extension (ignoring "
                 "target-abi)\n";
@@ -630,8 +630,8 @@ public:
     return isUImm<11>();
   }
 
-  bool isXSfmmVType() const {
-    return Kind == KindTy::VType && YSXVType::isValidXSfmmVType(VType.Val);
+  bool isXRemovedSfmmVType() const {
+    return false;
   }
 
   /// Return true if the operand is a valid for the fence instruction e.g.
@@ -2191,7 +2191,7 @@ ParseStatus YSXAsmParser::parseVTypeI(OperandVector &Operands) {
     if (MaxSEW >= 8 && Sew > MaxSEW)
       Warning(S, "use of vtype encodings with SEW > " + Twine(MaxSEW) +
                      " and LMUL == mf" + Twine(Lmul) +
-                     " may not be compatible with all RVV implementations");
+                     " may not be compatible with all YSXVec implementations");
   }
 
   unsigned VTypeI =
@@ -2202,7 +2202,7 @@ ParseStatus YSXAsmParser::parseVTypeI(OperandVector &Operands) {
 
 bool YSXAsmParser::generateVTypeError(SMLoc ErrorLoc) {
   if (STI->hasFeature(YSX::FeatureStdExtZvfbfa) ||
-      STI->hasFeature(YSX::FeatureVendorXSfvfbfexp16e))
+      STI->hasFeature(YSX::YSXDisabledVendorFeatureXRemovedSfvfbfexp16e))
     return Error(
         ErrorLoc,
         "operand must be "
@@ -2213,62 +2213,13 @@ bool YSXAsmParser::generateVTypeError(SMLoc ErrorLoc) {
       "e[8|16|32|64],m[1|2|4|8|f2|f4|f8],[ta|tu],[ma|mu]");
 }
 
-ParseStatus YSXAsmParser::parseXSfmmVType(OperandVector &Operands) {
+ParseStatus YSXAsmParser::parseXRemovedSfmmVType(OperandVector &Operands) {
+  (void)Operands;
   SMLoc S = getLoc();
-
-  unsigned Widen = 0;
-  unsigned SEW = 0;
-  bool AltFmt = false;
-  StringRef Identifier;
-
-  if (getTok().isNot(AsmToken::Identifier))
-    goto Fail;
-
-  Identifier = getTok().getIdentifier();
-
-  if (!Identifier.consume_front("e"))
-    goto Fail;
-
-  if (Identifier.getAsInteger(10, SEW)) {
-    if (Identifier != "16alt")
-      goto Fail;
-
-    AltFmt = true;
-    SEW = 16;
-  }
-  if (!YSXVType::isValidSEW(SEW))
-    goto Fail;
-
-  Lex();
-
-  if (!parseOptionalToken(AsmToken::Comma))
-    goto Fail;
-
-  if (getTok().isNot(AsmToken::Identifier))
-    goto Fail;
-
-  Identifier = getTok().getIdentifier();
-
-  if (!Identifier.consume_front("w"))
-    goto Fail;
-  if (Identifier.getAsInteger(10, Widen))
-    goto Fail;
-  if (Widen != 1 && Widen != 2 && Widen != 4)
-    goto Fail;
-
-  Lex();
-
-  if (getLexer().is(AsmToken::EndOfStatement)) {
-    Operands.push_back(YSXOperand::createVType(
-        YSXVType::encodeXSfmmVType(SEW, Widen, AltFmt), S));
-    return ParseStatus::Success;
-  }
-
-Fail:
-  return generateXSfmmVTypeError(S);
+  return generateXRemovedSfmmVTypeError(S);
 }
 
-bool YSXAsmParser::generateXSfmmVTypeError(SMLoc ErrorLoc) {
+bool YSXAsmParser::generateXRemovedSfmmVTypeError(SMLoc ErrorLoc) {
   return Error(ErrorLoc, "operand must be e[8|16|16alt|32|64],w[1|2|4]");
 }
 
@@ -2293,7 +2244,7 @@ ParseStatus YSXAsmParser::parseMaskReg(OperandVector &Operands) {
 }
 
 ParseStatus YSXAsmParser::parseGPRAsFPR64(OperandVector &Operands) {
-  if (!isRV64() || getSTI().hasFeature(YSX::FeatureStdExtF))
+  if (!isRV64() || getSTI().hasFeature(YSX::YSXDisabledStdExtF))
     return ParseStatus::NoMatch;
 
   return parseGPRAsFPR(Operands);
@@ -2312,12 +2263,12 @@ ParseStatus YSXAsmParser::parseGPRAsFPR(OperandVector &Operands) {
   SMLoc E = getTok().getEndLoc();
   getLexer().Lex();
   Operands.push_back(YSXOperand::createReg(
-      Reg, S, E, !getSTI().hasFeature(YSX::FeatureStdExtF)));
+      Reg, S, E, !getSTI().hasFeature(YSX::YSXDisabledStdExtF)));
   return ParseStatus::Success;
 }
 
 ParseStatus YSXAsmParser::parseGPRPairAsFPR64(OperandVector &Operands) {
-  if (isRV64() || getSTI().hasFeature(YSX::FeatureStdExtF))
+  if (isRV64() || getSTI().hasFeature(YSX::YSXDisabledStdExtF))
     return ParseStatus::NoMatch;
 
   if (getLexer().isNot(AsmToken::Identifier))
@@ -2903,6 +2854,37 @@ bool YSXAsmParser::parseDirectiveOption() {
 
   if (Option == "arch") {
     SmallVector<YSXOptionArchArg> Args;
+    auto RestoreFeatureBits = [&](FeatureBitset OldFeatureBits) {
+      copySTI().setFeatureBits(OldFeatureBits);
+      setAvailableFeatures(ComputeAvailableFeatures(OldFeatureBits));
+    };
+    auto ValidateYSXFeatureBits = [&](SMLoc Loc,
+                                      FeatureBitset OldFeatureBits) -> bool {
+      if (!getSTI().getTargetTriple().isYSX64())
+        return false;
+
+      auto ParseResult =
+          YSXFeatures::parseFeatureBits(isRV64(), STI->getFeatureBits());
+      if (!ParseResult) {
+        RestoreFeatureBits(OldFeatureBits);
+
+        std::string Buffer;
+        raw_string_ostream OutputErrMsg(Buffer);
+        handleAllErrors(ParseResult.takeError(), [&](llvm::StringError &ErrMsg) {
+          OutputErrMsg << ErrMsg.getMessage();
+        });
+
+        return Error(Loc, OutputErrMsg.str());
+      }
+
+      if (!YSXFeatures::isValidYSXISAInfo(**ParseResult)) {
+        RestoreFeatureBits(OldFeatureBits);
+        return Error(Loc, "YSX only supports arch string rv64ima");
+      }
+
+      return false;
+    };
+
     do {
       if (Parser.parseComma())
         return true;
@@ -2944,28 +2926,19 @@ bool YSXAsmParser::parseDirectiveOption() {
           StringRef(Feature).starts_with("experimental-"))
         return Error(Loc, "unexpected experimental extensions");
       auto Ext = llvm::lower_bound(YSXFeatureKV, Feature);
-      if (Ext == std::end(YSXFeatureKV) || StringRef(Ext->Key) != Feature)
+      if (Ext == std::end(YSXFeatureKV) || StringRef(Ext->Key) != Feature) {
+        if (getSTI().getTargetTriple().isYSX64())
+          return Error(Loc, "YSX only supports arch string rv64ima");
         return Error(Loc, "unknown extension feature");
+      }
 
       Args.emplace_back(Type, Arch.str());
+      FeatureBitset OldFeatureBits = STI->getFeatureBits();
 
       if (Type == YSXOptionArchArgType::Plus) {
-        FeatureBitset OldFeatureBits = STI->getFeatureBits();
-
         setFeatureBits(Ext->Value, Ext->Key);
-        auto ParseResult = YSXFeatures::parseFeatureBits(isRV64(), STI->getFeatureBits());
-        if (!ParseResult) {
-          copySTI().setFeatureBits(OldFeatureBits);
-          setAvailableFeatures(ComputeAvailableFeatures(OldFeatureBits));
-
-          std::string Buffer;
-          raw_string_ostream OutputErrMsg(Buffer);
-          handleAllErrors(ParseResult.takeError(), [&](llvm::StringError &ErrMsg) {
-            OutputErrMsg << ErrMsg.getMessage();
-          });
-
-          return Error(Loc, OutputErrMsg.str());
-        }
+        if (ValidateYSXFeatureBits(Loc, OldFeatureBits))
+          return true;
       } else {
         assert(Type == YSXOptionArchArgType::Minus);
         // It is invalid to disable an extension that there are other enabled
@@ -2981,6 +2954,8 @@ bool YSXAsmParser::parseDirectiveOption() {
         }
 
         clearFeatureBits(Ext->Value, Ext->Key);
+        if (ValidateYSXFeatureBits(Loc, OldFeatureBits))
+          return true;
       }
     } while (Parser.getTok().isNot(AsmToken::EndOfStatement));
 
@@ -3015,8 +2990,11 @@ bool YSXAsmParser::parseDirectiveOption() {
     if (Parser.parseEOL())
       return true;
 
+    if (getSTI().getTargetTriple().isYSX64())
+      return Error(Tok.getLoc(), "YSX only supports arch string rv64ima");
+
     getTargetStreamer().emitDirectiveOptionRVC();
-    setFeatureBits(YSX::FeatureStdExtC, "c");
+    setFeatureBits(YSX::YSXDisabledStdExtC, "c");
     return false;
   }
 
@@ -3025,8 +3003,6 @@ bool YSXAsmParser::parseDirectiveOption() {
       return true;
 
     getTargetStreamer().emitDirectiveOptionNoRVC();
-    clearFeatureBits(YSX::FeatureStdExtC, "c");
-    clearFeatureBits(YSX::FeatureStdExtZca, "zca");
     return false;
   }
 
@@ -3589,15 +3565,6 @@ std::unique_ptr<YSXOperand> YSXAsmParser::defaultFRMArgLegacyOp() const {
 bool YSXAsmParser::validateInstruction(MCInst &Inst,
                                          OperandVector &Operands) {
   unsigned Opcode = Inst.getOpcode();
-
-  if (Opcode == YSX::CM_MVSA01 || Opcode == YSX::QC_CM_MVSA01) {
-    MCRegister Rd1 = Inst.getOperand(0).getReg();
-    MCRegister Rd2 = Inst.getOperand(1).getReg();
-    if (Rd1 == Rd2) {
-      SMLoc Loc = Operands[1]->getStartLoc();
-      return Error(Loc, "rs1 and rs2 must be different");
-    }
-  }
 
   const MCInstrDesc &MCID = MII.get(Opcode);
   if (!(MCID.TSFlags & YSXII::ConstraintMask))
