@@ -10,7 +10,6 @@
 #define LLVM_TARGETPARSER_YSXISAINFO_H
 
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
 #include "llvm/TargetParser/RISCVTargetParser.h"
@@ -72,7 +71,7 @@ public:
 
   std::string toString() const { return ArchString; }
 
-  StringRef computeDefaultABI() const { return XLen == 64 ? "lp64" : "ilp32"; }
+  StringRef computeDefaultABI() const { return "lp64"; }
 
   static bool isSupportedExtensionFeature(StringRef Feature) {
     return Feature == "i" || Feature == "m" || Feature == "a" ||
@@ -84,10 +83,25 @@ public:
     return Ext.lower();
   }
 
+  static std::unique_ptr<YSXISAInfo> createRV64IMAInfo() {
+    auto Info =
+        std::unique_ptr<YSXISAInfo>(new YSXISAInfo(64, StringRef("rv64ima")));
+    Info->addExtension("i", 2, 1);
+    Info->addExtension("m", 2, 0);
+    Info->addExtension("zmmul", 1, 0);
+    Info->addExtension("a", 2, 1);
+    Info->addExtension("zaamo", 1, 0);
+    Info->addExtension("zalrsc", 1, 0);
+    return Info;
+  }
+
   static Expected<std::unique_ptr<YSXISAInfo>>
   parseFeatures(unsigned XLen, const std::vector<std::string> &Features) {
-    auto Info = std::unique_ptr<YSXISAInfo>(new YSXISAInfo(
-        XLen, XLen == 64 ? StringRef("rv64ima") : StringRef("rv32ima")));
+    if (XLen != 64)
+      return unsupportedArch("rv32ima");
+
+    auto Info =
+        std::unique_ptr<YSXISAInfo>(new YSXISAInfo(64, StringRef("rv64ima")));
 
     for (StringRef Feature : Features) {
       bool Enabled = true;
@@ -117,9 +131,13 @@ public:
       } else if (Feature == "zalrsc") {
         Info->addExtension("zalrsc", 1, 0);
       } else {
-        Info->addExtension(Feature, 0, 0);
+        return unsupportedArch(Feature);
       }
     }
+
+    if (!Info->hasExtension("i") || !Info->hasExtension("m") ||
+        !Info->hasExtension("a"))
+      return unsupportedArch("rv64ima");
 
     return Info;
   }
@@ -129,77 +147,9 @@ public:
                   bool ExperimentalExtensionVersionCheck = true) {
     std::string Lower = Arch.lower();
     StringRef LowerArch(Lower);
-    if (!LowerArch.starts_with("rv32") && !LowerArch.starts_with("rv64"))
+    if (LowerArch != "rv64ima")
       return unsupportedArch(Arch);
-
-    unsigned XLen = LowerArch.starts_with("rv64") ? 64 : 32;
-    auto Info = std::unique_ptr<YSXISAInfo>(new YSXISAInfo(XLen, LowerArch));
-    StringRef Exts = LowerArch.drop_front(4);
-
-    SmallVector<StringRef, 8> Groups;
-    Exts.split(Groups, "_", /*MaxSplit=*/-1, /*KeepEmpty=*/false);
-    for (StringRef Group : Groups) {
-      if (Group.empty())
-        continue;
-
-      if (Group.size() > 1 && (Group.front() == 'z' || Group.front() == 's' ||
-                               Group.front() == 'x')) {
-        if (Group == "zmmul")
-          Info->addExtension("zmmul", 1, 0);
-        else if (Group == "zaamo")
-          Info->addExtension("zaamo", 1, 0);
-        else if (Group == "zalrsc")
-          Info->addExtension("zalrsc", 1, 0);
-        else
-          Info->addExtension(Group, 0, 0);
-        continue;
-      }
-
-      for (char C : Group) {
-        switch (C) {
-        case 'i':
-          Info->addExtension("i", 2, 1);
-          break;
-        case 'm':
-          Info->addExtension("m", 2, 0);
-          Info->addExtension("zmmul", 1, 0);
-          break;
-        case 'a':
-          Info->addExtension("a", 2, 1);
-          Info->addExtension("zaamo", 1, 0);
-          Info->addExtension("zalrsc", 1, 0);
-          break;
-        case 'g':
-          Info->addExtension("i", 2, 1);
-          Info->addExtension("m", 2, 0);
-          Info->addExtension("a", 2, 1);
-          Info->addExtension("zmmul", 1, 0);
-          Info->addExtension("zaamo", 1, 0);
-          Info->addExtension("zalrsc", 1, 0);
-          Info->addExtension("f", 2, 2);
-          Info->addExtension("d", 2, 2);
-          Info->addExtension("zicsr", 2, 0);
-          Info->addExtension("zifencei", 2, 0);
-          break;
-        case 'c':
-          Info->addExtension("c", 2, 0);
-          break;
-        case 'f':
-          Info->addExtension("f", 2, 2);
-          break;
-        case 'd':
-          Info->addExtension("d", 2, 2);
-          break;
-        case 'v':
-          Info->addExtension("v", 1, 0);
-          break;
-        default:
-          return unsupportedArch(Arch);
-        }
-      }
-    }
-
-    return Info;
+    return createRV64IMAInfo();
   }
 };
 

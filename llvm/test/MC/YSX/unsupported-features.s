@@ -4,6 +4,9 @@
 # RUN: printf "add a0, a0, a1\n" | llvm-mc -triple=ysx64 -mattr=-f,-v,-zbb -
 # RUN: llvm-mc -triple=ysx64 -mattr=help 2>&1 | FileCheck %s --check-prefix=HELP
 # RUN: not llvm-mc -triple=ysx64 %s 2>&1 | FileCheck %s --check-prefix=ARCH
+# RUN: printf ".option arch, rv64ima\nadd a0, a0, a1\n" | llvm-mc -triple=ysx64 -
+# RUN: printf ".option arch, rv32ima\n" | not llvm-mc -triple=ysx64 - 2>&1 | FileCheck %s --check-prefix=FULLARCH
+# RUN: printf ".option arch, rv64ima_zbb\n" | not llvm-mc -triple=ysx64 - 2>&1 | FileCheck %s --check-prefix=FULLARCH
 # RUN: printf ".option arch, +f\n" | not llvm-mc -triple=ysx64 - 2>&1 | FileCheck %s --check-prefix=OPTION
 # RUN: printf ".option arch, +c\n" | not llvm-mc -triple=ysx64 - 2>&1 | FileCheck %s --check-prefix=OPTION
 # RUN: printf ".option arch, +zbb\n" | not llvm-mc -triple=ysx64 - 2>&1 | FileCheck %s --check-prefix=OPTION
@@ -39,8 +42,9 @@
 # CHECK: LLVM ERROR: YSX only supports the rv64ima ISA
 
 .option arch, rv64gc
-# ARCH: error: YSX only supports arch string rv64ima
+# ARCH: error: invalid arch name 'rv64gc', YSX only supports arch string rv64ima
 # OPTION: error: YSX only supports arch string rv64ima
+# FULLARCH: error: invalid arch name
 # UNSUP-INST: error: unrecognized instruction mnemonic
 # INSN16: error: compressed instructions are not allowed
 # HELP: Available features for this target:

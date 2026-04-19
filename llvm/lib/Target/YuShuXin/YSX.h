@@ -50,18 +50,6 @@ FunctionPass *createYSXISelDag(YSXTargetMachine &TM,
 FunctionPass *createYSXLateBranchOptPass();
 void initializeYSXLateBranchOptPass(PassRegistry &);
 
-FunctionPass *createYSXMakeCompressibleOptPass();
-void initializeYSXMakeCompressibleOptPass(PassRegistry &);
-
-FunctionPass *createYSXGatherScatterLoweringPass();
-void initializeYSXGatherScatterLoweringPass(PassRegistry &);
-
-FunctionPass *createYSXVectorPeepholePass();
-void initializeYSXVectorPeepholePass(PassRegistry &);
-
-FunctionPass *createYSXOptWInstrsPass();
-void initializeYSXOptWInstrsPass(PassRegistry &);
-
 FunctionPass *createYSXFoldMemOffsetPass();
 void initializeYSXFoldMemOffsetPass(PassRegistry &);
 
@@ -77,45 +65,15 @@ void initializeYSXPreRAExpandPseudoPass(PassRegistry &);
 FunctionPass *createYSXExpandAtomicPseudoPass();
 void initializeYSXExpandAtomicPseudoPass(PassRegistry &);
 
-FunctionPass *createYSXInsertVSETVLIPass();
-void initializeYSXInsertVSETVLIPass(PassRegistry &);
-extern char &YSXInsertVSETVLIID;
-
 FunctionPass *createYSXPostRAExpandPseudoPass();
 void initializeYSXPostRAExpandPseudoPass(PassRegistry &);
 FunctionPass *createYSXInsertReadWriteCSRPass();
 void initializeYSXInsertReadWriteCSRPass(PassRegistry &);
 
-FunctionPass *createYSXInsertWriteVXRMPass();
-void initializeYSXInsertWriteVXRMPass(PassRegistry &);
-
-FunctionPass *createYSXRedundantCopyEliminationPass();
-void initializeYSXRedundantCopyEliminationPass(PassRegistry &);
-
-FunctionPass *createYSXMoveMergePass();
-void initializeYSXMoveMergePass(PassRegistry &);
-
-FunctionPass *createYSXPushPopOptimizationPass();
-void initializeYSXPushPopOptPass(PassRegistry &);
-FunctionPass *createYSXLoadStoreOptPass();
-void initializeYSXLoadStoreOptPass(PassRegistry &);
-
-FunctionPass *createYSXPreAllocZilsdOptPass();
-void initializeYSXPreAllocZilsdOptPass(PassRegistry &);
-
-FunctionPass *createYSXZacasABIFixPass();
-void initializeYSXZacasABIFixPass(PassRegistry &);
-
 void initializeYSXDAGToDAGISelLegacyPass(PassRegistry &);
 
 ModulePass *createYSXPromoteConstantPass();
 void initializeYSXPromoteConstantPass(PassRegistry &);
-
-FunctionPass *createYSXVLOptimizerPass();
-void initializeYSXVLOptimizerPass(PassRegistry &);
-
-FunctionPass *createYSXVMV0EliminationPass();
-void initializeYSXVMV0EliminationPass(PassRegistry &);
 
 void initializeYSXAsmPrinterPass(PassRegistry &);
 } // namespace llvm

@@ -65,9 +65,6 @@ public:
   createPostMachineScheduler(MachineSchedContext *C) const override;
 };
 
-std::unique_ptr<ScheduleDAGMutation>
-createYSXVectorMaskDAGMutation(const TargetRegisterInfo *TRI);
-
 } // namespace llvm
 
 #endif
