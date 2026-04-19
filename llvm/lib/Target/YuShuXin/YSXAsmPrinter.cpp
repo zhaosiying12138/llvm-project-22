@@ -23,7 +23,6 @@
 #include "YSXRegisterInfo.h"
 #include "TargetInfo/YSXTargetInfo.h"
 #include "llvm/ADT/APInt.h"
-#include "llvm/ADT/Statistic.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
@@ -47,9 +46,6 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "asm-printer"
-
-STATISTIC(YSXNumInstrsCompressed,
-          "Number of RISC-V Compressed instructions emitted");
 
 namespace llvm {
 extern const SubtargetFeatureKV YSXFeatureKV[YSX::NumSubtargetFeatures];
@@ -90,7 +86,7 @@ public:
   bool PrintAsmMemoryOperand(const MachineInstr *MI, unsigned OpNo,
                              const char *ExtraCode, raw_ostream &OS) override;
 
-  // Returns whether Inst is compressed.
+  // Returns whether Inst was shortened.
   bool EmitToStreamer(MCStreamer &S, const MCInst &Inst,
                       const MCSubtargetInfo &SubtargetInfo);
   bool EmitToStreamer(MCStreamer &S, const MCInst &Inst) {
@@ -133,7 +129,7 @@ private:
 
 void YSXAsmPrinter::LowerSTACKMAP(MCStreamer &OutStreamer, StackMaps &SM,
                                     const MachineInstr &MI) {
-  unsigned NOPBytes = STI->hasStdExtZca() ? 2 : 4;
+  unsigned NOPBytes = 4;
   unsigned NumNOPBytes = StackMapOpers(&MI).getNumPatchBytes();
 
   auto &Ctx = OutStreamer.getContext();
@@ -166,7 +162,7 @@ void YSXAsmPrinter::LowerSTACKMAP(MCStreamer &OutStreamer, StackMaps &SM,
 // [<def>], <id>, <numBytes>, <target>, <numArgs>
 void YSXAsmPrinter::LowerPATCHPOINT(MCStreamer &OutStreamer, StackMaps &SM,
                                       const MachineInstr &MI) {
-  unsigned NOPBytes = STI->hasStdExtZca() ? 2 : 4;
+  unsigned NOPBytes = 4;
 
   auto &Ctx = OutStreamer.getContext();
   MCSymbol *MILabel = Ctx.createTempSymbol();
@@ -187,14 +183,14 @@ void YSXAsmPrinter::LowerPATCHPOINT(MCStreamer &OutStreamer, StackMaps &SM,
       SmallVector<MCInst, 8> Seq;
       YSXMatInt::generateMCInstSeq(CallTarget, *STI, YSX::X1, Seq);
       for (MCInst &Inst : Seq) {
-        bool Compressed = EmitToStreamer(OutStreamer, Inst);
-        EncodedBytes += Compressed ? 2 : 4;
+        EmitToStreamer(OutStreamer, Inst);
+        EncodedBytes += 4;
       }
-      bool Compressed = EmitToStreamer(OutStreamer, MCInstBuilder(YSX::JALR)
-                                                        .addReg(YSX::X1)
-                                                        .addReg(YSX::X1)
-                                                        .addImm(0));
-      EncodedBytes += Compressed ? 2 : 4;
+      EmitToStreamer(OutStreamer, MCInstBuilder(YSX::JALR)
+                                      .addReg(YSX::X1)
+                                      .addReg(YSX::X1)
+                                      .addImm(0));
+      EncodedBytes += 4;
     }
   } else if (CalleeMO.isGlobal()) {
     MCOperand CallTargetMCOp;
@@ -215,7 +211,7 @@ void YSXAsmPrinter::LowerPATCHPOINT(MCStreamer &OutStreamer, StackMaps &SM,
 
 void YSXAsmPrinter::LowerSTATEPOINT(MCStreamer &OutStreamer, StackMaps &SM,
                                       const MachineInstr &MI) {
-  unsigned NOPBytes = STI->hasStdExtZca() ? 2 : 4;
+  unsigned NOPBytes = 4;
 
   StatepointOpers SOpers(&MI);
   if (unsigned PatchBytes = SOpers.getNumPatchBytes()) {
@@ -261,45 +257,15 @@ void YSXAsmPrinter::LowerSTATEPOINT(MCStreamer &OutStreamer, StackMaps &SM,
 
 bool YSXAsmPrinter::EmitToStreamer(MCStreamer &S, const MCInst &Inst,
                                      const MCSubtargetInfo &SubtargetInfo) {
-  MCInst CInst;
-  bool Res = YSXRVC::compress(CInst, Inst, SubtargetInfo);
-  if (Res)
-    ++YSXNumInstrsCompressed;
-  S.emitInstruction(Res ? CInst : Inst, SubtargetInfo);
-  return Res;
+  S.emitInstruction(Inst, SubtargetInfo);
+  return false;
 }
 
 // Simple pseudo-instructions have their lowering (with expansion to real
 // instructions) auto-generated.
 #include "YSXGenMCPseudoLowering.inc"
 
-// If the target supports Zihintntl and the instruction has a nontemporal
-// MachineMemOperand, emit an NTLH hint instruction before it.
 void YSXAsmPrinter::emitNTLHint(const MachineInstr *MI) {
-  if (!STI->hasStdExtZihintntl())
-    return;
-
-  if (MI->memoperands_empty())
-    return;
-
-  MachineMemOperand *MMO = *(MI->memoperands_begin());
-  if (!MMO->isNonTemporal())
-    return;
-
-  unsigned NontemporalMode = 0;
-  if (MMO->getFlags() & MONontemporalBit0)
-    NontemporalMode += 0b1;
-  if (MMO->getFlags() & MONontemporalBit1)
-    NontemporalMode += 0b10;
-
-  MCInst Hint;
-  Hint.setOpcode(YSX::ADD);
-
-  Hint.addOperand(MCOperand::createReg(YSX::X0));
-  Hint.addOperand(MCOperand::createReg(YSX::X0));
-  Hint.addOperand(MCOperand::createReg(YSX::X2 + NontemporalMode));
-
-  EmitToStreamer(*OutStreamer, Hint);
 }
 
 void YSXAsmPrinter::emitInstruction(const MachineInstr *MI) {
@@ -505,21 +471,8 @@ void YSXAsmPrinter::LowerPATCHABLE_TAIL_CALL(const MachineInstr *MI) {
 }
 
 void YSXAsmPrinter::emitSled(const MachineInstr *MI, SledKind Kind) {
-  // We want to emit the jump instruction and the nops constituting the sled.
-  // The format is as follows:
-  // .Lxray_sled_N
-  //   ALIGN
-  //   J .tmpN
-  //   21 or 33 C.NOP instructions
-  // .tmpN
-
-  // The following variable holds the count of the number of NOPs to be patched
-  // in for XRay instrumentation during compilation.
-  // Note that RV64 and RV32 each has a sled of 68 and 44 bytes, respectively.
-  // Assuming we're using JAL to jump to .tmpN, then we only need
-  // (68 - 4)/2 = 32 NOPs for RV64 and (44 - 4)/2 = 20 for RV32. However, there
-  // is a chance that we'll use C.JAL instead, so an additional NOP is needed.
-  const uint8_t NoopsInSledCount = STI->is64Bit() ? 33 : 21;
+  // Emit a 68-byte sled: one 4-byte jump followed by sixteen 4-byte NOPs.
+  const uint8_t NoopsInSledCount = 16;
 
   OutStreamer->emitCodeAlignment(Align(4), STI);
   auto CurSled = OutContext.createTempSymbol("xray_sled_", true);
@@ -673,7 +626,7 @@ void YSXAsmPrinter::LowerKCFI_CHECK(const MachineInstr &MI) {
   } else {
     // Adjust the offset for patchable-function-prefix. This assumes that
     // patchable-function-prefix is the same for all functions.
-    int NopSize = STI->hasStdExtZca() ? 2 : 4;
+    int NopSize = 4;
     int64_t PrefixNops = 0;
     (void)MI.getMF()
         ->getFunction()

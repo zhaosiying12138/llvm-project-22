@@ -42,9 +42,6 @@ enum {
   S_LO = FirstTargetFixupKind,
   S_PCREL_LO,
   S_TPREL_LO,
-  // Vendor-specific relocation types might conflict across vendors.
-  // Refer to them using Specifier constants.
-  S_QC_ABS20,
 };
 
 Specifier parseSpecifierName(StringRef name);

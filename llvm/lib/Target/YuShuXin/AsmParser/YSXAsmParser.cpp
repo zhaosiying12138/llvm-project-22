@@ -17,7 +17,6 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCContext.h"
@@ -47,9 +46,6 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "ysx-asm-parser"
-
-STATISTIC(YSXNumInstrsCompressed,
-          "Number of RISC-V Compressed instructions emitted");
 
 static cl::opt<bool> AddBuildAttributes("ysx-add-build-attributes",
                                         cl::init(false));
@@ -109,8 +105,7 @@ class YSXAsmParser : public MCTargetAsmParser {
 
   ParseStatus parseDirective(AsmToken DirectiveID) override;
 
-  // Helper to actually emit an instruction to the MCStreamer. Also, when
-  // possible, compression of the instruction is performed.
+  // Helper to actually emit an instruction to the MCStreamer.
   void emitToStreamer(MCStreamer &S, const MCInst &Inst);
 
   // Helper to emit a combination of LUI, ADDI(W), and SLLI instructions that
@@ -188,21 +183,11 @@ class YSXAsmParser : public MCTargetAsmParser {
   ParseStatus parsePseudoJumpSymbol(OperandVector &Operands);
   ParseStatus parseJALOffset(OperandVector &Operands);
   ParseStatus parseInsnDirectiveOpcode(OperandVector &Operands);
-  ParseStatus parseInsnCDirectiveOpcode(OperandVector &Operands);
   template <bool IsRV64Inst> ParseStatus parseGPRPair(OperandVector &Operands);
   ParseStatus parseGPRPair(OperandVector &Operands, bool IsRV64Inst);
   ParseStatus parseFenceArg(OperandVector &Operands);
-  ParseStatus parseRegList(OperandVector &Operands, bool MustIncludeS0 = false);
-  ParseStatus parseRegListS0(OperandVector &Operands) {
-    return parseRegList(Operands, /*MustIncludeS0=*/true);
-  }
 
   ParseStatus parseRegReg(OperandVector &Operands);
-  ParseStatus parseZcmpStackAdj(OperandVector &Operands,
-                                bool ExpectNegative = false);
-  ParseStatus parseZcmpNegStackAdj(OperandVector &Operands) {
-    return parseZcmpStackAdj(Operands, /*ExpectNegative*/ true);
-  }
 
   bool parseOperand(OperandVector &Operands, StringRef Mnemonic);
   bool parseExprWithSpecifier(const MCExpr *&Res, SMLoc &E);
@@ -215,8 +200,7 @@ class YSXAsmParser : public MCTargetAsmParser {
   /// Helper to reset target features for a new arch string. It
   /// also records the new arch string that is expanded by YSXISAInfo
   /// and reports error for invalid arch string.
-  bool resetToArch(StringRef Arch, SMLoc Loc, std::string &Result,
-                   bool FromOptionDirective);
+  bool resetToArch(StringRef Arch, SMLoc Loc, std::string &Result);
 
   void setFeatureBits(uint64_t Feature, StringRef FeatureString) {
     if (!(getSTI().hasFeature(Feature))) {
@@ -279,18 +263,6 @@ public:
     setAvailableFeatures(ComputeAvailableFeatures(STI.getFeatureBits()));
 
     auto ABIName = StringRef(Options.ABIName);
-    if (ABIName.ends_with("f")) {
-      errs() << "Hard-float 'f' ABI can't be used for a target that "
-                "doesn't support the F instruction set extension (ignoring "
-                "target-abi)\n";
-    } else if (ABIName.ends_with("d")) {
-      errs() << "Hard-float 'd' ABI can't be used for a target that "
-                "doesn't support the D instruction set extension (ignoring "
-                "target-abi)\n";
-    }
-
-    // Use computeTargetABI to check if ABIName is valid. If invalid, output
-    // error message.
     YSXABI::computeTargetABI(STI.getTargetTriple(), STI.getFeatureBits(),
                                ABIName);
 
@@ -312,8 +284,6 @@ struct YSXOperand final : public MCParsedAsmOperand {
     Expression,
     SystemRegister,
     Fence,
-    RegList,
-    StackAdj,
     RegReg,
   } Kind;
 
@@ -338,14 +308,6 @@ struct YSXOperand final : public MCParsedAsmOperand {
     unsigned Val;
   };
 
-  struct RegListOp {
-    unsigned Encoding;
-  };
-
-  struct StackAdjOp {
-    unsigned Val;
-  };
-
   struct RegRegOp {
     MCRegister BaseReg;
     MCRegister OffsetReg;
@@ -358,8 +320,6 @@ struct YSXOperand final : public MCParsedAsmOperand {
     ExprOp Expr;
     SysRegOp SysReg;
     FenceOp Fence;
-    RegListOp RegList;
-    StackAdjOp StackAdj;
     RegRegOp RegReg;
   };
 
@@ -386,12 +346,6 @@ public:
     case KindTy::Fence:
       Fence = o.Fence;
       break;
-    case KindTy::RegList:
-      RegList = o.RegList;
-      break;
-    case KindTy::StackAdj:
-      StackAdj = o.StackAdj;
-      break;
     case KindTy::RegReg:
       RegReg = o.RegReg;
       break;
@@ -416,11 +370,6 @@ public:
   bool isMem() const override { return false; }
   bool isSystemRegister() const { return Kind == KindTy::SystemRegister; }
   bool isRegReg() const { return Kind == KindTy::RegReg; }
-  bool isRegList() const { return Kind == KindTy::RegList; }
-  bool isRegListS0() const {
-    return Kind == KindTy::RegList && RegList.Encoding != YSXZC::RA;
-  }
-  bool isStackAdj() const { return Kind == KindTy::StackAdj; }
 
   bool isGPR() const {
     return Kind == KindTy::Register &&
@@ -460,7 +409,7 @@ public:
 
     int64_t Imm;
     if (evaluateConstantExpr(getExpr(), Imm))
-      return isShiftedInt<N - 1, 1>(fixImmediateForRV32(Imm, isRV64Expr()));
+      return isShiftedInt<N - 1, 1>(Imm);
 
     YSX::Specifier VK = YSX::S_None;
     return YSXAsmParser::classifySymbolRef(getExpr(), VK) &&
@@ -475,7 +424,7 @@ public:
 
     int64_t Imm;
     if (evaluateConstantExpr(getExpr(), Imm))
-      return isInt<N>(fixImmediateForRV32(Imm, isRV64Expr()));
+      return isInt<N>(Imm);
 
     YSX::Specifier VK = YSX::S_None;
     return YSXAsmParser::classifySymbolRef(getExpr(), VK) &&
@@ -552,7 +501,7 @@ public:
     // Given only Imm, ensuring that the actually specified constant is either
     // a signed or unsigned 64-bit number is unfortunately impossible.
     if (evaluateConstantExpr(getExpr(), Imm))
-      return isRV64Expr() || (isInt<32>(Imm) || isUInt<32>(Imm));
+      return true;
 
     return YSXAsmParser::isSymbolDiff(getExpr());
   }
@@ -563,8 +512,7 @@ public:
       return false;
     bool IsConstantImm = evaluateConstantExpr(getExpr(), Imm);
     // 'la imm' supports constant immediates only.
-    return IsConstantImm &&
-           (isRV64Expr() || (isInt<32>(Imm) || isUInt<32>(Imm)));
+    return IsConstantImm;
   }
 
   template <unsigned N> bool isUImm() const {
@@ -592,21 +540,15 @@ public:
   }
 
   bool isUImmLog2XLen() const {
-    if (isExpr() && isRV64Expr())
-      return isUImm<6>();
-    return isUImm<5>();
+    return isUImm<6>();
   }
 
   bool isUImmLog2XLenNonZero() const {
-    if (isExpr() && isRV64Expr())
-      return isUImmPred([](int64_t Imm) { return Imm != 0 && isUInt<6>(Imm); });
-    return isUImmPred([](int64_t Imm) { return Imm != 0 && isUInt<5>(Imm); });
+    return isUImmPred([](int64_t Imm) { return Imm != 0 && isUInt<6>(Imm); });
   }
 
   bool isUImmLog2XLenHalf() const {
-    if (isExpr() && isRV64Expr())
-      return isUImm<5>();
-    return isUImm<4>();
+    return isUImm<5>();
   }
 
   bool isUImm1() const { return isUImm<1>(); }
@@ -680,7 +622,7 @@ public:
     if (!isExpr())
       return false;
     bool IsConstantImm = evaluateConstantExpr(getExpr(), Imm);
-    return IsConstantImm && isInt<N>(fixImmediateForRV32(Imm, isRV64Expr()));
+    return IsConstantImm && isInt<N>(Imm);
   }
 
   template <class Pred> bool isSImmPred(Pred p) const {
@@ -688,7 +630,7 @@ public:
     if (!isExpr())
       return false;
     bool IsConstantImm = evaluateConstantExpr(getExpr(), Imm);
-    return IsConstantImm && p(fixImmediateForRV32(Imm, isRV64Expr()));
+    return IsConstantImm && p(Imm);
   }
 
   bool isSImm5() const { return isSImm<5>(); }
@@ -736,21 +678,13 @@ public:
         [](int64_t Imm) { return isShiftedUInt<8, 2>(Imm) && (Imm != 0); });
   }
 
-  // If this a RV32 and the immediate is a uimm32, sign extend it to 32 bits.
-  // This allows writing 'addi a0, a0, 0xffffffff'.
-  static int64_t fixImmediateForRV32(int64_t Imm, bool IsRV64Imm) {
-    if (IsRV64Imm || !isUInt<32>(Imm))
-      return Imm;
-    return SignExtend64<32>(Imm);
-  }
-
   bool isSImm12LO() const {
     if (!isExpr())
       return false;
 
     int64_t Imm;
     if (evaluateConstantExpr(getExpr(), Imm))
-      return isInt<12>(fixImmediateForRV32(Imm, isRV64Expr()));
+      return isInt<12>(Imm);
 
     YSX::Specifier VK = YSX::S_None;
     return YSXAsmParser::classifySymbolRef(getExpr(), VK) &&
@@ -782,11 +716,9 @@ public:
 
     int64_t Imm;
     if (evaluateConstantExpr(getExpr(), Imm))
-      return isInt<20>(fixImmediateForRV32(Imm, isRV64Expr()));
+      return isInt<20>(Imm);
 
-    YSX::Specifier VK = YSX::S_None;
-    return YSXAsmParser::classifySymbolRef(getExpr(), VK) &&
-           VK == YSX::S_QC_ABS20;
+    return false;
   }
 
   bool isSImm8Unsigned() const { return isSImm<8>() || isUImm<8>(); }
@@ -910,7 +842,7 @@ public:
     case KindTy::Expression:
       OS << "<imm: ";
       MAI.printExpr(OS, *Expr.Expr);
-      OS << ' ' << (Expr.IsRV64 ? "rv64" : "rv32") << '>';
+      OS << " rv64>";
       break;
     case KindTy::Register:
       OS << "<reg: " << RegName(Reg.Reg) << " (" << Reg.Reg.id() << ")>";
@@ -924,16 +856,6 @@ public:
     case KindTy::Fence:
       OS << "<fence: ";
       OS << getFence();
-      OS << '>';
-      break;
-    case KindTy::RegList:
-      OS << "<reglist: ";
-      YSXZC::printRegList(RegList.Encoding, OS);
-      OS << '>';
-      break;
-    case KindTy::StackAdj:
-      OS << "<stackadj: ";
-      OS << StackAdj.Val;
       OS << '>';
       break;
     case KindTy::RegReg:
@@ -989,14 +911,6 @@ public:
     return Op;
   }
 
-  static std::unique_ptr<YSXOperand> createRegList(unsigned RlistEncode,
-                                                   SMLoc S) {
-    auto Op = std::make_unique<YSXOperand>(KindTy::RegList);
-    Op->RegList.Encoding = RlistEncode;
-    Op->StartLoc = S;
-    return Op;
-  }
-
   static std::unique_ptr<YSXOperand>
   createRegReg(MCRegister BaseReg, MCRegister OffsetReg, SMLoc S) {
     auto Op = std::make_unique<YSXOperand>(KindTy::RegReg);
@@ -1007,21 +921,13 @@ public:
     return Op;
   }
 
-  static std::unique_ptr<YSXOperand> createStackAdj(unsigned StackAdj, SMLoc S) {
-    auto Op = std::make_unique<YSXOperand>(KindTy::StackAdj);
-    Op->StackAdj.Val = StackAdj;
-    Op->StartLoc = S;
-    return Op;
-  }
-
   static void addExpr(MCInst &Inst, const MCExpr *Expr, bool IsRV64Imm) {
     assert(Expr && "Expr shouldn't be null!");
     int64_t Imm = 0;
     bool IsConstant = evaluateConstantExpr(Expr, Imm);
 
     if (IsConstant)
-      Inst.addOperand(
-          MCOperand::createImm(fixImmediateForRV32(Imm, IsRV64Imm)));
+      Inst.addOperand(MCOperand::createImm(Imm));
     else
       Inst.addOperand(MCOperand::createExpr(Expr));
   }
@@ -1063,20 +969,10 @@ public:
     Inst.addOperand(MCOperand::createImm(SysReg.Encoding));
   }
 
-  void addRegListOperands(MCInst &Inst, unsigned N) const {
-    assert(N == 1 && "Invalid number of operands!");
-    Inst.addOperand(MCOperand::createImm(RegList.Encoding));
-  }
-
   void addRegRegOperands(MCInst &Inst, unsigned N) const {
     assert(N == 2 && "Invalid number of operands!");
     Inst.addOperand(MCOperand::createReg(RegReg.BaseReg));
     Inst.addOperand(MCOperand::createReg(RegReg.OffsetReg));
-  }
-
-  void addStackAdjOperands(MCInst &Inst, unsigned N) const {
-    assert(N == 1 && "Invalid number of operands!");
-    Inst.addOperand(MCOperand::createImm(StackAdj.Val));
   }
 
 };
@@ -1395,66 +1291,6 @@ ParseStatus YSXAsmParser::parseInsnDirectiveOpcode(OperandVector &Operands) {
       "opcode must be a valid opcode name or an immediate in the range");
 }
 
-ParseStatus YSXAsmParser::parseInsnCDirectiveOpcode(OperandVector &Operands) {
-  SMLoc S = getLoc();
-  SMLoc E;
-  const MCExpr *Res;
-
-  switch (getLexer().getKind()) {
-  default:
-    return ParseStatus::NoMatch;
-  case AsmToken::LParen:
-  case AsmToken::Minus:
-  case AsmToken::Plus:
-  case AsmToken::Exclaim:
-  case AsmToken::Tilde:
-  case AsmToken::Integer:
-  case AsmToken::String: {
-    if (getParser().parseExpression(Res, E))
-      return ParseStatus::Failure;
-
-    auto *CE = dyn_cast<MCConstantExpr>(Res);
-    if (CE) {
-      int64_t Imm = CE->getValue();
-      if (Imm >= 0 && Imm <= 2) {
-        Operands.push_back(YSXOperand::createExpr(Res, S, E, isRV64()));
-        return ParseStatus::Success;
-      }
-    }
-
-    break;
-  }
-  case AsmToken::Identifier: {
-    StringRef Identifier;
-    if (getParser().parseIdentifier(Identifier))
-      return ParseStatus::Failure;
-
-    unsigned Opcode;
-    if (Identifier == "C0")
-      Opcode = 0;
-    else if (Identifier == "C1")
-      Opcode = 1;
-    else if (Identifier == "C2")
-      Opcode = 2;
-    else
-      break;
-
-    Res = MCConstantExpr::create(Opcode, getContext());
-    E = SMLoc::getFromPointer(S.getPointer() + Identifier.size());
-    Operands.push_back(YSXOperand::createExpr(Res, S, E, isRV64()));
-    return ParseStatus::Success;
-  }
-  case AsmToken::Percent: {
-    // Discard operand with modifier.
-    break;
-  }
-  }
-
-  return generateImmOutOfRangeError(
-      S, 0, 2,
-      "opcode must be a valid opcode name or an immediate in the range");
-}
-
 ParseStatus YSXAsmParser::parseCSRSystemRegister(OperandVector &Operands) {
   SMLoc S = getLoc();
   const MCExpr *Res;
@@ -1526,11 +1362,6 @@ ParseStatus YSXAsmParser::parseCSRSystemRegister(OperandVector &Operands) {
           return SysReg->FeaturesRequired[Feature.Value];
         });
         auto ErrorMsg = std::string("system register '") + SysReg->Name + "' ";
-        if (SysReg->IsRV32Only && FeatureBits[YSX::Feature64Bit]) {
-          ErrorMsg += "is RV32 only";
-          if (Feature != std::end(YSXFeatureKV))
-            ErrorMsg += " and ";
-        }
         if (Feature != std::end(YSXFeatureKV)) {
           ErrorMsg +=
               "requires '" + std::string(Feature->Key) + "' to be enabled";
@@ -1761,8 +1592,8 @@ ParseStatus YSXAsmParser::parseGPRPair(OperandVector &Operands,
   // If this is not an RV64 GPRPair instruction, don't parse as a GPRPair on
   // RV64 as it will prevent matching the RV64 version of the same instruction
   // that doesn't use a GPRPair.
-  // If this is an RV64 GPRPair instruction, there is no RV32 version so we can
-  // still parse as a pair.
+  // GPRPair operands are only accepted for instructions that explicitly use
+  // them.
   if (!IsRV64Inst && isRV64())
     return ParseStatus::NoMatch;
 
@@ -1961,143 +1792,6 @@ ParseStatus YSXAsmParser::parseRegReg(OperandVector &Operands) {
   return ParseStatus::Success;
 }
 
-// RegList: {ra [, s0[-sN]]}
-// XRegList: {x1 [, x8[-x9][, x18[-xN]]]}
-
-// When MustIncludeS0 = true (not the default) (used for `qc.cm.pushfp`) which
-// must include `fp`/`s0` in the list:
-// RegList: {ra, s0[-sN]}
-// XRegList: {x1, x8[-x9][, x18[-xN]]}
-ParseStatus YSXAsmParser::parseRegList(OperandVector &Operands,
-                                         bool MustIncludeS0) {
-  if (getTok().isNot(AsmToken::LCurly))
-    return ParseStatus::NoMatch;
-
-  SMLoc S = getLoc();
-
-  Lex();
-
-  bool UsesXRegs;
-  MCRegister RegEnd;
-  do {
-    if (getTok().isNot(AsmToken::Identifier))
-      return Error(getLoc(), "invalid register");
-
-    StringRef RegName = getTok().getIdentifier();
-    MCRegister Reg = matchRegisterNameHelper(RegName);
-    if (!Reg)
-      return Error(getLoc(), "invalid register");
-
-    if (!RegEnd) {
-      UsesXRegs = RegName[0] == 'x';
-      if (Reg != YSX::X1)
-        return Error(getLoc(), "register list must start from 'ra' or 'x1'");
-    } else if (RegEnd == YSX::X1) {
-      if (Reg != YSX::X8 || (UsesXRegs != (RegName[0] == 'x')))
-        return Error(getLoc(), Twine("register must be '") +
-                                   (UsesXRegs ? "x8" : "s0") + "'");
-    } else if (RegEnd == YSX::X9 && UsesXRegs) {
-      if (Reg != YSX::X18 || (RegName[0] != 'x'))
-        return Error(getLoc(), "register must be 'x18'");
-    } else {
-      return Error(getLoc(), "too many register ranges");
-    }
-
-    RegEnd = Reg;
-
-    Lex();
-
-    SMLoc MinusLoc = getLoc();
-    if (parseOptionalToken(AsmToken::Minus)) {
-      if (RegEnd == YSX::X1)
-        return Error(MinusLoc, Twine("register '") + (UsesXRegs ? "x1" : "ra") +
-                                   "' cannot start a multiple register range");
-
-      if (getTok().isNot(AsmToken::Identifier))
-        return Error(getLoc(), "invalid register");
-
-      StringRef RegName = getTok().getIdentifier();
-      MCRegister Reg = matchRegisterNameHelper(RegName);
-      if (!Reg)
-        return Error(getLoc(), "invalid register");
-
-      if (RegEnd == YSX::X8) {
-        if ((Reg != YSX::X9 &&
-             (UsesXRegs || Reg < YSX::X18 || Reg > YSX::X27)) ||
-            (UsesXRegs != (RegName[0] == 'x'))) {
-          if (UsesXRegs)
-            return Error(getLoc(), "register must be 'x9'");
-          return Error(getLoc(), "register must be in the range 's1' to 's11'");
-        }
-      } else if (RegEnd == YSX::X18) {
-        if (Reg < YSX::X19 || Reg > YSX::X27 || (RegName[0] != 'x'))
-          return Error(getLoc(),
-                       "register must be in the range 'x19' to 'x27'");
-      } else
-        llvm_unreachable("unexpected register");
-
-      RegEnd = Reg;
-
-      Lex();
-    }
-  } while (parseOptionalToken(AsmToken::Comma));
-
-  if (parseToken(AsmToken::RCurly, "expected ',' or '}'"))
-    return ParseStatus::Failure;
-
-  if (RegEnd == YSX::X26)
-    return Error(S, "invalid register list, '{ra, s0-s10}' or '{x1, x8-x9, "
-                    "x18-x26}' is not supported");
-
-  auto Encode = YSXZC::encodeRegList(RegEnd, isRVE());
-  assert(Encode != YSXZC::INVALID_RLIST);
-
-  if (MustIncludeS0 && Encode == YSXZC::RA)
-    return Error(S, "register list must include 's0' or 'x8'");
-
-  Operands.push_back(YSXOperand::createRegList(Encode, S));
-
-  return ParseStatus::Success;
-}
-
-ParseStatus YSXAsmParser::parseZcmpStackAdj(OperandVector &Operands,
-                                              bool ExpectNegative) {
-  SMLoc S = getLoc();
-  bool Negative = parseOptionalToken(AsmToken::Minus);
-
-  if (getTok().isNot(AsmToken::Integer))
-    return ParseStatus::NoMatch;
-
-  int64_t StackAdjustment = getTok().getIntVal();
-
-  auto *RegListOp = static_cast<YSXOperand *>(Operands.back().get());
-  if (!RegListOp->isRegList())
-    return ParseStatus::NoMatch;
-
-  unsigned RlistEncode = RegListOp->RegList.Encoding;
-
-  assert(RlistEncode != YSXZC::INVALID_RLIST);
-  unsigned StackAdjBase = YSXZC::getStackAdjBase(RlistEncode, isRV64());
-  if (Negative != ExpectNegative || StackAdjustment % 16 != 0 ||
-      StackAdjustment < StackAdjBase || (StackAdjustment - StackAdjBase) > 48) {
-    int64_t Lower = StackAdjBase;
-    int64_t Upper = StackAdjBase + 48;
-    if (ExpectNegative) {
-      Lower = -Lower;
-      Upper = -Upper;
-      std::swap(Lower, Upper);
-    }
-    return generateImmOutOfRangeError(S, Lower, Upper,
-                                      "stack adjustment for register list must "
-                                      "be a multiple of 16 bytes in the range");
-  }
-
-  unsigned StackAdj = (StackAdjustment - StackAdjBase);
-  Operands.push_back(YSXOperand::createStackAdj(StackAdj, S));
-  Lex();
-  return ParseStatus::Success;
-}
-
 /// Looks at a token type and creates the relevant operand from this
 /// information, adding to Operands. If operand was parsed, returns false, else
 /// true.
@@ -2201,8 +1895,8 @@ ParseStatus YSXAsmParser::parseDirective(AsmToken DirectiveID) {
   return ParseStatus::NoMatch;
 }
 
-bool YSXAsmParser::resetToArch(StringRef Arch, SMLoc Loc, std::string &Result,
-                                 bool FromOptionDirective) {
+bool YSXAsmParser::resetToArch(StringRef Arch, SMLoc Loc,
+                                 std::string &Result) {
   for (auto &Feature : YSXFeatureKV)
     if (llvm::YSXISAInfo::isSupportedExtensionFeature(Feature.Key))
       clearFeatureBits(Feature.Value, Feature.Key);
@@ -2230,19 +1924,9 @@ bool YSXAsmParser::resetToArch(StringRef Arch, SMLoc Loc, std::string &Result,
     if (ISAInfo->hasExtension(Feature.Key))
       setFeatureBits(Feature.Value, Feature.Key);
 
-  if (FromOptionDirective) {
-    if (ISAInfo->getXLen() == 32 && isRV64())
-      return Error(Loc, "bad arch string switching from rv64 to rv32");
-    else if (ISAInfo->getXLen() == 64 && !isRV64())
-      return Error(Loc, "bad arch string switching from rv32 to rv64");
-  }
-
-  if (ISAInfo->getXLen() == 32)
-    clearFeatureBits(YSX::Feature64Bit, "64bit");
-  else if (ISAInfo->getXLen() == 64)
-    setFeatureBits(YSX::Feature64Bit, "64bit");
-  else
+  if (ISAInfo->getXLen() != 64)
     return Error(Loc, "bad arch string " + Arch);
+  setFeatureBits(YSX::Feature64Bit, "64bit");
 
   Result = ISAInfo->toString();
   return false;
@@ -2338,7 +2022,7 @@ bool YSXAsmParser::parseDirectiveOption() {
 
       if (Type == YSXOptionArchArgType::Full) {
         std::string Result;
-        if (resetToArch(Arch, Loc, Result, true))
+        if (resetToArch(Arch, Loc, Result))
           return true;
 
         Args.emplace_back(Type, Result);
@@ -2428,7 +2112,6 @@ bool YSXAsmParser::parseDirectiveOption() {
     if (Parser.parseEOL())
       return true;
 
-    getTargetStreamer().emitDirectiveOptionNoRVC();
     return false;
   }
 
@@ -2546,7 +2229,7 @@ bool YSXAsmParser::parseDirectiveAttribute() {
     getTargetStreamer().emitTextAttribute(Tag, StringValue);
   else {
     std::string Result;
-    if (resetToArch(StringValue, ValueExprLoc, Result, false))
+    if (resetToArch(StringValue, ValueExprLoc, Result))
       return true;
 
     // Then emit the arch string.
@@ -2559,8 +2242,6 @@ bool YSXAsmParser::parseDirectiveAttribute() {
 static bool isValidInsnFormat(StringRef Format, const MCSubtargetInfo &STI) {
   return StringSwitch<bool>(Format)
       .Cases({"r", "r4", "i", "b", "sb", "u", "j", "uj", "s"}, true)
-      .Cases({"qc.eai", "qc.ei", "qc.eb", "qc.ej", "qc.es"},
-             !STI.hasFeature(YSX::Feature64Bit))
       .Default(false);
 }
 
@@ -2615,7 +2296,7 @@ bool YSXAsmParser::parseDirectiveInsn(SMLoc L) {
     }
 
     if (EncodingDerivedLength == 2)
-      return Error(ErrorLoc, "compressed instructions are not allowed");
+      return Error(ErrorLoc, "16-bit instruction encodings are not allowed");
 
     if (getParser().parseEOL("invalid operand for instruction")) {
       getParser().eatToEndOfStatement();
@@ -2626,7 +2307,7 @@ bool YSXAsmParser::parseDirectiveInsn(SMLoc L) {
     if (Length) {
       switch (*Length) {
       case 2:
-        return Error(ErrorLoc, "compressed instructions are not allowed");
+        return Error(ErrorLoc, "16-bit instruction encodings are not allowed");
       case 4:
         Opcode = YSX::Insn32;
         break;
@@ -2665,14 +2346,8 @@ bool YSXAsmParser::parseDirectiveInsn(SMLoc L) {
 }
 
 void YSXAsmParser::emitToStreamer(MCStreamer &S, const MCInst &Inst) {
-  MCInst CInst;
-  bool Res = false;
   const MCSubtargetInfo &STI = getSTI();
-  if (!STI.hasFeature(YSX::FeatureExactAssembly))
-    Res = YSXRVC::compress(CInst, Inst, STI);
-  if (Res)
-    ++YSXNumInstrsCompressed;
-  S.emitInstruction((Res ? CInst : Inst), STI);
+  S.emitInstruction(Inst, STI);
 }
 
 void YSXAsmParser::emitLoadImm(MCRegister DestReg, int64_t Value,
@@ -2902,11 +2577,6 @@ bool YSXAsmParser::processInstruction(MCInst &Inst, SMLoc IDLoc,
       return false;
     }
     int64_t Imm = Inst.getOperand(1).getImm();
-    // On RV32 the immediate here can either be a signed or an unsigned
-    // 32-bit number. Sign extension has to be performed to ensure that Imm
-    // represents the expected signed 64-bit number.
-    if (!isRV64())
-      Imm = SignExtend64<32>(Imm);
     emitLoadImm(Reg, Imm, Out);
     return false;
   }

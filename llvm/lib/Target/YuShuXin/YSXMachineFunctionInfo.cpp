@@ -70,8 +70,6 @@ YSXMachineFunctionInfo::getInterruptStackKind(
 
   return StringSwitch<YSXMachineFunctionInfo::InterruptStackKind>(
              InterruptVal)
-      .Case("qci-nest", InterruptStackKind::QCINest)
-      .Case("qci-nonest", InterruptStackKind::QCINoNest)
       .Case("SiFive-CLIC-preemptible",
             InterruptStackKind::SiFiveCLICPreemptible)
       .Case("SiFive-CLIC-stack-swap", InterruptStackKind::SiFiveCLICStackSwap)
@@ -84,51 +82,8 @@ void yaml::YSXMachineFunctionInfo::mappingImpl(yaml::IO &YamlIO) {
   MappingTraits<YSXMachineFunctionInfo>::mapping(YamlIO, *this);
 }
 
-YSXMachineFunctionInfo::PushPopKind
-YSXMachineFunctionInfo::getPushPopKind(const MachineFunction &MF) const {
-  // We cannot use fixed locations for the callee saved spill slots if the
-  // function uses a varargs save area.
-  // TODO: Use a separate placement for vararg registers to enable Zcmp.
-  if (VarArgsSaveSize != 0)
-    return PushPopKind::None;
-
-  // SiFive interrupts are not compatible with push/pop.
-  if (useSiFiveInterrupt(MF))
-    return PushPopKind::None;
-
-  // Zcmp is not compatible with the frame pointer convention.
-  if (MF.getSubtarget<YSXSubtarget>().hasStdExtZcmp() &&
-      !MF.getTarget().Options.DisableFramePointerElim(MF))
-    return PushPopKind::StdExtZcmp;
-
-  // Xqccmp is Zcmp but has a push order compatible with the frame-pointer
-  // convention.
-  if (MF.getSubtarget<YSXSubtarget>().hasVendorXqccmp())
-    return PushPopKind::VendorXqccmp;
-
-  return PushPopKind::None;
-}
-
 bool YSXMachineFunctionInfo::hasImplicitFPUpdates(
-    const MachineFunction &MF) const {
-  switch (getInterruptStackKind(MF)) {
-  case InterruptStackKind::QCINest:
-  case InterruptStackKind::QCINoNest:
-    // QC.C.MIENTER and QC.C.MIENTER.NEST both update FP on function entry.
-    return true;
-  default:
-    break;
-  }
-
-  switch (getPushPopKind(MF)) {
-  case PushPopKind::VendorXqccmp:
-    // When using Xqccmp, we will use `QC.CM.PUSHFP` when Frame Pointers are
-    // enabled, which will update FP.
-    return true;
-  default:
-    break;
-  }
-
+    const MachineFunction &) const {
   return false;
 }
 

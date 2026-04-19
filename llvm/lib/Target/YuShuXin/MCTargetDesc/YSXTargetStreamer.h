@@ -33,7 +33,6 @@ struct YSXOptionArchArg {
 
 class YSXTargetStreamer : public MCTargetStreamer {
   YSXABI::ABI TargetABI = YSXABI::ABI_Unknown;
-  bool HasRVC = false;
   bool HasTSO = false;
 
 public:
@@ -50,8 +49,6 @@ public:
   virtual void emitDirectiveOptionPush();
   virtual void emitDirectiveOptionRelax();
   virtual void emitDirectiveOptionNoRelax();
-  virtual void emitDirectiveOptionRVC();
-  virtual void emitDirectiveOptionNoRVC();
   virtual void emitAttribute(unsigned Attribute, unsigned Value);
   virtual void finishAttributeSection();
   virtual void emitTextAttribute(unsigned Attribute, StringRef String);
@@ -62,7 +59,6 @@ public:
   void setTargetABI(YSXABI::ABI ABI);
   YSXABI::ABI getTargetABI() const { return TargetABI; }
   void setFlagsFromFeatures(const MCSubtargetInfo &STI);
-  bool hasRVC() const { return HasRVC; }
   bool hasTSO() const { return HasTSO; }
 };
 
@@ -88,8 +84,6 @@ public:
   void emitDirectiveOptionPush() override;
   void emitDirectiveOptionRelax() override;
   void emitDirectiveOptionNoRelax() override;
-  void emitDirectiveOptionRVC() override;
-  void emitDirectiveOptionNoRVC() override;
 };
 
 }

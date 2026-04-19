@@ -24,10 +24,10 @@ class RVSDNode<string opcode, SDTypeProfile type_profile,
 }
 
 // Target-independent type requirements, but with target-specific formats.
-def SDT_CallSeqStart : SDCallSeqStart<[SDTCisVT<0, i32>,
-                                       SDTCisVT<1, i32>]>;
-def SDT_CallSeqEnd   : SDCallSeqEnd<[SDTCisVT<0, i32>,
-                                     SDTCisVT<1, i32>]>;
+def SDT_CallSeqStart : SDCallSeqStart<[SDTCisVT<0, i64>,
+                                       SDTCisVT<1, i64>]>;
+def SDT_CallSeqEnd   : SDCallSeqEnd<[SDTCisVT<0, i64>,
+                                     SDTCisVT<1, i64>]>;
 
 // Target-dependent type requirements.
 def SDT_YSXCall     : SDTypeProfile<0, -1, [SDTCisVT<0, XLenVT>]>;
@@ -58,14 +58,6 @@ def ysx_tail      : RVSDNode<"TAIL", SDT_YSXCall,
                                [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue,
                                 SDNPVariadic]>;
 
-// Software guarded calls for large code model
-def ysx_sw_guarded_call : RVSDNode<"SW_GUARDED_CALL", SDT_YSXCall,
-                                     [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue,
-                                      SDNPVariadic]>;
-def ysx_sw_guarded_tail : RVSDNode<"SW_GUARDED_TAIL", SDT_YSXCall,
-                                     [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue,
-                                      SDNPVariadic]>;
-
 def ysx_ret_glue  : RVSDNode<"RET_GLUE", SDTNone,
                                [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]>;
 
@@ -78,10 +70,6 @@ def ysx_ret_glue  : RVSDNode<"RET_GLUE", SDTNone,
 def ysx_selectcc  : RVSDNode<"SELECT_CC", SDT_YSXSelectCC>;
 def ysx_brcc      : RVSDNode<"BR_CC", SDT_YSXBrCC,
                                [SDNPHasChain]>;
-
-// Software guarded BRIND node. Operand is the target address.
-def ysx_sw_guarded_brind : RVSDNode<"SW_GUARDED_BRIND",
-                                      SDTBrind, [SDNPHasChain]>;
 
 // RV64I shifts, directly matching the semantics of the named RISC-V
 // instructions.
@@ -312,10 +300,7 @@ class BareSImm13Lsb0MaybeSym : Operand<OtherVT> {
   }];
 }
 
-// A 13-bit signed immediate where the least significant bit is zero. The ImmLeaf
-// is needed so that the CompressInstEmitter can correctly add checks for the
-// compress patterns that involve instructions that use this operand. Similar to
-// bare_simm9_lsb0 in YSXInstrInfoC.td.
+// A 13-bit signed immediate where the least significant bit is zero.
 def bare_simm13_lsb0 : BareSImm13Lsb0MaybeSym,
                        ImmLeaf<XLenVT, [{return isShiftedInt<12, 1>(Imm);}]> {
   let ParserMatchClass = BareSImmNLsb0AsmOperand<13>;
@@ -937,16 +922,6 @@ def : InstAlias<"jalr $rd, (${rs})",      (JALR GPR:$rd, GPR:$rs, 0), 0>;
 
 def : InstAlias<"fence", (FENCE 0xF, 0xF)>; // 0xF == iorw
 
-let Predicates = [HasStdExtZihintpause] in
-def : InstAlias<"pause", (FENCE 0x1, 0x0)>; // 0x1 == w
-
-let Predicates = [HasStdExtZihintntl] in {
-  def : InstAlias<"ntl.p1",     (ADD   X0, X0, X2)>;
-  def : InstAlias<"ntl.pall",   (ADD   X0, X0, X3)>;
-  def : InstAlias<"ntl.s1",     (ADD   X0, X0, X4)>;
-  def : InstAlias<"ntl.all",    (ADD   X0, X0, X5)>;
-} // Predicates = [HasStdExtZihintntl]
-
 let EmitPriority = 0 in {
 def : InstAlias<"lb $rd, (${rs1})",
                 (LB  GPR:$rd, GPR:$rs1, 0)>;
@@ -1202,7 +1177,6 @@ class unop_oneuse<SDPatternOperator operator>
 def sext_oneuse   : unop_oneuse<sext>;
 def zext_oneuse   : unop_oneuse<zext>;
 def anyext_oneuse : unop_oneuse<anyext>;
-def ext_oneuse    : unop_oneuse<ext>;
 
 def 33signbits_node : PatLeaf<(i64 GPR:$src), [{
   return CurDAG->ComputeNumSignBits(Op) > 32;
@@ -1227,8 +1201,7 @@ def : PatGprUimmLog2XLen<shl, SLLI>;
 def : PatGprUimmLog2XLen<srl, SRLI>;
 def : PatGprUimmLog2XLen<sra, SRAI>;
 
-// Select 'or' as ADDI if the immediate bits are known to be 0 in $rs1. This
-// can improve compressibility.
+// Select 'or' as ADDI if the immediate bits are known to be 0 in $rs1.
 def ysx_or_disjoint : PatFrag<(ops node:$lhs, node:$rhs), (or node:$lhs, node:$rhs),[{
   return orDisjoint(N);
 }]>;
@@ -1242,10 +1215,7 @@ def ysx_xor_like : PatFrags<(ops node:$lhs, node:$rhs),
                               [(ysx_or_disjoint node:$lhs, node:$rhs),
                                (xor  node:$lhs, node:$rhs)]>;
 
-// negate of low bit can be done via two (compressible) shifts.  The negate
-// is never compressible since rs1 and rd can't be the same register.
-def : Pat<(i32 (sub 0, (and_oneuse GPR:$rs, 1))),
-          (SRAI (i32 (SLLI $rs, 31)), 31)>, Requires<[IsRV32]>;
+// Negate of low bit can be done via two shifts.
 def : Pat<(i64 (sub 0, (and_oneuse GPR:$rs, 1))),
           (SRAI (i64 (SLLI $rs, 63)), 63)>, Requires<[IsRV64]>;
 
@@ -1260,14 +1230,14 @@ def : Pat<(XLenVT (and GPR:$rs, immop_oneuse<TrailingOnesMask>:$mask)),
 // Match both a plain shift and one where the shift amount is masked (this is
 // typically introduced when the legalizer promotes the shift amount and
 // zero-extends it). For RISC-V, the mask is unnecessary as shifts in the base
-// ISA only read the least significant 5 bits (RV32I) or 6 bits (RV64I).
+// ISA only reads the least significant 6 bits.
 def shiftMaskXLen : ComplexPattern<XLenVT, 1, "selectShiftMaskXLen", [], [], 0>;
 def shiftMask32   : ComplexPattern<i64, 1, "selectShiftMask32", [], [], 0>;
 class PatGprShiftMaskXLen<SDPatternOperator OpNode, RVInst Inst>
-    : Pat<(OpNode GPR:$rs1, shiftMaskXLen:$rs2),
+    : Pat<(XLenVT (OpNode (XLenVT GPR:$rs1), shiftMaskXLen:$rs2)),
           (Inst GPR:$rs1, shiftMaskXLen:$rs2)>;
 class PatGprShiftMask32<SDPatternOperator OpNode, RVInst Inst>
-    : Pat<(OpNode GPR:$rs1, shiftMask32:$rs2),
+    : Pat<(i64 (OpNode (i64 GPR:$rs1), shiftMask32:$rs2)),
           (Inst GPR:$rs1, shiftMask32:$rs2)>;
 
 def : PatGprShiftMaskXLen<shl, SLL>;
@@ -1423,11 +1393,8 @@ multiclass SelectCC_GPR_riirr<DAGOperand valty, DAGOperand imm> {
                 valty:$truev, valty:$falsev), []>;
 }
 
-let Predicates = [IsRV32] in {
-def : Pat<(i32 (setlt (i32 GPR:$rs1), 0)), (SRLI GPR:$rs1, 31)>; // compressible
-}
 let Predicates = [IsRV64] in {
-def : Pat<(i64 (setlt (i64 GPR:$rs1), 0)), (SRLI GPR:$rs1, 63)>; // compressible
+def : Pat<(i64 (setlt (i64 GPR:$rs1), 0)), (SRLI GPR:$rs1, 63)>;
 def : Pat<(i64 (setlt (sext_inreg GPR:$rs1, i32), 0)), (SRLIW GPR:$rs1, 31)>;
 }
 
@@ -1487,36 +1454,13 @@ let isBarrier = 1, isBranch = 1, isTerminator = 1 in
 def PseudoBR : Pseudo<(outs), (ins simm21_lsb0_jal:$imm20), [(br bb:$imm20)]>,
                PseudoInstExpansion<(JAL X0, simm21_lsb0_jal:$imm20)>;
 
-let Predicates = [NoStdExtZicfilp],
-    isBarrier = 1, isBranch = 1, isIndirectBranch = 1, isTerminator = 1 in
+let isBarrier = 1, isBranch = 1, isIndirectBranch = 1, isTerminator = 1 in
 def PseudoBRIND : Pseudo<(outs), (ins GPRJALR:$rs1, simm12_lo:$imm12), []>,
                   PseudoInstExpansion<(JALR X0, GPR:$rs1, simm12_lo:$imm12)>;
 
-let Predicates = [HasStdExtZicfilp],
-    isBarrier = 1, isBranch = 1, isIndirectBranch = 1, isTerminator = 1 in {
-def PseudoBRINDNonX7 : Pseudo<(outs), (ins GPRJALRNonX7:$rs1, simm12_lo:$imm12), []>,
-                       PseudoInstExpansion<(JALR X0, GPR:$rs1, simm12_lo:$imm12)>;
-def PseudoBRINDX7 : Pseudo<(outs), (ins GPRX7:$rs1, simm12_lo:$imm12), []>,
-                    PseudoInstExpansion<(JALR X0, GPR:$rs1, simm12_lo:$imm12)>;
-}
-
-// For Zicfilp, need to avoid using X7/T2 for indirect branches which need
-// landing pad.
-let Predicates = [HasStdExtZicfilp] in {
-def : Pat<(brind GPRJALRNonX7:$rs1), (PseudoBRINDNonX7 GPRJALRNonX7:$rs1, 0)>;
-def : Pat<(brind (add GPRJALRNonX7:$rs1, simm12_lo:$imm12)),
-          (PseudoBRINDNonX7 GPRJALRNonX7:$rs1, simm12_lo:$imm12)>;
-
-def : Pat<(ysx_sw_guarded_brind GPRX7:$rs1), (PseudoBRINDX7 GPRX7:$rs1, 0)>;
-def : Pat<(ysx_sw_guarded_brind (add GPRX7:$rs1, simm12_lo:$imm12)),
-          (PseudoBRINDX7 GPRX7:$rs1, simm12_lo:$imm12)>;
-}
-
-let Predicates = [NoStdExtZicfilp] in {
 def : Pat<(brind GPRJALR:$rs1), (PseudoBRIND GPRJALR:$rs1, 0)>;
 def : Pat<(brind (add GPRJALR:$rs1, simm12_lo:$imm12)),
           (PseudoBRIND GPRJALR:$rs1, simm12_lo:$imm12)>;
-}
 
 // PseudoCALLReg is a generic pseudo instruction for calls which will eventually
 // expand to auipc and jalr while encoding, with any given register used as the
@@ -1544,19 +1488,9 @@ def : Pat<(ysx_call tglobaladdr:$func), (PseudoCALL tglobaladdr:$func)>;
 def : Pat<(ysx_call texternalsym:$func), (PseudoCALL texternalsym:$func)>;
 
 let isCall = 1, Defs = [X1] in {
-let Predicates = [NoStdExtZicfilp] in
 def PseudoCALLIndirect : Pseudo<(outs), (ins GPRJALR:$rs1),
                                 [(ysx_call GPRJALR:$rs1)]>,
                          PseudoInstExpansion<(JALR X1, GPR:$rs1, 0)>;
-let Predicates = [HasStdExtZicfilp] in {
-def PseudoCALLIndirectNonX7 : Pseudo<(outs), (ins GPRJALRNonX7:$rs1),
-                                     [(ysx_call GPRJALRNonX7:$rs1)]>,
-                              PseudoInstExpansion<(JALR X1, GPR:$rs1, 0)>;
-// For large code model, non-indirect calls could be software-guarded
-def PseudoCALLIndirectX7 : Pseudo<(outs), (ins GPRX7:$rs1),
-                                  [(ysx_sw_guarded_call GPRX7:$rs1)]>,
-                           PseudoInstExpansion<(JALR X1, GPR:$rs1, 0)>;
-}
 }
 
 let isBarrier = 1, isReturn = 1, isTerminator = 1 in
@@ -1573,19 +1507,9 @@ def PseudoTAIL : Pseudo<(outs), (ins call_symbol:$dst), [],
                  Sched<[WriteIALU, WriteJalr, ReadJalr]>;
 
 let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1, Uses = [X2] in {
-let Predicates = [NoStdExtZicfilp] in
 def PseudoTAILIndirect : Pseudo<(outs), (ins GPRTC:$rs1),
                                 [(ysx_tail GPRTC:$rs1)]>,
                          PseudoInstExpansion<(JALR X0, GPR:$rs1, 0)>;
-let Predicates = [HasStdExtZicfilp] in {
-def PseudoTAILIndirectNonX7 : Pseudo<(outs), (ins GPRTCNonX7:$rs1),
-                                     [(ysx_tail GPRTCNonX7:$rs1)]>,
-                              PseudoInstExpansion<(JALR X0, GPR:$rs1, 0)>;
-// For large code model, non-indirect calls could be software-guarded
-def PseudoTAILIndirectX7 : Pseudo<(outs), (ins GPRX7:$rs1),
-                                  [(ysx_sw_guarded_tail GPRX7:$rs1)]>,
-                           PseudoInstExpansion<(JALR X0, GPR:$rs1, 0)>;
-}
 }
 
 def : Pat<(ysx_tail (iPTR tglobaladdr:$dst)),
@@ -1683,8 +1607,7 @@ def PseudoTLSDESCCall : Pseudo<(outs GPR:$rd),
 
 /// Sign/Zero Extends
 
-// There are single-instruction versions of these in Zbb, so disable these
-// Pseudos if that extension is present.
+// These pseudos keep assembler aliases for byte/halfword extension sequences.
 let hasSideEffects = 0, mayLoad = 0,
     mayStore = 0, isCodeGenOnly = 0, isAsmParserOnly = 1 in {
 def PseudoSEXT_B : Pseudo<(outs GPR:$rd), (ins GPR:$rs), [], "sext.b", "$rd, $rs">;
@@ -1707,10 +1630,9 @@ class LdPat<PatFrag LoadOp, RVInst Inst, ValueType vt = XLenVT,
           (Inst GPRMem:$rs1, simm12_lo:$imm12)>;
 
 def : LdPat<sextloadi8, LB>;
-def : LdPat<extloadi8, LBU>; // Prefer unsigned due to no c.lb in Zcb.
+def : LdPat<extloadi8, LBU>;
 def : LdPat<sextloadi16, LH>;
 def : LdPat<extloadi16, LH>;
-def : LdPat<load, LW, i32>, Requires<[IsRV32]>;
 def : LdPat<zextloadi8, LBU>;
 def : LdPat<zextloadi16, LHU>;
 
@@ -1724,8 +1646,6 @@ class StPat<PatFrag StoreOp, RVInst Inst, RegisterClass StTy,
 
 def : StPat<truncstorei8, SB, GPR, XLenVT>;
 def : StPat<truncstorei16, SH, GPR, XLenVT>;
-def : StPat<store, SW, GPR, i32>, Requires<[IsRV32]>;
-
 /// Fences
 
 // Refer to Table A.6 in the version 2.3 draft of the RISC-V Instruction Set
@@ -1741,31 +1661,30 @@ def : Pat<(atomic_fence (XLenVT 6), (timm)), (FENCE_TSO)>;
 def : Pat<(atomic_fence (XLenVT 7), (timm)), (FENCE 0b11, 0b11)>;
 
 // Lowering for atomic load and store is defined in YSXInstrInfoA.td.
-// Although these are lowered to fence+load/store instructions defined in the
-// base RV32I/RV64I ISA, this lowering is only used when the A extension is
-// present. This is necessary as it isn't valid to mix __atomic_* libcalls
-// with inline atomic operations for the same object.
+// Although these are lowered to fence+load/store instructions, this lowering is
+// only used when the A extension is present. This is necessary as it isn't valid
+// to mix __atomic_* libcalls with inline atomic operations for the same object.
 
 /// Other pseudo-instructions
 
 // Pessimistically assume the stack pointer will be clobbered
 let Defs = [X2], Uses = [X2] in {
-def ADJCALLSTACKDOWN : Pseudo<(outs), (ins i32imm:$amt1, i32imm:$amt2),
+def ADJCALLSTACKDOWN : Pseudo<(outs), (ins i64imm:$amt1, i64imm:$amt2),
                               [(callseq_start timm:$amt1, timm:$amt2)]>;
-def ADJCALLSTACKUP   : Pseudo<(outs), (ins i32imm:$amt1, i32imm:$amt2),
+def ADJCALLSTACKUP   : Pseudo<(outs), (ins i64imm:$amt1, i64imm:$amt2),
                               [(callseq_end timm:$amt1, timm:$amt2)]>;
 } // Defs = [X2], Uses = [X2]
 
 /// RV64 patterns
 
-let Predicates = [IsRV64, NoStdExtZba] in {
+let Predicates = [IsRV64] in {
 def : Pat<(i64 (and GPR:$rs1, 0xffffffff)), (SRLI (i64 (SLLI GPR:$rs1, 32)), 32)>;
 
 // If we're shifting a 32-bit zero extended value left by 0-31 bits, use 2
 // shifts instead of 3. This can occur when unsigned is used to index an array.
 def : Pat<(i64 (shl (and GPR:$rs1, 0xffffffff), uimm5:$shamt)),
           (SRLI (i64 (SLLI GPR:$rs1, 32)), (ImmSubFrom32 uimm5:$shamt))>;
-} // Predicates = [IsRV64, NoStdExtZba]
+} // Predicates = [IsRV64]
 
 class binop_allhusers<SDPatternOperator operator>
     : PatFrag<(ops node:$lhs, node:$rhs),
@@ -1846,8 +1765,7 @@ def : PatGprImm<binop_allwusers<or>,  ORI,  u32simm12>;
 def : PatGprImm<binop_allwusers<xor>, XORI, u32simm12>;
 
 // Select 'or' as ADDIW if the immediate bits are known to be 0 in $rs1 and
-// $rs1 is sign extended. This can improve compressibility. Using ADDIW gives
-// more power to YSXOptWInstrs.
+// $rs1 is sign extended. Using ADDIW gives more power to YSXOptWInstrs.
 def : Pat<(ysx_or_disjoint 33signbits_node:$rs1, simm12_lo:$imm),
           (ADDIW $rs1, simm12_lo:$imm)>;
 

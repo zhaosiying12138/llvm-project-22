@@ -70,31 +70,10 @@ YSXTargetLowering::YSXTargetLowering(const TargetMachine &TM,
   YSXABI::ABI ABI = Subtarget.getTargetABI();
   assert(ABI != YSXABI::ABI_Unknown && "Improperly initialised target ABI");
 
-  if ((ABI == YSXABI::ABI_ILP32F || ABI == YSXABI::ABI_LP64F) &&
-      !Subtarget.hasStdExtF()) {
-    errs() << "Hard-float 'f' ABI can't be used for a target that "
-                "doesn't support the F instruction set extension (ignoring "
-                          "target-abi)\n";
-    ABI = Subtarget.is64Bit() ? YSXABI::ABI_LP64 : YSXABI::ABI_ILP32;
-  } else if ((ABI == YSXABI::ABI_ILP32D || ABI == YSXABI::ABI_LP64D) &&
-             !Subtarget.hasStdExtD()) {
-    errs() << "Hard-float 'd' ABI can't be used for a target that "
-              "doesn't support the D instruction set extension (ignoring "
-              "target-abi)\n";
-    ABI = Subtarget.is64Bit() ? YSXABI::ABI_LP64 : YSXABI::ABI_ILP32;
-  }
-
   switch (ABI) {
   default:
     reportFatalUsageError("Don't know how to lower this ABI");
-  case YSXABI::ABI_ILP32:
-  case YSXABI::ABI_ILP32E:
-  case YSXABI::ABI_LP64E:
-  case YSXABI::ABI_ILP32F:
-  case YSXABI::ABI_ILP32D:
   case YSXABI::ABI_LP64:
-  case YSXABI::ABI_LP64F:
-  case YSXABI::ABI_LP64D:
     break;
   }
 
@@ -126,54 +105,37 @@ YSXTargetLowering::YSXTargetLowering(const TargetMachine &TM,
   setCondCodeAction(ISD::SETGE, XLenVT, Expand);
   setCondCodeAction(ISD::SETUGT, XLenVT, Custom);
   setCondCodeAction(ISD::SETUGE, XLenVT, Expand);
-  if (!(Subtarget.hasVendorXCValu() && !Subtarget.is64Bit())) {
-    setCondCodeAction(ISD::SETULE, XLenVT, Expand);
-    setCondCodeAction(ISD::SETLE, XLenVT, Expand);
-  }
+  setCondCodeAction(ISD::SETULE, XLenVT, Expand);
+  setCondCodeAction(ISD::SETLE, XLenVT, Expand);
 
   setOperationAction({ISD::STACKSAVE, ISD::STACKRESTORE}, MVT::Other, Expand);
 
   setOperationAction(ISD::VASTART, MVT::Other, Custom);
   setOperationAction({ISD::VAARG, ISD::VACOPY, ISD::VAEND}, MVT::Other, Expand);
 
-  if (!Subtarget.hasVendorXRemovedTHeadBb() && !Subtarget.hasVendorXRemovedQcibm() &&
-      !Subtarget.hasVendorXAndesPerf())
-    setOperationAction(ISD::SIGN_EXTEND_INREG, MVT::i1, Expand);
+  setOperationAction(ISD::SIGN_EXTEND_INREG, MVT::i1, Expand);
 
   setOperationAction(ISD::EH_DWARF_CFA, MVT::i32, Custom);
 
-  if (!Subtarget.hasStdExtZbb() && !Subtarget.hasVendorXRemovedTHeadBb() &&
-      !Subtarget.hasVendorXRemovedQcibm() && !Subtarget.hasVendorXAndesPerf() &&
-      !(Subtarget.hasVendorXCValu() && !Subtarget.is64Bit()))
-    setOperationAction(ISD::SIGN_EXTEND_INREG, {MVT::i8, MVT::i16}, Expand);
+  setOperationAction(ISD::SIGN_EXTEND_INREG, {MVT::i8, MVT::i16}, Expand);
+  setOperationAction(ISD::EH_DWARF_CFA, MVT::i64, Custom);
 
-  if (Subtarget.hasStdExtZilsd() && !Subtarget.is64Bit()) {
-    setOperationAction(ISD::LOAD, MVT::i64, Custom);
-    setOperationAction(ISD::STORE, MVT::i64, Custom);
-  }
-
-  if (Subtarget.is64Bit()) {
-    setOperationAction(ISD::EH_DWARF_CFA, MVT::i64, Custom);
-
-    setOperationAction(ISD::LOAD, MVT::i32, Custom);
-    setOperationAction({ISD::ADD, ISD::SUB, ISD::SHL, ISD::SRA, ISD::SRL},
-                       MVT::i32, Custom);
-    setOperationAction({ISD::UADDO, ISD::USUBO}, MVT::i32, Custom);
-    setOperationAction({ISD::SADDO, ISD::SSUBO}, MVT::i32, Custom);
-  }
+  setOperationAction(ISD::LOAD, MVT::i32, Custom);
+  setOperationAction({ISD::ADD, ISD::SUB, ISD::SHL, ISD::SRA, ISD::SRL},
+                     MVT::i32, Custom);
+  setOperationAction({ISD::UADDO, ISD::USUBO}, MVT::i32, Custom);
+  setOperationAction({ISD::SADDO, ISD::SSUBO}, MVT::i32, Custom);
   if (!Subtarget.hasStdExtZmmul()) {
     setOperationAction({ISD::MUL, ISD::MULHS, ISD::MULHU}, XLenVT, Expand);
-  } else if (Subtarget.is64Bit()) {
+  } else {
     setOperationAction(ISD::MUL, MVT::i128, Custom);
     setOperationAction(ISD::MUL, MVT::i32, Custom);
-  } else {
-    setOperationAction(ISD::MUL, MVT::i64, Custom);
   }
 
   if (!Subtarget.hasStdExtM()) {
     setOperationAction({ISD::SDIV, ISD::UDIV, ISD::SREM, ISD::UREM}, XLenVT,
                        Expand);
-  } else if (Subtarget.is64Bit()) {
+  } else {
     setOperationAction({ISD::SDIV, ISD::UDIV, ISD::UREM},
                        {MVT::i8, MVT::i16, MVT::i32}, Custom);
   }
@@ -185,76 +147,25 @@ YSXTargetLowering::YSXTargetLowering(const TargetMachine &TM,
   setOperationAction({ISD::SHL_PARTS, ISD::SRL_PARTS, ISD::SRA_PARTS}, XLenVT,
                      Custom);
 
-  if (Subtarget.hasStdExtZbb() || Subtarget.hasStdExtZbkb()) {
-    if (Subtarget.is64Bit())
-      setOperationAction({ISD::ROTL, ISD::ROTR}, MVT::i32, Custom);
-  } else if (Subtarget.hasVendorXRemovedTHeadBb()) {
-    if (Subtarget.is64Bit())
-      setOperationAction({ISD::ROTL, ISD::ROTR}, MVT::i32, Custom);
-    setOperationAction({ISD::ROTL, ISD::ROTR}, XLenVT, Custom);
-  } else if (Subtarget.hasVendorXCVbitmanip() && !Subtarget.is64Bit()) {
-    setOperationAction(ISD::ROTL, XLenVT, Expand);
-  } else {
-    setOperationAction({ISD::ROTL, ISD::ROTR}, XLenVT, Expand);
-  }
-
-  if (Subtarget.hasStdExtP())
-    setOperationAction({ISD::FSHL, ISD::FSHR}, XLenVT, Legal);
-
-  setOperationAction(ISD::BSWAP, XLenVT,
-                     Subtarget.hasREV8Like() ? Legal : Expand);
-
-  if ((Subtarget.hasVendorXCVbitmanip() || Subtarget.hasVendorXRemovedQcibm()) &&
-      !Subtarget.is64Bit()) {
-    setOperationAction(ISD::BITREVERSE, XLenVT, Legal);
-  } else {
-    // Zbkb can use rev8+brev8 to implement bitreverse.
-    setOperationAction(ISD::BITREVERSE, XLenVT,
-                       Subtarget.hasStdExtZbkb() ? Custom : Expand);
-    if (Subtarget.hasStdExtZbkb())
-      setOperationAction(ISD::BITREVERSE, MVT::i8, Custom);
-  }
-
-  if (Subtarget.hasStdExtZbb() ||
-      (Subtarget.hasVendorXCValu() && !Subtarget.is64Bit())) {
-    setOperationAction({ISD::SMIN, ISD::SMAX, ISD::UMIN, ISD::UMAX}, XLenVT,
-                       Legal);
-  }
-
-  if (Subtarget.hasCTZLike()) {
-    if (Subtarget.is64Bit())
-      setOperationAction({ISD::CTTZ, ISD::CTTZ_ZERO_UNDEF}, MVT::i32, Custom);
-  } else {
-    setOperationAction(ISD::CTTZ, XLenVT, Expand);
-  }
-
-  if (!Subtarget.hasCPOPLike()) {
-    // TODO: These should be set to LibCall, but this currently breaks
-    //   the Linux kernel build. See #101786. Lacks i128 tests, too.
-    if (Subtarget.is64Bit())
-      setOperationAction(ISD::CTPOP, MVT::i128, Expand);
-    else
-      setOperationAction(ISD::CTPOP, MVT::i32, Expand);
-    setOperationAction(ISD::CTPOP, MVT::i64, Expand);
-  }
-
-  if (!Subtarget.hasCLZLike())
-    setOperationAction(ISD::CTLZ, XLenVT, Expand);
+  setOperationAction({ISD::ROTL, ISD::ROTR}, XLenVT, Expand);
+  setOperationAction(ISD::BSWAP, XLenVT, Expand);
+  setOperationAction(ISD::BITREVERSE, XLenVT, Expand);
+  setOperationAction(ISD::CTTZ, XLenVT, Expand);
+  setOperationAction(ISD::CTPOP, MVT::i128, Expand);
+  setOperationAction(ISD::CTPOP, MVT::i64, Expand);
+  setOperationAction(ISD::CTLZ, XLenVT, Expand);
 
   if (Subtarget.hasShortForwardBranchIALU()) {
     // We can use PseudoCCSUB to implement ABS.
     setOperationAction(ISD::ABS, XLenVT, Legal);
-  } else if (Subtarget.is64Bit()) {
+  } else {
     setOperationAction(ISD::ABS, MVT::i32, Custom);
   }
 
-  if (!Subtarget.useMIPSCCMovInsn() && !Subtarget.hasVendorXRemovedTHeadCondMov())
-    setOperationAction(ISD::SELECT, XLenVT, Custom);
+  setOperationAction(ISD::SELECT, XLenVT, Custom);
 
-  if (!Subtarget.hasStdExtZbb() && Subtarget.is64Bit()) {
-    setOperationAction({ISD::SADDSAT, ISD::SSUBSAT, ISD::UADDSAT, ISD::USUBSAT},
-                       MVT::i32, Custom);
-  }
+  setOperationAction({ISD::SADDSAT, ISD::SSUBSAT, ISD::UADDSAT, ISD::USUBSAT},
+                     MVT::i32, Custom);
 
   setOperationAction({ISD::GlobalAddress, ISD::BlockAddress, ISD::ConstantPool,
                       ISD::JumpTable},
@@ -262,33 +173,21 @@ YSXTargetLowering::YSXTargetLowering(const TargetMachine &TM,
 
   setOperationAction(ISD::GlobalTLSAddress, XLenVT, Custom);
 
-  if (Subtarget.is64Bit())
-    setOperationAction(ISD::Constant, MVT::i64, Custom);
+  setOperationAction(ISD::Constant, MVT::i64, Custom);
 
   setOperationAction(ISD::READCYCLECOUNTER, MVT::i64, Expand);
   setOperationAction(ISD::READSTEADYCOUNTER, MVT::i64, Expand);
 
-  if (Subtarget.is64Bit()) {
-    setOperationAction(ISD::INIT_TRAMPOLINE, MVT::Other, Custom);
-    setOperationAction(ISD::ADJUST_TRAMPOLINE, MVT::Other, Custom);
-  }
+  setOperationAction(ISD::INIT_TRAMPOLINE, MVT::Other, Custom);
+  setOperationAction(ISD::ADJUST_TRAMPOLINE, MVT::Other, Custom);
 
   setOperationAction({ISD::TRAP, ISD::DEBUGTRAP}, MVT::Other, Legal);
   setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::Other, Custom);
-  if (Subtarget.is64Bit())
-    setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::i32, Custom);
-
-  if (Subtarget.hasVendorXMIPSCBOP())
-    setOperationAction(ISD::PREFETCH, MVT::Other, Custom);
-  else if (Subtarget.hasStdExtZicbop())
-    setOperationAction(ISD::PREFETCH, MVT::Other, Legal);
+  setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::i32, Custom);
 
   if (Subtarget.hasStdExtZalrsc()) {
     setMaxAtomicSizeInBitsSupported(Subtarget.getXLen());
-    if (Subtarget.hasStdExtZabha() && Subtarget.hasStdExtZacas())
-      setMinCmpXchgSizeInBits(8);
-    else
-      setMinCmpXchgSizeInBits(32);
+    setMinCmpXchgSizeInBits(32);
   } else if (Subtarget.hasForcedAtomics()) {
     setMaxAtomicSizeInBitsSupported(Subtarget.getXLen());
   } else {
@@ -318,35 +217,8 @@ YSXTargetLowering::YSXTargetLowering(const TargetMachine &TM,
         XLenVT, LibCall);
   }
 
-  if (Subtarget.hasVendorXRemovedTHeadMemIdx()) {
-    for (unsigned im : {ISD::PRE_INC, ISD::POST_INC}) {
-      setIndexedLoadAction(im, MVT::i8, Legal);
-      setIndexedStoreAction(im, MVT::i8, Legal);
-      setIndexedLoadAction(im, MVT::i16, Legal);
-      setIndexedStoreAction(im, MVT::i16, Legal);
-      setIndexedLoadAction(im, MVT::i32, Legal);
-      setIndexedStoreAction(im, MVT::i32, Legal);
-
-      if (Subtarget.is64Bit()) {
-        setIndexedLoadAction(im, MVT::i64, Legal);
-        setIndexedStoreAction(im, MVT::i64, Legal);
-      }
-    }
-  }
-
-  if (Subtarget.hasVendorXCVmem() && !Subtarget.is64Bit()) {
-    setIndexedLoadAction(ISD::POST_INC, MVT::i8, Legal);
-    setIndexedLoadAction(ISD::POST_INC, MVT::i16, Legal);
-    setIndexedLoadAction(ISD::POST_INC, MVT::i32, Legal);
-
-    setIndexedStoreAction(ISD::POST_INC, MVT::i8, Legal);
-    setIndexedStoreAction(ISD::POST_INC, MVT::i16, Legal);
-    setIndexedStoreAction(ISD::POST_INC, MVT::i32, Legal);
-  }
-
   // Function alignments.
-  const Align FunctionAlignment(Subtarget.hasStdExtZca() ? 2 : 4);
-  setMinFunctionAlignment(FunctionAlignment);
+  setMinFunctionAlignment(Align(4));
   // Set preferred alignments.
   setPrefFunctionAlignment(Subtarget.getPrefFunctionAlignment());
   setPrefLoopAlignment(Subtarget.getPrefLoopAlignment());
@@ -357,7 +229,7 @@ YSXTargetLowering::YSXTargetLowering(const TargetMachine &TM,
   setTargetDAGCombine(ISD::SRA);
   setTargetDAGCombine(ISD::SIGN_EXTEND_INREG);
 
-  setMaxDivRemBitWidthSupported(Subtarget.is64Bit() ? 128 : 64);
+  setMaxDivRemBitWidthSupported(128);
 
   // Disable strict node mutation.
   IsStrictFPEnabled = true;
@@ -459,17 +331,8 @@ bool YSXTargetLowering::isLegalAddImmediate(int64_t Imm) const {
   return isInt<12>(Imm);
 }
 
-// On RV32, 64-bit integers are split into their high and low parts and held
-// in two different registers, so the trunc is free since the low register can
-// just be used.
-// FIXME: Should we consider i64->i32 free on RV64 to match the EVT version of
-// isTruncateFree?
 bool YSXTargetLowering::isTruncateFree(Type *SrcTy, Type *DstTy) const {
-  if (Subtarget.is64Bit() || !SrcTy->isIntegerTy() || !DstTy->isIntegerTy())
-    return false;
-  unsigned SrcBits = SrcTy->getPrimitiveSizeInBits();
-  unsigned DestBits = DstTy->getPrimitiveSizeInBits();
-  return (SrcBits == 64 && DestBits == 32);
+  return false;
 }
 
 bool YSXTargetLowering::isTruncateFree(EVT SrcVT, EVT DstVT) const {
@@ -503,35 +366,24 @@ bool YSXTargetLowering::isZExtFree(SDValue Val, EVT VT2) const {
 }
 
 bool YSXTargetLowering::isSExtCheaperThanZExt(EVT SrcVT, EVT DstVT) const {
-  return Subtarget.is64Bit() && SrcVT == MVT::i32 && DstVT == MVT::i64;
+  return SrcVT == MVT::i32 && DstVT == MVT::i64;
 }
 
 bool YSXTargetLowering::signExtendConstant(const ConstantInt *CI) const {
-  return Subtarget.is64Bit() && CI->getType()->isIntegerTy(32);
+  return CI->getType()->isIntegerTy(32);
 }
 
 bool YSXTargetLowering::isCheapToSpeculateCttz(Type *Ty) const {
-  return Subtarget.hasCTZLike();
+  return false;
 }
 
 bool YSXTargetLowering::isCheapToSpeculateCtlz(Type *Ty) const {
-  return Subtarget.hasCLZLike();
+  return false;
 }
 
 bool YSXTargetLowering::isMaskAndCmp0FoldingBeneficial(
     const Instruction &AndI) const {
-  // We expect to be able to match a bit extraction instruction if the Zbs
-  // extension is supported and the mask is a power of two. However, we
-  // conservatively return false if the mask would fit in an ANDI instruction,
-  // on the basis that it's possible the sinking+duplication of the AND in
-  // CodeGenPrepare triggered by this hook wouldn't decrease the instruction
-  // count and would increase code size (e.g. ANDI+BNEZ => BEXTI+BNEZ).
-  if (!Subtarget.hasBEXTILike())
-    return false;
-  ConstantInt *Mask = dyn_cast<ConstantInt>(AndI.getOperand(1));
-  if (!Mask)
-    return false;
-  return !Mask->getValue().isSignedIntN(12) && Mask->getValue().isPowerOf2();
+  return false;
 }
 
 bool YSXTargetLowering::hasAndNotCompare(SDValue Y) const {
@@ -540,8 +392,7 @@ bool YSXTargetLowering::hasAndNotCompare(SDValue Y) const {
   if (VT.isVector())
     return false;
 
-  return (Subtarget.hasStdExtZbb() || Subtarget.hasStdExtZbkb()) &&
-         (!isa<ConstantSDNode>(Y) || cast<ConstantSDNode>(Y)->isOpaque());
+  return false;
 }
 
 bool YSXTargetLowering::hasAndNot(SDValue Y) const {
@@ -549,13 +400,7 @@ bool YSXTargetLowering::hasAndNot(SDValue Y) const {
 }
 
 bool YSXTargetLowering::hasBitTest(SDValue X, SDValue Y) const {
-  // Zbs provides BEXT[_I], which can be used with SEQZ/SNEZ as a bit test.
-  if (Subtarget.hasStdExtZbs())
-    return X.getValueType().isScalarInteger();
   auto *C = dyn_cast<ConstantSDNode>(Y);
-  // XTheadBs provides th.tst (similar to bexti), if Y is a constant
-  if (Subtarget.hasVendorXRemovedTHeadBs())
-    return C != nullptr;
   // We can use ANDI+SEQZ/SNEZ as a bit test. Y contains the bit position.
   return C && C->getAPIntValue().ule(10);
 }
@@ -633,8 +478,7 @@ unsigned
 YSXTargetLowering::getNumRegisters(LLVMContext &Context, EVT VT,
                                      std::optional<MVT> RegisterVT) const {
   // Pair inline assembly operand
-  if (VT == (Subtarget.is64Bit() ? MVT::i128 : MVT::i64) && RegisterVT &&
-      *RegisterVT == MVT::Untyped)
+  if (VT == MVT::i128 && RegisterVT && *RegisterVT == MVT::Untyped)
     return 1;
 
   return TargetLowering::getNumRegisters(Context, VT, RegisterVT);
@@ -657,9 +501,7 @@ static void translateSetCCForBranch(const SDLoc &DL, SDValue &LHS, SDValue &RHS,
   // bit to be tested to the MSB and perform a signed compare with 0.
   if (isIntEqualitySetCC(CC) && isNullConstant(RHS) &&
       LHS.getOpcode() == ISD::AND && LHS.hasOneUse() &&
-      isa<ConstantSDNode>(LHS.getOperand(1)) &&
-      // XAndesPerf supports branch on test bit.
-      !Subtarget.hasVendorXAndesPerf()) {
+      isa<ConstantSDNode>(LHS.getOperand(1))) {
     uint64_t Mask = LHS.getConstantOperandVal(1);
     if ((isPowerOf2_64(Mask) || isMask_64(Mask)) && !isInt<12>(Mask)) {
       unsigned ShAmt = 0;
@@ -689,21 +531,6 @@ static void translateSetCCForBranch(const SDLoc &DL, SDValue &LHS, SDValue &RHS,
         CC = ISD::SETGE;
         return;
       }
-      if ((Subtarget.hasVendorXRemovedQcicm() || Subtarget.hasVendorXRemovedQcicli()) &&
-          C != INT64_MAX && isInt<5>(C + 1)) {
-        // We have a conditional move instruction for SETGE but not SETGT.
-        // Convert X > C to X >= C + 1, if (C + 1) is a 5-bit signed immediate.
-        RHS = DAG.getSignedConstant(C + 1, DL, RHS.getValueType());
-        CC = ISD::SETGE;
-        return;
-      }
-      if (Subtarget.hasVendorXRemovedQcibi() && C != INT64_MAX && isInt<16>(C + 1)) {
-        // We have a branch immediate instruction for SETGE but not SETGT.
-        // Convert X > C to X >= C + 1, if (C + 1) is a 16-bit signed immediate.
-        RHS = DAG.getSignedConstant(C + 1, DL, RHS.getValueType());
-        CC = ISD::SETGE;
-        return;
-      }
       break;
     case ISD::SETLT:
       // Convert X < 1 to 0 >= X.
@@ -715,22 +542,6 @@ static void translateSetCCForBranch(const SDLoc &DL, SDValue &LHS, SDValue &RHS,
       }
       break;
     case ISD::SETUGT:
-      if ((Subtarget.hasVendorXRemovedQcicm() || Subtarget.hasVendorXRemovedQcicli()) &&
-          C != INT64_MAX && isUInt<5>(C + 1)) {
-        // We have a conditional move instruction for SETUGE but not SETUGT.
-        // Convert X > C to X >= C + 1, if (C + 1) is a 5-bit signed immediate.
-        RHS = DAG.getConstant(C + 1, DL, RHS.getValueType());
-        CC = ISD::SETUGE;
-        return;
-      }
-      if (Subtarget.hasVendorXRemovedQcibi() && C != INT64_MAX && isUInt<16>(C + 1)) {
-        // We have a branch immediate instruction for SETUGE but not SETUGT.
-        // Convert X > C to X >= C + 1, if (C + 1) is a 16-bit unsigned
-        // immediate.
-        RHS = DAG.getConstant(C + 1, DL, RHS.getValueType());
-        CC = ISD::SETUGE;
-        return;
-      }
       break;
     }
   }
@@ -777,8 +588,8 @@ static SDValue lowerConstant(SDValue Op, SelectionDAG &DAG,
   // Special case. See if we can build the constant as (ADD (SLLI X, C), X) do
   // that if it will avoid a constant pool.
   // It will require an extra temporary register though.
-  // If we have Zba we can use (ADD_UW X, (SLLI X, 32)) to handle cases where
-  // low and high 32 bits are the same and bit 31 and 63 are set.
+  // This uses a plain ADD sequence; YSX does not model wider add-with-shift
+  // extension forms.
   unsigned ShiftAmt, AddOpc;
   YSXMatInt::InstSeq SeqLo =
       YSXMatInt::generateTwoRegInstSeq(Imm, Subtarget, ShiftAmt, AddOpc);
@@ -788,35 +599,11 @@ static SDValue lowerConstant(SDValue Op, SelectionDAG &DAG,
   return SDValue();
 }
 
-static SDValue LowerPREFETCH(SDValue Op, const YSXSubtarget &Subtarget,
-                             SelectionDAG &DAG) {
-
-  unsigned IsData = Op.getConstantOperandVal(4);
-
-  // mips-p8700  we support data prefetch for now.
-  if (Subtarget.hasVendorXMIPSCBOP() && !IsData)
-    return Op.getOperand(0);
-  return Op;
-}
-
 static SDValue LowerATOMIC_FENCE(SDValue Op, SelectionDAG &DAG,
                                  const YSXSubtarget &Subtarget) {
   SDLoc dl(Op);
-  AtomicOrdering FenceOrdering =
-      static_cast<AtomicOrdering>(Op.getConstantOperandVal(1));
   SyncScope::ID FenceSSID =
       static_cast<SyncScope::ID>(Op.getConstantOperandVal(2));
-
-  if (Subtarget.hasStdExtZtso()) {
-    // The only fence that needs an instruction is a sequentially-consistent
-    // cross-thread fence.
-    if (FenceOrdering == AtomicOrdering::SequentiallyConsistent &&
-        FenceSSID == SyncScope::System)
-      return Op;
-
-    // MEMBARRIER is a compiler barrier; it codegens to a no-op.
-    return DAG.getNode(ISD::MEMBARRIER, dl, MVT::Other, Op.getOperand(0));
-  }
 
   // singlethread fences only synchronize with signal handlers on the same
   // thread and thus only need to preserve instruction order, not actually
@@ -833,8 +620,6 @@ SDValue YSXTargetLowering::LowerOperation(SDValue Op,
   switch (Op.getOpcode()) {
   default:
     return SDValue();
-  case ISD::PREFETCH:
-    return LowerPREFETCH(Op, Subtarget, DAG);
   case ISD::ATOMIC_FENCE:
     return LowerATOMIC_FENCE(Op, DAG, Subtarget);
   case ISD::GlobalAddress:
@@ -961,7 +746,7 @@ SDValue YSXTargetLowering::emitFlushICache(SelectionDAG &DAG, SDValue InChain,
 SDValue YSXTargetLowering::lowerINIT_TRAMPOLINE(SDValue Op,
                                                   SelectionDAG &DAG) const {
   if (!Subtarget.is64Bit())
-    llvm::reportFatalUsageError("Trampolines only implemented for RV64");
+    llvm::reportFatalUsageError("Trampolines only implemented for ysx64");
 
   // Create an MCCodeEmitter to encode instructions.
   TargetLoweringObjectFile *TLO = getTargetMachine().getObjFileLowering();
@@ -986,21 +771,8 @@ SDValue YSXTargetLowering::lowerINIT_TRAMPOLINE(SDValue Op,
   //     16: <StaticChainOffset>
   //     24: <FunctionAddressOffset>
   //     32:
-  // Offset with branch control flow protection enabled:
-  //      0: lpad    <imm20>
-  //      4: auipc   t3, 0
-  //      8: ld      t2, 28(t3)
-  //     12: ld      t3, 20(t3)
-  //     16: jalr    t2
-  //     20: <StaticChainOffset>
-  //     28: <FunctionAddressOffset>
-  //     36:
 
-  const bool HasCFBranch =
-      Subtarget.hasStdExtZicfilp() &&
-      DAG.getMachineFunction().getFunction().getParent()->getModuleFlag(
-          "cf-protection-branch");
-  const unsigned StaticChainIdx = HasCFBranch ? 5 : 4;
+  const unsigned StaticChainIdx = 4;
   const unsigned StaticChainOffset = StaticChainIdx * 4;
   const unsigned FunctionAddressOffset = StaticChainOffset + 8;
 
@@ -1017,58 +789,29 @@ SDValue YSXTargetLowering::lowerINIT_TRAMPOLINE(SDValue Op,
   SmallVector<SDValue> OutChains;
 
   SmallVector<uint32_t> Encodings;
-  if (!HasCFBranch) {
-    Encodings.append(
-        {// auipc t2, 0
-         // Loads the current PC into t2.
-         GetEncoding(MCInstBuilder(YSX::AUIPC).addReg(YSX::X7).addImm(0)),
-         // ld t0, 24(t2)
-         // Loads the function address into t0. Note that we are using offsets
-         // pc-relative to the first instruction of the trampoline.
-         GetEncoding(MCInstBuilder(YSX::LD)
-                         .addReg(YSX::X5)
-                         .addReg(YSX::X7)
-                         .addImm(FunctionAddressOffset)),
-         // ld t2, 16(t2)
-         // Load the value of the static chain.
-         GetEncoding(MCInstBuilder(YSX::LD)
-                         .addReg(YSX::X7)
-                         .addReg(YSX::X7)
-                         .addImm(StaticChainOffset)),
-         // jalr t0
-         // Jump to the function.
-         GetEncoding(MCInstBuilder(YSX::JALR)
-                         .addReg(YSX::X0)
-                         .addReg(YSX::X5)
-                         .addImm(0))});
-  } else {
-    Encodings.append(
-        {// auipc x0, <imm20> (lpad <imm20>)
-         // Landing pad.
-         GetEncoding(MCInstBuilder(YSX::AUIPC).addReg(YSX::X0).addImm(0)),
-         // auipc t3, 0
-         // Loads the current PC into t3.
-         GetEncoding(MCInstBuilder(YSX::AUIPC).addReg(YSX::X28).addImm(0)),
-         // ld t2, (FunctionAddressOffset - 4)(t3)
-         // Loads the function address into t2. Note that we are using offsets
-         // pc-relative to the SECOND instruction of the trampoline.
-         GetEncoding(MCInstBuilder(YSX::LD)
-                         .addReg(YSX::X7)
-                         .addReg(YSX::X28)
-                         .addImm(FunctionAddressOffset - 4)),
-         // ld t3, (StaticChainOffset - 4)(t3)
-         // Load the value of the static chain.
-         GetEncoding(MCInstBuilder(YSX::LD)
-                         .addReg(YSX::X28)
-                         .addReg(YSX::X28)
-                         .addImm(StaticChainOffset - 4)),
-         // jalr t2
-         // Software-guarded jump to the function.
-         GetEncoding(MCInstBuilder(YSX::JALR)
-                         .addReg(YSX::X0)
-                         .addReg(YSX::X7)
-                         .addImm(0))});
-  }
+  Encodings.append(
+      {// auipc t2, 0
+       // Loads the current PC into t2.
+       GetEncoding(MCInstBuilder(YSX::AUIPC).addReg(YSX::X7).addImm(0)),
+       // ld t0, 24(t2)
+       // Loads the function address into t0. Note that we are using offsets
+       // pc-relative to the first instruction of the trampoline.
+       GetEncoding(MCInstBuilder(YSX::LD)
+                       .addReg(YSX::X5)
+                       .addReg(YSX::X7)
+                       .addImm(FunctionAddressOffset)),
+       // ld t2, 16(t2)
+       // Load the value of the static chain.
+       GetEncoding(MCInstBuilder(YSX::LD)
+                       .addReg(YSX::X7)
+                       .addReg(YSX::X7)
+                       .addImm(StaticChainOffset)),
+       // jalr t0
+       // Jump to the function.
+       GetEncoding(MCInstBuilder(YSX::JALR)
+                       .addReg(YSX::X0)
+                       .addReg(YSX::X5)
+                       .addImm(0))});
 
   // Store encoded instructions.
   for (auto [Idx, Encoding] : llvm::enumerate(Encodings)) {
@@ -1121,7 +864,7 @@ SDValue YSXTargetLowering::lowerINIT_TRAMPOLINE(SDValue Op,
 SDValue YSXTargetLowering::lowerADJUST_TRAMPOLINE(SDValue Op,
                                                     SelectionDAG &DAG) const {
   if (!Subtarget.is64Bit())
-    llvm::reportFatalUsageError("Trampolines only implemented for RV64");
+    llvm::reportFatalUsageError("Trampolines only implemented for ysx64");
 
   return Op.getOperand(0);
 }
@@ -1429,10 +1172,6 @@ static std::optional<bool> matchSetCC(SDValue LHS, SDValue RHS,
   return std::nullopt;
 }
 
-static bool isSimm12Constant(SDValue V) {
-  return isa<ConstantSDNode>(V) && V->getAsAPIntVal().isSignedIntN(12);
-}
-
 static SDValue lowerSelectToBinOp(SDNode *N, SelectionDAG &DAG,
                                   const YSXSubtarget &Subtarget) {
   SDValue CondV = N->getOperand(0);
@@ -1454,20 +1193,16 @@ static SDValue lowerSelectToBinOp(SDNode *N, SelectionDAG &DAG,
       return DAG.getNode(ISD::OR, DL, VT, Neg, DAG.getFreeze(TrueV));
     }
 
-    const bool HasCZero = VT.isScalarInteger() && Subtarget.hasCZEROLike();
-
     // (select c, 0, y) -> (c-1) & y
-    if (isNullConstant(TrueV) && (!HasCZero || isSimm12Constant(FalseV))) {
+    if (isNullConstant(TrueV)) {
       SDValue Neg =
           DAG.getNode(ISD::ADD, DL, VT, CondV, DAG.getAllOnesConstant(DL, VT));
       return DAG.getNode(ISD::AND, DL, VT, Neg, DAG.getFreeze(FalseV));
     }
     if (isNullConstant(FalseV)) {
       // (select c, y, 0) -> -c & y
-      if (!HasCZero || isSimm12Constant(TrueV)) {
-        SDValue Neg = DAG.getNegative(CondV, DL, VT);
-        return DAG.getNode(ISD::AND, DL, VT, Neg, DAG.getFreeze(TrueV));
-      }
+      SDValue Neg = DAG.getNegative(CondV, DL, VT);
+      return DAG.getNode(ISD::AND, DL, VT, Neg, DAG.getFreeze(TrueV));
     }
   }
 
@@ -1912,14 +1647,11 @@ bool YSXTargetLowering::shouldTransformSignedTruncationCheck(
   if (XVT != MVT::i32 && XVT != MVT::i64)
     return false;
 
-  // We can use sext.w for RV64 or an srai 31 on RV32.
+  // YSX64 can use sext.w for 32-bit truncation checks.
   if (KeptBits == 32 || KeptBits == 64)
     return true;
 
-  // With Zbb we can use sext.h/sext.b.
-  return Subtarget.hasStdExtZbb() &&
-         ((KeptBits == 8 && XVT == MVT::i64 && !Subtarget.is64Bit()) ||
-          KeptBits == 16);
+  return false;
 }
 
 bool YSXTargetLowering::isDesirableToCommuteWithShift(
@@ -1958,13 +1690,6 @@ bool YSXTargetLowering::isDesirableToCommuteWithShift(
     auto *C1 = dyn_cast<ConstantSDNode>(N0->getOperand(1));
     auto *C2 = dyn_cast<ConstantSDNode>(N->getOperand(1));
 
-    // Bail if we might break a sh{1,2,3}add/qc.shladd pattern.
-    if (C2 && Subtarget.hasShlAdd(C2->getZExtValue()) && N->hasOneUse() &&
-        N->user_begin()->getOpcode() == ISD::ADD &&
-        !isUsedByLdSt(*N->user_begin(), nullptr) &&
-        !isa<ConstantSDNode>(N->user_begin()->getOperand(1)))
-      return false;
-
     if (C1 && C2) {
       const APInt &C1Int = C1->getAPIntValue();
       APInt ShiftedC1Int = C1Int << C2->getAPIntValue();
@@ -1984,12 +1709,10 @@ bool YSXTargetLowering::isDesirableToCommuteWithShift(
 
       // Neither constant will fit into an immediate, so find materialisation
       // costs.
-      int C1Cost =
-          YSXMatInt::getIntMatCost(C1Int, Ty.getSizeInBits(), Subtarget,
-                                     /*CompressionCost*/ true);
+      int C1Cost = YSXMatInt::getIntMatCost(C1Int, Ty.getSizeInBits(),
+                                            Subtarget);
       int ShiftedC1Cost = YSXMatInt::getIntMatCost(
-          ShiftedC1Int, Ty.getSizeInBits(), Subtarget,
-          /*CompressionCost*/ true);
+          ShiftedC1Int, Ty.getSizeInBits(), Subtarget);
 
       // Materialising `c1` is cheaper than materialising `c1 << c2`, so the
       // combine should be prevented.
@@ -2550,11 +2273,7 @@ SDValue YSXTargetLowering::LowerFormalArguments(
   case CallingConv::GRAAL:
     break;
   case CallingConv::GHC:
-    if (Subtarget.hasStdExtE())
-      reportFatalUsageError("GHC calling convention is not supported on RVE!");
-    if (!Subtarget.hasStdExtFOrZfinx() || !Subtarget.hasStdExtDOrZdinx())
-      reportFatalUsageError("GHC calling convention requires the (Zfinx/F) and "
-                            "(Zdinx/D) instruction set extensions");
+    reportFatalUsageError("GHC calling convention is not supported by YSX");
   }
 
   const Function &Func = MF.getFunction();
@@ -2772,9 +2491,7 @@ SDValue YSXTargetLowering::LowerCall(CallLoweringInfo &CLI,
   CCState ArgCCInfo(CallConv, IsVarArg, MF, ArgLocs, *DAG.getContext());
 
   if (CallConv == CallingConv::GHC) {
-    if (Subtarget.hasStdExtE())
-      reportFatalUsageError("GHC calling convention is not supported on RVE!");
-    ArgCCInfo.AnalyzeCallOperands(Outs, CC_YSX_GHC);
+    reportFatalUsageError("GHC calling convention is not supported by YSX");
   } else
     analyzeOutputArgs(MF, ArgCCInfo, Outs, /*IsRet=*/false, &CLI,
                       CallConv == CallingConv::Fast ? CC_YSX_FastCC
@@ -2930,14 +2647,11 @@ SDValue YSXTargetLowering::LowerCall(CallLoweringInfo &CLI,
   // If the callee is a GlobalAddress/ExternalSymbol node, turn it into a
   // TargetGlobalAddress/TargetExternalSymbol node so that legalize won't
   // split it and then direct call can be matched by PseudoCALL.
-  bool CalleeIsLargeExternalSymbol = false;
   if (getTargetMachine().getCodeModel() == CodeModel::Large) {
     if (auto *S = dyn_cast<GlobalAddressSDNode>(Callee))
       Callee = getLargeGlobalAddress(S, DL, PtrVT, DAG);
-    else if (auto *S = dyn_cast<ExternalSymbolSDNode>(Callee)) {
+    else if (auto *S = dyn_cast<ExternalSymbolSDNode>(Callee))
       Callee = getLargeExternalSymbol(S, DL, PtrVT, DAG);
-      CalleeIsLargeExternalSymbol = true;
-    }
   } else if (GlobalAddressSDNode *S = dyn_cast<GlobalAddressSDNode>(Callee)) {
     const GlobalValue *GV = S->getGlobal();
     Callee = DAG.getTargetGlobalAddress(GV, DL, PtrVT, 0, YSXII::MO_CALL);
@@ -2971,20 +2685,9 @@ SDValue YSXTargetLowering::LowerCall(CallLoweringInfo &CLI,
   // Emit the call.
   SDVTList NodeTys = DAG.getVTList(MVT::Other, MVT::Glue);
 
-  // Use software guarded branch for large code model non-indirect calls
-  // Tail call to external symbol will have a null CLI.CB and we need another
-  // way to determine the callsite type
-  bool NeedSWGuarded = false;
-  if (getTargetMachine().getCodeModel() == CodeModel::Large &&
-      Subtarget.hasStdExtZicfilp() &&
-      ((CLI.CB && !CLI.CB->isIndirectCall()) || CalleeIsLargeExternalSymbol))
-    NeedSWGuarded = true;
-
   if (IsTailCall) {
     MF.getFrameInfo().setHasTailCall();
-    unsigned CallOpc =
-        NeedSWGuarded ? YSXISD::SW_GUARDED_TAIL : YSXISD::TAIL;
-    SDValue Ret = DAG.getNode(CallOpc, DL, NodeTys, Ops);
+    SDValue Ret = DAG.getNode(YSXISD::TAIL, DL, NodeTys, Ops);
     if (CLI.CFIType)
       Ret.getNode()->setCFIType(CLI.CFIType->getZExtValue());
     DAG.addNoMergeSiteInfo(Ret.getNode(), CLI.NoMerge);
@@ -2992,8 +2695,7 @@ SDValue YSXTargetLowering::LowerCall(CallLoweringInfo &CLI,
     return Ret;
   }
 
-  unsigned CallOpc = NeedSWGuarded ? YSXISD::SW_GUARDED_CALL : YSXISD::CALL;
-  Chain = DAG.getNode(CallOpc, DL, NodeTys, Ops);
+  Chain = DAG.getNode(YSXISD::CALL, DL, NodeTys, Ops);
   if (CLI.CFIType)
     Chain.getNode()->setCFIType(CLI.CFIType->getZExtValue());
 
@@ -3310,12 +3012,6 @@ void YSXTargetLowering::LowerAsmOperandForConstraint(
 Instruction *YSXTargetLowering::emitLeadingFence(IRBuilderBase &Builder,
                                                    Instruction *Inst,
                                                    AtomicOrdering Ord) const {
-  if (Subtarget.hasStdExtZtso()) {
-    if (isa<LoadInst>(Inst) && Ord == AtomicOrdering::SequentiallyConsistent)
-      return Builder.CreateFence(Ord);
-    return nullptr;
-  }
-
   if (isa<LoadInst>(Inst) && Ord == AtomicOrdering::SequentiallyConsistent)
     return Builder.CreateFence(Ord);
   if (isa<StoreInst>(Inst) && isReleaseOrStronger(Ord))
@@ -3326,12 +3022,6 @@ Instruction *YSXTargetLowering::emitLeadingFence(IRBuilderBase &Builder,
 Instruction *YSXTargetLowering::emitTrailingFence(IRBuilderBase &Builder,
                                                     Instruction *Inst,
                                                     AtomicOrdering Ord) const {
-  if (Subtarget.hasStdExtZtso()) {
-    if (isa<StoreInst>(Inst) && Ord == AtomicOrdering::SequentiallyConsistent)
-      return Builder.CreateFence(Ord);
-    return nullptr;
-  }
-
   if (isa<LoadInst>(Inst) && isAcquireOrStronger(Ord))
     return Builder.CreateFence(AtomicOrdering::Acquire);
   if (Subtarget.enableTrailingSeqCstFence() && isa<StoreInst>(Inst) &&
@@ -3358,14 +3048,11 @@ YSXTargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const {
 
   unsigned Size = AI->getType()->getPrimitiveSizeInBits();
   if (AI->getOperation() == AtomicRMWInst::Nand) {
-    if (Subtarget.hasStdExtZacas() &&
-        (Size >= 32 || Subtarget.hasStdExtZabha()))
-      return AtomicExpansionKind::CmpXChg;
     if (Size < 32)
       return AtomicExpansionKind::MaskedIntrinsic;
   }
 
-  if (Size < 32 && !Subtarget.hasStdExtZabha())
+  if (Size < 32)
     return AtomicExpansionKind::MaskedIntrinsic;
 
   return AtomicExpansionKind::None;
@@ -3462,8 +3149,7 @@ YSXTargetLowering::shouldExpandAtomicCmpXchgInIR(
     return AtomicExpansionKind::None;
 
   unsigned Size = CI->getCompareOperand()->getType()->getPrimitiveSizeInBits();
-  if (!(Subtarget.hasStdExtZabha() && Subtarget.hasStdExtZacas()) &&
-      (Size == 8 || Size == 16))
+  if (Size == 8 || Size == 16)
     return AtomicExpansionKind::MaskedIntrinsic;
   return AtomicExpansionKind::None;
 }
@@ -3505,39 +3191,10 @@ const MCExpr *YSXTargetLowering::LowerCustomJumpTableEntry(
   return MCSymbolRefExpr::create(MBB->getSymbol(), Ctx);
 }
 
-bool YSXTargetLowering::getIndexedAddressParts(SDNode *Op, SDValue &Base,
-                                                 SDValue &Offset,
-                                                 ISD::MemIndexedMode &AM,
-                                                 SelectionDAG &DAG) const {
-  // Target does not support indexed loads.
-  if (!Subtarget.hasVendorXRemovedTHeadMemIdx())
-    return false;
-
-  if (Op->getOpcode() != ISD::ADD && Op->getOpcode() != ISD::SUB)
-    return false;
-
-  Base = Op->getOperand(0);
-  if (ConstantSDNode *RHS = dyn_cast<ConstantSDNode>(Op->getOperand(1))) {
-    int64_t RHSC = RHS->getSExtValue();
-    if (Op->getOpcode() == ISD::SUB)
-      RHSC = -(uint64_t)RHSC;
-
-    // The constants that can be encoded in the THeadMemIdx instructions
-    // are of the form (sign_extend(imm5) << imm2).
-    bool isLegalIndexedOffset = false;
-    for (unsigned i = 0; i < 4; i++)
-      if (isInt<5>(RHSC >> i) && ((RHSC % (1LL << i)) == 0)) {
-        isLegalIndexedOffset = true;
-        break;
-      }
-
-    if (!isLegalIndexedOffset)
-      return false;
-
-    Offset = Op->getOperand(1);
-    return true;
-  }
-
+bool YSXTargetLowering::getIndexedAddressParts(SDNode *, SDValue &,
+                                                 SDValue &,
+                                                 ISD::MemIndexedMode &,
+                                                 SelectionDAG &) const {
   return false;
 }
 
@@ -3568,26 +3225,6 @@ bool YSXTargetLowering::getPostIndexedAddressParts(SDNode *N, SDNode *Op,
                                                      SDValue &Offset,
                                                      ISD::MemIndexedMode &AM,
                                                      SelectionDAG &DAG) const {
-  if (Subtarget.hasVendorXCVmem() && !Subtarget.is64Bit()) {
-    if (Op->getOpcode() != ISD::ADD)
-      return false;
-
-    if (LSBaseSDNode *LS = dyn_cast<LSBaseSDNode>(N))
-      Base = LS->getBasePtr();
-    else
-      return false;
-
-    if (Base == Op->getOperand(0))
-      Offset = Op->getOperand(1);
-    else if (Base == Op->getOperand(1))
-      Offset = Op->getOperand(0);
-    else
-      return false;
-
-    AM = ISD::POST_INC;
-    return true;
-  }
-
   EVT VT;
   SDValue Ptr;
   if (LoadSDNode *LD = dyn_cast<LoadSDNode>(N)) {
@@ -3611,8 +3248,7 @@ bool YSXTargetLowering::getPostIndexedAddressParts(SDNode *N, SDNode *Op,
 }
 
 ISD::NodeType YSXTargetLowering::getExtendForAtomicCmpSwapArg() const {
-  // Zacas will use amocas.w which does not require extension.
-  return Subtarget.hasStdExtZacas() ? ISD::ANY_EXTEND : ISD::SIGN_EXTEND;
+  return ISD::SIGN_EXTEND;
 }
 
 ISD::NodeType YSXTargetLowering::getExtendForAtomicRMWArg(unsigned Op) const {
@@ -3677,19 +3313,9 @@ bool YSXTargetLowering::decomposeMulByConstant(LLVMContext &Context, EVT VT,
   auto *ConstNode = cast<ConstantSDNode>(C);
   const APInt &Imm = ConstNode->getAPIntValue();
 
-  // Don't do this if the XRemovedQciac extension is enabled and the Imm in simm12.
-  if (Subtarget.hasVendorXRemovedQciac() && Imm.isSignedIntN(12))
-    return false;
-
   // Break the MUL to a SLLI and an ADD/SUB.
   if ((Imm + 1).isPowerOf2() || (Imm - 1).isPowerOf2() ||
       (1 - Imm).isPowerOf2() || (-1 - Imm).isPowerOf2())
-    return true;
-
-  // Optimize the MUL to (SH*ADD x, (SLLI x, bits)) if Imm is not simm12.
-  if (Subtarget.hasShlAdd(3) && !Imm.isSignedIntN(12) &&
-      ((Imm - 2).isPowerOf2() || (Imm - 4).isPowerOf2() ||
-       (Imm - 8).isPowerOf2()))
     return true;
 
   // Break the MUL to two SLLI instructions and an ADD/SUB, if Imm needs
@@ -3885,11 +3511,8 @@ bool YSXTargetLowering::areTwoSDNodeTargetMMOFlagsMergeable(
   return getTargetMMOFlags(NodeX) == getTargetMMOFlags(NodeY);
 }
 
-bool YSXTargetLowering::isCtpopFast(EVT VT) const {
-  if (VT.isVector())
-    return false;
-
-  return Subtarget.hasCPOPLike() && (VT == MVT::i32 || VT == MVT::i64);
+bool YSXTargetLowering::isCtpopFast(EVT) const {
+  return false;
 }
 
 unsigned YSXTargetLowering::getCustomCtpopCost(EVT VT,
@@ -3899,30 +3522,6 @@ unsigned YSXTargetLowering::getCustomCtpopCost(EVT VT,
 
 bool YSXTargetLowering::shouldInsertFencesForAtomic(
     const Instruction *I) const {
-  if (Subtarget.hasStdExtZalasr()) {
-    if (Subtarget.hasStdExtZtso()) {
-      // Zalasr + TSO means that atomic_load_acquire and atomic_store_release
-      // should be lowered to plain load/store. The easiest way to do this is
-      // to say we should insert fences for them, and the fence insertion code
-      // will just not insert any fences
-      auto *LI = dyn_cast<LoadInst>(I);
-      auto *SI = dyn_cast<StoreInst>(I);
-      if ((LI &&
-           (LI->getOrdering() == AtomicOrdering::SequentiallyConsistent)) ||
-          (SI &&
-           (SI->getOrdering() == AtomicOrdering::SequentiallyConsistent))) {
-        // Here, this is a load or store which is seq_cst, and needs a .aq or
-        // .rl therefore we shouldn't try to insert fences
-        return false;
-      }
-      // Here, we are a TSO inst that isn't a seq_cst load/store
-      return isa<LoadInst>(I) || isa<StoreInst>(I);
-    }
-    return false;
-  }
-  // Note that one specific case requires fence insertion for an
-  // AtomicCmpXchgInst but is handled via the YSXZacasABIFix pass rather
-  // than this hook due to limitations in the interface here.
   return isa<LoadInst>(I) || isa<StoreInst>(I);
 }
 
@@ -3949,8 +3548,6 @@ YSXTargetLowering::BuildSDIVPow2(SDNode *N, const APInt &Divisor,
 
 bool YSXTargetLowering::shouldFoldSelectWithSingleBitTest(
     EVT VT, const APInt &AndMask) const {
-  if (Subtarget.hasCZEROLike() || Subtarget.hasVendorXRemovedTHeadCondMov())
-    return !Subtarget.hasBEXTILike() && AndMask.ugt(1024);
   return TargetLowering::shouldFoldSelectWithSingleBitTest(VT, AndMask);
 }
 
@@ -3962,15 +3559,6 @@ SDValue YSXTargetLowering::expandIndirectJTBranch(const SDLoc &dl,
                                                     SDValue Value, SDValue Addr,
                                                     int JTI,
                                                     SelectionDAG &DAG) const {
-  if (Subtarget.hasStdExtZicfilp()) {
-    // When Zicfilp enabled, we need to use software guarded branch for jump
-    // table branch.
-    SDValue Chain = Value;
-    // Jump table debug info is only needed if CodeView is enabled.
-    if (DAG.getTarget().getTargetTriple().isOSBinFormatCOFF())
-      Chain = DAG.getJumpTableDebugInfo(JTI, Chain, dl);
-    return DAG.getNode(YSXISD::SW_GUARDED_BRIND, dl, MVT::Other, Chain, Addr);
-  }
   return TargetLowering::expandIndirectJTBranch(dl, Value, Addr, JTI, DAG);
 }
 

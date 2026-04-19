@@ -42,11 +42,6 @@ using namespace llvm;
 
 #define DEBUG_TYPE "ysx-instr-info"
 
-static bool isCompressibleInst(const MachineInstr &MI,
-                               const YSXSubtarget &STI) {
-  return false;
-}
-
 static cl::opt<MachineTraceStrategy> ForceMachineCombinerStrategy(
     "ysx-force-machine-combiner-strategy", cl::Hidden,
     cl::desc("Force machine combiner to use a specific strategy for machine "
@@ -293,16 +288,6 @@ void YSXInstrInfo::movImm(MachineBasicBlock &MBB,
                           MachineInstr::MIFlag Flag, bool DstRenamable,
                           bool DstIsDead) const {
   Register SrcReg = YSX::X0;
-
-  // For RV32, allow a sign or unsigned 32 bit value.
-  if (!STI.is64Bit() && !isInt<32>(Val)) {
-    // If have a uimm32 it will still fit in a register so we can allow it.
-    if (!isUInt<32>(Val))
-      report_fatal_error("Should only materialize 32-bit constants for RV32");
-
-    // Sign extend for generateInstSeq.
-    Val = SignExtend64<32>(Val);
-  }
 
   YSXMatInt::InstSeq Seq = YSXMatInt::generateInstSeq(Val, STI);
   assert(!Seq.empty());
@@ -626,8 +611,6 @@ void YSXInstrInfo::insertIndirectBranch(MachineBasicBlock &MBB,
 
   RS->enterBasicBlockEnd(MBB);
   const TargetRegisterClass *RC = &YSX::GPRRegClass;
-  if (STI.hasStdExtZicfilp())
-    RC = &YSX::GPRX7RegClass;
   Register TmpGPR =
       RS->scavengeRegisterBackwards(*RC, MI.getIterator(),
                                     /*RestoreAfter=*/false, /*SpAdj=*/0,
@@ -637,11 +620,8 @@ void YSXInstrInfo::insertIndirectBranch(MachineBasicBlock &MBB,
   else {
     // The case when there is no scavenged register needs special handling.
 
-    // Pick s11(or s1 for rve) because it doesn't make a difference.
-    TmpGPR = STI.hasStdExtE() ? YSX::X9 : YSX::X27;
-    // Force t2 if Zicfilp is on
-    if (STI.hasStdExtZicfilp())
-      TmpGPR = YSX::X7;
+    // Pick s11 because it doesn't make a difference.
+    TmpGPR = YSX::X27;
 
     int FrameIndex = RVFI->getBranchRelaxationScratchFrameIndex();
     if (FrameIndex == -1)
@@ -1028,25 +1008,8 @@ unsigned YSXInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
                               *MF.getTarget().getMCAsmInfo());
   }
 
-  if (!MI.memoperands_empty()) {
-    MachineMemOperand *MMO = *(MI.memoperands_begin());
-    if (STI.hasStdExtZihintntl() && MMO->isNonTemporal()) {
-      if (STI.hasStdExtZca()) {
-        if (isCompressibleInst(MI, STI))
-          return 4; // c.ntl.all + c.load/c.store
-        return 6;   // c.ntl.all + load/store
-      }
-      return 8; // ntl.all + load/store
-    }
-  }
-
   if (Opcode == TargetOpcode::BUNDLE)
     return getInstBundleLength(MI);
-
-  if (MI.getParent() && MI.getParent()->getParent()) {
-    if (isCompressibleInst(MI, STI))
-      return 2;
-  }
 
   switch (Opcode) {
   case TargetOpcode::STACKMAP:
@@ -1074,12 +1037,9 @@ unsigned YSXInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
               .getAsInteger(10, Num))
         return get(Opcode).getSize();
 
-      // Number of C.NOP or NOP
-      return (STI.hasStdExtZca() ? 2 : 4) * Num;
+      return 4 * Num;
     }
-    // XRay uses C.JAL + 21 or 33 C.NOP for each sled in RV32 and RV64,
-    // respectively.
-    return STI.is64Bit() ? 68 : 44;
+    return 68;
   }
   default:
     return get(Opcode).getSize();
@@ -1400,15 +1360,6 @@ bool YSXInstrInfo::verifyInstruction(const MachineInstr &MI,
           break;
         case YSXOp::OPERAND_RVKRNUM_2_14:
           Ok = Imm >= 2 && Imm <= 14;
-          break;
-        case YSXOp::OPERAND_RLIST:
-          Ok = Imm >= YSXZC::RA && Imm <= YSXZC::RA_S0_S11;
-          break;
-        case YSXOp::OPERAND_RLIST_S0:
-          Ok = Imm >= YSXZC::RA_S0 && Imm <= YSXZC::RA_S0_S11;
-          break;
-        case YSXOp::OPERAND_STACKADJ:
-          Ok = Imm >= 0 && Imm <= 48 && Imm % 16 == 0;
           break;
         case YSXOp::OPERAND_COND_CODE:
           Ok = Imm >= 0 && Imm < YSXCC::COND_INVALID;
@@ -1857,8 +1808,7 @@ YSXInstrInfo::getOutliningCandidateInfo(
 
   // Each RepeatedSequenceLoc is identical.
   outliner::Candidate &Candidate = RepeatedSequenceLocs[0];
-  unsigned InstrSizeCExt =
-      Candidate.getMF()->getSubtarget<YSXSubtarget>().hasStdExtZca() ? 2 : 4;
+  unsigned InstrSize = 4;
   unsigned CallOverhead = 0, FrameOverhead = 0;
 
   // Count the number of CFI instructions in the candidate, if present.
@@ -1886,15 +1836,13 @@ YSXInstrInfo::getOutliningCandidateInfo(
   if (Candidate.back().isReturn()) {
     MOCI = MachineOutlinerTailCall;
     // tail call = auipc + jalr in the worst case without linker relaxation.
-    // FIXME: This code suggests the JALR can be compressed - how?
-    CallOverhead = 4 + InstrSizeCExt;
+    CallOverhead = 4 + InstrSize;
     // Using tail call we move ret instruction from caller to callee.
     FrameOverhead = 0;
   } else {
     // call t0, function = 8 bytes.
     CallOverhead = 8;
-    // jr t0 = 4 bytes, 2 bytes if compressed instructions are enabled.
-    FrameOverhead = InstrSizeCExt;
+    FrameOverhead = InstrSize;
   }
 
   // If we have CFI instructions, we can only outline if the outlined section

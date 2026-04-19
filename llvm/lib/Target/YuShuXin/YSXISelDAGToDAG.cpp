@@ -104,8 +104,8 @@ static SDValue selectImm(SelectionDAG *CurDAG, const SDLoc &DL, const MVT VT,
   // See if we can create this constant as (ADD (SLLI X, C), X) where X is at
   // worst an LUI+ADDIW. This will require an extra register, but avoids a
   // constant pool.
-  // If we have Zba we can use (ADD_UW X, (SLLI X, 32)) to handle cases where
-  // low and high 32 bits are the same and bit 31 and 63 are set.
+  // Use a plain ADD sequence for constants that can be formed from two related
+  // register values.
   if (Seq.size() > 3) {
     unsigned ShiftAmt, AddOpc;
     YSXMatInt::InstSeq SeqLo =
@@ -233,18 +233,6 @@ void YSXDAGToDAGISel::selectSF_VC_X_SE(SDNode *Node) {
   return;
 }
 
-static bool isApplicableToPLI(int Val) {
-  // Check if the immediate is packed i8 or i10
-  int16_t Bit31To16 = Val >> 16;
-  int16_t Bit15To0 = Val;
-  int8_t Bit15To8 = Bit15To0 >> 8;
-  int8_t Bit7To0 = Val;
-  if (Bit31To16 != Bit15To0)
-    return false;
-
-  return isInt<10>(Bit31To16) || Bit15To8 == Bit7To0;
-}
-
 void YSXDAGToDAGISel::Select(SDNode *Node) {
   // If we have a custom node, we have already selected.
   if (Node->isMachineOpcode()) {
@@ -286,19 +274,11 @@ void YSXDAGToDAGISel::Select(SDNode *Node) {
     else if (!isInt<32>(Imm) && isUInt<32>(Imm) && hasAllWUsers(Node))
       Imm = SignExtend64<32>(Imm);
 
-    if (VT == MVT::i64 && Subtarget->hasStdExtP() && isApplicableToPLI(Imm) &&
-        hasAllWUsers(Node)) {
-      // If it's 4 packed 8-bit integers or 2 packed signed 16-bit integers, we
-      // can simply copy lower 32 bits to higher 32 bits to make it able to
-      // rematerialize to PLI_B or PLI_H
-      Imm = ((uint64_t)Imm << 32) | (Imm & 0xFFFFFFFF);
-    }
-
     ReplaceNode(Node, selectImm(CurDAG, DL, VT, Imm, *Subtarget).getNode());
     return;
   }
   case YSXISD::BuildGPRPair: {
-    assert(!Subtarget->is64Bit() && "BuildGPRPair only handled on RV32");
+    assert(Subtarget->is64Bit() && "YSX GPR pairs are only modeled for ysx64");
 
     SDValue Ops[] = {
         CurDAG->getTargetConstant(YSX::GPRPairRegClassID, DL, MVT::i32),
@@ -312,7 +292,7 @@ void YSXDAGToDAGISel::Select(SDNode *Node) {
     return;
   }
   case YSXISD::SplitGPRPair: {
-    assert(!Subtarget->is64Bit() && "SplitGPRPair only handled on RV32");
+    assert(Subtarget->is64Bit() && "YSX GPR pairs are only modeled for ysx64");
     if (!SDValue(Node, 0).use_empty()) {
       SDValue Lo = CurDAG->getTargetExtractSubreg(YSX::sub_gpr_even, DL,
                                                   Node->getValueType(0),
@@ -363,10 +343,6 @@ void YSXDAGToDAGISel::Select(SDNode *Node) {
         // where C2 has C4 leading zeros and no trailing zeros.
         // This is profitable if the "and" was to be lowered to
         // (srli (slli X, C4), C4) and not (andi X, C2).
-        // For "LeadingZeros == 32":
-        // - with Zba it's just (slli.uw X, C)
-        // - without Zba a tablegen pattern applies the very same
-        //   transform as we would have done here
         SDNode *SLLI = CurDAG->getMachineNode(
             YSX::SLLI, DL, VT, N0.getOperand(0),
             CurDAG->getTargetConstant(LeadingZeros, DL, VT));
@@ -420,11 +396,10 @@ void YSXDAGToDAGISel::Select(SDNode *Node) {
     unsigned TrailingOnes = llvm::countr_one(Mask);
     if (ShAmt >= TrailingOnes)
       break;
-    // If the mask has 32 trailing ones, use SRLI on RV32 or SRLIW on RV64.
     if (TrailingOnes == 32) {
       SDNode *SRLI = CurDAG->getMachineNode(
-          Subtarget->is64Bit() ? YSX::SRLIW : YSX::SRLI, DL, VT,
-          N0.getOperand(0), CurDAG->getTargetConstant(ShAmt, DL, VT));
+          YSX::SRLIW, DL, VT, N0.getOperand(0),
+          CurDAG->getTargetConstant(ShAmt, DL, VT));
       ReplaceNode(Node, SRLI);
       return;
     }
@@ -459,10 +434,8 @@ void YSXDAGToDAGISel::Select(SDNode *Node) {
     //          (srai (slli X, (XLen-16), (XLen-16) + C)
     // And      (sra (sext_inreg X, i8), C) ->
     //          (srai (slli X, (XLen-8), (XLen-8) + C)
-    // This can occur when Zbb is enabled, which makes sext_inreg i16/i8 legal.
-    // This transform matches the code we get without Zbb. The shifts are more
-    // compressible, and this can help expose CSE opportunities in the sdiv by
-    // constant optimization.
+    // This can help expose CSE opportunities in the sdiv by constant
+    // optimization.
     auto *N1C = dyn_cast<ConstantSDNode>(Node->getOperand(1));
     if (!N1C)
       break;
@@ -512,13 +485,7 @@ void YSXDAGToDAGISel::Select(SDNode *Node) {
       unsigned XLen = Subtarget->getXLen();
       assert((C2 > 0 && C2 < XLen) && "Unexpected shift amount!");
 
-      // Keep track of whether this is a c.andi. If we can't use c.andi, the
-      // shift pair might offer more compression opportunities.
-      // TODO: We could check for C extension here, but we don't have many lit
-      // tests with the C extension enabled so not checking gets better
-      // coverage.
       // TODO: What if ANDI faster than shift?
-      bool IsCANDI = isInt<6>(N1C->getSExtValue());
 
       uint64_t C1 = N1C->getZExtValue();
 
@@ -578,11 +545,7 @@ void YSXDAGToDAGISel::Select(SDNode *Node) {
             return;
 
           // (srli (slli x, c3-c2), c3).
-          // Skip if we could use (zext.w (sraiw X, C2)).
-          bool Skip = Subtarget->hasStdExtZba() && Leading == 32 &&
-                      X.getOpcode() == ISD::SIGN_EXTEND_INREG &&
-                      cast<VTSDNode>(X.getOperand(1))->getVT() == MVT::i32;
-          if (OneUseOrZExtW && !Skip) {
+          if (OneUseOrZExtW) {
             SDNode *SLLI = CurDAG->getMachineNode(
                 YSX::SLLI, DL, VT, X,
                 CurDAG->getTargetConstant(Leading - C2, DL, VT));
@@ -617,7 +580,7 @@ void YSXDAGToDAGISel::Select(SDNode *Node) {
           if (tryUnsignedBitfieldInsertInZero(Node, DL, VT, X, Msb, Lsb))
             return;
 
-          if (OneUseOrZExtW && !IsCANDI) {
+          if (OneUseOrZExtW) {
             // (packh x0, X)
             // (srli (slli c2+c3), c3)
             SDNode *SLLI = CurDAG->getMachineNode(
@@ -637,8 +600,7 @@ void YSXDAGToDAGISel::Select(SDNode *Node) {
       if (!LeftShift && isShiftedMask_64(C1)) {
         unsigned Leading = XLen - llvm::bit_width(C1);
         unsigned Trailing = llvm::countr_zero(C1);
-        if (Leading == C2 && C2 + Trailing < XLen && OneUseOrZExtW &&
-            !IsCANDI) {
+        if (Leading == C2 && C2 + Trailing < XLen && OneUseOrZExtW) {
           unsigned SrliOpc = YSX::SRLI;
           // If the input is zexti32 we should use SRLIW.
           if (X.getOpcode() == ISD::AND &&
@@ -658,7 +620,7 @@ void YSXDAGToDAGISel::Select(SDNode *Node) {
         }
         // If the leading zero count is C2+32, we can use SRLIW instead of SRLI.
         if (Leading > 32 && (Leading - 32) == C2 && C2 + Trailing < 32 &&
-            OneUseOrZExtW && !IsCANDI) {
+            OneUseOrZExtW) {
           SDNode *SRLIW = CurDAG->getMachineNode(
               YSX::SRLIW, DL, VT, X,
               CurDAG->getTargetConstant(C2 + Trailing, DL, VT));
@@ -668,7 +630,6 @@ void YSXDAGToDAGISel::Select(SDNode *Node) {
           ReplaceNode(Node, SLLI);
           return;
         }
-        // If we have 32 bits in the mask, we can use SLLI_UW instead of SLLI.
       }
 
       // Turn (and (shl x, c2), c1) -> (slli (srli x, c3-c2), c3) if c1 is a
@@ -676,7 +637,7 @@ void YSXDAGToDAGISel::Select(SDNode *Node) {
       if (LeftShift && isShiftedMask_64(C1)) {
         unsigned Leading = XLen - llvm::bit_width(C1);
         unsigned Trailing = llvm::countr_zero(C1);
-        if (Leading == 0 && C2 < Trailing && OneUseOrZExtW && !IsCANDI) {
+        if (Leading == 0 && C2 < Trailing && OneUseOrZExtW) {
           SDNode *SRLI = CurDAG->getMachineNode(
               YSX::SRLI, DL, VT, X,
               CurDAG->getTargetConstant(Trailing - C2, DL, VT));
@@ -687,7 +648,7 @@ void YSXDAGToDAGISel::Select(SDNode *Node) {
           return;
         }
         // If we have (32-C2) leading zeros, we can use SRLIW instead of SRLI.
-        if (C2 < Trailing && Leading + C2 == 32 && OneUseOrZExtW && !IsCANDI) {
+        if (C2 < Trailing && Leading + C2 == 32 && OneUseOrZExtW) {
           SDNode *SRLIW = CurDAG->getMachineNode(
               YSX::SRLIW, DL, VT, X,
               CurDAG->getTargetConstant(Trailing - C2, DL, VT));
@@ -698,7 +659,6 @@ void YSXDAGToDAGISel::Select(SDNode *Node) {
           return;
         }
 
-        // If we have 32 bits in the mask, we can use SLLI_UW instead of SLLI.
       }
     }
 
@@ -760,9 +720,7 @@ void YSXDAGToDAGISel::Select(SDNode *Node) {
     // available.
     // Transform (and x, C1)
     //        -> (<bfextract> x, msb, lsb)
-    if (isMask_64(C1) && !isInt<12>(N1C->getSExtValue()) &&
-        !(C1 == 0xffff && Subtarget->hasStdExtZbb()) &&
-        !(C1 == 0xffffffff && Subtarget->hasStdExtZba())) {
+    if (isMask_64(C1) && !isInt<12>(N1C->getSExtValue())) {
       const unsigned Msb = llvm::bit_width(C1) - 1;
       if (tryUnsignedBitfieldExtract(Node, DL, VT, N0, Msb, 0))
         return;
@@ -799,21 +757,9 @@ void YSXDAGToDAGISel::Select(SDNode *Node) {
     // If this can be an ANDI or ZEXT.H, don't do this if the ANDI/ZEXT has
     // multiple users or the constant is a simm12. This prevents inserting a
     // shift and still have uses of the AND/ZEXT. Shifting a simm12 will likely
-    // make it more costly to materialize. Otherwise, using a SLLI might allow
-    // it to be compressed.
-    bool IsANDIOrZExt =
-        isInt<12>(C2) ||
-        (C2 == UINT64_C(0xFFFF) && Subtarget->hasStdExtZbb());
-    // With XRemovedTHeadBb, we can use TH.EXTU.
-    IsANDIOrZExt |= C2 == UINT64_C(0xFFFF) && Subtarget->hasVendorXRemovedTHeadBb();
+    // make it more costly to materialize.
+    bool IsANDIOrZExt = isInt<12>(C2);
     if (IsANDIOrZExt && (isInt<12>(N1C->getSExtValue()) || !N0.hasOneUse()))
-      break;
-    // If this can be a ZEXT.w, don't do this if the ZEXT has multiple users or
-    // the constant is a simm32.
-    bool IsZExtW = C2 == UINT64_C(0xFFFFFFFF) && Subtarget->hasStdExtZba();
-    // With XRemovedTHeadBb, we can use TH.EXTU.
-    IsZExtW |= C2 == UINT64_C(0xFFFFFFFF) && Subtarget->hasVendorXRemovedTHeadBb();
-    if (IsZExtW && (isInt<32>(N1C->getSExtValue()) || !N0.hasOneUse()))
       break;
 
     // We need to shift left the AND input and C1 by a total of XLen bits.
@@ -830,10 +776,6 @@ void YSXDAGToDAGISel::Select(SDNode *Node) {
       break;
 
     uint64_t ShiftedC1 = C1 << ConstantShift;
-    // If this RV32, we need to sign extend the constant.
-    if (XLen == 32)
-      ShiftedC1 = SignExtend64<32>(ShiftedC1);
-
     // Create (mulhu (slli X, lzcnt(C2)), C1 << (XLen - lzcnt(C2))).
     SDNode *Imm = selectImm(CurDAG, DL, VT, ShiftedC1, *Subtarget).getNode();
     SDNode *SLLI =
@@ -1267,28 +1209,16 @@ bool YSXDAGToDAGISel::SelectAddrRegImmLsb00000(SDValue Addr, SDValue &Base,
   return true;
 }
 
-/// Return true if this a load/store that we have a RegRegScale instruction for.
-static bool isRegRegScaleLoadOrStore(SDNode *User, SDValue Add,
-                                     const YSXSubtarget &Subtarget) {
-  if (User->getOpcode() != ISD::LOAD && User->getOpcode() != ISD::STORE)
-    return false;
-  EVT VT = cast<MemSDNode>(User)->getMemoryVT();
-  if (!(VT.isScalarInteger() &&
-        (Subtarget.hasVendorXRemovedTHeadMemIdx() ||
-         Subtarget.hasVendorXRemovedQcisls())))
-    return false;
-  // Don't allow stores of the value. It must be used as the address.
-  if (User->getOpcode() == ISD::STORE &&
-      cast<StoreSDNode>(User)->getValue() == Add)
-    return false;
-
-  return true;
+/// YSX has no reg+reg-scaled load/store forms.
+static bool isRegRegScaleLoadOrStore(SDNode *, SDValue,
+                                     const YSXSubtarget &) {
+  return false;
 }
 
 /// Is it profitable to fold this Add into RegRegScale load/store. If \p
 /// Shift is non-null, then we have matched a shl+add. We allow reassociating
 /// (add (add (shl A C2) B) C1) -> (add (add B C1) (shl A C2)) if there is a
-/// single addi and we don't have a SHXADD instruction we could use.
+/// single addi.
 /// FIXME: May still need to check how many and what kind of users the SHL has.
 static bool isWorthFoldingIntoRegRegScale(const YSXSubtarget &Subtarget,
                                           SDValue Add,
@@ -1305,12 +1235,6 @@ static bool isWorthFoldingIntoRegRegScale(const YSXSubtarget &Subtarget,
       return false;
 
     FoundADDI = true;
-
-    // If we have a SHXADD instruction, prefer that over reassociating an ADDI.
-    assert(Shift.getOpcode() == ISD::SHL);
-    unsigned ShiftAmt = Shift.getConstantOperandVal(1);
-    if (Subtarget.hasShlAdd(ShiftAmt))
-      return false;
 
     // All users of the ADDI should be load/store.
     for (auto *ADDIUser : User->users())
@@ -1569,9 +1493,8 @@ bool YSXDAGToDAGISel::selectSETCC(SDValue N, ISD::CondCode ExpectedCCVal,
                     0);
       return true;
     }
-    // Same as the addi case above but for larger immediates (signed 26-bit) use
-    // the QC_E_ADDI instruction from the XRemovedQcilia extension, if available. Avoid
-    // anything which can be done with a single lui as it might be compressible.
+    // Larger-immediate equality folding is intentionally omitted for the
+    // rv64ima-only YSX surface.
   }
 
   // If nothing else we can XOR the LHS and RHS to produce zero if they are
@@ -1804,10 +1727,9 @@ bool YSXDAGToDAGISel::orDisjoint(const SDNode *N) const {
 
 bool YSXDAGToDAGISel::selectImm64IfCheaper(int64_t Imm, int64_t OrigImm,
                                              SDValue N, SDValue &Val) {
-  int OrigCost = YSXMatInt::getIntMatCost(APInt(64, OrigImm), 64, *Subtarget,
-                                            /*CompressionCost=*/true);
-  int Cost = YSXMatInt::getIntMatCost(APInt(64, Imm), 64, *Subtarget,
-                                        /*CompressionCost=*/true);
+  int OrigCost =
+      YSXMatInt::getIntMatCost(APInt(64, OrigImm), 64, *Subtarget);
+  int Cost = YSXMatInt::getIntMatCost(APInt(64, Imm), 64, *Subtarget);
   if (OrigCost <= Cost)
     return false;
 
@@ -1872,9 +1794,7 @@ bool YSXDAGToDAGISel::selectInvLogicImm(SDValue N, SDValue &Val) {
     case ISD::AND:
     case ISD::OR:
     case ISD::XOR:
-      if (!(Subtarget->hasStdExtZbb() || Subtarget->hasStdExtZbkb()))
-        return false;
-      break;
+      return false;
     default:
       return false;
     }

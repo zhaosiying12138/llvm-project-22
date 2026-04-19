@@ -35,26 +35,6 @@ enum {
   InstFormatB = 5,
   InstFormatU = 6,
   InstFormatJ = 7,
-  InstFormatCR = 8,
-  InstFormatCI = 9,
-  InstFormatCSS = 10,
-  InstFormatCIW = 11,
-  InstFormatCL = 12,
-  InstFormatCS = 13,
-  InstFormatCA = 14,
-  InstFormatCB = 15,
-  InstFormatCJ = 16,
-  InstFormatCU = 17,
-  InstFormatCLB = 18,
-  InstFormatCLH = 19,
-  InstFormatCSB = 20,
-  InstFormatCSH = 21,
-  InstFormatQC_EAI = 22,
-  InstFormatQC_EI = 23,
-  InstFormatQC_EB = 24,
-  InstFormatQC_EJ = 25,
-  InstFormatQC_ES = 26,
-  InstFormatNDS_BRANCH_10 = 27,
   InstFormatOther = 31,
 
   InstFormatMask = 31,
@@ -167,9 +147,6 @@ enum OperandType : unsigned {
   OPERAND_RVKRNUM_0_7,
   OPERAND_RVKRNUM_1_10,
   OPERAND_RVKRNUM_2_14,
-  OPERAND_RLIST,
-  OPERAND_RLIST_S0,
-  OPERAND_STACKADJ,
   // Condition code used by select and short forward branch pseudos.
   OPERAND_COND_CODE,
   // Ordering for atomic pseudos.
@@ -222,14 +199,10 @@ struct SysReg {
   // Register number without the privilege bits.
   // unsigned Number;
   FeatureBitset FeaturesRequired;
-  bool IsRV32Only;
   bool IsAltName;
   bool IsDeprecatedName;
 
   bool haveRequiredFeatures(const FeatureBitset &ActiveFeatures) const {
-    // Not in 32-bit mode.
-    if (IsRV32Only && ActiveFeatures[YSX::Feature64Bit])
-      return false;
     // No required feature associated with the system register.
     if (FeaturesRequired.none())
       return true;
@@ -254,14 +227,7 @@ struct YSXOpcode {
 namespace YSXABI {
 
 enum ABI {
-  ABI_ILP32,
-  ABI_ILP32F,
-  ABI_ILP32D,
-  ABI_ILP32E,
   ABI_LP64,
-  ABI_LP64F,
-  ABI_LP64D,
-  ABI_LP64E,
   ABI_Unknown
 };
 
@@ -292,85 +258,6 @@ llvm::Expected<std::unique_ptr<YSXISAInfo>>
 parseFeatureBits(bool IsRV64, const FeatureBitset &FeatureBits);
 
 } // namespace YSXFeatures
-
-namespace YSXRVC {
-bool compress(MCInst &OutInst, const MCInst &MI, const MCSubtargetInfo &STI);
-bool uncompress(MCInst &OutInst, const MCInst &MI, const MCSubtargetInfo &STI);
-} // namespace YSXRVC
-
-namespace YSXZC {
-enum RLISTENCODE {
-  RA = 4,
-  RA_S0,
-  RA_S0_S1,
-  RA_S0_S2,
-  RA_S0_S3,
-  RA_S0_S4,
-  RA_S0_S5,
-  RA_S0_S6,
-  RA_S0_S7,
-  RA_S0_S8,
-  RA_S0_S9,
-  // note - to include s10, s11 must also be included
-  RA_S0_S11,
-  INVALID_RLIST,
-};
-
-inline unsigned encodeRegList(MCRegister EndReg, bool IsRVE = false) {
-  assert((!IsRVE || EndReg <= YSX::X9) && "Invalid Rlist for RV32E");
-  switch (EndReg.id()) {
-  case YSX::X1:
-    return RLISTENCODE::RA;
-  case YSX::X8:
-    return RLISTENCODE::RA_S0;
-  case YSX::X9:
-    return RLISTENCODE::RA_S0_S1;
-  case YSX::X18:
-    return RLISTENCODE::RA_S0_S2;
-  case YSX::X19:
-    return RLISTENCODE::RA_S0_S3;
-  case YSX::X20:
-    return RLISTENCODE::RA_S0_S4;
-  case YSX::X21:
-    return RLISTENCODE::RA_S0_S5;
-  case YSX::X22:
-    return RLISTENCODE::RA_S0_S6;
-  case YSX::X23:
-    return RLISTENCODE::RA_S0_S7;
-  case YSX::X24:
-    return RLISTENCODE::RA_S0_S8;
-  case YSX::X25:
-    return RLISTENCODE::RA_S0_S9;
-  case YSX::X27:
-    return RLISTENCODE::RA_S0_S11;
-  default:
-    llvm_unreachable("Undefined input.");
-  }
-}
-
-inline static unsigned encodeRegListNumRegs(unsigned NumRegs) {
-  assert(NumRegs > 0 && NumRegs < 14 && NumRegs != 12 &&
-         "Unexpected number of registers");
-  if (NumRegs == 13)
-    return RLISTENCODE::RA_S0_S11;
-
-  return RLISTENCODE::RA + (NumRegs - 1);
-}
-
-inline static unsigned getStackAdjBase(unsigned RlistVal, bool IsRV64) {
-  assert(RlistVal >= RLISTENCODE::RA && RlistVal <= RLISTENCODE::RA_S0_S11 &&
-         "Invalid Rlist");
-  unsigned NumRegs = (RlistVal - RLISTENCODE::RA) + 1;
-  // s10 and s11 are saved together.
-  if (RlistVal == RLISTENCODE::RA_S0_S11)
-    ++NumRegs;
-
-  unsigned RegSize = IsRV64 ? 8 : 4;
-  return alignTo(NumRegs * RegSize, 16);
-}
-
-void printRegList(unsigned RlistEncode, raw_ostream &OS);
-} // namespace YSXZC
 
 } // namespace llvm
 

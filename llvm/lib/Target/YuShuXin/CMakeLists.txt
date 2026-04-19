@@ -32,8 +32,6 @@ add_llvm_target(YSXCodeGen
   YSXInstrInfo.cpp
   YSXISelDAGToDAG.cpp
   YSXISelLowering.cpp
-  YSXIndirectBranchTracking.cpp
-  YSXLandingPadSetup.cpp
   YSXLateBranchOpt.cpp
   YSXMachineFunctionInfo.cpp
   YSXPostRAExpandPseudoInsts.cpp

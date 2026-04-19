@@ -35,33 +35,12 @@ enum Fixups {
   fixup_ysx_jal,
   // 12-bit fixup for symbol references in the branch instructions
   fixup_ysx_branch,
-  // 11-bit fixup for symbol references in the compressed jump instruction
-  fixup_ysx_rvc_jump,
-  // 8-bit fixup for symbol references in the compressed branch instruction
-  fixup_ysx_rvc_branch,
-  // 6-bit fixup for symbol references in instructions like c.li
-  fixup_ysx_rvc_imm,
   // Fixup representing a legacy no-pic function call attached to the auipc
   // instruction in a pair composed of adjacent auipc+jalr instructions.
   fixup_ysx_call,
   // Fixup representing a function call attached to the auipc instruction in a
   // pair composed of adjacent auipc+jalr instructions.
   fixup_ysx_call_plt,
-
-  // Qualcomm specific fixups
-  // 12-bit fixup for symbol references in the 48-bit XRemovedQcibi branch immediate
-  // instructions
-  fixup_ysx_qc_e_branch,
-  // 32-bit fixup for symbol references in the 48-bit qc.e.li instruction
-  fixup_ysx_qc_e_32,
-  // 20-bit fixup for symbol references in the 32-bit qc.li instruction
-  fixup_ysx_qc_abs20_u,
-  // 32-bit fixup for symbol references in the 48-bit qc.j/qc.jal instructions
-  fixup_ysx_qc_e_call_plt,
-
-  // Andes specific fixups
-  // 10-bit fixup for symbol references in the xandesperf branch instruction
-  fixup_ysx_nds_branch_10,
 
   // Used as a sentinel, must be the last
   fixup_ysx_invalid,

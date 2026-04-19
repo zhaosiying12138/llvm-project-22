@@ -384,7 +384,6 @@ void YSXPassConfig::addPreRegAlloc() {
   addPass(createYSXPreRAExpandPseudoPass());
 
   addPass(createYSXInsertReadWriteCSRPass());
-  addPass(createYSXLandingPadSetupPass());
 
   if (TM->getOptLevel() != CodeGenOptLevel::None && EnableMachinePipeliner)
     addPass(&MachinePipelinerID);

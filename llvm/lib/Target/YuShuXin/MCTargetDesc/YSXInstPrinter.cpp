@@ -69,13 +69,7 @@ bool YSXInstPrinter::applyTargetSpecificCLOption(StringRef Opt) {
 void YSXInstPrinter::printInst(const MCInst *MI, uint64_t Address,
                                  StringRef Annot, const MCSubtargetInfo &STI,
                                  raw_ostream &O) {
-  bool Res = false;
   const MCInst *NewMI = MI;
-  MCInst UncompressedMI;
-  if (PrintAliases && !NoAliases)
-    Res = YSXRVC::uncompress(UncompressedMI, *MI, STI);
-  if (Res)
-    NewMI = &UncompressedMI;
   if (!PrintAliases || NoAliases || !printAliasInstr(NewMI, Address, STI, O))
     printInstruction(NewMI, Address, STI, O);
   printAnnotation(O, Annot);
@@ -167,51 +161,6 @@ void YSXInstPrinter::printZeroOffsetMemOp(const MCInst *MI, unsigned OpNo,
   O << ")";
 }
 
-// Print a Zcmp RList. If we are printing architectural register names rather
-// than ABI register names, we need to print "{x1, x8-x9, x18-x27}" for all
-// registers. Otherwise, we print "{ra, s0-s11}".
-void YSXInstPrinter::printRegList(const MCInst *MI, unsigned OpNo,
-                                    const MCSubtargetInfo &STI, raw_ostream &O) {
-  unsigned Imm = MI->getOperand(OpNo).getImm();
-
-  assert(Imm >= YSXZC::RLISTENCODE::RA &&
-         Imm <= YSXZC::RLISTENCODE::RA_S0_S11 && "Invalid Rlist");
-
-  O << "{";
-  printRegName(O, YSX::X1);
-
-  if (Imm >= YSXZC::RLISTENCODE::RA_S0) {
-    O << ", ";
-    printRegName(O, YSX::X8);
-  }
-
-  if (Imm >= YSXZC::RLISTENCODE::RA_S0_S1) {
-    O << '-';
-    if (Imm == YSXZC::RLISTENCODE::RA_S0_S1 || ArchRegNames)
-      printRegName(O, YSX::X9);
-  }
-
-  if (Imm >= YSXZC::RLISTENCODE::RA_S0_S2) {
-    if (ArchRegNames)
-      O << ", ";
-    if (Imm == YSXZC::RLISTENCODE::RA_S0_S2 || ArchRegNames)
-      printRegName(O, YSX::X18);
-  }
-
-  if (Imm >= YSXZC::RLISTENCODE::RA_S0_S3) {
-    if (ArchRegNames)
-      O << '-';
-    unsigned Offset = (Imm - YSXZC::RLISTENCODE::RA_S0_S3);
-    // Encodings for S3-S9 are contiguous. There is no encoding for S10, so we
-    // must skip to S11(X27).
-    if (Imm == YSXZC::RLISTENCODE::RA_S0_S11)
-      ++Offset;
-    printRegName(O, YSX::X19 + Offset);
-  }
-
-  O << "}";
-}
-
 void YSXInstPrinter::printRegReg(const MCInst *MI, unsigned OpNo,
                                    const MCSubtargetInfo &STI, raw_ostream &O) {
   const MCOperand &OffsetMO = MI->getOperand(OpNo + 1);
@@ -226,27 +175,8 @@ void YSXInstPrinter::printRegReg(const MCInst *MI, unsigned OpNo,
   O << ")";
 }
 
-void YSXInstPrinter::printStackAdj(const MCInst *MI, unsigned OpNo,
-                                     const MCSubtargetInfo &STI, raw_ostream &O,
-                                     bool Negate) {
-  int64_t Imm = MI->getOperand(OpNo).getImm();
-  bool IsRV64 = STI.hasFeature(YSX::Feature64Bit);
-  int64_t StackAdj = 0;
-  auto RlistVal = MI->getOperand(0).getImm();
-  auto Base = YSXZC::getStackAdjBase(RlistVal, IsRV64);
-  StackAdj = Imm + Base;
-  assert((StackAdj >= Base && StackAdj <= Base + 48) &&
-         "Incorrect stack adjust");
-  if (Negate)
-    StackAdj = -StackAdj;
-
-  // RAII guard for ANSI color escape sequences
-  WithMarkup ScopedMarkup = markup(O, Markup::Immediate);
-  O << StackAdj;
-}
-
 void YSXInstPrinter::printImm(const MCInst *MI, unsigned OpNo,
-                                const MCSubtargetInfo &STI, raw_ostream &O) {
+                              const MCSubtargetInfo &STI, raw_ostream &O) {
   const MCOperand &Op = MI->getOperand(OpNo);
   const unsigned Opcode = MI->getOpcode();
   uint64_t Imm = Op.getImm();

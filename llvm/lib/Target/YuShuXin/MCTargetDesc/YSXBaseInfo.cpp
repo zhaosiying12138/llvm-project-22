@@ -32,74 +32,15 @@ namespace YSXInsnOpcode {
 namespace YSXABI {
 ABI computeTargetABI(const Triple &TT, const FeatureBitset &FeatureBits,
                      StringRef ABIName) {
-  if (TT.isYSX64()) {
-    if (!ABIName.empty() && ABIName != "lp64")
-      reportFatalUsageError("YSX only supports the lp64 ABI");
-    return ABI_LP64;
-  }
-
-  auto TargetABI = getTargetABI(ABIName);
-  bool IsRV64 = TT.isArch64Bit();
-  bool IsRVE = false;
-
-  if (!ABIName.empty() && TargetABI == ABI_Unknown) {
-    errs()
-        << "'" << ABIName
-        << "' is not a recognized ABI for this target (ignoring target-abi)\n";
-  } else if (ABIName.starts_with("ilp32") && IsRV64) {
-    errs() << "32-bit ABIs are not supported for 64-bit targets (ignoring "
-              "target-abi)\n";
-    TargetABI = ABI_Unknown;
-  } else if (ABIName.starts_with("lp64") && !IsRV64) {
-    errs() << "64-bit ABIs are not supported for 32-bit targets (ignoring "
-              "target-abi)\n";
-    TargetABI = ABI_Unknown;
-  } else if (!IsRV64 && IsRVE && TargetABI != ABI_ILP32E &&
-             TargetABI != ABI_Unknown) {
-    // TODO: move this checking to YSXTargetLowering and YSXAsmParser
-    errs()
-        << "Only the ilp32e ABI is supported for RV32E (ignoring target-abi)\n";
-    TargetABI = ABI_Unknown;
-  } else if (IsRV64 && IsRVE && TargetABI != ABI_LP64E &&
-             TargetABI != ABI_Unknown) {
-    // TODO: move this checking to YSXTargetLowering and YSXAsmParser
-    errs()
-        << "Only the lp64e ABI is supported for RV64E (ignoring target-abi)\n";
-    TargetABI = ABI_Unknown;
-  }
-
-  if ((TargetABI == YSXABI::ABI::ABI_ILP32E ||
-       (TargetABI == ABI_Unknown && IsRVE && !IsRV64)) &&
-      false)
-    reportFatalUsageError("ILP32E cannot be used with the D ISA extension");
-
-  if (TargetABI != ABI_Unknown)
-    return TargetABI;
-
-  // If no explicit ABI is given, try to compute the default ABI.
-  auto ISAInfo = YSXFeatures::parseFeatureBits(IsRV64, FeatureBits);
-  if (!ISAInfo)
-    reportFatalUsageError(ISAInfo.takeError());
-  return getTargetABI((*ISAInfo)->computeDefaultABI());
+  if (!ABIName.empty() && ABIName != "lp64")
+    reportFatalUsageError("YSX only supports the lp64 ABI");
+  return ABI_LP64;
 }
 
 ABI getTargetABI(StringRef ABIName) {
-  auto TargetABI = StringSwitch<ABI>(ABIName)
-                       .Case("ilp32", ABI_ILP32)
-                       .Case("ilp32f", ABI_ILP32F)
-                       .Case("ilp32d", ABI_ILP32D)
-                       .Case("ilp32e", ABI_ILP32E)
-                       .Case("lp64", ABI_LP64)
-                       .Case("lp64f", ABI_LP64F)
-                       .Case("lp64d", ABI_LP64D)
-                       .Case("lp64e", ABI_LP64E)
-                       .Default(ABI_Unknown);
-  return TargetABI;
+  return ABIName == "lp64" ? ABI_LP64 : ABI_Unknown;
 }
 
-// To avoid the BP value clobbered by a function call, we need to choose a
-// callee saved register to save the value. RV32E only has X8 and X9 as callee
-// saved registers and X8 will be used as fp. So we choose X9 as bp.
 MCRegister getBPReg() { return YSX::X9; }
 
 // Returns the register holding shadow call stack pointer.
@@ -127,13 +68,8 @@ bool isValidYSXISAInfo(const YSXISAInfo &ISAInfo) {
 }
 
 void validate(const Triple &TT, const FeatureBitset &FeatureBits) {
-  if (TT.isArch64Bit() && !FeatureBits[YSX::Feature64Bit])
-    reportFatalUsageError("RV64 target requires an RV64 CPU");
-  if (!TT.isArch64Bit() && !FeatureBits[YSX::Feature32Bit])
-    reportFatalUsageError("RV32 target requires an RV32 CPU");
-  if (FeatureBits[YSX::Feature32Bit] &&
-      FeatureBits[YSX::Feature64Bit])
-    reportFatalUsageError("RV32 and RV64 can't be combined");
+  if (!TT.isYSX64() || !FeatureBits[YSX::Feature64Bit])
+    reportFatalUsageError("YSX requires a 64-bit target");
 
   if (TT.isYSX64()) {
     auto ISAInfo = parseFeatureBits(/*IsRV64=*/true, FeatureBits);
@@ -158,29 +94,5 @@ parseFeatureBits(bool IsRV64, const FeatureBitset &FeatureBits) {
 }
 
 } // namespace YSXFeatures
-
-bool YSXRVC::compress(MCInst &OutInst, const MCInst &MI,
-                        const MCSubtargetInfo &STI) {
-  return false;
-}
-
-bool YSXRVC::uncompress(MCInst &OutInst, const MCInst &MI,
-                          const MCSubtargetInfo &STI) {
-  return false;
-}
-
-void YSXZC::printRegList(unsigned RlistEncode, raw_ostream &OS) {
-  assert(RlistEncode >= RLISTENCODE::RA &&
-         RlistEncode <= RLISTENCODE::RA_S0_S11 && "Invalid Rlist");
-  OS << "{ra";
-  if (RlistEncode > YSXZC::RA) {
-    OS << ", s0";
-    if (RlistEncode == YSXZC::RA_S0_S11)
-      OS << "-s11";
-    else if (RlistEncode > YSXZC::RA_S0 && RlistEncode <= YSXZC::RA_S0_S11)
-      OS << "-s" << (RlistEncode - YSXZC::RA_S0);
-  }
-  OS << "}";
-}
 
 } // namespace llvm

@@ -51,7 +51,7 @@
 # OPTION: error: YSX only supports arch string rv64ima
 # FULLARCH: error: invalid arch name
 # UNSUP-INST: error: unrecognized instruction mnemonic
-# INSN16: error: compressed instructions are not allowed
+# INSN16: error: 16-bit instruction encodings are not allowed
 # HELP: Available features for this target:
 # HELP-NOT: 32bit
 # HELP-NOT: log-vrgather

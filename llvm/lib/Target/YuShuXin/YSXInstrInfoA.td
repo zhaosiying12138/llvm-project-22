@@ -173,7 +173,6 @@ class seq_cst_store<PatFrag base>
 // any ordering. This is necessary because AtomicExpandPass has added fences to
 // atomic load/stores and changed them to unordered ones.
 let Predicates = [HasAtomicLdSt] in {
-  // Use unsigned for aext due to no c.lb in Zcb.
   def : LdPat<relaxed_load<atomic_load_sext_8>,   LB>;
   def : LdPat<relaxed_load<atomic_load_azext_8>,  LBU>;
   def : LdPat<relaxed_load<atomic_load_asext_16>, LH>;
@@ -182,10 +181,6 @@ let Predicates = [HasAtomicLdSt] in {
   def : StPat<relaxed_store<atomic_store_8>,  SB, GPR, XLenVT>;
   def : StPat<relaxed_store<atomic_store_16>, SH, GPR, XLenVT>;
   def : StPat<relaxed_store<atomic_store_32>, SW, GPR, XLenVT>;
-}
-
-let Predicates = [HasAtomicLdSt, IsRV32] in {
-  def : LdPat<relaxed_load<atomic_load_nonext_32>, LW, i32>;
 }
 
 let Predicates = [HasAtomicLdSt, IsRV64] in {
@@ -202,7 +197,7 @@ class PatAMO<SDPatternOperator OpNode, RVInst Inst, ValueType vt = XLenVT>
 
 multiclass AMOPat<string AtomicOp, string BaseInst, ValueType vt = XLenVT,
                   list<Predicate> ExtraPreds = []> {
-let Predicates = !listconcat([HasStdExtA, NoStdExtZtso], ExtraPreds) in {
+let Predicates = !listconcat([HasStdExtA], ExtraPreds) in {
   def : PatAMO<!cast<PatFrag>(AtomicOp#"_monotonic"),
                !cast<RVInst>(BaseInst), vt>;
   def : PatAMO<!cast<PatFrag>(AtomicOp#"_acquire"),
@@ -213,18 +208,6 @@ let Predicates = !listconcat([HasStdExtA, NoStdExtZtso], ExtraPreds) in {
                !cast<RVInst>(BaseInst#"_AQRL"), vt>;
   def : PatAMO<!cast<PatFrag>(AtomicOp#"_seq_cst"),
                !cast<RVInst>(BaseInst#"_AQRL"), vt>;
-}
-let Predicates = !listconcat([HasStdExtA, HasStdExtZtso], ExtraPreds) in {
-  def : PatAMO<!cast<PatFrag>(AtomicOp#"_monotonic"),
-               !cast<RVInst>(BaseInst), vt>;
-  def : PatAMO<!cast<PatFrag>(AtomicOp#"_acquire"),
-               !cast<RVInst>(BaseInst), vt>;
-  def : PatAMO<!cast<PatFrag>(AtomicOp#"_release"),
-               !cast<RVInst>(BaseInst), vt>;
-  def : PatAMO<!cast<PatFrag>(AtomicOp#"_acq_rel"),
-               !cast<RVInst>(BaseInst), vt>;
-  def : PatAMO<!cast<PatFrag>(AtomicOp#"_seq_cst"),
-               !cast<RVInst>(BaseInst), vt>;
 }
 }
 
@@ -451,12 +434,12 @@ multiclass PseudoCmpXchgPat<string Op, Pseudo CmpXchgInst,
             (CmpXchgInst GPR:$addr, GPR:$cmp, GPR:$new, 7)>;
 }
 
-let Predicates = [HasStdExtZalrsc, NoStdExtZacas] in {
+let Predicates = [HasStdExtZalrsc] in {
 def PseudoCmpXchg32 : PseudoCmpXchg;
 defm : PseudoCmpXchgPat<"atomic_cmp_swap_i32", PseudoCmpXchg32>;
 }
 
-let Predicates = [HasStdExtZalrsc, NoStdExtZacas, IsRV64] in {
+let Predicates = [HasStdExtZalrsc, IsRV64] in {
 def PseudoCmpXchg64 : PseudoCmpXchg;
 defm : PseudoCmpXchgPat<"atomic_cmp_swap_i64", PseudoCmpXchg64, i64>;
 }

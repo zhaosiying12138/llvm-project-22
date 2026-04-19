@@ -62,7 +62,6 @@ class YSXProcessorModel<string n, SchedMachineModel m,
                         string default_march = "">
     : ProcessorModel<n, m, f, tunef> {
   string DefaultMarch = default_march;
-  int MVendorID = 0;
   int MArchID = 0;
   int MImpID = 0;
 }

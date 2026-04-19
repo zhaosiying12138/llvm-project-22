@@ -29,26 +29,19 @@ def sub_32 : SubRegIndex<32>;
 let FallbackRegAltNameIndex = NoRegAltName in
 def ABIRegAltName : RegAltNameIndex;
 
-// GPR sizes change with HwMode.
 def sub_gpr_even : SubRegIndex<32> {
-  let SubRegRanges = SubRegRangeByHwMode<[RV32, RV64],
-                                         [SubRegRange<32>, SubRegRange<64>]>;
+  let SubRegRanges =
+      SubRegRangeByHwMode<[DefaultMode], [SubRegRange<64>]>;
 }
 def sub_gpr_odd  : SubRegIndex<32, 32> {
-  let SubRegRanges = SubRegRangeByHwMode<[RV32, RV64],
-                                         [SubRegRange<32, 32>, SubRegRange<64, 64>]>;
+  let SubRegRanges =
+      SubRegRangeByHwMode<[DefaultMode], [SubRegRange<64, 64>]>;
 }
 } // Namespace = "YSX"
 
 //===----------------------------------------------------------------------===//
 // General Purpose Registers (aka Integer Registers)
 //===----------------------------------------------------------------------===//
-
-// CostPerUse is set higher for registers that may not be compressible as they
-// are not part of GPRC, the most restrictive register class used by the
-// compressed instruction set. This will influence the greedy register
-// allocator to reduce the use of registers that can't be encoded in 16 bit
-// instructions.
 
 let RegAltNameIndices = [ABIRegAltName] in {
   // 16-bit sub-registers for use by Zhinx. Having a 16-bit sub-register reduces
@@ -172,19 +165,16 @@ let RegAltNameIndices = [ABIRegAltName] in {
   }
 }
 
-def XLenVT : ValueTypeByHwMode<[RV32, RV64],
-                               [i32,  i64]>;
+defvar XLenVT = i64;
 defvar XLenPairVT = untyped;
 
-def XLenRI : RegInfoByHwMode<
-      [RV32,              RV64],
-      [RegInfo<32,32,32>, RegInfo<64,64,64>]>;
+def XLenRI : RegInfoByHwMode<[DefaultMode], [RegInfo<64,64,64>]>;
 
 class YSXRegisterClass<list<ValueType> regTypes, int align, dag regList>
     : RegisterClass<"YSX", regTypes, align, regList>;
 
 class GPRRegisterClass<dag regList>
-    : YSXRegisterClass<[XLenVT], 32, regList> {
+    : YSXRegisterClass<[XLenVT, i32], 32, regList> {
   let RegInfos = XLenRI;
 }
 
@@ -251,10 +241,6 @@ def SP : GPRRegisterClass<(add X2)> {
   let DiagnosticString = "register must be sp (x2)";
 }
 
-// Saved Registers from s0 to s7, for C.MVA01S07 instruction in Zcmp extension
-def SR07 : GPRRegisterClass<(add (sequence "X%u", 8, 9),
-                                 (sequence "X%u", 18, 23))>;
-
 def GPRX1X5 :  GPRRegisterClass<(add X1, X5)> {
   let DiagnosticType = "InvalidRegClassGPRX1X5";
   let DiagnosticString = "register must be ra or t0 (x1 or x5)";
@@ -269,9 +255,8 @@ def GPRNoX31 : GPRRegisterClass<(sub GPR, X31)> {
 // Even-Odd GPR Pairs
 //===----------------------------------------------------------------------===//
 
-def XLenPairRI : RegInfoByHwMode<
-      [RV32,                RV64],
-      [RegInfo<64, 64, 32>, RegInfo<128, 128, 64>]>;
+def XLenPairRI
+    : RegInfoByHwMode<[DefaultMode], [RegInfo<128, 128, 64>]>;
 
 // Dummy zero register for use in the register pair containing X0 (as X1 is
 // not read to or written when the X0 register pair is used).
@@ -320,19 +305,3 @@ def GPRPairC : YSXRegisterClass<[XLenPairVT], 64, (add
   X10_X11, X12_X13, X14_X15, X8_X9
 )>;
 } // let RegInfos = XLenPairRI, CopyCost = 2
-
-// Shadow Stack register
-def SSP    : YSXReg<0, "ssp">;
-
-//===----------------------------------------------------------------------===//
-// XRemovedSfmmbase tiles
-//===----------------------------------------------------------------------===//
-foreach Index = 0-15 in
-  def T#Index : YSXReg<Index, "mt"#Index, []>,
-                DwarfRegNum<[!add(Index, 3072)]>;
-
-let RegInfos = XLenRI in {
-  def TR   : YSXRegisterClass<[untyped], 32, (add (sequence "T%u", 0, 15))>;
-  def TRM2 : YSXRegisterClass<[untyped], 32, (add (decimate TR, 2))>;
-  def TRM4 : YSXRegisterClass<[untyped], 32, (add (decimate TR, 4))>;
-}

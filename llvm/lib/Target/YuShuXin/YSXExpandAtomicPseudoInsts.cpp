@@ -207,21 +207,17 @@ bool YSXExpandAtomicPseudo::expandMI(MachineBasicBlock &MBB,
 }
 
 static unsigned getLRForRMW32(AtomicOrdering Ordering,
-                              const YSXSubtarget *Subtarget) {
+                              const YSXSubtarget *) {
   switch (Ordering) {
   default:
     llvm_unreachable("Unexpected AtomicOrdering");
   case AtomicOrdering::Monotonic:
     return YSX::LR_W;
   case AtomicOrdering::Acquire:
-    if (Subtarget->hasStdExtZtso())
-      return YSX::LR_W;
     return YSX::LR_W_AQ;
   case AtomicOrdering::Release:
     return YSX::LR_W;
   case AtomicOrdering::AcquireRelease:
-    if (Subtarget->hasStdExtZtso())
-      return YSX::LR_W;
     return YSX::LR_W_AQ;
   case AtomicOrdering::SequentiallyConsistent:
     return YSX::LR_W_AQRL;
@@ -229,7 +225,7 @@ static unsigned getLRForRMW32(AtomicOrdering Ordering,
 }
 
 static unsigned getSCForRMW32(AtomicOrdering Ordering,
-                              const YSXSubtarget *Subtarget) {
+                              const YSXSubtarget *) {
   switch (Ordering) {
   default:
     llvm_unreachable("Unexpected AtomicOrdering");
@@ -238,12 +234,8 @@ static unsigned getSCForRMW32(AtomicOrdering Ordering,
   case AtomicOrdering::Acquire:
     return YSX::SC_W;
   case AtomicOrdering::Release:
-    if (Subtarget->hasStdExtZtso())
-      return YSX::SC_W;
     return YSX::SC_W_RL;
   case AtomicOrdering::AcquireRelease:
-    if (Subtarget->hasStdExtZtso())
-      return YSX::SC_W;
     return YSX::SC_W_RL;
   case AtomicOrdering::SequentiallyConsistent:
     return YSX::SC_W_RL;
@@ -251,21 +243,17 @@ static unsigned getSCForRMW32(AtomicOrdering Ordering,
 }
 
 static unsigned getLRForRMW64(AtomicOrdering Ordering,
-                              const YSXSubtarget *Subtarget) {
+                              const YSXSubtarget *) {
   switch (Ordering) {
   default:
     llvm_unreachable("Unexpected AtomicOrdering");
   case AtomicOrdering::Monotonic:
     return YSX::LR_D;
   case AtomicOrdering::Acquire:
-    if (Subtarget->hasStdExtZtso())
-      return YSX::LR_D;
     return YSX::LR_D_AQ;
   case AtomicOrdering::Release:
     return YSX::LR_D;
   case AtomicOrdering::AcquireRelease:
-    if (Subtarget->hasStdExtZtso())
-      return YSX::LR_D;
     return YSX::LR_D_AQ;
   case AtomicOrdering::SequentiallyConsistent:
     return YSX::LR_D_AQRL;
@@ -273,7 +261,7 @@ static unsigned getLRForRMW64(AtomicOrdering Ordering,
 }
 
 static unsigned getSCForRMW64(AtomicOrdering Ordering,
-                              const YSXSubtarget *Subtarget) {
+                              const YSXSubtarget *) {
   switch (Ordering) {
   default:
     llvm_unreachable("Unexpected AtomicOrdering");
@@ -282,12 +270,8 @@ static unsigned getSCForRMW64(AtomicOrdering Ordering,
   case AtomicOrdering::Acquire:
     return YSX::SC_D;
   case AtomicOrdering::Release:
-    if (Subtarget->hasStdExtZtso())
-      return YSX::SC_D;
     return YSX::SC_D_RL;
   case AtomicOrdering::AcquireRelease:
-    if (Subtarget->hasStdExtZtso())
-      return YSX::SC_D;
     return YSX::SC_D_RL;
   case AtomicOrdering::SequentiallyConsistent:
     return YSX::SC_D_RL;
@@ -682,10 +666,6 @@ bool YSXExpandAtomicPseudo::expandAtomicMinMaxOp(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
     AtomicRMWInst::BinOp BinOp, bool IsMasked, int Width,
     MachineBasicBlock::iterator &NextMBBI) {
-  // Using MIN(U)/MAX(U) is preferrable if permitted
-  if (STI->hasPermissiveZalrsc() && STI->hasStdExtZbb() && !IsMasked)
-    return expandAtomicBinOp(MBB, MBBI, BinOp, IsMasked, Width, NextMBBI);
-
   MachineInstr &MI = *MBBI;
   DebugLoc DL = MI.getDebugLoc();
   MachineFunction *MF = MBB.getParent();

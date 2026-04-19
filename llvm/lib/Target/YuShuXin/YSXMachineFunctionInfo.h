@@ -59,13 +59,6 @@ private:
   /// Registers that have been sign extended from i32.
   SmallVector<Register, 8> SExt32Registers;
 
-  /// Size of stack frame for Zcmp PUSH/POP
-  unsigned RVPushStackSize = 0;
-  unsigned RVPushRegs = 0;
-
-  /// Size of any opaque stack adjustment due to QCI Interrupt instructions.
-  unsigned QCIInterruptStackSize = 0;
-
   /// Store Frame Indexes for Interrupt-Related CSR Spills.
   SmallVector<int, 2> InterruptCSRFrameIndexes;
 
@@ -96,7 +89,7 @@ public:
   }
 
   unsigned getReservedSpillsSize() const {
-    return LibCallStackSize + RVPushStackSize + QCIInterruptStackSize;
+    return LibCallStackSize;
   }
 
   unsigned getLibCallStackSize() const { return LibCallStackSize; }
@@ -105,8 +98,7 @@ public:
   bool useSaveRestoreLibCalls(const MachineFunction &MF) const {
     // We cannot use fixed locations for the callee saved spill slots if the
     // function uses a varargs save area, or is an interrupt handler.
-    return !isPushable(MF) &&
-           MF.getSubtarget<YSXSubtarget>().enableSaveRestore() &&
+    return MF.getSubtarget<YSXSubtarget>().enableSaveRestore() &&
            VarArgsSaveSize == 0 && !MF.getFrameInfo().hasTailCall() &&
            !MF.getFunction().hasFnAttribute("interrupt");
   }
@@ -114,39 +106,14 @@ public:
   unsigned getCalleeSavedStackSize() const { return CalleeSavedStackSize; }
   void setCalleeSavedStackSize(unsigned Size) { CalleeSavedStackSize = Size; }
 
-  enum class PushPopKind { None = 0, StdExtZcmp, VendorXqccmp };
-
-  PushPopKind getPushPopKind(const MachineFunction &MF) const;
-
-  bool isPushable(const MachineFunction &MF) const {
-    return getPushPopKind(MF) != PushPopKind::None;
-  }
-
-  unsigned getRVPushRegs() const { return RVPushRegs; }
-  void setRVPushRegs(unsigned Regs) { RVPushRegs = Regs; }
-
-  unsigned getRVPushStackSize() const { return RVPushStackSize; }
-  void setRVPushStackSize(unsigned Size) { RVPushStackSize = Size; }
-
   enum class InterruptStackKind {
     None = 0,
-    QCINest,
-    QCINoNest,
     SiFiveCLICPreemptible,
     SiFiveCLICStackSwap,
     SiFiveCLICPreemptibleStackSwap
   };
 
   InterruptStackKind getInterruptStackKind(const MachineFunction &MF) const;
-
-  bool useQCIInterrupt(const MachineFunction &MF) const {
-    InterruptStackKind Kind = getInterruptStackKind(MF);
-    return Kind == InterruptStackKind::QCINest ||
-           Kind == InterruptStackKind::QCINoNest;
-  }
-
-  unsigned getQCIInterruptStackSize() const { return QCIInterruptStackSize; }
-  void setQCIInterruptStackSize(unsigned Size) { QCIInterruptStackSize = Size; }
 
   bool useSiFiveInterrupt(const MachineFunction &MF) const {
     InterruptStackKind Kind = getInterruptStackKind(MF);

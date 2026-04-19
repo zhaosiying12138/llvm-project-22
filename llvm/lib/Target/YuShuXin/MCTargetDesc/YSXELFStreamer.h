@@ -39,7 +39,7 @@ public:
 
 class YSXTargetELFStreamer : public YSXTargetStreamer {
 private:
-  StringRef CurrentVendor;
+  StringRef AttributeNamespace;
 
   MCSection *AttributeSection = nullptr;
 
@@ -63,8 +63,6 @@ public:
   void emitDirectiveOptionPush() override;
   void emitDirectiveOptionRelax() override;
   void emitDirectiveOptionNoRelax() override;
-  void emitDirectiveOptionRVC() override;
-  void emitDirectiveOptionNoRVC() override;
 
   void emitNoteGnuPropertySection(const uint32_t Feature1And);
   void finish() override;

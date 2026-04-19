@@ -37,7 +37,6 @@ YSX::Specifier YSX::parseSpecifierName(StringRef name) {
       .Case("tlsdesc_load_lo", ELF::R_RISCV_TLSDESC_LOAD_LO12)
       .Case("tlsdesc_add_lo", ELF::R_RISCV_TLSDESC_ADD_LO12)
       .Case("tlsdesc_call", ELF::R_RISCV_TLSDESC_CALL)
-      .Case("qc.abs20", YSX::S_QC_ABS20)
       // Used in data directives
       .Case("pltpcrel", ELF::R_RISCV_PLT32)
       .Case("gotpcrel", ELF::R_RISCV_GOT32_PCREL)
@@ -84,8 +83,6 @@ StringRef YSX::getSpecifierName(Specifier S) {
     return "gotpcrel";
   case ELF::R_RISCV_PLT32:
     return "pltpcrel";
-  case YSX::S_QC_ABS20:
-    return "qc.abs20";
   }
   llvm_unreachable("Invalid ELF symbol kind");
 }

@@ -40,12 +40,6 @@ void initializeYSXCodeGenPrepareLegacyPassPass(PassRegistry &);
 FunctionPass *createYSXDeadRegisterDefinitionsPass();
 void initializeYSXDeadRegisterDefinitionsPass(PassRegistry &);
 
-FunctionPass *createYSXIndirectBranchTrackingPass();
-void initializeYSXIndirectBranchTrackingPass(PassRegistry &);
-
-FunctionPass *createYSXLandingPadSetupPass();
-void initializeYSXLandingPadSetupPass(PassRegistry &);
-
 FunctionPass *createYSXISelDag(YSXTargetMachine &TM,
                                  CodeGenOptLevel OptLevel);
 

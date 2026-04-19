@@ -136,127 +136,17 @@ public:
   bool GETTER() const { return ATTRIBUTE; }
 #include "YSXGenSubtargetInfo.inc"
 
-  LLVM_DEPRECATED("Now Equivalent to hasStdExtZca", "hasStdExtZca")
-  bool hasStdExtCOrZca() const { return false; }
-  bool hasStdExtCOrZcd() const { return false; }
-  bool hasStdExtCOrZcfOrZce() const {
-    return false;
-  }
-  bool hasStdExtZvl() const { return false; }
-  bool hasStdExtD() const { return false; }
-  bool hasStdExtE() const { return false; }
-  bool hasStdExtP() const { return false; }
-  bool hasStdExtZabha() const { return false; }
-  bool hasStdExtZacas() const { return false; }
-  bool hasStdExtZalasr() const { return false; }
-  bool hasStdExtZba() const { return false; }
-  bool hasStdExtZbb() const { return false; }
-  bool hasStdExtZbkb() const { return false; }
-  bool hasStdExtZbs() const { return false; }
-  bool hasStdExtZca() const { return false; }
-  bool hasStdExtZcb() const { return false; }
-  bool hasStdExtZcmop() const { return false; }
-  bool hasStdExtZcmp() const { return false; }
-  bool hasStdExtZdinx() const { return false; }
-  bool hasStdExtZfa() const { return false; }
-  bool hasStdExtZfbfmin() const { return false; }
-  bool hasStdExtZfh() const { return false; }
-  bool hasStdExtZfhmin() const { return false; }
-  bool hasStdExtZfinx() const { return false; }
-  bool hasStdExtZhinxmin() const { return false; }
-  bool hasStdExtZicbop() const { return false; }
-  bool hasStdExtZicfilp() const { return false; }
-  bool hasStdExtZicond() const { return false; }
-  bool hasStdExtZihintntl() const { return false; }
-  bool hasStdExtZilsd() const { return false; }
-  bool hasStdExtZtso() const { return false; }
-  bool hasStdExtZvbb() const { return false; }
-  bool hasStdExtZvfbfa() const { return false; }
-  bool hasStdExtZvfbfwma() const { return false; }
-  bool hasStdExtZvfh() const { return false; }
-  bool hasStdExtZvkb() const { return false; }
-  bool hasStdExtZvknhb() const { return false; }
-  bool hasStdExtZvqdotq() const { return false; }
-  bool hasStdExtFOrZfinx() const { return false; }
-  bool hasStdExtDOrZdinx() const { return false; }
-  bool hasStdExtZfhOrZhinx() const { return false; }
-  bool hasStdExtZfhminOrZhinxmin() const {
-    return false;
-  }
-  bool hasStdExtF() const { return false; }
-  bool hasStdExtV() const { return false; }
-  bool hasHalfFPLoadStoreMove() const {
-    return false;
-  }
-  bool allowZilsd4ByteAlign() const { return false; }
-  bool enableUnalignedVectorMem() const { return false; }
-
-  bool hasCLZLike() const {
-    return false;
-  }
-  bool hasCTZLike() const {
-    return false;
-  }
-  bool hasCPOPLike() const {
-    return false;
-  }
-  bool hasREV8Like() const {
-    return false;
-  }
-
-  bool hasBEXTILike() const { return false; }
-
-  bool hasVendorXAndesBFHCvt() const { return false; }
-  bool hasVendorXAndesPerf() const { return false; }
-  bool hasVendorXAndesVBFHCvt() const { return false; }
-  bool hasVendorXAndesVPackFPH() const { return false; }
-  bool hasVendorXCValu() const { return false; }
-  bool hasVendorXCVbitmanip() const { return false; }
-  bool hasVendorXCVmem() const { return false; }
-  bool hasVendorXMIPSCBOP() const { return false; }
-  bool hasVendorXRemovedQcia() const { return false; }
-  bool hasVendorXRemovedQciac() const { return false; }
-  bool hasVendorXRemovedQcibi() const { return false; }
-  bool hasVendorXRemovedQcibm() const { return false; }
-  bool hasVendorXRemovedQcicli() const { return false; }
-  bool hasVendorXRemovedQcicm() const { return false; }
-  bool hasVendorXRemovedQciint() const { return false; }
-  bool hasVendorXRemovedQcili() const { return false; }
-  bool hasVendorXRemovedQcilia() const { return false; }
-  bool hasVendorXRemovedQcisls() const { return false; }
-  bool hasVendorXRemovedSfmclic() const { return false; }
-  bool hasVendorXRemovedSfmmbase() const { return false; }
-  bool hasVendorXRemovedTHeadBb() const { return false; }
-  bool hasVendorXRemovedTHeadBs() const { return false; }
-  bool hasVendorXRemovedTHeadCondMov() const { return false; }
-  bool hasVendorXRemovedTHeadFMemIdx() const { return false; }
-  bool hasVendorXRemovedTHeadMemIdx() const { return false; }
-  bool hasVendorXRemovedTHeadMemPair() const { return false; }
-  bool hasVendorXRivosVisni() const { return false; }
-  bool hasVendorXRivosVizip() const { return false; }
-  bool hasVendorXqccmp() const { return false; }
-
-  bool hasCZEROLike() const {
-    return false;
-  }
-
   bool hasConditionalMoveFusion() const {
-    // YSX has no compressed move; only the scalar short-forward-branch model
-    // can enable this generic combine.
     return hasShortForwardBranchIALU();
-  }
-
-  bool hasShlAdd(int64_t ShAmt) const {
-    return false;
   }
 
   bool is64Bit() const { return IsRV64; }
   bool isLittleEndian() const { return IsLittleEndian; }
   MVT getXLenVT() const {
-    return is64Bit() ? MVT::i64 : MVT::i32;
+    return MVT::i64;
   }
   unsigned getXLen() const {
-    return is64Bit() ? 64 : 32;
+    return 64;
   }
   bool useMIPSLoadStorePairs() const;
   bool useMIPSCCMovInsn() const;
@@ -264,18 +154,8 @@ public:
     return 0;
   }
 
-  Align getZilsdAlign() const {
-    return Align(enableUnalignedScalarMem() ? 1
-                 : allowZilsd4ByteAlign()   ? 4
-                                            : 8);
-  }
-
   YSXABI::ABI getTargetABI() const { return TargetABI; }
-  bool isSoftFPABI() const {
-    return TargetABI == YSXABI::ABI_LP64 ||
-           TargetABI == YSXABI::ABI_ILP32 ||
-           TargetABI == YSXABI::ABI_ILP32E;
-  }
+  bool isSoftFPABI() const { return true; }
   bool isRegisterReservedByUser(Register i) const override {
     assert(i.id() < YSX::NUM_TARGET_REGS && "Register out of range");
     return UserReservedRegister[i.id()];

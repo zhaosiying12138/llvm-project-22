@@ -49,8 +49,6 @@ void YSXTargetStreamer::emitDirectiveOptionPop() {}
 void YSXTargetStreamer::emitDirectiveOptionPush() {}
 void YSXTargetStreamer::emitDirectiveOptionRelax() {}
 void YSXTargetStreamer::emitDirectiveOptionNoRelax() {}
-void YSXTargetStreamer::emitDirectiveOptionRVC() {}
-void YSXTargetStreamer::emitDirectiveOptionNoRVC() {}
 void YSXTargetStreamer::emitAttribute(unsigned Attribute, unsigned Value) {}
 void YSXTargetStreamer::finishAttributeSection() {}
 void YSXTargetStreamer::emitTextAttribute(unsigned Attribute,
@@ -65,21 +63,13 @@ void YSXTargetStreamer::setTargetABI(YSXABI::ABI ABI) {
 }
 
 void YSXTargetStreamer::setFlagsFromFeatures(const MCSubtargetInfo &STI) {
-  HasRVC = false;
   HasTSO = false;
 }
 
 void YSXTargetStreamer::emitTargetAttributes(const MCSubtargetInfo &STI,
                                                bool EmitStackAlign) {
   if (EmitStackAlign) {
-    unsigned StackAlign;
-    if (TargetABI == YSXABI::ABI_ILP32E)
-      StackAlign = 4;
-    else if (TargetABI == YSXABI::ABI_LP64E)
-      StackAlign = 8;
-    else
-      StackAlign = 16;
-    emitAttribute(RISCVAttrs::STACK_ALIGN, StackAlign);
+    emitAttribute(RISCVAttrs::STACK_ALIGN, 16);
   }
 
   auto ParseResult = YSXFeatures::parseFeatureBits(
@@ -122,14 +112,6 @@ void YSXTargetAsmStreamer::emitDirectiveOptionPIC() {
 
 void YSXTargetAsmStreamer::emitDirectiveOptionNoPIC() {
   OS << "\t.option\tnopic\n";
-}
-
-void YSXTargetAsmStreamer::emitDirectiveOptionRVC() {
-  OS << "\t.option\trvc\n";
-}
-
-void YSXTargetAsmStreamer::emitDirectiveOptionNoRVC() {
-  OS << "\t.option\tnorvc\n";
 }
 
 void YSXTargetAsmStreamer::emitDirectiveOptionExact() {

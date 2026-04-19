@@ -91,20 +91,10 @@ unsigned YSXELFObjectWriter::getRelocType(const MCFixup &Fixup,
       return ELF::R_RISCV_JAL;
     case YSX::fixup_ysx_branch:
       return ELF::R_RISCV_BRANCH;
-    case YSX::fixup_ysx_rvc_jump:
-      return ELF::R_RISCV_RVC_JUMP;
-    case YSX::fixup_ysx_rvc_branch:
-      return ELF::R_RISCV_RVC_BRANCH;
     case YSX::fixup_ysx_call:
       return ELF::R_RISCV_CALL_PLT;
     case YSX::fixup_ysx_call_plt:
       return ELF::R_RISCV_CALL_PLT;
-    case YSX::fixup_ysx_qc_e_branch:
-      return ELF::R_RISCV_QC_E_BRANCH;
-    case YSX::fixup_ysx_qc_e_call_plt:
-      return ELF::R_RISCV_QC_E_CALL_PLT;
-    case YSX::fixup_ysx_nds_branch_10:
-      return ELF::R_RISCV_NDS_BRANCH_10;
     }
   }
 
@@ -135,13 +125,6 @@ unsigned YSXELFObjectWriter::getRelocType(const MCFixup &Fixup,
     return ELF::R_RISCV_LO12_I;
   case YSX::fixup_ysx_lo12_s:
     return ELF::R_RISCV_LO12_S;
-  case YSX::fixup_ysx_rvc_imm:
-    reportError(Fixup.getLoc(), "No relocation for CI-type instructions");
-    return ELF::R_RISCV_NONE;
-  case YSX::fixup_ysx_qc_e_32:
-    return ELF::R_RISCV_QC_E_32;
-  case YSX::fixup_ysx_qc_abs20_u:
-    return ELF::R_RISCV_QC_ABS20_U;
   }
 }
 

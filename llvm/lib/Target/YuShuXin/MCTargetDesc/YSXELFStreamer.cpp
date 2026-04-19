@@ -27,7 +27,7 @@ using namespace llvm;
 // This part is for ELF object output.
 YSXTargetELFStreamer::YSXTargetELFStreamer(MCStreamer &S,
                                                const MCSubtargetInfo &STI)
-    : YSXTargetStreamer(S), CurrentVendor("riscv") {
+    : YSXTargetStreamer(S), AttributeNamespace("riscv") {
   MCAssembler &MCA = getStreamer().getAssembler();
   const FeatureBitset &Features = STI.getFeatureBits();
   auto &MAB = static_cast<YSXAsmBackend &>(MCA.getBackend());
@@ -54,8 +54,6 @@ void YSXTargetELFStreamer::emitDirectiveOptionPop() {}
 void YSXTargetELFStreamer::emitDirectiveOptionPush() {}
 void YSXTargetELFStreamer::emitDirectiveOptionRelax() {}
 void YSXTargetELFStreamer::emitDirectiveOptionNoRelax() {}
-void YSXTargetELFStreamer::emitDirectiveOptionRVC() {}
-void YSXTargetELFStreamer::emitDirectiveOptionNoRVC() {}
 
 void YSXTargetELFStreamer::emitAttribute(unsigned Attribute, unsigned Value) {
   getStreamer().setAttributeItem(Attribute, Value, /*OverwriteExisting=*/true);
@@ -78,7 +76,7 @@ void YSXTargetELFStreamer::finishAttributeSection() {
   if (S.Contents.empty())
     return;
 
-  S.emitAttributesSection(CurrentVendor, ".riscv.attributes",
+  S.emitAttributesSection(AttributeNamespace, ".riscv.attributes",
                           ELF::SHT_RISCV_ATTRIBUTES, AttributeSection);
 }
 
@@ -89,26 +87,11 @@ void YSXTargetELFStreamer::finish() {
 
   unsigned EFlags = W.getELFHeaderEFlags();
 
-  if (hasRVC())
-    EFlags |= ELF::EF_RISCV_RVC;
   if (hasTSO())
     EFlags |= ELF::EF_RISCV_TSO;
 
   switch (ABI) {
-  case YSXABI::ABI_ILP32:
   case YSXABI::ABI_LP64:
-    break;
-  case YSXABI::ABI_ILP32F:
-  case YSXABI::ABI_LP64F:
-    EFlags |= ELF::EF_RISCV_FLOAT_ABI_SINGLE;
-    break;
-  case YSXABI::ABI_ILP32D:
-  case YSXABI::ABI_LP64D:
-    EFlags |= ELF::EF_RISCV_FLOAT_ABI_DOUBLE;
-    break;
-  case YSXABI::ABI_ILP32E:
-  case YSXABI::ABI_LP64E:
-    EFlags |= ELF::EF_RISCV_RVE;
     break;
   case YSXABI::ABI_Unknown:
     llvm_unreachable("Improperly initialised target ABI");

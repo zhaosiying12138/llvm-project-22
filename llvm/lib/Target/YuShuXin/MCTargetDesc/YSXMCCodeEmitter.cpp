@@ -101,13 +101,6 @@ public:
                          SmallVectorImpl<MCFixup> &Fixups,
                          const MCSubtargetInfo &STI) const;
 
-  unsigned getRlistOpValue(const MCInst &MI, unsigned OpNo,
-                           SmallVectorImpl<MCFixup> &Fixups,
-                           const MCSubtargetInfo &STI) const;
-
-  unsigned getRlistS0OpValue(const MCInst &MI, unsigned OpNo,
-                             SmallVectorImpl<MCFixup> &Fixups,
-                             const MCSubtargetInfo &STI) const;
 };
 } // end anonymous namespace
 
@@ -126,26 +119,16 @@ static void addFixup(SmallVectorImpl<MCFixup> &Fixups, uint32_t Offset,
   case YSX::fixup_ysx_pcrel_lo12_s:
   case YSX::fixup_ysx_jal:
   case YSX::fixup_ysx_branch:
-  case YSX::fixup_ysx_rvc_jump:
-  case YSX::fixup_ysx_rvc_branch:
   case YSX::fixup_ysx_call:
   case YSX::fixup_ysx_call_plt:
-  case YSX::fixup_ysx_qc_e_branch:
-  case YSX::fixup_ysx_qc_e_call_plt:
-  case YSX::fixup_ysx_nds_branch_10:
     PCRel = true;
   }
   Fixups.push_back(MCFixup::create(Offset, Value, Kind, PCRel));
 }
 
 // Expand PseudoCALL(Reg), PseudoTAIL and PseudoJump to AUIPC and JALR with
-// relocation types. We expand those pseudo-instructions while encoding them,
-// meaning AUIPC and JALR won't go through RISC-V MC to MC compressed
-// instruction transformation. This is acceptable because AUIPC has no 16-bit
-// form and C_JALR has no immediate operand field.  We let linker relaxation
-// deal with it. When linker relaxation is enabled, AUIPC and JALR have a
-// chance to relax to JAL.
-// If the C extension is enabled, JAL has a chance relax to C_JAL.
+// relocation types. Linker relaxation can still relax the AUIPC/JALR pair to
+// JAL when relaxation is enabled.
 void YSXMCCodeEmitter::expandFunctionCall(const MCInst &MI,
                                             SmallVectorImpl<char> &CB,
                                             SmallVectorImpl<MCFixup> &Fixups,
@@ -542,10 +525,6 @@ uint64_t YSXMCCodeEmitter::getImmOpValue(const MCInst &MI, unsigned OpNo,
       FixupKind = YSX::fixup_ysx_call_plt;
       RelaxCandidate = true;
       break;
-    case YSX::S_QC_ABS20:
-      FixupKind = YSX::fixup_ysx_qc_abs20_u;
-      RelaxCandidate = true;
-      break;
     case ELF::R_RISCV_GOT_HI20:
     case ELF::R_RISCV_TPREL_HI20:
     case ELF::R_RISCV_TLSDESC_HI20:
@@ -561,31 +540,8 @@ uint64_t YSXMCCodeEmitter::getImmOpValue(const MCInst &MI, unsigned OpNo,
       FixupKind = YSX::fixup_ysx_branch;
       // Relaxes to B<cc>; JAL, with fixup_ysx_jal
       AsmRelaxToLinkerRelaxable();
-    } else if (MIFrm == YSXII::InstFormatCJ) {
-      FixupKind = YSX::fixup_ysx_rvc_jump;
-      // Relaxes to JAL with fixup_ysx_jal
-      AsmRelaxToLinkerRelaxable();
-    } else if (MIFrm == YSXII::InstFormatCB) {
-      FixupKind = YSX::fixup_ysx_rvc_branch;
-      // Relaxes to B<cc>; JAL, with fixup_ysx_jal
-      AsmRelaxToLinkerRelaxable();
-    } else if (MIFrm == YSXII::InstFormatCI) {
-      FixupKind = YSX::fixup_ysx_rvc_imm;
-      // Relaxes to `QC.E.LI` with fixup_ysx_qc_e_32
     } else if (MIFrm == YSXII::InstFormatI) {
       FixupKind = YSX::fixup_ysx_12_i;
-    } else if (MIFrm == YSXII::InstFormatQC_EB) {
-      FixupKind = YSX::fixup_ysx_qc_e_branch;
-      // Relaxes to QC.E.B<cc>I; JAL, with fixup_ysx_jal
-      AsmRelaxToLinkerRelaxable();
-    } else if (MIFrm == YSXII::InstFormatQC_EAI) {
-      FixupKind = YSX::fixup_ysx_qc_e_32;
-      RelaxCandidate = true;
-    } else if (MIFrm == YSXII::InstFormatQC_EJ) {
-      FixupKind = YSX::fixup_ysx_qc_e_call_plt;
-      RelaxCandidate = true;
-    } else if (MIFrm == YSXII::InstFormatNDS_BRANCH_10) {
-      FixupKind = YSX::fixup_ysx_nds_branch_10;
     }
   }
 
@@ -600,27 +556,6 @@ uint64_t YSXMCCodeEmitter::getImmOpValue(const MCInst &MI, unsigned OpNo,
   ++MCNumFixups;
 
   return 0;
-}
-
-unsigned YSXMCCodeEmitter::getRlistOpValue(const MCInst &MI, unsigned OpNo,
-                                             SmallVectorImpl<MCFixup> &Fixups,
-                                             const MCSubtargetInfo &STI) const {
-  const MCOperand &MO = MI.getOperand(OpNo);
-  assert(MO.isImm() && "Rlist operand must be immediate");
-  auto Imm = MO.getImm();
-  assert(Imm >= 4 && "EABI is currently not implemented");
-  return Imm;
-}
-unsigned
-YSXMCCodeEmitter::getRlistS0OpValue(const MCInst &MI, unsigned OpNo,
-                                      SmallVectorImpl<MCFixup> &Fixups,
-                                      const MCSubtargetInfo &STI) const {
-  const MCOperand &MO = MI.getOperand(OpNo);
-  assert(MO.isImm() && "Rlist operand must be immediate");
-  auto Imm = MO.getImm();
-  assert(Imm >= 4 && "EABI is currently not implemented");
-  assert(Imm != YSXZC::RA && "Rlist operand must include s0");
-  return Imm;
 }
 
 #include "YSXGenMCCodeEmitter.inc"

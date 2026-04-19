@@ -33,11 +33,6 @@ static cl::opt<bool> ULEB128Reloc(
     "ysx-uleb128-reloc", cl::init(true), cl::Hidden,
     cl::desc("Emit R_RISCV_SET_ULEB128/E_RISCV_SUB_ULEB128 if appropriate"));
 
-static cl::opt<bool>
-    AlignRvc("ysx-align-rvc", cl::init(true), cl::Hidden,
-             cl::desc("When generating R_RISCV_ALIGN, insert $alignment-2 "
-                      "bytes of NOPs even in norvc code"));
-
 YSXAsmBackend::YSXAsmBackend(const MCSubtargetInfo &STI, uint8_t OSABI,
                                  bool Is64Bit, bool IsLittleEndian,
                                  const MCTargetOptions &Options)
@@ -82,19 +77,8 @@ MCFixupKindInfo YSXAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
       {"fixup_ysx_pcrel_lo12_s", 0, 32, 0},
       {"fixup_ysx_jal", 12, 20, 0},
       {"fixup_ysx_branch", 0, 32, 0},
-      {"fixup_ysx_rvc_jump", 2, 11, 0},
-      {"fixup_ysx_rvc_branch", 0, 16, 0},
-      {"fixup_ysx_rvc_imm", 0, 16, 0},
       {"fixup_ysx_call", 0, 64, 0},
       {"fixup_ysx_call_plt", 0, 64, 0},
-
-      {"fixup_ysx_qc_e_branch", 0, 48, 0},
-      {"fixup_ysx_qc_e_32", 16, 32, 0},
-      {"fixup_ysx_qc_abs20_u", 0, 32, 0},
-      {"fixup_ysx_qc_e_call_plt", 0, 48, 0},
-
-      // Andes fixups
-      {"fixup_ysx_nds_branch_10", 0, 32, 0},
   };
   static_assert((std::size(Infos)) == YSX::NumTargetFixupKinds,
                 "Not all fixup kinds added to Infos array");
@@ -127,16 +111,7 @@ bool YSXAsmBackend::fixupNeedsRelaxationAdvanced(const MCFragment &,
   switch (Kind) {
   default:
     return false;
-  case YSX::fixup_ysx_rvc_branch:
-    // For compressed branch instructions the immediate must be
-    // in the range [-256, 254].
-    return Offset > 254 || Offset < -256;
-  case YSX::fixup_ysx_rvc_jump:
-    // For compressed jump instructions the immediate must be
-    // in the range [-2048, 2046].
-    return Offset > 2046 || Offset < -2048;
   case YSX::fixup_ysx_branch:
-  case YSX::fixup_ysx_qc_e_branch:
     // For conditional branch instructions the immediate must be
     // in the range [-4096, 4094].
     return Offset > 4094 || Offset < -4096;
@@ -144,15 +119,10 @@ bool YSXAsmBackend::fixupNeedsRelaxationAdvanced(const MCFragment &,
     // For jump instructions the immediate must be in the range
     // [-1048576, 1048574]
     return Offset > 1048574 || Offset < -1048576;
-  case YSX::fixup_ysx_rvc_imm:
-    // This fixup can never be emitted as a relocation, so always needs to be
-    // relaxed.
-    return true;
   }
 }
 
-// Given a compressed control flow instruction this function returns
-// the expanded instruction, or the original instruction code if no
+// Return the expanded long-branch opcode, or the original opcode if no
 // expansion is available.
 static unsigned getRelaxedOpcode(unsigned Opcode, ArrayRef<MCOperand> Operands,
                                  const MCSubtargetInfo &STI) {
@@ -354,9 +324,8 @@ bool YSXAsmBackend::mayNeedRelaxation(unsigned Opcode,
 
 bool YSXAsmBackend::writeNopData(raw_ostream &OS, uint64_t Count,
                                    const MCSubtargetInfo *STI) const {
-  // We mostly follow binutils' convention here: align to even boundary with a
-  // 0-fill padding.  We emit up to 1 2-byte nop, though we use c.nop if RVC is
-  // enabled or 0-fill otherwise.  The remainder is now padded with 4-byte nops.
+  // Align to an even boundary with zero padding and use 4-byte scalar nops for
+  // the remaining padding.
 
   // Instructions always are at even addresses.  We must be in a data area or
   // be unaligned due to some other reason.
@@ -368,9 +337,7 @@ bool YSXAsmBackend::writeNopData(raw_ostream &OS, uint64_t Count,
   // TODO: emit a mapping symbol right here
 
   if (Count % 4 == 2) {
-    // The canonical nop with Zca is c.nop. For .balign 4, we generate a 2-byte
-    // c.nop even in a norvc region.
-    OS.write("\x01\0", 2);
+    OS.write("\0\0", 2);
     Count -= 2;
   }
 
@@ -425,7 +392,6 @@ static uint64_t adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
     Value = (Sbit << 19) | (Lo10 << 9) | (Mid1 << 8) | Hi8;
     return Value;
   }
-  case YSX::fixup_ysx_qc_e_branch:
   case YSX::fixup_ysx_branch: {
     if (!isInt<13>(Value))
       Ctx.reportError(Fixup.getLoc(), "fixup value out of range");
@@ -452,87 +418,6 @@ static uint64_t adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
     uint64_t UpperImm = (Value + 0x800ULL) & 0xfffff000ULL;
     uint64_t LowerImm = Value & 0xfffULL;
     return UpperImm | ((LowerImm << 20) << 32);
-  }
-  case YSX::fixup_ysx_rvc_jump: {
-    if (!isInt<12>(Value))
-      Ctx.reportError(Fixup.getLoc(), "fixup value out of range");
-    // Need to produce offset[11|4|9:8|10|6|7|3:1|5] from the 11-bit Value.
-    unsigned Bit11  = (Value >> 11) & 0x1;
-    unsigned Bit4   = (Value >> 4) & 0x1;
-    unsigned Bit9_8 = (Value >> 8) & 0x3;
-    unsigned Bit10  = (Value >> 10) & 0x1;
-    unsigned Bit6   = (Value >> 6) & 0x1;
-    unsigned Bit7   = (Value >> 7) & 0x1;
-    unsigned Bit3_1 = (Value >> 1) & 0x7;
-    unsigned Bit5   = (Value >> 5) & 0x1;
-    Value = (Bit11 << 10) | (Bit4 << 9) | (Bit9_8 << 7) | (Bit10 << 6) |
-            (Bit6 << 5) | (Bit7 << 4) | (Bit3_1 << 1) | Bit5;
-    return Value;
-  }
-  case YSX::fixup_ysx_rvc_branch: {
-    if (!isInt<9>(Value))
-      Ctx.reportError(Fixup.getLoc(), "fixup value out of range");
-    // Need to produce offset[8|4:3], [reg 3 bit], offset[7:6|2:1|5]
-    unsigned Bit8   = (Value >> 8) & 0x1;
-    unsigned Bit7_6 = (Value >> 6) & 0x3;
-    unsigned Bit5   = (Value >> 5) & 0x1;
-    unsigned Bit4_3 = (Value >> 3) & 0x3;
-    unsigned Bit2_1 = (Value >> 1) & 0x3;
-    Value = (Bit8 << 12) | (Bit4_3 << 10) | (Bit7_6 << 5) | (Bit2_1 << 3) |
-            (Bit5 << 2);
-    return Value;
-  }
-  case YSX::fixup_ysx_rvc_imm: {
-    if (!isInt<6>(Value))
-      Ctx.reportError(Fixup.getLoc(), "fixup value out of range");
-    unsigned Bit5 = (Value >> 5) & 0x1;
-    unsigned Bit4_0 = Value & 0x1f;
-    Value = (Bit5 << 12) | (Bit4_0 << 2);
-    return Value;
-  }
-  case YSX::fixup_ysx_qc_e_32: {
-    if (!isInt<32>(Value))
-      Ctx.reportError(Fixup.getLoc(), "fixup value out of range");
-    return Value & 0xffffffffu;
-  }
-  case YSX::fixup_ysx_qc_abs20_u: {
-    if (!isInt<20>(Value))
-      Ctx.reportError(Fixup.getLoc(), "fixup value out of range");
-    unsigned Bit19 = (Value >> 19) & 0x1;
-    unsigned Bit14_0 = Value & 0x7fff;
-    unsigned Bit18_15 = (Value >> 15) & 0xf;
-    Value = (Bit19 << 31) | (Bit14_0 << 16) | (Bit18_15 << 12);
-    return Value;
-  }
-  case YSX::fixup_ysx_qc_e_call_plt: {
-    if (!isInt<32>(Value))
-      Ctx.reportError(Fixup.getLoc(), "fixup value out of range");
-    if (Value & 0x1)
-      Ctx.reportError(Fixup.getLoc(), "fixup value must be 2-byte aligned");
-    uint64_t Bit31_16 = (Value >> 16) & 0xffff;
-    uint64_t Bit12 = (Value >> 12) & 0x1;
-    uint64_t Bit10_5 = (Value >> 5) & 0x3f;
-    uint64_t Bit15_13 = (Value >> 13) & 0x7;
-    uint64_t Bit4_1 = (Value >> 1) & 0xf;
-    uint64_t Bit11 = (Value >> 11) & 0x1;
-    Value = (Bit31_16 << 32ull) | (Bit12 << 31) | (Bit10_5 << 25) |
-            (Bit15_13 << 17) | (Bit4_1 << 8) | (Bit11 << 7);
-    return Value;
-  }
-  case YSX::fixup_ysx_nds_branch_10: {
-    if (!isInt<11>(Value))
-      Ctx.reportError(Fixup.getLoc(), "fixup value out of range");
-    if (Value & 0x1)
-      Ctx.reportError(Fixup.getLoc(), "fixup value must be 2-byte aligned");
-    // Need to extract imm[10], imm[9:5], imm[4:1] from the 11-bit Value.
-    unsigned Sbit = (Value >> 10) & 0x1;
-    unsigned Hi5 = (Value >> 5) & 0x1f;
-    unsigned Lo4 = (Value >> 1) & 0xf;
-    // Inst{31} = Sbit;
-    // Inst{29-25} = Hi5;
-    // Inst{11-8} = Lo4;
-    Value = (Sbit << 31) | (Hi5 << 25) | (Lo4 << 8);
-    return Value;
   }
   }
 }
@@ -657,49 +542,6 @@ std::optional<bool> YSXAsmBackend::evaluateFixup(const MCFragment &,
          isPCRelFixupResolved(AUIPCTarget.getAddSym(), *AUIPCDF);
 }
 
-void YSXAsmBackend::maybeAddVendorReloc(const MCFragment &F,
-                                          const MCFixup &Fixup) {
-  StringRef VendorIdentifier;
-  switch (Fixup.getKind()) {
-  default:
-    // No Vendor Relocation Required.
-    return;
-  case YSX::fixup_ysx_qc_e_branch:
-  case YSX::fixup_ysx_qc_abs20_u:
-  case YSX::fixup_ysx_qc_e_32:
-  case YSX::fixup_ysx_qc_e_call_plt:
-    VendorIdentifier = "QUALCOMM";
-    break;
-  case YSX::fixup_ysx_nds_branch_10:
-    VendorIdentifier = "ANDES";
-    break;
-  }
-
-  // Create a local symbol for the vendor relocation to reference. It's fine if
-  // the symbol has the same name as an existing symbol.
-  MCContext &Ctx = Asm->getContext();
-  MCSymbol *VendorSymbol = Ctx.createLocalSymbol(VendorIdentifier);
-  auto [It, Inserted] =
-      VendorSymbols.try_emplace(VendorIdentifier, VendorSymbol);
-
-  if (Inserted) {
-    // Setup the just-created symbol
-    VendorSymbol->setVariableValue(MCConstantExpr::create(0, Ctx));
-    Asm->registerSymbol(*VendorSymbol);
-  } else {
-    // Fetch the existing symbol
-    VendorSymbol = It->getValue();
-  }
-
-  MCFixup VendorFixup =
-      MCFixup::create(Fixup.getOffset(), nullptr, ELF::R_RISCV_VENDOR);
-  // Explicitly create MCValue rather than using an MCExpr and evaluating it so
-  // that the absolute vendor symbol is not evaluated to constant 0.
-  MCValue VendorTarget = MCValue::get(VendorSymbol);
-  uint64_t VendorValue;
-  Asm->getWriter().recordRelocation(F, VendorFixup, VendorTarget, VendorValue);
-}
-
 static bool relaxableFixupNeedsRelocation(const MCFixupKind Kind) {
   // Some Fixups are marked as LinkerRelaxable by
   // `YSXMCCodeEmitter::getImmOpValue` only because they may be
@@ -709,11 +551,7 @@ static bool relaxableFixupNeedsRelocation(const MCFixupKind Kind) {
   switch (Kind) {
   default:
     break;
-  case YSX::fixup_ysx_rvc_jump:
   case YSX::fixup_ysx_branch:
-  case YSX::fixup_ysx_rvc_branch:
-  case YSX::fixup_ysx_qc_e_branch:
-  case YSX::fixup_ysx_rvc_imm:
     return false;
   }
   return true;
@@ -772,10 +610,6 @@ bool YSXAsmBackend::addReloc(const MCFragment &F, const MCFixup &Fixup,
     IsResolved = isPCRelFixupResolved(Target.getAddSym(), F);
 
   if (!IsResolved) {
-    // Some Fixups require a VENDOR relocation, record it (directly) before we
-    // add the relocation.
-    maybeAddVendorReloc(F, Fixup);
-
     Asm->getWriter().recordRelocation(F, Fixup, Target, FixedValue);
 
     if (NeedsRelax) {

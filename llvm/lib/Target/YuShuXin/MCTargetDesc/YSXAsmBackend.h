@@ -12,7 +12,6 @@
 #include "MCTargetDesc/YSXBaseInfo.h"
 #include "MCTargetDesc/YSXFixupKinds.h"
 #include "MCTargetDesc/YSXMCTargetDesc.h"
-#include "llvm/ADT/StringMap.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 
@@ -32,8 +31,6 @@ protected:
 
   bool isPCRelFixupResolved(const MCSymbol *SymA, const MCFragment &F);
 
-  StringMap<MCSymbol *> VendorSymbols;
-
 public:
   YSXAsmBackend(const MCSubtargetInfo &STI, uint8_t OSABI, bool Is64Bit,
                   bool IsLittleEndian, const MCTargetOptions &Options);
@@ -43,8 +40,6 @@ public:
                                     uint64_t &) override;
   bool addReloc(const MCFragment &, const MCFixup &, const MCValue &,
                 uint64_t &FixedValue, bool IsResolved);
-
-  void maybeAddVendorReloc(const MCFragment &, const MCFixup &);
 
   void applyFixup(const MCFragment &, const MCFixup &, const MCValue &Target,
                   uint8_t *Data, uint64_t Value, bool IsResolved) override;

@@ -84,19 +84,11 @@ def HasStdExtA : Predicate<"Subtarget->hasStdExtA()">,
 // Target width and generic assembler controls
 //===----------------------------------------------------------------------===//
 
-def Feature32Bit
-    : SubtargetFeature<"32bit", "IsRV32", "true", "Implements RV32">;
 def Feature64Bit
     : SubtargetFeature<"64bit", "IsRV64", "true", "Implements RV64">;
 def IsRV64 : Predicate<"Subtarget->is64Bit()">,
              AssemblerPredicate<(all_of Feature64Bit),
                                 "RV64I Base Instruction Set">;
-def IsRV32 : Predicate<"!Subtarget->is64Bit()">,
-             AssemblerPredicate<(all_of (not Feature64Bit)),
-                                "RV32I Base Instruction Set">;
-
-defvar RV32 = DefaultMode;
-def RV64 : HwMode<[IsRV64]>;
 
 def FeatureRelax
     : SubtargetFeature<"relax", "EnableLinkerRelax", "true",
@@ -141,19 +133,6 @@ def FeatureTaggedGlobals
 def Experimental
     : SubtargetFeature<"experimental", "HasExperimental", "true",
                        "Experimental intrinsics">;
-
-//===----------------------------------------------------------------------===//
-// Unsupported extension predicates retained only for surviving generic TD code
-//===----------------------------------------------------------------------===//
-
-def HasStdExtZicfilp : Predicate<"false">;
-def NoStdExtZicfilp : Predicate<"true">;
-def HasStdExtZihintpause : Predicate<"false">;
-def HasStdExtZihintntl : Predicate<"false">;
-def HasStdExtZtso : Predicate<"false">;
-def NoStdExtZtso : Predicate<"true">;
-def NoStdExtZba : Predicate<"true">;
-def NoStdExtZacas : Predicate<"true">;
 
 //===----------------------------------------------------------------------===//
 // Scalar tuning controls still consumed by generic passes

@@ -13,7 +13,7 @@
 // The RISC-V calling convention is handled with custom code in
 // YSXISelLowering.cpp (CC_YSX).
 
-def CSR_ILP32_LP64
+def CSR_LP64
     : CalleeSavedRegs<(add X1, X8, X9, (sequence "X%u", 18, 27))>;
 
 // Needed for implementation of YSXRegisterInfo::getNoPreservedMask()

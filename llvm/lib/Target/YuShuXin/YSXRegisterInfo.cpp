@@ -62,9 +62,8 @@ YSXRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
   switch (Subtarget.getTargetABI()) {
   default:
     llvm_unreachable("Unrecognized ABI");
-  case YSXABI::ABI_ILP32:
   case YSXABI::ABI_LP64:
-    return CSR_ILP32_LP64_SaveList;
+    return CSR_LP64_SaveList;
   }
 }
 
@@ -98,24 +97,10 @@ BitVector YSXRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   // beginning with 'x0' for instructions that take register pairs.
   markSuperRegs(Reserved, YSX::DUMMY_REG_PAIR_WITH_X0);
 
-  // There are only 16 GPRs for RVE.
-  if (Subtarget.hasStdExtE())
-    for (MCPhysReg Reg = YSX::X16_H; Reg <= YSX::X31_H; Reg++)
-      markSuperRegs(Reserved, Reg);
-
   if (MF.getFunction().getCallingConv() == CallingConv::GRAAL) {
-    if (Subtarget.hasStdExtE())
-      reportFatalUsageError("Graal reserved registers do not exist in RVE");
     markSuperRegs(Reserved, YSX::X23_H);
     markSuperRegs(Reserved, YSX::X27_H);
   }
-
-  // Shadow stack pointer.
-  markSuperRegs(Reserved, YSX::SSP);
-
-  // XRemovedSfmmbase
-  for (MCPhysReg Reg = YSX::T0; Reg <= YSX::T15; Reg++)
-    markSuperRegs(Reserved, Reg);
 
   assert(checkAllSuperRegsMarked(Reserved));
   return Reserved;
@@ -186,11 +171,8 @@ void YSXRegisterInfo::adjustReg(MachineBasicBlock &MBB,
     return;
   }
 
-  // Use shNadd if doing so lets us materialize a 12 bit immediate with a single
-  // instruction.  This saves 1 instruction over the full lui/addi+add fallback
-  // path.  We avoid anything which can be done with a single lui as it might
-  // be compressible.  Note that the sh1add case is fully covered by the 2x addi
-  // case just above and is thus omitted.
+  // Use the full lui/addi+add fallback path once two aligned ADDIs are not
+  // enough to materialize the offset.
   unsigned Opc = YSX::ADD;
   if (Val < 0) {
     Val = -Val;
@@ -421,9 +403,8 @@ YSXRegisterInfo::getCallPreservedMask(const MachineFunction & MF,
   switch (ABI) {
   default:
     llvm_unreachable("Unrecognized ABI");
-  case YSXABI::ABI_ILP32:
   case YSXABI::ABI_LP64:
-    return CSR_ILP32_LP64_RegMask;
+    return CSR_LP64_RegMask;
   }
 }
 
@@ -444,9 +425,7 @@ void YSXRegisterInfo::getOffsetOpcodes(const StackOffset &Offset,
 
 unsigned
 YSXRegisterInfo::getRegisterCostTableIndex(const MachineFunction &MF) const {
-  return MF.getSubtarget<YSXSubtarget>().hasStdExtZca() && !DisableCostPerUse
-             ? 1
-             : 0;
+  return 0;
 }
 
 float YSXRegisterInfo::getSpillWeightScaleFactor(
@@ -454,8 +433,6 @@ float YSXRegisterInfo::getSpillWeightScaleFactor(
   return getRegClassWeight(RC).RegWeight;
 }
 
-// Add two address hints to improve chances of being able to use a compressed
-// instruction.
 bool YSXRegisterInfo::getRegAllocationHints(
     Register VirtReg, ArrayRef<MCPhysReg> Order,
     SmallVectorImpl<MCPhysReg> &Hints, const MachineFunction &MF,
@@ -511,59 +488,22 @@ bool YSXRegisterInfo::getRegAllocationHints(
   // Add any two address hints after any copy hints.
   SmallSet<Register, 4> TwoAddrHints;
 
-  auto tryAddHint = [&](const MachineOperand &VRRegMO, const MachineOperand &MO,
-                        bool NeedGPRC) -> void {
+  auto tryAddHint = [&](const MachineOperand &VRRegMO,
+                        const MachineOperand &MO) -> void {
     Register Reg = MO.getReg();
     Register PhysReg = Reg.isPhysical() ? Reg : Register(VRM->getPhys(Reg));
     // TODO: Support GPRPair subregisters? Need to be careful with even/odd
     // registers. If the virtual register is an odd register of a pair and the
     // physical register is even (or vice versa), we should not add the hint.
-    if (PhysReg && (!NeedGPRC || YSX::GPRCRegClass.contains(PhysReg)) &&
-        !MO.getSubReg() && !VRRegMO.getSubReg()) {
+    if (PhysReg && !MO.getSubReg() && !VRRegMO.getSubReg()) {
       if (!MRI->isReserved(PhysReg) && !is_contained(Hints, PhysReg))
         TwoAddrHints.insert(PhysReg);
     }
   };
 
-  // This is all of the compressible binary instructions. If an instruction
-  // needs GPRC register class operands \p NeedGPRC will be set to true.
-  auto isCompressible = [](const MachineInstr &, bool &NeedGPRC) {
-    NeedGPRC = false;
-    return false;
-  };
-
-  // Returns true if this operand is compressible. For non-registers it always
-  // returns true. Immediate range was already checked in isCompressible.
-  // For registers, it checks if the register is a GPRC register. reg-reg
-  // instructions that require GPRC need all register operands to be GPRC.
-  auto isCompressibleOpnd = [&](const MachineOperand &MO) {
-    if (!MO.isReg())
-      return true;
-    Register Reg = MO.getReg();
-    Register PhysReg = Reg.isPhysical() ? Reg : Register(VRM->getPhys(Reg));
-    return PhysReg && YSX::GPRCRegClass.contains(PhysReg);
-  };
-
   for (auto &MO : MRI->reg_nodbg_operands(VirtReg)) {
     const MachineInstr &MI = *MO.getParent();
     unsigned OpIdx = MO.getOperandNo();
-    bool NeedGPRC;
-    if (isCompressible(MI, NeedGPRC)) {
-      if (OpIdx == 0 && MI.getOperand(1).isReg()) {
-        if (!NeedGPRC || MI.getNumExplicitOperands() < 3 ||
-            isCompressibleOpnd(MI.getOperand(2)))
-          tryAddHint(MO, MI.getOperand(1), NeedGPRC);
-        if (MI.isCommutable() && MI.getOperand(2).isReg() &&
-            (!NeedGPRC || isCompressibleOpnd(MI.getOperand(1))))
-          tryAddHint(MO, MI.getOperand(2), NeedGPRC);
-      } else if (OpIdx == 1 && (!NeedGPRC || MI.getNumExplicitOperands() < 3 ||
-                                isCompressibleOpnd(MI.getOperand(2)))) {
-        tryAddHint(MO, MI.getOperand(0), NeedGPRC);
-      } else if (MI.isCommutable() && OpIdx == 2 &&
-                 (!NeedGPRC || isCompressibleOpnd(MI.getOperand(1)))) {
-        tryAddHint(MO, MI.getOperand(0), NeedGPRC);
-      }
-    }
 
     // Add a hint if it would allow auipc/lui+addi(w) fusion.  We do this even
     // without the fusions explicitly enabled as the impact is rarely negative
@@ -578,9 +518,9 @@ bool YSXRegisterInfo::getRegAllocationHints(
         if ((I->getOpcode() == YSX::LUI || I->getOpcode() == YSX::AUIPC) &&
             I->getOperand(0).getReg() == MI.getOperand(1).getReg()) {
           if (OpIdx == 0)
-            tryAddHint(MO, MI.getOperand(1), /*NeedGPRC=*/false);
+            tryAddHint(MO, MI.getOperand(1));
           else
-            tryAddHint(MO, MI.getOperand(0), /*NeedGPRC=*/false);
+            tryAddHint(MO, MI.getOperand(0));
         }
       }
     }

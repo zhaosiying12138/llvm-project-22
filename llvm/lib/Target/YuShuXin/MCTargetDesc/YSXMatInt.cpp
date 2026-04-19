@@ -13,38 +13,6 @@
 #include "llvm/Support/MathExtras.h"
 using namespace llvm;
 
-static int getInstSeqCost(YSXMatInt::InstSeq &Res, bool HasRVC) {
-  if (!HasRVC)
-    return Res.size();
-
-  int Cost = 0;
-  for (auto Instr : Res) {
-    // Assume instructions that aren't listed aren't compressible.
-    bool Compressed = false;
-    switch (Instr.getOpcode()) {
-    case YSX::SLLI:
-    case YSX::SRLI:
-      Compressed = true;
-      break;
-    case YSX::ADDI:
-    case YSX::ADDIW:
-    case YSX::LUI:
-      Compressed = isInt<6>(Instr.getImm());
-      break;
-    }
-    // Two RVC instructions take the same space as one RVI instruction, but
-    // can take longer to execute than the single RVI instruction. Thus, we
-    // consider that two RVC instruction are slightly more costly than one
-    // RVI instruction. For longer sequences of RVC instructions the space
-    // savings can be worth it, though. The costs below try to model that.
-    if (!Compressed)
-      Cost += 100; // Baseline cost of one RVI instruction: 100%.
-    else
-      Cost += 70; // 70% cost of baseline.
-  }
-  return Cost;
-}
-
 // Recursively generate a sequence for materializing an integer.
 static void generateInstSeqImpl(int64_t Val, const MCSubtargetInfo &STI,
                                 YSXMatInt::InstSeq &Res) {
@@ -68,8 +36,7 @@ static void generateInstSeqImpl(int64_t Val, const MCSubtargetInfo &STI,
       unsigned AddiOpc = YSX::ADDI;
       if (IsRV64 && Hi20) {
         // Use ADDIW rather than ADDI only when necessary for correctness. As
-        // noted in YSXOptWInstrs, this helps reduce test differences vs
-        // RV32 without being a pessimization.
+        // noted in YSXOptWInstrs, this avoids unnecessary ADDIW use.
         int64_t LuiRes = SignExtend64<32>(Hi20 << 12);
         if (!isInt<32>(LuiRes + Lo12))
           AddiOpc = YSX::ADDIW;
@@ -183,29 +150,24 @@ InstSeq generateInstSeq(int64_t Val, const MCSubtargetInfo &STI) {
   if ((Val & 0xfff) != 0 && (Val & 1) == 0 && Res.size() >= 2) {
     unsigned TrailingZeros = llvm::countr_zero((uint64_t)Val);
     int64_t ShiftedVal = Val >> TrailingZeros;
-    // If we can use C.LI+C.SLLI instead of LUI+ADDI(W) prefer that since
-    // its more compressible. But only if LUI+ADDI(W) isn't fusable.
-    // NOTE: We don't check for C extension to minimize differences in generated
-    // code.
-    bool IsShiftedCompressible =
+    bool IsShiftedSmallImmediate =
         isInt<6>(ShiftedVal) && !STI.hasFeature(YSX::YSXTuneLUIADDIFusion);
     YSXMatInt::InstSeq TmpSeq;
     generateInstSeqImpl(ShiftedVal, STI, TmpSeq);
 
     // Keep the new sequence if it is an improvement.
-    if ((TmpSeq.size() + 1) < Res.size() || IsShiftedCompressible) {
+    if ((TmpSeq.size() + 1) < Res.size() || IsShiftedSmallImmediate) {
       TmpSeq.emplace_back(YSX::SLLI, TrailingZeros);
       Res = TmpSeq;
     }
   }
 
-  // If we have a 1 or 2 instruction sequence this is the best we can do. This
-  // will always be true for RV32 and will often be true for RV64.
+  // If we have a 1 or 2 instruction sequence this is the best we can do.
   if (Res.size() <= 2)
     return Res;
 
   assert(STI.hasFeature(YSX::Feature64Bit) &&
-         "Expected RV32 to only need 2 instructions");
+         "Expected 64-bit YSX for long immediate materialization");
 
   // If the lower 13 bits are something like 0x17ff, try to add 1 to change the
   // lower 13 bits to 0x1800. We can restore this with an ADDI of -1 at the end
@@ -312,9 +274,8 @@ InstSeq generateTwoRegInstSeq(int64_t Val, const MCSubtargetInfo &STI,
 }
 
 int getIntMatCost(const APInt &Val, unsigned Size, const MCSubtargetInfo &STI,
-                  bool CompressionCost, bool FreeZeroes) {
+                  bool FreeZeroes) {
   bool IsRV64 = STI.hasFeature(YSX::Feature64Bit);
-  bool HasRVC = false;
   int PlatRegSize = IsRV64 ? 64 : 32;
 
   // Split the constant into platform register sized chunks, and calculate cost
@@ -325,7 +286,7 @@ int getIntMatCost(const APInt &Val, unsigned Size, const MCSubtargetInfo &STI,
     if (FreeZeroes && Chunk.getSExtValue() == 0)
       continue;
     InstSeq MatSeq = generateInstSeq(Chunk.getSExtValue(), STI);
-    Cost += getInstSeqCost(MatSeq, HasRVC);
+    Cost += MatSeq.size();
   }
   return std::max(FreeZeroes ? 0 : 1, Cost);
 }

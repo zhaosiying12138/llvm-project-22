@@ -31,10 +31,6 @@
 using namespace llvm;
 
 static Align getABIStackAlignment(YSXABI::ABI ABI) {
-  if (ABI == YSXABI::ABI_ILP32E)
-    return Align(4);
-  if (ABI == YSXABI::ABI_LP64E)
-    return Align(8);
   return Align(16);
 }
 
@@ -54,44 +50,13 @@ static constexpr MCPhysReg SPReg = YSX::X2;
 // The register used to hold the return address.
 static constexpr MCPhysReg RAReg = YSX::X1;
 
-// LIst of CSRs that are given a fixed location by save/restore libcalls or
-// Zcmp/Xqccmp Push/Pop. The order in this table indicates the order the
-// registers are saved on the stack. Zcmp uses the reverse order of save/restore
-// and Xqccmp on the stack, but this is handled when offsets are calculated.
+// List of CSRs that are given a fixed location by save/restore libcalls.
 static const MCPhysReg FixedCSRFIMap[] = {
     /*ra*/ RAReg,      /*s0*/ FramePointerReg,      /*s1*/ YSX::X9,
     /*s2*/ YSX::X18, /*s3*/ YSX::X19, /*s4*/ YSX::X20,
     /*s5*/ YSX::X21, /*s6*/ YSX::X22, /*s7*/ YSX::X23,
     /*s8*/ YSX::X24, /*s9*/ YSX::X25, /*s10*/ YSX::X26,
     /*s11*/ YSX::X27};
-
-// The number of stack bytes allocated by `QC.C.MIENTER(.NEST)` and popped by
-// `QC.C.MILEAVERET`.
-static constexpr uint64_t QCIInterruptPushAmount = 96;
-
-static const std::pair<MCPhysReg, int8_t> FixedCSRFIQCIInterruptMap[] = {
-    /* -1 is a gap for mepc/mnepc */
-    {/*fp*/ FramePointerReg, -2},
-    /* -3 is a gap for qc.mcause */
-    {/*ra*/ RAReg, -4},
-    /* -5 is reserved */
-    {/*t0*/ YSX::X5, -6},
-    {/*t1*/ YSX::X6, -7},
-    {/*t2*/ YSX::X7, -8},
-    {/*a0*/ YSX::X10, -9},
-    {/*a1*/ YSX::X11, -10},
-    {/*a2*/ YSX::X12, -11},
-    {/*a3*/ YSX::X13, -12},
-    {/*a4*/ YSX::X14, -13},
-    {/*a5*/ YSX::X15, -14},
-    {/*a6*/ YSX::X16, -15},
-    {/*a7*/ YSX::X17, -16},
-    {/*t3*/ YSX::X28, -17},
-    {/*t4*/ YSX::X29, -18},
-    {/*t5*/ YSX::X30, -19},
-    {/*t6*/ YSX::X31, -20},
-    /* -21, -22, -23, -24 are reserved */
-};
 
 /// Returns true if DWARF CFI instructions ("frame moves") should be emitted.
 static bool needsDwarfCFI(const MachineFunction &MF) {
@@ -104,12 +69,6 @@ static void emitSCSPrologue(MachineFunction &MF, MachineBasicBlock &MBB,
                             MachineBasicBlock::iterator MI,
                             const DebugLoc &DL) {
   const auto &STI = MF.getSubtarget<YSXSubtarget>();
-  // We check Zimop instead of (Zimop || Zcmop) to determine whether HW shadow
-  // stack is available despite the fact that sspush/sspopchk both have a
-  // compressed form, because if only Zcmop is available, we would need to
-  // reserve X5 due to c.sspopchk only takes X5 and we currently do not support
-  // using X5 as the return address register.
-  // However, we can still aggressively use c.sspush x1 if zcmop is available.
   bool HasHWShadowStack = false;
   bool HasSWShadowStack =
       MF.getFunction().hasFnAttribute(Attribute::ShadowCallStack);
@@ -340,21 +299,6 @@ getRestoreLibCallName(const MachineFunction &MF,
   return RestoreLibCalls[LibCallID];
 }
 
-// Get the max reg of Push/Pop for restoring callee saved registers.
-static unsigned getNumPushPopRegs(const std::vector<CalleeSavedInfo> &CSI) {
-  unsigned NumPushPopRegs = 0;
-  for (auto &CS : CSI) {
-    auto *FII = llvm::find_if(FixedCSRFIMap,
-                              [&](MCPhysReg P) { return P == CS.getReg(); });
-    if (FII != std::end(FixedCSRFIMap)) {
-      unsigned RegNum = std::distance(std::begin(FixedCSRFIMap), FII);
-      NumPushPopRegs = std::max(NumPushPopRegs, RegNum + 1);
-    }
-  }
-  assert(NumPushPopRegs != 12 && "x26 requires x27 to also be pushed");
-  return NumPushPopRegs;
-}
-
 // Return true if the specified function should have a dedicated frame
 // pointer register.  This is true if frame pointer elimination is
 // disabled, if it needs dynamic stack realignment, if the function has
@@ -385,14 +329,9 @@ bool YSXFrameLowering::hasBP(const MachineFunction &MF) const {
 // Determines the size of the frame and maximum call frame size.
 void YSXFrameLowering::determineFrameLayout(MachineFunction &MF) const {
   MachineFrameInfo &MFI = MF.getFrameInfo();
-  auto *RVFI = MF.getInfo<YSXMachineFunctionInfo>();
 
   // Get the number of bytes to allocate from the FrameInfo.
   uint64_t FrameSize = MFI.getStackSize();
-
-  // QCI Interrupts use at least 96 bytes of stack space
-  if (RVFI->useQCIInterrupt(MF))
-    FrameSize = std::max(FrameSize, QCIInterruptPushAmount);
 
   // Get the alignment.
   Align StackAlign = getStackAlign();
@@ -426,43 +365,15 @@ getPushOrLibCallsSavedInfo(const MachineFunction &MF,
   auto *RVFI = MF.getInfo<YSXMachineFunctionInfo>();
 
   SmallVector<CalleeSavedInfo, 8> PushOrLibCallsCSI;
-  if (!RVFI->useSaveRestoreLibCalls(MF) && !RVFI->isPushable(MF))
+  if (!RVFI->useSaveRestoreLibCalls(MF))
     return PushOrLibCallsCSI;
 
   for (const auto &CS : CSI) {
-    if (RVFI->useQCIInterrupt(MF)) {
-      // Some registers are saved by both `QC.C.MIENTER(.NEST)` and
-      // `QC.CM.PUSH(FP)`. In these cases, prioritise the CFI info that points
-      // to the versions saved by `QC.C.MIENTER(.NEST)` which is what FP
-      // unwinding would use.
-      if (llvm::is_contained(llvm::make_first_range(FixedCSRFIQCIInterruptMap),
-                             CS.getReg()))
-        continue;
-    }
-
     if (llvm::is_contained(FixedCSRFIMap, CS.getReg()))
       PushOrLibCallsCSI.push_back(CS);
   }
 
   return PushOrLibCallsCSI;
-}
-
-static SmallVector<CalleeSavedInfo, 8>
-getQCISavedInfo(const MachineFunction &MF,
-                const std::vector<CalleeSavedInfo> &CSI) {
-  auto *RVFI = MF.getInfo<YSXMachineFunctionInfo>();
-
-  SmallVector<CalleeSavedInfo, 8> QCIInterruptCSI;
-  if (!RVFI->useQCIInterrupt(MF))
-    return QCIInterruptCSI;
-
-  for (const auto &CS : CSI) {
-    if (llvm::is_contained(llvm::make_first_range(FixedCSRFIQCIInterruptMap),
-                           CS.getReg()))
-      QCIInterruptCSI.push_back(CS);
-  }
-
-  return QCIInterruptCSI;
 }
 
 // Allocate stack space and probe it if necessary.
@@ -578,31 +489,6 @@ void YSXFrameLowering::allocateStack(MachineBasicBlock &MBB,
     CFIBuilder.buildDefCFAOffset(Offset);
 }
 
-static bool isPush(unsigned Opcode) {
-  return false;
-}
-
-static bool isPop(unsigned Opcode) {
-  return false;
-}
-
-static unsigned getPushOpcode(YSXMachineFunctionInfo::PushPopKind Kind,
-                              bool UpdateFP) {
-  switch (Kind) {
-  default:
-    llvm_unreachable("Unhandled PushPopKind");
-  }
-}
-
-static unsigned getPopOpcode(YSXMachineFunctionInfo::PushPopKind Kind) {
-  // There are other pops but they are introduced later by the Push/Pop
-  // Optimizer.
-  switch (Kind) {
-  default:
-    llvm_unreachable("Unhandled PushPopKind");
-  }
-}
-
 void YSXFrameLowering::emitPrologue(MachineFunction &MF,
                                       MachineBasicBlock &MBB) const {
   MachineFrameInfo &MFI = MF.getFrameInfo();
@@ -626,11 +512,6 @@ void YSXFrameLowering::emitPrologue(MachineFunction &MF,
 
   // Emit prologue for shadow call stack.
   emitSCSPrologue(MF, MBB, MBBI, DL);
-
-  // We keep track of the first instruction because it might be a
-  // `(QC.)CM.PUSH(FP)`, and we may need to adjust the immediate rather than
-  // inserting an `addi sp, sp, -N*16`
-  auto PossiblePush = MBBI;
 
   // Skip past all callee-saved register spill instructions.
   while (MBBI != MBB.end() && MBBI->getFlag(MachineInstr::FrameSetup))
@@ -702,43 +583,6 @@ void YSXFrameLowering::emitPrologue(MachineFunction &MF,
   if (FirstSPAdjustAmount) {
     StackSize = FirstSPAdjustAmount;
     RealStackSize = FirstSPAdjustAmount;
-  }
-
-  if (RVFI->useQCIInterrupt(MF)) {
-    // The function starts with `QC.C.MIENTER(.NEST)`, so the `(QC.)CM.PUSH(FP)`
-    // could only be the next instruction.
-    ++PossiblePush;
-
-    if (NeedsDwarfCFI) {
-      // Insert the CFI metadata before where we think the `(QC.)CM.PUSH(FP)`
-      // could be. The PUSH will also get its own CFI metadata for its own
-      // modifications, which should come after the PUSH.
-      CFIInstBuilder PushCFIBuilder(MBB, PossiblePush,
-                                    MachineInstr::FrameSetup);
-      PushCFIBuilder.buildDefCFAOffset(QCIInterruptPushAmount);
-      for (const CalleeSavedInfo &CS : getQCISavedInfo(MF, CSI))
-        PushCFIBuilder.buildOffset(CS.getReg(),
-                                   MFI.getObjectOffset(CS.getFrameIdx()));
-    }
-  }
-
-  if (RVFI->isPushable(MF) && PossiblePush != MBB.end() &&
-      isPush(PossiblePush->getOpcode())) {
-    // Use available stack adjustment in push instruction to allocate additional
-    // stack space. Align the stack size down to a multiple of 16. This is
-    // needed for RVE.
-    // FIXME: Can we increase the stack size to a multiple of 16 instead?
-    uint64_t StackAdj =
-        std::min(alignDown(StackSize, 16), static_cast<uint64_t>(48));
-    PossiblePush->getOperand(1).setImm(StackAdj);
-    StackSize -= StackAdj;
-
-    if (NeedsDwarfCFI) {
-      CFIBuilder.buildDefCFAOffset(RealStackSize - StackSize);
-      for (const CalleeSavedInfo &CS : getPushOrLibCallsSavedInfo(MF, CSI))
-        CFIBuilder.buildOffset(CS.getReg(),
-                               MFI.getObjectOffset(CS.getFrameIdx()));
-    }
   }
 
   // Allocate space on the stack if necessary.
@@ -985,45 +829,10 @@ void YSXFrameLowering::emitEpilogue(MachineFunction &MF,
     for (const CalleeSavedInfo &CS : getUnmanagedCSI(MF, CSI))
       CFIBuilder.buildRestore(CS.getReg());
 
-  if (RVFI->isPushable(MF) && MBBI != MBB.end() && isPop(MBBI->getOpcode())) {
-    // Use available stack adjustment in pop instruction to deallocate stack
-    // space. Align the stack size down to a multiple of 16. This is needed for
-    // RVE.
-    // FIXME: Can we increase the stack size to a multiple of 16 instead?
-    uint64_t StackAdj =
-        std::min(alignDown(StackSize, 16), static_cast<uint64_t>(48));
-    MBBI->getOperand(1).setImm(StackAdj);
-    StackSize -= StackAdj;
-
-    if (StackSize != 0)
-      deallocateStack(MF, MBB, MBBI, DL, StackSize,
-                      /*stack_adj of cm.pop instr*/ RealStackSize - StackSize);
-
-    auto NextI = next_nodbg(MBBI, MBB.end());
-    if (NextI == MBB.end() || NextI->getOpcode() != YSX::PseudoRET) {
-      ++MBBI;
-      if (NeedsDwarfCFI) {
-        CFIBuilder.setInsertPoint(MBBI);
-
-        for (const CalleeSavedInfo &CS : getPushOrLibCallsSavedInfo(MF, CSI))
-          CFIBuilder.buildRestore(CS.getReg());
-
-        // Update CFA Offset. If this is a QCI interrupt function, there will
-        // be a leftover offset which is deallocated by `QC.C.MILEAVERET`,
-        // otherwise getQCIInterruptStackSize() will be 0.
-        CFIBuilder.buildDefCFAOffset(RVFI->getQCIInterruptStackSize());
-      }
-    }
-  }
-
   emitSiFiveCLICPreemptibleRestores(MF, MBB, MBBI, DL);
 
-  // Deallocate stack if StackSize isn't a zero yet. If this is a QCI interrupt
-  // function, there will be a leftover offset which is deallocated by
-  // `QC.C.MILEAVERET`, otherwise getQCIInterruptStackSize() will be 0.
   if (StackSize != 0)
-    deallocateStack(MF, MBB, MBBI, DL, StackSize,
-                    RVFI->getQCIInterruptStackSize());
+    deallocateStack(MF, MBB, MBBI, DL, StackSize, 0);
 
   // Emit epilogue for shadow call stack.
   emitSCSEpilogue(MF, MBB, MBBI, DL);
@@ -1128,11 +937,7 @@ void YSXFrameLowering::determineCalleeSaves(MachineFunction &MF,
   if (hasBP(MF))
     SavedRegs.set(YSXABI::getBPReg());
 
-  // When using cm.push/pop we must save X27 if we save X26.
   auto *RVFI = MF.getInfo<YSXMachineFunctionInfo>();
-  if (RVFI->isPushable(MF) && SavedRegs.test(YSX::X26))
-    SavedRegs.set(YSX::X27);
-
   // SiFive Preemptible Interrupt Handlers need additional frame entries
   createSiFivePreemptibleInterruptFrameEntries(MF, *RVFI);
 }
@@ -1150,22 +955,19 @@ static unsigned estimateFunctionSizeInBytes(const MachineFunction &MF,
       //
       //        foo
       //        bne     t5, t6, .rev_cond # `TII->getInstSizeInBytes(MI)` bytes
-      //        sd      s11, 0(sp)        # 4 bytes, or 2 bytes with Zca
+      //        sd      s11, 0(sp)        # 4 bytes
       //        jump    .restore, s11     # 8 bytes
       // .rev_cond
       //        bar
-      //        j       .dest_bb          # 4 bytes, or 2 bytes with Zca
+      //        j       .dest_bb          # 4 bytes
       // .restore:
-      //        ld      s11, 0(sp)        # 4 bytes, or 2 bytes with Zca
+      //        ld      s11, 0(sp)        # 4 bytes
       // .dest:
       //        baz
       if (MI.isConditionalBranch())
         FnSize += TII.getInstSizeInBytes(MI);
       if (MI.isConditionalBranch() || MI.isUnconditionalBranch()) {
-        if (MF.getSubtarget<YSXSubtarget>().hasStdExtZca())
-          FnSize += 2 + 8 + 2 + 2;
-        else
-          FnSize += 4 + 8 + 4 + 4;
+        FnSize += 4 + 8 + 4 + 4;
         continue;
       }
 
@@ -1284,8 +1086,8 @@ YSXFrameLowering::getFirstSPAdjustAmount(const MachineFunction &MF) const {
   const std::vector<CalleeSavedInfo> &CSI = MFI.getCalleeSavedInfo();
   uint64_t StackSize = MFI.getStackSize();
 
-  // Disable SplitSPAdjust if save-restore libcall, push/pop or QCI interrupts
-  // are used. The callee-saved registers will be pushed by the save-restore
+  // Disable SplitSPAdjust if save-restore libcall or push/pop are used.
+  // The callee-saved registers will be pushed by the save-restore
   // libcalls, so we don't have to split the SP adjustment in this case.
   if (RVFI->getReservedSpillsSize())
     return 0;
@@ -1296,50 +1098,10 @@ YSXFrameLowering::getFirstSPAdjustAmount(const MachineFunction &MF) const {
     // FirstSPAdjustAmount is chosen at most as (2048 - StackAlign) because
     // 2048 will cause sp = sp + 2048 in the epilogue to be split into multiple
     // instructions. Offsets smaller than 2048 can fit in a single load/store
-    // instruction, and we have to stick with the stack alignment. 2048 has
-    // 16-byte alignment. The stack alignment for RV32 and RV64 is 16 and for
-    // RV32E it is 4. So (2048 - StackAlign) will satisfy the stack alignment.
+    // instruction, and we have to stick with the ysx64 16-byte stack
+    // alignment. So (2048 - StackAlign) will satisfy the stack alignment.
     const uint64_t StackAlign = getStackAlign().value();
 
-    // Amount of (2048 - StackAlign) will prevent callee saved and restored
-    // instructions be compressed, so try to adjust the amount to the largest
-    // offset that stack compression instructions accept when target supports
-    // compression instructions.
-    if (STI.hasStdExtZca()) {
-      // The compression extensions may support the following instructions:
-      // ysx32: c.lwsp rd, offset[7:2] => 2^(6 + 2)
-      //          c.swsp rs2, offset[7:2] => 2^(6 + 2)
-      //          c.flwsp rd, offset[7:2] => 2^(6 + 2)
-      //          c.fswsp rs2, offset[7:2] => 2^(6 + 2)
-      // ysx64: c.ldsp rd, offset[8:3] => 2^(6 + 3)
-      //          c.sdsp rs2, offset[8:3] => 2^(6 + 3)
-      //          c.fldsp rd, offset[8:3] => 2^(6 + 3)
-      //          c.fsdsp rs2, offset[8:3] => 2^(6 + 3)
-      const uint64_t RVCompressLen = STI.getXLen() * 8;
-      // Compared with amount (2048 - StackAlign), StackSize needs to
-      // satisfy the following conditions to avoid using more instructions
-      // to adjust the sp after adjusting the amount, such as
-      // StackSize meets the condition (StackSize <= 2048 + RVCompressLen),
-      // case1: Amount is 2048 - StackAlign: use addi + addi to adjust sp.
-      // case2: Amount is RVCompressLen: use addi + addi to adjust sp.
-      auto CanCompress = [&](uint64_t CompressLen) -> bool {
-        if (StackSize <= 2047 + CompressLen ||
-            (StackSize > 2048 * 2 - StackAlign &&
-             StackSize <= 2047 * 2 + CompressLen) ||
-            StackSize > 2048 * 3 - StackAlign)
-          return true;
-
-        return false;
-      };
-      // In the epilogue, addi sp, sp, 496 is used to recover the sp and it
-      // can be compressed(C.ADDI16SP, offset can be [-512, 496]), but
-      // addi sp, sp, 512 can not be compressed. So try to use 496 first.
-      const uint64_t ADDI16SPCompressLen = 496;
-      if (STI.is64Bit() && CanCompress(ADDI16SPCompressLen))
-        return ADDI16SPCompressLen;
-      if (CanCompress(RVCompressLen))
-        return RVCompressLen;
-    }
     return 2048 - StackAlign;
   }
   return 0;
@@ -1365,59 +1127,18 @@ bool YSXFrameLowering::assignCalleeSavedSpillSlots(
   if (CSI.empty())
     return true;
 
-  if (RVFI->useQCIInterrupt(MF)) {
-    RVFI->setQCIInterruptStackSize(QCIInterruptPushAmount);
-  }
-
-  if (RVFI->isPushable(MF)) {
-    // Determine how many GPRs we need to push and save it to RVFI.
-    unsigned PushedRegNum = getNumPushPopRegs(CSI);
-
-    // `QC.C.MIENTER(.NEST)` will save `ra` and `s0`, so we should only push if
-    // we want to push more than 2 registers. Otherwise, we should push if we
-    // want to push more than 0 registers.
-    unsigned OnlyPushIfMoreThan = RVFI->useQCIInterrupt(MF) ? 2 : 0;
-    if (PushedRegNum > OnlyPushIfMoreThan) {
-      RVFI->setRVPushRegs(PushedRegNum);
-      RVFI->setRVPushStackSize(alignTo((STI.getXLen() / 8) * PushedRegNum, 16));
-    }
-  }
-
   for (auto &CS : CSI) {
     MCRegister Reg = CS.getReg();
     const TargetRegisterClass *RC = RegInfo->getMinimalPhysRegClass(Reg);
     unsigned Size = RegInfo->getSpillSize(*RC);
 
-    if (RVFI->useQCIInterrupt(MF)) {
-      const auto *FFI = llvm::find_if(FixedCSRFIQCIInterruptMap, [&](auto P) {
-        return P.first == CS.getReg();
-      });
-      if (FFI != std::end(FixedCSRFIQCIInterruptMap)) {
-        int64_t Offset = FFI->second * (int64_t)Size;
-
-        int FrameIdx = MFI.CreateFixedSpillStackObject(Size, Offset);
-        assert(FrameIdx < 0);
-        CS.setFrameIdx(FrameIdx);
-        continue;
-      }
-    }
-
-    if (RVFI->useSaveRestoreLibCalls(MF) || RVFI->isPushable(MF)) {
+    if (RVFI->useSaveRestoreLibCalls(MF)) {
       const auto *FII = llvm::find_if(
           FixedCSRFIMap, [&](MCPhysReg P) { return P == CS.getReg(); });
       unsigned RegNum = std::distance(std::begin(FixedCSRFIMap), FII);
 
       if (FII != std::end(FixedCSRFIMap)) {
-        int64_t Offset;
-        if (RVFI->getPushPopKind(MF) ==
-            YSXMachineFunctionInfo::PushPopKind::StdExtZcmp)
-          Offset = -int64_t(RVFI->getRVPushRegs() - RegNum) * Size;
-        else
-          Offset = -int64_t(RegNum + 1) * Size;
-
-        if (RVFI->useQCIInterrupt(MF))
-          Offset -= QCIInterruptPushAmount;
-
+        int64_t Offset = -int64_t(RegNum + 1) * Size;
         int FrameIdx = MFI.CreateFixedSpillStackObject(Size, Offset);
         assert(FrameIdx < 0);
         CS.setFrameIdx(FrameIdx);
@@ -1436,19 +1157,7 @@ bool YSXFrameLowering::assignCalleeSavedSpillSlots(
     CS.setFrameIdx(FrameIdx);
   }
 
-  if (RVFI->useQCIInterrupt(MF)) {
-    // Allocate a fixed object that covers the entire QCI stack allocation,
-    // because there are gaps which are reserved for future use.
-    MFI.CreateFixedSpillStackObject(
-        QCIInterruptPushAmount, -static_cast<int64_t>(QCIInterruptPushAmount));
-  }
-
-  if (RVFI->isPushable(MF)) {
-    int64_t QCIOffset = RVFI->useQCIInterrupt(MF) ? QCIInterruptPushAmount : 0;
-    // Allocate a fixed object that covers the full push.
-    if (int64_t PushSize = RVFI->getRVPushStackSize())
-      MFI.CreateFixedSpillStackObject(PushSize, -PushSize - QCIOffset);
-  } else if (int LibCallRegs = getLibCallID(MF, CSI) + 1) {
+  if (int LibCallRegs = getLibCallID(MF, CSI) + 1) {
     int64_t LibCallFrameSize =
         alignTo((STI.getXLen() / 8) * LibCallRegs, getStackAlign());
     MFI.CreateFixedSpillStackObject(LibCallFrameSize, -LibCallFrameSize);
@@ -1469,26 +1178,7 @@ bool YSXFrameLowering::spillCalleeSavedRegisters(
   if (MI != MBB.end() && !MI->isDebugInstr())
     DL = MI->getDebugLoc();
 
-  YSXMachineFunctionInfo *RVFI = MF->getInfo<YSXMachineFunctionInfo>();
-
-  if (RVFI->isPushable(*MF)) {
-    // Emit CM.PUSH with base StackAdj & evaluate Push stack
-    unsigned PushedRegNum = RVFI->getRVPushRegs();
-    if (PushedRegNum > 0) {
-      // Use encoded number to represent registers to spill.
-      unsigned Opcode = getPushOpcode(
-          RVFI->getPushPopKind(*MF), hasFP(*MF) && !RVFI->useQCIInterrupt(*MF));
-      unsigned RegEnc = YSXZC::encodeRegListNumRegs(PushedRegNum);
-      MachineInstrBuilder PushBuilder =
-          BuildMI(MBB, MI, DL, TII.get(Opcode))
-              .setMIFlag(MachineInstr::FrameSetup);
-      PushBuilder.addImm(RegEnc);
-      PushBuilder.addImm(0);
-
-      for (unsigned i = 0; i < PushedRegNum; i++)
-        PushBuilder.addUse(FixedCSRFIMap[i], RegState::Implicit);
-    }
-  } else if (const char *SpillLibCall = getSpillLibCallName(*MF, CSI)) {
+  if (const char *SpillLibCall = getSpillLibCallName(*MF, CSI)) {
     // Add spill libcall via non-callee-saved register t0.
     BuildMI(MBB, MI, DL, TII.get(YSX::PseudoCALLReg), YSX::X5)
         .addExternalSymbol(SpillLibCall, YSXII::MO_CALL)
@@ -1499,7 +1189,7 @@ bool YSXFrameLowering::spillCalleeSavedRegisters(
       MBB.addLiveIn(CS.getReg());
   }
 
-  // Manually spill values not spilled by libcall & Push/Pop.
+  // Manually spill values not spilled by libcall.
   const auto &UnmanagedCSI = getUnmanagedCSI(*MF, CSI);
 
   auto storeRegsToStackSlots = [&](decltype(UnmanagedCSI) CSInfo) {
@@ -1529,7 +1219,7 @@ bool YSXFrameLowering::restoreCalleeSavedRegisters(
   if (MI != MBB.end() && !MI->isDebugInstr())
     DL = MI->getDebugLoc();
 
-  // Manually restore values not restored by libcall & Push/Pop.
+  // Manually restore values not restored by libcall.
   // Reverse the restore order in epilog.  In addition, the return
   // address will be restored first in the epilogue. It increases
   // the opportunity to avoid the load-to-use data hazard between
@@ -1550,44 +1240,19 @@ bool YSXFrameLowering::restoreCalleeSavedRegisters(
   };
   loadRegFromStackSlot(UnmanagedCSI);
 
-  YSXMachineFunctionInfo *RVFI = MF->getInfo<YSXMachineFunctionInfo>();
-  if (RVFI->useQCIInterrupt(*MF)) {
-    // Don't emit anything here because restoration is handled by
-    // QC.C.MILEAVERET which we already inserted to return.
-    assert(MI->getOpcode() == YSX::QC_C_MILEAVERET &&
-           "Unexpected QCI Interrupt Return Instruction");
-  }
+  const char *RestoreLibCall = getRestoreLibCallName(*MF, CSI);
+  if (RestoreLibCall) {
+    // Add restore libcall via tail call.
+    MachineBasicBlock::iterator NewMI =
+        BuildMI(MBB, MI, DL, TII.get(YSX::PseudoTAIL))
+            .addExternalSymbol(RestoreLibCall, YSXII::MO_CALL)
+            .setMIFlag(MachineInstr::FrameDestroy);
 
-  if (RVFI->isPushable(*MF)) {
-    unsigned PushedRegNum = RVFI->getRVPushRegs();
-    if (PushedRegNum > 0) {
-      unsigned Opcode = getPopOpcode(RVFI->getPushPopKind(*MF));
-      unsigned RegEnc = YSXZC::encodeRegListNumRegs(PushedRegNum);
-      MachineInstrBuilder PopBuilder =
-          BuildMI(MBB, MI, DL, TII.get(Opcode))
-              .setMIFlag(MachineInstr::FrameDestroy);
-      // Use encoded number to represent registers to restore.
-      PopBuilder.addImm(RegEnc);
-      PopBuilder.addImm(0);
-
-      for (unsigned i = 0; i < RVFI->getRVPushRegs(); i++)
-        PopBuilder.addDef(FixedCSRFIMap[i], RegState::ImplicitDefine);
-    }
-  } else {
-    const char *RestoreLibCall = getRestoreLibCallName(*MF, CSI);
-    if (RestoreLibCall) {
-      // Add restore libcall via tail call.
-      MachineBasicBlock::iterator NewMI =
-          BuildMI(MBB, MI, DL, TII.get(YSX::PseudoTAIL))
-              .addExternalSymbol(RestoreLibCall, YSXII::MO_CALL)
-              .setMIFlag(MachineInstr::FrameDestroy);
-
-      // Remove trailing returns, since the terminator is now a tail call to the
-      // restore function.
-      if (MI != MBB.end() && MI->getOpcode() == YSX::PseudoRET) {
-        NewMI->copyImplicitOps(*MF, *MI);
-        MI->eraseFromParent();
-      }
+    // Remove trailing returns, since the terminator is now a tail call to the
+    // restore function.
+    if (MI != MBB.end() && MI->getOpcode() == YSX::PseudoRET) {
+      NewMI->copyImplicitOps(*MF, *MI);
+      MI->eraseFromParent();
     }
   }
   return true;
@@ -1622,11 +1287,6 @@ bool YSXFrameLowering::canUseAsEpilogue(const MachineBasicBlock &MBB) const {
   const MachineFunction *MF = MBB.getParent();
   MachineBasicBlock *TmpMBB = const_cast<MachineBasicBlock *>(&MBB);
   const auto *RVFI = MF->getInfo<YSXMachineFunctionInfo>();
-
-  // We do not want QC.C.MILEAVERET to be subject to shrink-wrapping - it must
-  // come in the final block of its function as it both pops and returns.
-  if (RVFI->useQCIInterrupt(*MF))
-    return MBB.succ_empty();
 
   if (!RVFI->useSaveRestoreLibCalls(*MF))
     return true;
