@@ -130,6 +130,51 @@ static int PrintSupportedCPUs(std::string TargetStr) {
   return 0;
 }
 
+static void PrintExtension(StringRef Name, StringRef Version,
+                           StringRef Description) {
+  llvm::outs().indent(4);
+  unsigned VersionWidth = Description.empty() ? 0 : 10;
+  llvm::outs() << llvm::left_justify(Name, 21)
+               << llvm::left_justify(Version, VersionWidth) << Description
+               << "\n";
+}
+
+static void PrintYSXExtension(StringRef Name, StringRef Version,
+                              const llvm::StringMap<llvm::StringRef> &DescMap) {
+  PrintExtension(Name, Version, DescMap.lookup(Name));
+}
+
+static void PrintYSXSupportedExtensions(
+    const llvm::StringMap<llvm::StringRef> &DescMap) {
+  llvm::outs() << "All available -march extensions for YuShuXin\n\n";
+  PrintExtension("Name", "Version", (DescMap.empty() ? "" : "Description"));
+  PrintYSXExtension("i", "2.1", DescMap);
+  PrintYSXExtension("m", "2.0", DescMap);
+  PrintYSXExtension("a", "2.1", DescMap);
+  PrintYSXExtension("zmmul", "1.0", DescMap);
+  PrintYSXExtension("zaamo", "1.0", DescMap);
+  PrintYSXExtension("zalrsc", "1.0", DescMap);
+}
+
+static void PrintYSXEnabledExtensions(
+    const std::set<llvm::StringRef> &EnabledFeatureNames,
+    const llvm::StringMap<llvm::StringRef> &DescMap) {
+  llvm::outs() << "Extensions enabled for the given YuShuXin target\n\n";
+  PrintExtension("Name", "Version", (DescMap.empty() ? "" : "Description"));
+  if (EnabledFeatureNames.count("i"))
+    PrintYSXExtension("i", "2.1", DescMap);
+  if (EnabledFeatureNames.count("m"))
+    PrintYSXExtension("m", "2.0", DescMap);
+  if (EnabledFeatureNames.count("a"))
+    PrintYSXExtension("a", "2.1", DescMap);
+  if (EnabledFeatureNames.count("zmmul"))
+    PrintYSXExtension("zmmul", "1.0", DescMap);
+  if (EnabledFeatureNames.count("zaamo"))
+    PrintYSXExtension("zaamo", "1.0", DescMap);
+  if (EnabledFeatureNames.count("zalrsc"))
+    PrintYSXExtension("zalrsc", "1.0", DescMap);
+}
+
 static int PrintSupportedExtensions(std::string TargetStr) {
   llvm::Triple Triple(TargetStr);
   std::string Error;
@@ -152,7 +197,9 @@ static int PrintSupportedExtensions(std::string TargetStr) {
   for (const llvm::SubtargetFeatureKV &feature : Features)
     DescMap.insert({feature.Key, feature.Desc});
 
-  if (MachineTriple.isRISCV())
+  if (MachineTriple.isYSX64())
+    PrintYSXSupportedExtensions(DescMap);
+  else if (MachineTriple.isRISCV())
     llvm::RISCVISAInfo::printSupportedExtensions(DescMap);
   else if (MachineTriple.isAArch64())
     llvm::AArch64::PrintSupportedExtensions();
@@ -200,7 +247,12 @@ static int PrintEnabledExtensions(const TargetOptions& TargetOpts) {
 
   if (MachineTriple.isAArch64())
     llvm::AArch64::printEnabledExtensions(EnabledFeatureNames);
-  else if (MachineTriple.isRISCV()) {
+  else if (MachineTriple.isYSX64()) {
+    llvm::StringMap<llvm::StringRef> DescMap;
+    for (const llvm::SubtargetFeatureKV &feature : Features)
+      DescMap.insert({feature.Key, feature.Desc});
+    PrintYSXEnabledExtensions(EnabledFeatureNames, DescMap);
+  } else if (MachineTriple.isRISCV()) {
     llvm::StringMap<llvm::StringRef> DescMap;
     for (const llvm::SubtargetFeatureKV &feature : Features)
       DescMap.insert({feature.Key, feature.Desc});

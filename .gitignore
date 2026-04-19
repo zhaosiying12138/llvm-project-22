@@ -59,6 +59,8 @@ autoconf/autom4te.cache
 .gemini/
 AGENTS.md
 .codex/
+.humanize/.pending-session-id
+.humanize/rlcr/
 # Cursor specific files
 .cursor
 .cursorignore

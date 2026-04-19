@@ -674,11 +674,24 @@ void tools::gnutools::Assembler::ConstructJob(Compilation &C,
   case llvm::Triple::riscv32:
   case llvm::Triple::riscv64:
   case llvm::Triple::ysx64: {
-    StringRef ABIName = riscv::getRISCVABI(Args, getToolChain().getTriple());
+    const llvm::Triple &Triple = getToolChain().getTriple();
+    StringRef ABIName = riscv::getRISCVABI(Args, Triple);
+    std::string MArchName = riscv::getRISCVArch(Args, Triple);
+    if (Triple.isYSX64()) {
+      if (MArchName != "rv64ima") {
+        D.Diag(diag::err_drv_invalid_riscv_arch_name)
+            << MArchName << "YuShuXin only supports -march=rv64ima";
+        return;
+      }
+      if (const Arg *A = Args.getLastArg(options::OPT_mabi_EQ);
+          A && StringRef(A->getValue()) != "lp64") {
+        D.Diag(diag::err_drv_unsupported_option_argument)
+            << A->getSpelling() << A->getValue();
+        return;
+      }
+    }
     CmdArgs.push_back("-mabi");
     CmdArgs.push_back(ABIName.data());
-    std::string MArchName =
-        riscv::getRISCVArch(Args, getToolChain().getTriple());
     CmdArgs.push_back("-march");
     CmdArgs.push_back(Args.MakeArgString(MArchName));
     if (!Args.hasFlag(options::OPT_mrelax, options::OPT_mno_relax, true))
