@@ -108,7 +108,6 @@ static void generateInstSeqImpl(int64_t Val, const MCSubtargetInfo &STI,
   Val = (uint64_t)Val - (uint64_t)Lo12;
 
   int ShiftAmount = 0;
-  bool Unsigned = false;
 
   // Val might now be valid for LUI without needing a shift.
   if (!isInt<32>(Val)) {

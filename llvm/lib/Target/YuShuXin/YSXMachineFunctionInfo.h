@@ -50,18 +50,12 @@ private:
   int VarArgsFrameIndex = 0;
   /// Size of the save area used for varargs
   int VarArgsSaveSize = 0;
-  /// FrameIndex used for transferring values between 64-bit FPRs and a pair
-  /// of 32-bit GPRs via the stack.
-  int MoveF64FrameIndex = -1;
   /// FrameIndex of the spill slot for the scratch register in BranchRelaxation.
   int BranchRelaxationScratchFrameIndex = -1;
   /// Size of any opaque stack adjustment due to save/restore libcalls.
   unsigned LibCallStackSize = 0;
   /// Size of stack frame to save callee saved registers
   unsigned CalleeSavedStackSize = 0;
-  /// Is there any vector argument or return?
-  bool IsVectorCall = false;
-
   /// Registers that have been sign extended from i32.
   SmallVector<Register, 8> SExt32Registers;
 
@@ -93,13 +87,6 @@ public:
 
   unsigned getVarArgsSaveSize() const { return VarArgsSaveSize; }
   void setVarArgsSaveSize(int Size) { VarArgsSaveSize = Size; }
-
-  int getMoveF64FrameIndex(MachineFunction &MF) {
-    if (MoveF64FrameIndex == -1)
-      MoveF64FrameIndex =
-          MF.getFrameInfo().CreateStackObject(8, Align(8), false);
-    return MoveF64FrameIndex;
-  }
 
   int getBranchRelaxationScratchFrameIndex() const {
     return BranchRelaxationScratchFrameIndex;
@@ -197,9 +184,6 @@ public:
 
   void addSExt32Register(Register Reg);
   bool isSExt32Register(Register Reg) const;
-
-  bool isVectorCall() const { return IsVectorCall; }
-  void setIsVectorCall() { IsVectorCall = true; }
 
   bool hasDynamicAllocation() const { return HasDynamicAllocation; }
   void setDynamicAllocation() { HasDynamicAllocation = true; }

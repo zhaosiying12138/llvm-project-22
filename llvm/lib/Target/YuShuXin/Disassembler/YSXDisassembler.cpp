@@ -19,7 +19,6 @@
 #include "llvm/MC/MCDisassembler/MCDisassembler.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstrInfo.h"
-#include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Compiler.h"
@@ -90,189 +89,6 @@ static DecodeStatus DecodeGPRRegisterClass(MCInst &Inst, uint32_t RegNo,
   return MCDisassembler::Success;
 }
 
-static DecodeStatus DecodeGPRX1X5RegisterClass(MCInst &Inst, uint32_t RegNo,
-                                               uint64_t Address,
-                                               const MCDisassembler *Decoder) {
-  MCRegister Reg = YSX::X0 + RegNo;
-  if (Reg != YSX::X1 && Reg != YSX::X5)
-    return MCDisassembler::Fail;
-
-  Inst.addOperand(MCOperand::createReg(Reg));
-  return MCDisassembler::Success;
-}
-
-static DecodeStatus DecodeGPRX1RegisterClass(MCInst &Inst,
-                                             const MCDisassembler *Decoder) {
-  Inst.addOperand(MCOperand::createReg(YSX::X1));
-  return MCDisassembler::Success;
-}
-
-static DecodeStatus DecodeSPRegisterClass(MCInst &Inst,
-                                          const MCDisassembler *Decoder) {
-  Inst.addOperand(MCOperand::createReg(YSX::X2));
-  return MCDisassembler::Success;
-}
-
-static DecodeStatus DecodeSPRegisterClass(MCInst &Inst, uint64_t RegNo,
-                                          uint32_t Address,
-                                          const MCDisassembler *Decoder) {
-  assert(RegNo == 2);
-  Inst.addOperand(MCOperand::createReg(YSX::X2));
-  return MCDisassembler::Success;
-}
-
-static DecodeStatus DecodeGPRX5RegisterClass(MCInst &Inst,
-                                             const MCDisassembler *Decoder) {
-  Inst.addOperand(MCOperand::createReg(YSX::X5));
-  return MCDisassembler::Success;
-}
-
-static DecodeStatus DecodeGPRNoX0RegisterClass(MCInst &Inst, uint32_t RegNo,
-                                               uint64_t Address,
-                                               const MCDisassembler *Decoder) {
-  if (RegNo == 0)
-    return MCDisassembler::Fail;
-
-  return DecodeGPRRegisterClass(Inst, RegNo, Address, Decoder);
-}
-
-static DecodeStatus DecodeGPRNoX2RegisterClass(MCInst &Inst, uint64_t RegNo,
-                                               uint32_t Address,
-                                               const MCDisassembler *Decoder) {
-  if (RegNo == 2)
-    return MCDisassembler::Fail;
-
-  return DecodeGPRRegisterClass(Inst, RegNo, Address, Decoder);
-}
-
-static DecodeStatus DecodeGPRNoX31RegisterClass(MCInst &Inst, uint32_t RegNo,
-                                                uint64_t Address,
-                                                const MCDisassembler *Decoder) {
-  if (RegNo == 31) {
-    return MCDisassembler::Fail;
-  }
-
-  return DecodeGPRRegisterClass(Inst, RegNo, Address, Decoder);
-}
-
-static DecodeStatus DecodeGPRCRegisterClass(MCInst &Inst, uint32_t RegNo,
-                                            uint64_t Address,
-                                            const MCDisassembler *Decoder) {
-  if (RegNo >= 8)
-    return MCDisassembler::Fail;
-
-  MCRegister Reg = YSX::X8 + RegNo;
-  Inst.addOperand(MCOperand::createReg(Reg));
-  return MCDisassembler::Success;
-}
-
-static DecodeStatus DecodeGPRPairRegisterClass(MCInst &Inst, uint32_t RegNo,
-                                               uint64_t Address,
-                                               const MCDisassembler *Decoder) {
-  if (RegNo >= 32 || RegNo % 2)
-    return MCDisassembler::Fail;
-
-  const YSXDisassembler *Dis =
-      static_cast<const YSXDisassembler *>(Decoder);
-  const MCRegisterInfo *RI = Dis->getContext().getRegisterInfo();
-  MCRegister Reg = RI->getMatchingSuperReg(
-      YSX::X0 + RegNo, YSX::sub_gpr_even,
-      &YSXMCRegisterClasses[YSX::GPRPairRegClassID]);
-  Inst.addOperand(MCOperand::createReg(Reg));
-  return MCDisassembler::Success;
-}
-
-static DecodeStatus
-DecodeGPRPairNoX0RegisterClass(MCInst &Inst, uint32_t RegNo, uint64_t Address,
-                               const MCDisassembler *Decoder) {
-  if (RegNo == 0)
-    return MCDisassembler::Fail;
-
-  return DecodeGPRPairRegisterClass(Inst, RegNo, Address, Decoder);
-}
-
-static DecodeStatus DecodeGPRPairCRegisterClass(MCInst &Inst, uint32_t RegNo,
-                                                uint64_t Address,
-                                                const MCDisassembler *Decoder) {
-  if (RegNo >= 8 || RegNo % 2)
-    return MCDisassembler::Fail;
-
-  const YSXDisassembler *Dis =
-      static_cast<const YSXDisassembler *>(Decoder);
-  const MCRegisterInfo *RI = Dis->getContext().getRegisterInfo();
-  MCRegister Reg = RI->getMatchingSuperReg(
-      YSX::X8 + RegNo, YSX::sub_gpr_even,
-      &YSXMCRegisterClasses[YSX::GPRPairCRegClassID]);
-  Inst.addOperand(MCOperand::createReg(Reg));
-  return MCDisassembler::Success;
-}
-
-static DecodeStatus DecodeSR07RegisterClass(MCInst &Inst, uint32_t RegNo,
-                                            uint64_t Address,
-                                            const void *Decoder) {
-  if (RegNo >= 8)
-    return MCDisassembler::Fail;
-
-  MCRegister Reg = (RegNo < 2) ? (RegNo + YSX::X8) : (RegNo - 2 + YSX::X18);
-  Inst.addOperand(MCOperand::createReg(Reg));
-  return MCDisassembler::Success;
-}
-
-static DecodeStatus DecodeTRRegisterClass(MCInst &Inst, uint32_t RegNo,
-                                          uint64_t Address,
-                                          const MCDisassembler *Decoder) {
-  if (RegNo > 15)
-    return MCDisassembler::Fail;
-
-  MCRegister Reg = YSX::T0 + RegNo;
-  Inst.addOperand(MCOperand::createReg(Reg));
-  return MCDisassembler::Success;
-}
-
-static DecodeStatus DecodeTRM2RegisterClass(MCInst &Inst, uint32_t RegNo,
-                                            uint64_t Address,
-                                            const MCDisassembler *Decoder) {
-  if (RegNo > 15 || RegNo % 2)
-    return MCDisassembler::Fail;
-
-  MCRegister Reg = YSX::T0 + RegNo;
-  Inst.addOperand(MCOperand::createReg(Reg));
-  return MCDisassembler::Success;
-}
-
-static DecodeStatus DecodeTRM4RegisterClass(MCInst &Inst, uint32_t RegNo,
-                                            uint64_t Address,
-                                            const MCDisassembler *Decoder) {
-  if (RegNo > 15 || RegNo % 4)
-    return MCDisassembler::Fail;
-
-  MCRegister Reg = YSX::T0 + RegNo;
-  Inst.addOperand(MCOperand::createReg(Reg));
-  return MCDisassembler::Success;
-}
-
-static DecodeStatus decodeVMaskReg(MCInst &Inst, uint32_t RegNo,
-                                   uint64_t Address,
-                                   const MCDisassembler *Decoder) {
-  if (RegNo != 1)
-    return MCDisassembler::Fail;
-
-  Inst.addOperand(MCOperand::createReg(YSX::NoRegister));
-  return MCDisassembler::Success;
-}
-
-static DecodeStatus decodeImmThreeOperand(MCInst &Inst,
-                                          const MCDisassembler *Decoder) {
-  Inst.addOperand(MCOperand::createImm(3));
-  return MCDisassembler::Success;
-}
-
-static DecodeStatus decodeImmFourOperand(MCInst &Inst,
-                                         const MCDisassembler *Decoder) {
-  Inst.addOperand(MCOperand::createImm(4));
-  return MCDisassembler::Success;
-}
-
 template <unsigned N>
 static DecodeStatus decodeUImmOperand(MCInst &Inst, uint32_t Imm,
                                       int64_t Address,
@@ -308,15 +124,6 @@ static DecodeStatus decodeUImmPlus1OperandGE(MCInst &Inst, uint32_t Imm,
   return MCDisassembler::Success;
 }
 
-static DecodeStatus decodeUImmSlistOperand(MCInst &Inst, uint32_t Imm,
-                                           int64_t Address,
-                                           const MCDisassembler *Decoder) {
-  assert(isUInt<3>(Imm) && "Invalid Slist immediate");
-  const uint8_t Slist[] = {0, 1, 2, 4, 8, 16, 15, 31};
-  Inst.addOperand(MCOperand::createImm(Slist[Imm]));
-  return MCDisassembler::Success;
-}
-
 static DecodeStatus decodeUImmLog2XLenOperand(MCInst &Inst, uint32_t Imm,
                                               int64_t Address,
                                               const MCDisassembler *Decoder) {
@@ -339,28 +146,12 @@ static DecodeStatus decodeUImmNonZeroOperand(MCInst &Inst, uint32_t Imm,
   return decodeUImmOperand<N>(Inst, Imm, Address, Decoder);
 }
 
-static DecodeStatus
-decodeUImmLog2XLenNonZeroOperand(MCInst &Inst, uint32_t Imm, int64_t Address,
-                                 const MCDisassembler *Decoder) {
-  if (Imm == 0)
-    return MCDisassembler::Fail;
-  return decodeUImmLog2XLenOperand(Inst, Imm, Address, Decoder);
-}
-
 template <unsigned N>
 static DecodeStatus decodeUImmPlus1Operand(MCInst &Inst, uint32_t Imm,
                                            int64_t Address,
                                            const MCDisassembler *Decoder) {
   assert(isUInt<N>(Imm) && "Invalid immediate");
   Inst.addOperand(MCOperand::createImm(Imm + 1));
-  return MCDisassembler::Success;
-}
-
-static DecodeStatus decodeImmZibiOperand(MCInst &Inst, uint32_t Imm,
-                                         int64_t Address,
-                                         const MCDisassembler *Decoder) {
-  assert(isUInt<5>(Imm) && "Invalid immediate");
-  Inst.addOperand(MCOperand::createImm(Imm ? Imm : -1LL));
   return MCDisassembler::Success;
 }
 
@@ -395,55 +186,6 @@ static DecodeStatus decodeSImmOperandAndLslN(MCInst &Inst, uint32_t Imm,
   return MCDisassembler::Success;
 }
 
-static DecodeStatus decodeCLUIImmOperand(MCInst &Inst, uint32_t Imm,
-                                         int64_t Address,
-                                         const MCDisassembler *Decoder) {
-  assert(isUInt<6>(Imm) && "Invalid immediate");
-  if (Imm == 0)
-    return MCDisassembler::Fail;
-  Imm = SignExtend64<6>(Imm) & 0xfffff;
-  Inst.addOperand(MCOperand::createImm(Imm));
-  return MCDisassembler::Success;
-}
-
-static DecodeStatus decodeFRMArg(MCInst &Inst, uint32_t Imm, int64_t Address,
-                                 const MCDisassembler *Decoder) {
-  assert(isUInt<3>(Imm) && "Invalid immediate");
-  if (!llvm::YSXFPRndMode::isValidRoundingMode(Imm))
-    return MCDisassembler::Fail;
-
-  Inst.addOperand(MCOperand::createImm(Imm));
-  return MCDisassembler::Success;
-}
-
-static DecodeStatus decodeRTZArg(MCInst &Inst, uint32_t Imm, int64_t Address,
-                                 const MCDisassembler *Decoder) {
-  assert(isUInt<3>(Imm) && "Invalid immediate");
-  if (Imm != YSXFPRndMode::RTZ)
-    return MCDisassembler::Fail;
-
-  Inst.addOperand(MCOperand::createImm(Imm));
-  return MCDisassembler::Success;
-}
-
-static DecodeStatus decodeZcmpRlist(MCInst &Inst, uint32_t Imm,
-                                    uint64_t Address,
-                                    const MCDisassembler *Decoder) {
-  bool IsRVE = false;
-  if (Imm < YSXZC::RA || (IsRVE && Imm >= YSXZC::RA_S0_S2))
-    return MCDisassembler::Fail;
-  Inst.addOperand(MCOperand::createImm(Imm));
-  return MCDisassembler::Success;
-}
-
-static DecodeStatus decodeXqccmpRlistS0(MCInst &Inst, uint32_t Imm,
-                                        uint64_t Address,
-                                        const MCDisassembler *Decoder) {
-  if (Imm < YSXZC::RA_S0)
-    return MCDisassembler::Fail;
-  return decodeZcmpRlist(Inst, Imm, Address, Decoder);
-}
-
 #include "YSXGenDisassemblerTables.inc"
 
 namespace {
@@ -461,10 +203,7 @@ static constexpr DecoderListEntry DecoderList32[]{
 
 namespace {
 // Define bitwidths for various types used to instantiate the decoder.
-template <> constexpr uint32_t InsnBitWidth<uint16_t> = 16;
 template <> constexpr uint32_t InsnBitWidth<uint32_t> = 32;
-// Use uint64_t to represent 48 bit instructions.
-template <> constexpr uint32_t InsnBitWidth<uint64_t> = 48;
 } // namespace
 
 DecodeStatus YSXDisassembler::getInstruction32(MCInst &MI, uint64_t &Size,

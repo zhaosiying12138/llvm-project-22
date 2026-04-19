@@ -74,9 +74,6 @@ void initializeYSXInsertReadWriteCSRPass(PassRegistry &);
 
 void initializeYSXDAGToDAGISelLegacyPass(PassRegistry &);
 
-ModulePass *createYSXPromoteConstantPass();
-void initializeYSXPromoteConstantPass(PassRegistry &);
-
 void initializeYSXAsmPrinterPass(PassRegistry &);
 } // namespace llvm
 

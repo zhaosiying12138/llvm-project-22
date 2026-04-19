@@ -169,10 +169,6 @@ bool YSXSubtarget::useConstantPoolForLargeInts() const {
   return !YSXDisableUsingConstantPoolForLargeInts;
 }
 
-bool YSXSubtarget::enablePExtSIMDCodeGen() const {
-  return false;
-}
-
 unsigned YSXSubtarget::getMaxBuildIntsCost() const {
   // Loading integer from constant pool needs two instructions (the reason why
   // the minimum cost is 2): an address calculation instruction and a load
@@ -182,22 +178,6 @@ unsigned YSXSubtarget::getMaxBuildIntsCost() const {
   return YSXMaxBuildIntsCost == 0
              ? getSchedModel().LoadLatency + 1
              : std::max<unsigned>(2, YSXMaxBuildIntsCost);
-}
-
-unsigned YSXSubtarget::getMaxYSXVecVectorSizeInBits() const {
-  return 0;
-}
-
-unsigned YSXSubtarget::getMinYSXVecVectorSizeInBits() const {
-  return 0;
-}
-
-unsigned YSXSubtarget::getMaxLMULForFixedLengthVectors() const {
-  return 1;
-}
-
-bool YSXSubtarget::useYSXVecForFixedLengthVectors() const {
-  return false;
 }
 
 bool YSXSubtarget::enableSubRegLiveness() const { return true; }

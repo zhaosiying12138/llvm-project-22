@@ -1305,10 +1305,6 @@ def PROBED_STACKALLOC : Pseudo<(outs),
                                (ins GPR:$target),
                                []>,
                                Sched<[]>;
-def PROBED_STACKALLOC_YSXVec : Pseudo<(outs),
-                                   (ins GPR:$target),
-                                   []>,
-                                   Sched<[]>;
 let usesCustomInserter = 1 in
 def PROBED_STACKALLOC_DYN : Pseudo<(outs),
                                (ins GPR:$target),

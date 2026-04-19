@@ -101,10 +101,6 @@ public:
                          SmallVectorImpl<MCFixup> &Fixups,
                          const MCSubtargetInfo &STI) const;
 
-  unsigned getVMaskReg(const MCInst &MI, unsigned OpNo,
-                       SmallVectorImpl<MCFixup> &Fixups,
-                       const MCSubtargetInfo &STI) const;
-
   unsigned getRlistOpValue(const MCInst &MI, unsigned OpNo,
                            SmallVectorImpl<MCFixup> &Fixups,
                            const MCSubtargetInfo &STI) const;
@@ -604,20 +600,6 @@ uint64_t YSXMCCodeEmitter::getImmOpValue(const MCInst &MI, unsigned OpNo,
   ++MCNumFixups;
 
   return 0;
-}
-
-unsigned YSXMCCodeEmitter::getVMaskReg(const MCInst &MI, unsigned OpNo,
-                                         SmallVectorImpl<MCFixup> &Fixups,
-                                         const MCSubtargetInfo &STI) const {
-  MCOperand MO = MI.getOperand(OpNo);
-  assert(MO.isReg() && "Expected a register.");
-
-  switch (MO.getReg().id()) {
-  default:
-    llvm_unreachable("Invalid mask register.");
-  case YSX::NoRegister:
-    return 1;
-  }
 }
 
 unsigned YSXMCCodeEmitter::getRlistOpValue(const MCInst &MI, unsigned OpNo,

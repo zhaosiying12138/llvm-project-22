@@ -24,7 +24,6 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/Analysis/ValueTracking.h"
-#include "llvm/Analysis/VectorUtils.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
@@ -40,6 +39,7 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/IntrinsicsRISCV.h"
+#include "llvm/IR/Module.h"
 #include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/MC/MCInstBuilder.h"
 #include "llvm/Support/CommandLine.h"
@@ -56,18 +56,6 @@ using namespace llvm;
 #define DEBUG_TYPE "ysx-lower"
 
 STATISTIC(NumTailCalls, "Number of tail calls");
-
-static cl::opt<unsigned> ExtensionMaxWebSize(
-    DEBUG_TYPE "-ext-max-web-size", cl::Hidden,
-    cl::desc("Give the maximum size (in number of nodes) of the web of "
-             "instructions that we will consider for VW expansion"),
-    cl::init(18));
-
-static cl::opt<bool>
-    AllowSplatInVW_W(DEBUG_TYPE "-form-vw-w-with-splat", cl::Hidden,
-                     cl::desc("Allow the formation of VW_W operations (e.g., "
-                              "VWADD_W) with splat constants"),
-                     cl::init(false));
 
 static cl::opt<bool>
     ReassocShlAddiAdd("ysx-reassoc-shl-addi-add", cl::Hidden,
@@ -496,17 +484,6 @@ bool YSXTargetLowering::isTruncateFree(EVT SrcVT, EVT DstVT) const {
 }
 
 bool YSXTargetLowering::isTruncateFree(SDValue Val, EVT VT2) const {
-  EVT SrcVT = Val.getValueType();
-  // free truncate from vnsrl and vnsra
-  if (Subtarget.hasVInstructions() &&
-      (Val.getOpcode() == ISD::SRL || Val.getOpcode() == ISD::SRA) &&
-      SrcVT.isVector() && VT2.isVector()) {
-    unsigned SrcBits = SrcVT.getVectorElementType().getSizeInBits();
-    unsigned DestBits = VT2.getVectorElementType().getSizeInBits();
-    if (SrcBits == DestBits * 2) {
-      return true;
-    }
-  }
   return TargetLowering::isTruncateFree(Val, VT2);
 }
 
@@ -568,12 +545,7 @@ bool YSXTargetLowering::hasAndNotCompare(SDValue Y) const {
 }
 
 bool YSXTargetLowering::hasAndNot(SDValue Y) const {
-  EVT VT = Y.getValueType();
-
-  if (!VT.isVector())
-    return hasAndNotCompare(Y);
-
-  return Subtarget.hasStdExtZvkb();
+  return hasAndNotCompare(Y);
 }
 
 bool YSXTargetLowering::hasBitTest(SDValue X, SDValue Y) const {
@@ -2241,111 +2213,6 @@ YSXTargetLowering::getTargetConstantFromLoad(LoadSDNode *Ld) const {
   return CNodeLo->getConstVal();
 }
 
-
-static MachineBasicBlock *
-EmitLoweredCascadedSelect(MachineInstr &First, MachineInstr &Second,
-                          MachineBasicBlock *ThisMBB,
-                          const YSXSubtarget &Subtarget) {
-  // Select_FPRX_ (rs1, rs2, imm, rs4, (Select_FPRX_ rs1, rs2, imm, rs4, rs5)
-  // Without this, custom-inserter would have generated:
-  //
-  //   A
-  //   | \
-  //   |  B
-  //   | /
-  //   C
-  //   | \
-  //   |  D
-  //   | /
-  //   E
-  //
-  // A: X = ...; Y = ...
-  // B: empty
-  // C: Z = PHI [X, A], [Y, B]
-  // D: empty
-  // E: PHI [X, C], [Z, D]
-  //
-  // If we lower both Select_FPRX_ in a single step, we can instead generate:
-  //
-  //   A
-  //   | \
-  //   |  C
-  //   | /|
-  //   |/ |
-  //   |  |
-  //   |  D
-  //   | /
-  //   E
-  //
-  // A: X = ...; Y = ...
-  // D: empty
-  // E: PHI [X, A], [X, C], [Y, D]
-
-  const YSXInstrInfo &TII = *Subtarget.getInstrInfo();
-  const DebugLoc &DL = First.getDebugLoc();
-  const BasicBlock *LLVM_BB = ThisMBB->getBasicBlock();
-  MachineFunction *F = ThisMBB->getParent();
-  MachineBasicBlock *FirstMBB = F->CreateMachineBasicBlock(LLVM_BB);
-  MachineBasicBlock *SecondMBB = F->CreateMachineBasicBlock(LLVM_BB);
-  MachineBasicBlock *SinkMBB = F->CreateMachineBasicBlock(LLVM_BB);
-  MachineFunction::iterator It = ++ThisMBB->getIterator();
-  F->insert(It, FirstMBB);
-  F->insert(It, SecondMBB);
-  F->insert(It, SinkMBB);
-
-  // Transfer the remainder of ThisMBB and its successor edges to SinkMBB.
-  SinkMBB->splice(SinkMBB->begin(), ThisMBB,
-                  std::next(MachineBasicBlock::iterator(First)),
-                  ThisMBB->end());
-  SinkMBB->transferSuccessorsAndUpdatePHIs(ThisMBB);
-
-  // Fallthrough block for ThisMBB.
-  ThisMBB->addSuccessor(FirstMBB);
-  // Fallthrough block for FirstMBB.
-  FirstMBB->addSuccessor(SecondMBB);
-  ThisMBB->addSuccessor(SinkMBB);
-  FirstMBB->addSuccessor(SinkMBB);
-  // This is fallthrough.
-  SecondMBB->addSuccessor(SinkMBB);
-
-  auto FirstCC = static_cast<YSXCC::CondCode>(First.getOperand(3).getImm());
-  Register FLHS = First.getOperand(1).getReg();
-  Register FRHS = First.getOperand(2).getReg();
-  // Insert appropriate branch.
-  BuildMI(FirstMBB, DL, TII.get(YSXCC::getBrCond(FirstCC, First.getOpcode())))
-      .addReg(FLHS)
-      .addReg(FRHS)
-      .addMBB(SinkMBB);
-
-  Register SLHS = Second.getOperand(1).getReg();
-  Register SRHS = Second.getOperand(2).getReg();
-  Register Op1Reg4 = First.getOperand(4).getReg();
-  Register Op1Reg5 = First.getOperand(5).getReg();
-
-  auto SecondCC = static_cast<YSXCC::CondCode>(Second.getOperand(3).getImm());
-  // Insert appropriate branch.
-  BuildMI(ThisMBB, DL,
-          TII.get(YSXCC::getBrCond(SecondCC, Second.getOpcode())))
-      .addReg(SLHS)
-      .addReg(SRHS)
-      .addMBB(SinkMBB);
-
-  Register DestReg = Second.getOperand(0).getReg();
-  Register Op2Reg4 = Second.getOperand(4).getReg();
-  BuildMI(*SinkMBB, SinkMBB->begin(), DL, TII.get(YSX::PHI), DestReg)
-      .addReg(Op2Reg4)
-      .addMBB(ThisMBB)
-      .addReg(Op1Reg4)
-      .addMBB(FirstMBB)
-      .addReg(Op1Reg5)
-      .addMBB(SecondMBB);
-
-  // Now remove the Select_FPRX_s.
-  First.eraseFromParent();
-  Second.eraseFromParent();
-  return SinkMBB;
-}
-
 static MachineBasicBlock *emitSelectPseudo(MachineInstr &MI,
                                            MachineBasicBlock *BB,
                                            const YSXSubtarget &Subtarget) {
@@ -2375,18 +2242,6 @@ static MachineBasicBlock *emitSelectPseudo(MachineInstr &MI,
   // previous selects in the sequence.
   // These conditions could be further relaxed. See the X86 target for a
   // related approach and more information.
-  //
-  // Select_FPRX_ (rs1, rs2, imm, rs4, (Select_FPRX_ rs1, rs2, imm, rs4, rs5))
-  // is checked here and handled by a separate function -
-  // EmitLoweredCascadedSelect.
-
-  auto Next = next_nodbg(MI.getIterator(), BB->instr_end());
-  if (MI.getOpcode() != YSX::Select_GPR_Using_CC_GPR &&
-      MI.getOperand(1).isReg() && MI.getOperand(2).isReg() &&
-      Next != BB->end() && Next->getOpcode() == MI.getOpcode() &&
-      Next->getOperand(5).getReg() == MI.getOperand(0).getReg() &&
-      Next->getOperand(5).isKill())
-    return EmitLoweredCascadedSelect(MI, *Next, BB, Subtarget);
 
   Register LHS = MI.getOperand(1).getReg();
   Register RHS;
@@ -2655,12 +2510,8 @@ static SDValue unpackFromMemLoc(SelectionDAG &DAG, SDValue Chain,
   EVT LocVT = VA.getLocVT();
   EVT ValVT = VA.getValVT();
   EVT PtrVT = MVT::getIntegerVT(DAG.getDataLayout().getPointerSizeInBits(0));
-  if (VA.getLocInfo() == CCValAssign::Indirect) {
-    // When the value is a scalable vector, we save the pointer which points to
-    // the scalable vector value in the stack. The ValVT will be the pointer
-    // type, instead of the scalable vector type.
+  if (VA.getLocInfo() == CCValAssign::Indirect)
     ValVT = LocVT;
-  }
   int FI = MFI.CreateFixedObject(ValVT.getStoreSize(), VA.getLocMemOffset(),
                                  /*IsImmutable=*/true);
   SDValue FIN = DAG.getFrameIndex(FI, PtrVT);
@@ -3347,15 +3198,11 @@ YSXTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
                                                   MVT VT) const {
   if (Constraint == "r" && !VT.isVector())
     return std::make_pair(0U, &YSX::GPRNoX0RegClass);
-  if (Constraint == "R" &&
-      (((VT == MVT::i64 || VT == MVT::f64) && !Subtarget.is64Bit()) ||
-       (VT == MVT::i128 && Subtarget.is64Bit())))
+  if (Constraint == "R" && VT == MVT::i128 && Subtarget.is64Bit())
     return std::make_pair(0U, &YSX::GPRPairNoX0RegClass);
   if (Constraint == "cr" && !VT.isVector())
     return std::make_pair(0U, &YSX::GPRCRegClass);
-  if (Constraint == "cR" &&
-      (((VT == MVT::i64 || VT == MVT::f64) && !Subtarget.is64Bit()) ||
-       (VT == MVT::i128 && Subtarget.is64Bit())))
+  if (Constraint == "cR" && VT == MVT::i128 && Subtarget.is64Bit())
     return std::make_pair(0U, &YSX::GPRPairCRegClass);
   if (Constraint == "vr" || Constraint == "vd" || Constraint == "vm" ||
       Constraint == "f" || Constraint == "cf")
@@ -3860,10 +3707,9 @@ bool YSXTargetLowering::decomposeMulByConstant(LLVMContext &Context, EVT VT,
 
 bool YSXTargetLowering::isMulAddWithConstProfitable(SDValue AddNode,
                                                       SDValue ConstNode) const {
-  // Let the DAGCombiner decide for vectors.
   EVT VT = AddNode.getValueType();
   if (VT.isVector())
-    return true;
+    return false;
 
   // Let the DAGCombiner decide for larger types.
   if (VT.getScalarSizeInBits() > Subtarget.getXLen())
@@ -3916,7 +3762,6 @@ SDValue YSXTargetLowering::joinRegisterPartsIntoValue(
 bool YSXTargetLowering::isIntDivCheap(EVT VT, AttributeList Attr) const {
   // When aggressively optimizing for code size, we prefer to use a div
   // instruction, as it is usually smaller than the alternative sequence.
-  // TODO: Add vector division?
   bool OptSize = Attr.hasFnAttr(Attribute::MinSize);
   return OptSize && !VT.isVector() &&
          VT.getSizeInBits() <= getMaxDivRemBitWidthSupported();
@@ -4259,12 +4104,6 @@ bool YSXTargetLowering::shouldFoldMaskToVariableShiftPair(SDValue Y) const {
 bool YSXTargetLowering::isReassocProfitable(SelectionDAG &DAG, SDValue N0,
                                               SDValue N1) const {
   if (!N0.hasOneUse())
-    return false;
-
-  // Avoid reassociating expressions that can be lowered to vector
-  // multiply accumulate (i.e. add (mul x, y), z)
-  if (N0.getOpcode() == ISD::ADD && N1.getOpcode() == ISD::MUL &&
-      (N0.getValueType().isVector() && Subtarget.hasVInstructions()))
     return false;
 
   return true;

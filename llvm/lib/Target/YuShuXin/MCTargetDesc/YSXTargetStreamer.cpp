@@ -18,7 +18,6 @@
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCSectionELF.h"
 #include "llvm/MC/MCStreamer.h"
-#include "llvm/MC/MCSymbol.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -52,7 +51,6 @@ void YSXTargetStreamer::emitDirectiveOptionRelax() {}
 void YSXTargetStreamer::emitDirectiveOptionNoRelax() {}
 void YSXTargetStreamer::emitDirectiveOptionRVC() {}
 void YSXTargetStreamer::emitDirectiveOptionNoRVC() {}
-void YSXTargetStreamer::emitDirectiveVariantCC(MCSymbol &Symbol) {}
 void YSXTargetStreamer::emitAttribute(unsigned Attribute, unsigned Value) {}
 void YSXTargetStreamer::finishAttributeSection() {}
 void YSXTargetStreamer::emitTextAttribute(unsigned Attribute,
@@ -168,10 +166,6 @@ void YSXTargetAsmStreamer::emitDirectiveOptionArch(
     OS << Arg.Value;
   }
   OS << "\n";
-}
-
-void YSXTargetAsmStreamer::emitDirectiveVariantCC(MCSymbol &Symbol) {
-  OS << "\t.variant_cc\t" << Symbol.getName() << "\n";
 }
 
 void YSXTargetAsmStreamer::emitAttribute(unsigned Attribute, unsigned Value) {

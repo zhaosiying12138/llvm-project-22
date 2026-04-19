@@ -343,13 +343,6 @@ private:
 
 namespace YSX {
 
-// Returns true if the given MI is an YSXVec instruction opcode for which we may
-// expect to see a FrameIndex operand.
-bool isYSXVecSpill(const MachineInstr &MI);
-
-// Special immediate for AVL operand of V pseudo instructions to indicate VLMax.
-static constexpr int64_t VLMaxSentinel = -1LL;
-
 // Mask assignments for floating-point
 static constexpr unsigned FPMASK_Negative_Infinity = 0x001;
 static constexpr unsigned FPMASK_Negative_Normal = 0x002;
@@ -362,35 +355,6 @@ static constexpr unsigned FPMASK_Positive_Infinity = 0x080;
 static constexpr unsigned FPMASK_Signaling_NaN = 0x100;
 static constexpr unsigned FPMASK_Quiet_NaN = 0x200;
 } // namespace YSX
-
-namespace YSXVPseudosTable {
-
-struct PseudoInfo {
-  uint16_t Pseudo;
-  uint16_t BaseInstr;
-};
-
-#define GET_YSXVPseudosTable_DECL
-#include "YSXGenSearchableTables.inc"
-
-inline const PseudoInfo *getPseudoInfo(unsigned) { return nullptr; }
-
-} // end namespace YSXVPseudosTable
-
-namespace YSX {
-
-struct YSXMaskedPseudoInfo {
-  uint16_t MaskedPseudo;
-  uint16_t UnmaskedPseudo;
-  uint8_t MaskOpIdx;
-};
-#define GET_YSXMaskedPseudosTable_DECL
-#include "YSXGenSearchableTables.inc"
-
-inline const YSXMaskedPseudoInfo *getMaskedPseudoInfo(unsigned) {
-  return nullptr;
-}
-} // end namespace YSX
 
 } // end namespace llvm
 #endif

@@ -38,20 +38,8 @@ public:
                               const MCSubtargetInfo &STI, raw_ostream &O);
   void printFenceArg(const MCInst *MI, unsigned OpNo,
                      const MCSubtargetInfo &STI, raw_ostream &O);
-  void printFRMArg(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
-                   raw_ostream &O);
-  void printFRMArgLegacy(const MCInst *MI, unsigned OpNo,
-                         const MCSubtargetInfo &STI, raw_ostream &O);
-  void printFPImmOperand(const MCInst *MI, unsigned OpNo,
-                         const MCSubtargetInfo &STI, raw_ostream &O);
   void printZeroOffsetMemOp(const MCInst *MI, unsigned OpNo,
                             const MCSubtargetInfo &STI, raw_ostream &O);
-  void printVTypeI(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
-                   raw_ostream &O);
-  void printXRemovedSfmmVType(const MCInst *MI, unsigned OpNo,
-                       const MCSubtargetInfo &STI, raw_ostream &O);
-  void printVMaskReg(const MCInst *MI, unsigned OpNo,
-                     const MCSubtargetInfo &STI, raw_ostream &O);
   void printImm(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
                 raw_ostream &O);
   void printRegList(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,

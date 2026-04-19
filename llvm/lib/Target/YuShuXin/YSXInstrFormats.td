@@ -61,66 +61,6 @@ def InstFormatNDS_BRANCH_10 : InstFormat<27>;
 def InstFormatOther         : InstFormat<31>;
 
 
-class YSXVConstraint<bits<3> val> {
-  bits<3> Value = val;
-}
-def NoConstraint  : YSXVConstraint<0b000>;
-def VS2Constraint : YSXVConstraint<0b001>;
-def VS1Constraint : YSXVConstraint<0b010>;
-def VMConstraint  : YSXVConstraint<0b100>;
-
-// Illegal instructions:
-//
-// * The destination vector register group for a masked vector instruction
-// cannot overlap the source mask register (v0), unless the destination vector
-// register is being written with a mask value (e.g., comparisons) or the
-// scalar result of a reduction.
-//
-// * Widening: The destination EEW is greater than the source EEW, the source
-// EMUL is at least 1. The destination vector register group cannot overlap
-// with the source vector register groups besides the highest-numbered part of
-// the destination register group.
-//
-// * Narrowing: The destination EEW is smaller than the source EEW. The
-// destination vector register group cannot overlap with the source vector
-// register groups besides the lowest-numbered part of the source register
-// group.
-//
-// * vmsbf.m/vmsif.m/vmsof.m: The destination register cannot overlap the
-// source register and, if masked, cannot overlap the mask register ('v0').
-//
-// * viota: The destination register cannot overlap the source register and,
-// if masked, cannot overlap the mask register ('v0').
-//
-// * v[f]slide[1]up: The destination vector register group for vslideup cannot
-// overlap the source vector register group.
-//
-// * vrgather: The destination vector register group cannot overlap with the
-// source vector register groups.
-//
-// * vcompress: The destination vector register group cannot overlap the
-// source vector register group or the source mask register
-def WidenVNoMask : YSXVConstraint<!or(VS2Constraint.Value,
-                                        VS1Constraint.Value)>;
-def WidenV       : YSXVConstraint<!or(VS2Constraint.Value,
-                                        VS1Constraint.Value,
-                                        VMConstraint.Value)>;
-def WidenW       : YSXVConstraint<!or(VS1Constraint.Value,
-                                        VMConstraint.Value)>;
-def WidenCvt     : YSXVConstraint<!or(VS2Constraint.Value,
-                                        VMConstraint.Value)>;
-def Iota         : YSXVConstraint<!or(VS2Constraint.Value,
-                                        VMConstraint.Value)>;
-def SlideUp      : YSXVConstraint<!or(VS2Constraint.Value,
-                                        VMConstraint.Value)>;
-def Vrgather     : YSXVConstraint<!or(VS2Constraint.Value,
-                                        VS1Constraint.Value,
-                                        VMConstraint.Value)>;
-def Vcompress    : YSXVConstraint<!or(VS2Constraint.Value,
-                                        VS1Constraint.Value)>;
-def Sha2Constraint : YSXVConstraint<!or(VS2Constraint.Value,
-                                          VS1Constraint.Value)>;
-
 // The following opcode names match those given in Table 19.1 in the
 // RISC-V User-level ISA specification ("RISC-V base opcode map").
 class YSXOpcode<string name, bits<7> val> {
@@ -177,21 +117,6 @@ def EltDepsVL        : EltDeps<vl=1, mask=0>;
 def EltDepsMask      : EltDeps<vl=0, mask=1>;
 def EltDepsVLMask    : EltDeps<vl=1, mask=1>;
 
-class EEW<bits<2> val> {
-  bits<2> Value = val;
-}
-def EEW1     : EEW<0>;
-def EEWSEWx1 : EEW<1>;
-def EEWSEWx2 : EEW<2>;
-def EEWSEWx4 : EEW<3>;
-
-class AltFmtType<bits<2> val> {
-  bits<2> Value = val;
-}
-def DONT_CARE_ALTFMT : AltFmtType<0>;
-def IS_NOT_ALTFMT    : AltFmtType<1>;
-def IS_ALTFMT        : AltFmtType<2>;
-
 class RVInstCommon<dag outs, dag ins, string opcodestr, string argstr,
                    list<dag> pattern, InstFormat format> : Instruction {
   let Namespace = "YSX";
@@ -205,91 +130,12 @@ class RVInstCommon<dag outs, dag ins, string opcodestr, string argstr,
 
   let TSFlags{4-0} = Format.Value;
 
-  // Defaults
-  YSXVConstraint YSXVecConstraint = NoConstraint;
-  let TSFlags{7-5} = YSXVecConstraint.Value;
-
-  bits<3> VLMul = 0;
-  let TSFlags{10-8} = VLMul;
-
-  bit IsTiedPseudo = 0;
-  let TSFlags{11} = IsTiedPseudo;
-
-  bit HasSEWOp = 0;
-  let TSFlags{12} = HasSEWOp;
-
-  bit HasVLOp = 0;
-  let TSFlags{13} = HasVLOp;
-
-  bit HasVecPolicyOp = 0;
-  let TSFlags{14} = HasVecPolicyOp;
-
-  bit IsYSXVecWideningReduction = 0;
-  let TSFlags{15} = IsYSXVecWideningReduction;
-
-  bit UsesMaskPolicy = 0;
-  let TSFlags{16} = UsesMaskPolicy;
-
   // Indicates that the result can be considered sign extended from bit 31. Some
   // instructions with this flag aren't W instructions, but are either sign
   // extended from a smaller size, always outputs a small integer, or put zeros
   // in bits 63:31. Used by the SExtWRemoval pass.
   bit IsSignExtendingOpW = 0;
-  let TSFlags{17} = IsSignExtendingOpW;
-
-  bit HasRoundModeOp = 0;
-  let TSFlags{18} =  HasRoundModeOp;
-
-  // This is only valid when HasRoundModeOp is set to 1. HasRoundModeOp is set
-  // to 1 for vector fixed-point or floating-point intrinsics. This bit is
-  // processed under pass 'YSXInsertReadWriteCSR' pass to distinguish between
-  // fixed-point / floating-point instructions and emit appropriate read/write
-  // to the correct CSR.
-  bit UsesVXRM = 0;
-  let TSFlags{19} =  UsesVXRM;
-
-  // Indicates whether these instructions can partially overlap between source
-  // registers and destination registers according to the vector spec.
-  // 0 -> not a vector pseudo
-  // 1 -> default value for vector pseudos. not widening or narrowing.
-  // 2 -> narrowing case
-  // 3 -> widening case
-  bits<2> TargetOverlapConstraintType = 0;
-  let TSFlags{21-20} = TargetOverlapConstraintType;
-
-  // Most vector instructions are elementwise, but some may depend on the value
-  // of VL (e.g. vslide1down.vx), and others may depend on the VL and mask
-  // (e.g. vredsum.vs, viota.m). Mark these instructions so that peepholes avoid
-  // changing their VL and/or mask.
-  EltDeps ElementsDependOn = EltDepsNone;
-  let TSFlags{22} = ElementsDependOn.VL;
-  let TSFlags{23} = ElementsDependOn.Mask;
-
-  // Indicates the EEW of a vector instruction's destination operand.
-  EEW DestEEW = EEWSEWx1;
-  let TSFlags{25-24} = DestEEW.Value;
-
-  // Some vector instructions like vslidedown/vrgather will read elements past
-  // VL, and should be marked to make sure YSXVLOptimizer doesn't reduce its
-  // operands' VLs.
-  bit ReadsPastVL = 0;
-  let TSFlags{26} = ReadsPastVL;
-
-  // 0 -> Don't care about altfmt bit in VTYPE.
-  // 1 -> Is not altfmt.
-  // 2 -> Is altfmt(BF16).
-  AltFmtType AltFmtType = DONT_CARE_ALTFMT;
-  let TSFlags{28-27} = AltFmtType.Value;
-
-  // XRemovedSfmmbase
-  bit HasTWidenOp = 0;
-  let TSFlags{29} = HasTWidenOp;
-
-  bit HasTmOp = 0;
-  let TSFlags{30} = HasTmOp;
-
-  bit HasTkOp = 0;
-  let TSFlags{31} = HasTkOp;
+  let TSFlags{5} = IsSignExtendingOpW;
 }
 
 class RVInst<dag outs, dag ins, string opcodestr, string argstr,

@@ -865,43 +865,8 @@ void YSXDAGToDAGISel::Select(SDNode *Node) {
     break;
   }
   case ISD::BITCAST: {
-    MVT SrcVT = Node->getOperand(0).getSimpleValueType();
-    // Just drop bitcasts between vectors if both are fixed or both are
-    // scalable.
-    if ((VT.isScalableVector() && SrcVT.isScalableVector()) ||
-        (VT.isFixedLengthVector() && SrcVT.isFixedLengthVector())) {
-      ReplaceUses(SDValue(Node, 0), Node->getOperand(0));
-      CurDAG->RemoveDeadNode(Node);
-      return;
-    }
-    if (Subtarget->enablePExtSIMDCodeGen()) {
-      bool Is32BitCast =
-          (VT == MVT::i32 && (SrcVT == MVT::v4i8 || SrcVT == MVT::v2i16)) ||
-          (SrcVT == MVT::i32 && (VT == MVT::v4i8 || VT == MVT::v2i16));
-      bool Is64BitCast =
-          (VT == MVT::i64 && (SrcVT == MVT::v8i8 || SrcVT == MVT::v4i16 ||
-                              SrcVT == MVT::v2i32)) ||
-          (SrcVT == MVT::i64 &&
-           (VT == MVT::v8i8 || VT == MVT::v4i16 || VT == MVT::v2i32));
-      if (Is32BitCast || Is64BitCast) {
-        ReplaceUses(SDValue(Node, 0), Node->getOperand(0));
-        CurDAG->RemoveDeadNode(Node);
-        return;
-      }
-    }
     break;
   }
-  case ISD::SCALAR_TO_VECTOR:
-    if (Subtarget->enablePExtSIMDCodeGen()) {
-      MVT SrcVT = Node->getOperand(0).getSimpleValueType();
-      if ((VT == MVT::v2i32 && SrcVT == MVT::i64) ||
-          (VT == MVT::v4i8 && SrcVT == MVT::i32)) {
-        ReplaceUses(SDValue(Node, 0), Node->getOperand(0));
-        CurDAG->RemoveDeadNode(Node);
-        return;
-      }
-    }
-    break;
   case ISD::PREFETCH:
     unsigned Locality = Node->getConstantOperandVal(3);
     if (Locality > 2)
@@ -1036,8 +1001,7 @@ static bool isWorthFoldingAdd(SDValue Add) {
         User->getOpcode() != ISD::ATOMIC_STORE)
       return false;
     EVT VT = cast<MemSDNode>(User)->getMemoryVT();
-    if (!VT.isScalarInteger() && VT != MVT::f16 && VT != MVT::f32 &&
-        VT != MVT::f64)
+    if (!VT.isScalarInteger())
       return false;
     // Don't allow stores of the value. It must be used as the address.
     if (User->getOpcode() == ISD::STORE &&
@@ -1310,9 +1274,8 @@ static bool isRegRegScaleLoadOrStore(SDNode *User, SDValue Add,
     return false;
   EVT VT = cast<MemSDNode>(User)->getMemoryVT();
   if (!(VT.isScalarInteger() &&
-        (Subtarget.hasVendorXRemovedTHeadMemIdx() || Subtarget.hasVendorXRemovedQcisls())) &&
-      !((VT == MVT::f32 || VT == MVT::f64) &&
-        Subtarget.hasVendorXRemovedTHeadFMemIdx()))
+        (Subtarget.hasVendorXRemovedTHeadMemIdx() ||
+         Subtarget.hasVendorXRemovedQcisls())))
     return false;
   // Don't allow stores of the value. It must be used as the address.
   if (User->getOpcode() == ISD::STORE &&
@@ -2057,35 +2020,6 @@ bool YSXDAGToDAGISel::selectSimm5Shl2(SDValue N, SDValue &Simm5,
   }
 
   return false;
-}
-
-bool YSXDAGToDAGISel::selectScalarFPAsInt(SDValue N, SDValue &Imm) {
-  // Allow bitcasts from XLenVT -> FP.
-  if (N.getOpcode() == ISD::BITCAST &&
-      N.getOperand(0).getValueType() == Subtarget->getXLenVT()) {
-    Imm = N.getOperand(0);
-    return true;
-  }
-  // Otherwise, look for FP constants that can materialized with scalar int.
-  ConstantFPSDNode *CFP = dyn_cast<ConstantFPSDNode>(N.getNode());
-  if (!CFP)
-    return false;
-  const APFloat &APF = CFP->getValueAPF();
-  // td can handle +0.0 already.
-  if (APF.isPosZero())
-    return false;
-
-  MVT VT = CFP->getSimpleValueType(0);
-
-  MVT XLenVT = Subtarget->getXLenVT();
-  if (VT == MVT::f64 && !Subtarget->is64Bit()) {
-    assert(APF.isNegZero() && "Unexpected constant.");
-    return false;
-  }
-  SDLoc DL(N);
-  Imm = selectImm(CurDAG, DL, XLenVT, APF.bitcastToAPInt().getSExtValue(),
-                  *Subtarget);
-  return true;
 }
 
 // Try to remove sext.w if the input is a W instruction or can be made into

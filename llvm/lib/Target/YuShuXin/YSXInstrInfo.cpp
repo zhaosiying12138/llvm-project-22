@@ -57,22 +57,6 @@ static cl::opt<MachineTraceStrategy> ForceMachineCombinerStrategy(
                clEnumValN(MachineTraceStrategy::TS_MinInstrCount, "min-instr",
                           "MinInstrCount strategy.")));
 
-namespace llvm::YSXVPseudosTable {
-
-using namespace YSX;
-
-#define GET_YSXVPseudosTable_IMPL
-#include "YSXGenSearchableTables.inc"
-
-} // namespace llvm::YSXVPseudosTable
-
-namespace llvm::YSX {
-
-#define GET_YSXMaskedPseudosTable_IMPL
-#include "YSXGenSearchableTables.inc"
-
-} // end namespace llvm::YSX
-
 YSXInstrInfo::YSXInstrInfo(const YSXSubtarget &STI)
     : YSXGenInstrInfo(STI, RegInfo, YSX::ADJCALLSTACKDOWN, YSX::ADJCALLSTACKUP),
       RegInfo(STI.getHwMode()), STI(STI) {}
@@ -1426,12 +1410,6 @@ bool YSXInstrInfo::verifyInstruction(const MachineInstr &MI,
         case YSXOp::OPERAND_STACKADJ:
           Ok = Imm >= 0 && Imm <= 48 && Imm % 16 == 0;
           break;
-        case YSXOp::OPERAND_FRMARG:
-          Ok = YSXFPRndMode::isValidRoundingMode(Imm);
-          break;
-        case YSXOp::OPERAND_RTZARG:
-          Ok = Imm == YSXFPRndMode::RTZ;
-          break;
         case YSXOp::OPERAND_COND_CODE:
           Ok = Imm >= 0 && Imm < YSXCC::COND_INVALID;
           break;
@@ -2330,7 +2308,6 @@ unsigned YSXInstrInfo::getTailDuplicateSize(CodeGenOptLevel OptLevel) const {
              : 2;
 }
 
-bool YSX::isYSXVecSpill(const MachineInstr &MI) { return false; }
 
 namespace {
 class YSXPipelinerLoopInfo : public TargetInstrInfo::PipelinerLoopInfo {

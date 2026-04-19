@@ -156,51 +156,6 @@ void YSXInstPrinter::printFenceArg(const MCInst *MI, unsigned OpNo,
     O << "0";
 }
 
-void YSXInstPrinter::printFRMArg(const MCInst *MI, unsigned OpNo,
-                                   const MCSubtargetInfo &STI, raw_ostream &O) {
-  auto FRMArg =
-      static_cast<YSXFPRndMode::RoundingMode>(MI->getOperand(OpNo).getImm());
-  if (PrintAliases && !NoAliases && FRMArg == YSXFPRndMode::RoundingMode::DYN)
-    return;
-  O << ", " << YSXFPRndMode::roundingModeToString(FRMArg);
-}
-
-void YSXInstPrinter::printFRMArgLegacy(const MCInst *MI, unsigned OpNo,
-                                         const MCSubtargetInfo &STI,
-                                         raw_ostream &O) {
-  auto FRMArg =
-      static_cast<YSXFPRndMode::RoundingMode>(MI->getOperand(OpNo).getImm());
-  // Never print rounding mode if it's the default 'rne'. This ensures the
-  // output can still be parsed by older tools that erroneously failed to
-  // accept a rounding mode.
-  if (FRMArg == YSXFPRndMode::RoundingMode::RNE)
-    return;
-  O << ", " << YSXFPRndMode::roundingModeToString(FRMArg);
-}
-
-void YSXInstPrinter::printFPImmOperand(const MCInst *MI, unsigned OpNo,
-                                         const MCSubtargetInfo &STI,
-                                         raw_ostream &O) {
-  unsigned Imm = MI->getOperand(OpNo).getImm();
-  if (Imm == 1) {
-    markup(O, Markup::Immediate) << "min";
-  } else if (Imm == 30) {
-    markup(O, Markup::Immediate) << "inf";
-  } else if (Imm == 31) {
-    markup(O, Markup::Immediate) << "nan";
-  } else {
-    float FPVal = YSXLoadFPImm::getFPImm(Imm);
-    // If the value is an integer, print a .0 fraction. Otherwise, use %g to
-    // which will not print trailing zeros and will use scientific notation
-    // if it is shorter than printing as a decimal. The smallest value requires
-    // 12 digits of precision including the decimal.
-    if (FPVal == (int)(FPVal))
-      markup(O, Markup::Immediate) << format("%.1f", FPVal);
-    else
-      markup(O, Markup::Immediate) << format("%.12g", FPVal);
-  }
-}
-
 void YSXInstPrinter::printZeroOffsetMemOp(const MCInst *MI, unsigned OpNo,
                                             const MCSubtargetInfo &STI,
                                             raw_ostream &O) {
@@ -210,17 +165,6 @@ void YSXInstPrinter::printZeroOffsetMemOp(const MCInst *MI, unsigned OpNo,
   O << "(";
   printRegName(O, MO.getReg());
   O << ")";
-}
-
-void YSXInstPrinter::printVTypeI(const MCInst *MI, unsigned OpNo,
-                                   const MCSubtargetInfo &STI, raw_ostream &O) {
-  O << formatImm(MI->getOperand(OpNo).getImm());
-}
-
-void YSXInstPrinter::printXRemovedSfmmVType(const MCInst *MI, unsigned OpNo,
-                                       const MCSubtargetInfo &STI,
-                                       raw_ostream &O) {
-  O << formatImm(MI->getOperand(OpNo).getImm());
 }
 
 // Print a Zcmp RList. If we are printing architectural register names rather
@@ -301,19 +245,6 @@ void YSXInstPrinter::printStackAdj(const MCInst *MI, unsigned OpNo,
   O << StackAdj;
 }
 
-void YSXInstPrinter::printVMaskReg(const MCInst *MI, unsigned OpNo,
-                                     const MCSubtargetInfo &STI,
-                                     raw_ostream &O) {
-  const MCOperand &MO = MI->getOperand(OpNo);
-
-  assert(MO.isReg() && "printVMaskReg can only print register operands");
-  if (MO.getReg() == YSX::NoRegister)
-    return;
-  O << ", ";
-  printRegName(O, MO.getReg());
-  O << ".t";
-}
-
 void YSXInstPrinter::printImm(const MCInst *MI, unsigned OpNo,
                                 const MCSubtargetInfo &STI, raw_ostream &O) {
   const MCOperand &Op = MI->getOperand(OpNo);
@@ -331,10 +262,7 @@ void YSXInstPrinter::printImm(const MCInst *MI, unsigned OpNo,
 
 const char *YSXInstPrinter::getRegisterName(MCRegister Reg) {
   // When PrintAliases is enabled, and EmitX8AsFP is enabled, x8 will be printed
-  // as fp instead of s0. Note that these similar registers are not replaced:
-  // - X8_H: used for f16 register in zhinx
-  // - X8_W: used for f32 register in zfinx
-  // - X8_X9: used for GPR Pair
+  // as fp instead of s0. GPR-pair aliases such as X8_X9 are not replaced.
   if (!ArchRegNames && EmitX8AsFP && Reg == YSX::X8)
     return "fp";
   return getRegisterName(Reg, ArchRegNames ? YSX::NoRegAltName

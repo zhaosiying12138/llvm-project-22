@@ -270,36 +270,6 @@ public:
                                             : 8);
   }
 
-  unsigned getELen() const {
-    return 0;
-  }
-  unsigned getRealMinVLen() const {
-    return 0;
-  }
-  unsigned getRealMaxVLen() const {
-    return 0;
-  }
-  // If we know the exact VLEN, return it.  Otherwise, return std::nullopt.
-  std::optional<unsigned> getRealVLen() const {
-    unsigned Min = getRealMinVLen();
-    if (Min == 0)
-      return std::nullopt;
-    if (Min != getRealMaxVLen())
-      return std::nullopt;
-    return Min;
-  }
-
-  /// If the ElementCount or TypeSize \p X is scalable and VScale (VLEN) is
-  /// exactly known, returns \p X converted to a fixed quantity. Otherwise
-  /// returns \p X unmodified.
-  template <typename Quantity> Quantity expandVScale(Quantity X) const {
-    if (auto VLen = getRealVLen(); VLen && X.isScalable()) {
-      const unsigned VScale = *VLen / YSX::YSXVecBitsPerBlock;
-      X = Quantity::getFixed(X.getKnownMinValue() * VScale);
-    }
-    return X;
-  }
-
   YSXABI::ABI getTargetABI() const { return TargetABI; }
   bool isSoftFPABI() const {
     return TargetABI == YSXABI::ABI_LP64 ||
@@ -314,17 +284,6 @@ public:
   // XRay support - require D and C extensions.
   bool isXRaySupported() const override { return false; }
 
-  // YSX intentionally has no YSXVec surface.
-  bool hasVInstructions() const { return false; }
-  bool hasVInstructionsI64() const { return false; }
-  bool hasVInstructionsF16Minimal() const { return false; }
-  bool hasVInstructionsF16() const { return false; }
-  bool hasVInstructionsBF16Minimal() const { return false; }
-  bool hasVInstructionsF32() const { return false; }
-  bool hasVInstructionsF64() const { return false; }
-  bool hasVInstructionsBF16() const { return false; }
-  bool hasVInstructionsAnyF() const { return false; }
-  bool hasVInstructionsFullMultiply() const { return false; }
   unsigned getMaxInterleaveFactor() const {
     return 1;
   }
@@ -333,18 +292,11 @@ public:
     return false;
   }
 
-  bool enablePExtSIMDCodeGen() const;
-
   unsigned getDLenFactor() const { return 1; }
 
 protected:
   // SelectionDAGISel related APIs.
   std::unique_ptr<const SelectionDAGTargetInfo> TSInfo;
-
-  // Vector queries are retained only for copied helper code that now always
-  // sees YSXVec as unavailable.
-  unsigned getMaxYSXVecVectorSizeInBits() const;
-  unsigned getMinYSXVecVectorSizeInBits() const;
 
 public:
   const SelectionDAGTargetInfo *getSelectionDAGInfo() const override;
@@ -357,9 +309,6 @@ public:
   // Maximum cost used for building integers, integers will be put into constant
   // pool if exceeded.
   unsigned getMaxBuildIntsCost() const;
-
-  unsigned getMaxLMULForFixedLengthVectors() const;
-  bool useYSXVecForFixedLengthVectors() const;
 
   bool enableSubRegLiveness() const override;
 

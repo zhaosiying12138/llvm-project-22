@@ -22,32 +22,10 @@
 namespace llvm {
 
 namespace YSXRI {
-enum : uint8_t {
-  // The IsVRegClass value of this RegisterClass.
-  IsVRegClassShift = 0,
-  IsVRegClassShiftMask = 0b1 << IsVRegClassShift,
-  // The NF value of this RegisterClass. This value is valid iff IsVRegClass is
-  // true.
-  NFShift = IsVRegClassShift + 1,
-  NFShiftMask = 0b111 << NFShift,
-};
-
-/// Register allocation hints for Zilsd register pairs
 enum {
-  // Used for Zilsd LD/SD register pairs
   RegPairOdd = 1,
   RegPairEven = 2,
 };
-
-/// \returns the IsVRegClass for the register class.
-static inline bool isVRegClass(uint8_t TSFlags) {
-  return (TSFlags & IsVRegClassShiftMask) >> IsVRegClassShift;
-}
-
-/// \returns the NF for the register class.
-static inline unsigned getNF(uint8_t TSFlags) {
-  return static_cast<unsigned>((TSFlags & NFShiftMask) >> NFShift) + 1;
-}
 } // namespace YSXRI
 
 struct YSXRegisterInfo : public YSXGenRegisterInfo {
@@ -103,9 +81,6 @@ struct YSXRegisterInfo : public YSXGenRegisterInfo {
   int64_t getFrameIndexInstrOffset(const MachineInstr *MI,
                                    int Idx) const override;
 
-  void lowerSegmentSpillReload(MachineBasicBlock::iterator II,
-                               bool IsSpill) const;
-
   Register getFrameRegister(const MachineFunction &MF) const override;
 
   StringRef getRegAsmName(MCRegister Reg) const override;
@@ -142,21 +117,6 @@ struct YSXRegisterInfo : public YSXGenRegisterInfo {
   void updateRegAllocHint(Register Reg, Register NewReg,
                           MachineFunction &MF) const override;
 
-  Register findVRegWithEncoding(const TargetRegisterClass &RegClass,
-                                uint16_t Encoding) const;
-
-  static bool isVRRegClass(const TargetRegisterClass *RC) {
-    return YSXRI::isVRegClass(RC->TSFlags) &&
-           YSXRI::getNF(RC->TSFlags) == 1;
-  }
-
-  static bool isVRNRegClass(const TargetRegisterClass *RC) {
-    return YSXRI::isVRegClass(RC->TSFlags) && YSXRI::getNF(RC->TSFlags) > 1;
-  }
-
-  static bool isYSXVecRegClass(const TargetRegisterClass *RC) {
-    return YSXRI::isVRegClass(RC->TSFlags);
-  }
 };
 } // namespace llvm
 

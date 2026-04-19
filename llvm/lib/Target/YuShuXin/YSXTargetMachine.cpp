@@ -98,7 +98,6 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeYSXTarget() {
   initializeYSXDAGToDAGISelLegacyPass(*PR);
   initializeYSXExpandAtomicPseudoPass(*PR);
   initializeYSXAsmPrinterPass(*PR);
-  initializeYSXPromoteConstantPass(*PR);
 }
 
 extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
@@ -305,8 +304,6 @@ void YSXPassConfig::addIRPasses() {
 }
 
 bool YSXPassConfig::addPreISel() {
-  if (TM->getOptLevel() != CodeGenOptLevel::None)
-    addPass(createYSXPromoteConstantPass());
   if (TM->getOptLevel() != CodeGenOptLevel::None) {
     // Add a barrier before instruction selection so that we will not get
     // deleted block address after enabling default outlining. See D99707 for

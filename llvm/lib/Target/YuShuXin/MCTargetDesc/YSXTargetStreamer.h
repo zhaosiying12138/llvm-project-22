@@ -52,7 +52,6 @@ public:
   virtual void emitDirectiveOptionNoRelax();
   virtual void emitDirectiveOptionRVC();
   virtual void emitDirectiveOptionNoRVC();
-  virtual void emitDirectiveVariantCC(MCSymbol &Symbol);
   virtual void emitAttribute(unsigned Attribute, unsigned Value);
   virtual void finishAttributeSection();
   virtual void emitTextAttribute(unsigned Attribute, StringRef String);
@@ -91,7 +90,6 @@ public:
   void emitDirectiveOptionNoRelax() override;
   void emitDirectiveOptionRVC() override;
   void emitDirectiveOptionNoRVC() override;
-  void emitDirectiveVariantCC(MCSymbol &Symbol) override;
 };
 
 }

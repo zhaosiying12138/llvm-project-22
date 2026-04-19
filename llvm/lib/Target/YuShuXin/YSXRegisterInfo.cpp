@@ -205,11 +205,6 @@ void YSXRegisterInfo::adjustReg(MachineBasicBlock &MBB,
       .setMIFlag(Flag);
 }
 
-void YSXRegisterInfo::lowerSegmentSpillReload(MachineBasicBlock::iterator II,
-                                                bool IsSpill) const {
-  llvm_unreachable("YSX does not support segment spill/reload");
-}
-
 bool YSXRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
                                             int SPAdj, unsigned FIOperandNum,
                                             RegScavenger *RS) const {
@@ -625,10 +620,4 @@ void YSXRegisterInfo::updateRegAllocHint(Register Reg, Register NewReg,
         MRI->setRegAllocationHint(NewReg, Hint.first, Partner);
     }
   }
-}
-
-Register
-YSXRegisterInfo::findVRegWithEncoding(const TargetRegisterClass &RegClass,
-                                        uint16_t Encoding) const {
-  llvm_unreachable("YSX does not support vector registers");
 }

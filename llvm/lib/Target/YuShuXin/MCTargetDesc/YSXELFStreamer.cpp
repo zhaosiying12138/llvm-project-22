@@ -121,11 +121,6 @@ void YSXTargetELFStreamer::reset() {
   AttributeSection = nullptr;
 }
 
-void YSXTargetELFStreamer::emitDirectiveVariantCC(MCSymbol &Symbol) {
-  getStreamer().getAssembler().registerSymbol(Symbol);
-  static_cast<MCSymbolELF &>(Symbol).setOther(ELF::STO_RISCV_VARIANT_CC);
-}
-
 void YSXELFStreamer::reset() {
   static_cast<YSXTargetStreamer *>(getTargetStreamer())->reset();
   MCELFStreamer::reset();

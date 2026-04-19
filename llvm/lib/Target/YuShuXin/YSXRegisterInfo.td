@@ -176,21 +176,12 @@ def XLenVT : ValueTypeByHwMode<[RV32, RV64],
                                [i32,  i64]>;
 defvar XLenPairVT = untyped;
 
-// Allow f64 in GPR for ZDINX on RV64.
 def XLenRI : RegInfoByHwMode<
       [RV32,              RV64],
       [RegInfo<32,32,32>, RegInfo<64,64,64>]>;
 
 class YSXRegisterClass<list<ValueType> regTypes, int align, dag regList>
-    : RegisterClass<"YSX", regTypes, align, regList> {
-  bit IsVRegClass = 0;
-  int VLMul = 1;
-  int NF = 1;
-
-  let TSFlags{0} = IsVRegClass;
-  let TSFlags{2-1} = !logtwo(VLMul);
-  let TSFlags{5-3} = !sub(NF, 1);
-}
+    : RegisterClass<"YSX", regTypes, align, regList>;
 
 class GPRRegisterClass<dag regList>
     : YSXRegisterClass<[XLenVT], 32, regList> {

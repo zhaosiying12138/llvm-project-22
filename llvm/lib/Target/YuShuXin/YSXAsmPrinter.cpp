@@ -602,12 +602,6 @@ void YSXAsmPrinter::emitAttributes(const MCSubtargetInfo &SubtargetInfo) {
 }
 
 void YSXAsmPrinter::emitFunctionEntryLabel() {
-  const auto *RMFI = MF->getInfo<YSXMachineFunctionInfo>();
-  if (RMFI->isVectorCall()) {
-    auto &RTS =
-        static_cast<YSXTargetStreamer &>(*OutStreamer->getTargetStreamer());
-    RTS.emitDirectiveVariantCC(*CurrentFnSym);
-  }
   return AsmPrinter::emitFunctionEntryLabel();
 }
 
@@ -740,11 +734,6 @@ void YSXAsmPrinter::EmitHwasanMemaccessSymbols(Module &M) {
 
   MCSymbol *HwasanTagMismatchV2Sym =
       OutContext.getOrCreateSymbol("__hwasan_tag_mismatch_v2");
-  // Annotate symbol as one having incompatible calling convention, so
-  // run-time linkers can instead eagerly bind this function.
-  auto &RTS =
-      static_cast<YSXTargetStreamer &>(*OutStreamer->getTargetStreamer());
-  RTS.emitDirectiveVariantCC(*HwasanTagMismatchV2Sym);
 
   const MCSymbolRefExpr *HwasanTagMismatchV2Ref =
       MCSymbolRefExpr::create(HwasanTagMismatchV2Sym, OutContext);
@@ -1075,16 +1064,7 @@ bool YSXAsmPrinter::lowerOperand(const MachineOperand &MO,
   return true;
 }
 
-static bool lowerYSXVMachineInstrToMCInst(const MachineInstr *MI,
-                                            MCInst &OutMI,
-                                            const YSXSubtarget *STI) {
-  return false;
-}
-
 void YSXAsmPrinter::lowerToMCInst(const MachineInstr *MI, MCInst &OutMI) {
-  if (lowerYSXVMachineInstrToMCInst(MI, OutMI, STI))
-    return;
-
   OutMI.setOpcode(MI->getOpcode());
 
   for (const MachineOperand &MO : MI->operands()) {

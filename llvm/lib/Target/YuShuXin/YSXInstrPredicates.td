@@ -10,11 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// This predicate is true when the rs2 operand of vlse or vsse is x0, false
-// otherwise.
-// Note: in our pseudo YSXVec MachinInstr, rs2 is the fourth operand. However,
-// it's the third operand of its MCInst form, so this predicate will not
-// be triggered by llvm-mca, which checks against MCInst.
+// No vector load/store scheduling predicates are active in the rv64ima subset.
 def VLDSX0Pred
     : MCSchedPredicate<FalsePred>;
 

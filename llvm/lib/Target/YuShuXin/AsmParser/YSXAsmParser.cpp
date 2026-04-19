@@ -66,16 +66,6 @@ struct ParserOptionsSet {
 };
 
 class YSXAsmParser : public MCTargetAsmParser {
-  // This tracks the parsing of the 4 optional operands that make up the vtype
-  // portion of vset(i)vli instructions which are separated by commas.
-  enum class VTypeState {
-    SeenNothingYet,
-    SeenSew,
-    SeenLmul,
-    SeenTailPolicy,
-    SeenMaskPolicy,
-  };
-
   SmallVector<FeatureBitset, 4> FeatureBitStack;
 
   SmallVector<ParserOptionsSet, 4> ParserOptionsStack;
@@ -119,12 +109,6 @@ class YSXAsmParser : public MCTargetAsmParser {
 
   ParseStatus parseDirective(AsmToken DirectiveID) override;
 
-  bool parseVTypeToken(const AsmToken &Tok, VTypeState &State, unsigned &Sew,
-                       unsigned &Lmul, bool &Fractional, bool &TailAgnostic,
-                       bool &MaskAgnostic, bool &AltFmt);
-  bool generateVTypeError(SMLoc ErrorLoc);
-
-  bool generateXRemovedSfmmVTypeError(SMLoc ErrorLoc);
   // Helper to actually emit an instruction to the MCStreamer. Also, when
   // possible, compression of the instruction is performed.
   void emitToStreamer(MCStreamer &S, const MCInst &Inst);
@@ -194,7 +178,6 @@ class YSXAsmParser : public MCTargetAsmParser {
 #include "YSXGenAsmMatcher.inc"
 
   ParseStatus parseCSRSystemRegister(OperandVector &Operands);
-  ParseStatus parseFPImm(OperandVector &Operands);
   ParseStatus parseExpression(OperandVector &Operands);
   ParseStatus parseRegister(OperandVector &Operands, bool AllowParens = false);
   ParseStatus parseMemOpBaseReg(OperandVector &Operands);
@@ -204,16 +187,10 @@ class YSXAsmParser : public MCTargetAsmParser {
   ParseStatus parseCallSymbol(OperandVector &Operands);
   ParseStatus parsePseudoJumpSymbol(OperandVector &Operands);
   ParseStatus parseJALOffset(OperandVector &Operands);
-  ParseStatus parseVTypeI(OperandVector &Operands);
-  ParseStatus parseMaskReg(OperandVector &Operands);
   ParseStatus parseInsnDirectiveOpcode(OperandVector &Operands);
   ParseStatus parseInsnCDirectiveOpcode(OperandVector &Operands);
-  ParseStatus parseGPRAsFPR(OperandVector &Operands);
-  ParseStatus parseGPRAsFPR64(OperandVector &Operands);
-  ParseStatus parseGPRPairAsFPR64(OperandVector &Operands);
   template <bool IsRV64Inst> ParseStatus parseGPRPair(OperandVector &Operands);
   ParseStatus parseGPRPair(OperandVector &Operands, bool IsRV64Inst);
-  ParseStatus parseFRMArg(OperandVector &Operands);
   ParseStatus parseFenceArg(OperandVector &Operands);
   ParseStatus parseRegList(OperandVector &Operands, bool MustIncludeS0 = false);
   ParseStatus parseRegListS0(OperandVector &Operands) {
@@ -221,7 +198,6 @@ class YSXAsmParser : public MCTargetAsmParser {
   }
 
   ParseStatus parseRegReg(OperandVector &Operands);
-  ParseStatus parseXRemovedSfmmVType(OperandVector &Operands);
   ParseStatus parseZcmpStackAdj(OperandVector &Operands,
                                 bool ExpectNegative = false);
   ParseStatus parseZcmpNegStackAdj(OperandVector &Operands) {
@@ -235,7 +211,6 @@ class YSXAsmParser : public MCTargetAsmParser {
   bool parseDirectiveOption();
   bool parseDirectiveAttribute();
   bool parseDirectiveInsn(SMLoc L);
-  bool parseDirectiveVariantCC();
 
   /// Helper to reset target features for a new arch string. It
   /// also records the new arch string that is expanded by YSXISAInfo
@@ -280,10 +255,6 @@ class YSXAsmParser : public MCTargetAsmParser {
 
     return false;
   }
-
-  std::unique_ptr<YSXOperand> defaultMaskRegOp() const;
-  std::unique_ptr<YSXOperand> defaultFRMArgOp() const;
-  std::unique_ptr<YSXOperand> defaultFRMArgLegacyOp() const;
 
 public:
   enum YSXMatchResultTy : unsigned {
@@ -339,10 +310,7 @@ struct YSXOperand final : public MCParsedAsmOperand {
     Token,
     Register,
     Expression,
-    FPImmediate,
     SystemRegister,
-    VType,
-    FRM,
     Fence,
     RegList,
     StackAdj,
@@ -351,16 +319,11 @@ struct YSXOperand final : public MCParsedAsmOperand {
 
   struct RegOp {
     MCRegister Reg;
-    bool IsGPRAsFPR;
   };
 
   struct ExprOp {
     const MCExpr *Expr;
     bool IsRV64;
-  };
-
-  struct FPImmOp {
-    uint64_t Val;
   };
 
   struct SysRegOp {
@@ -369,14 +332,6 @@ struct YSXOperand final : public MCParsedAsmOperand {
     unsigned Encoding;
     // FIXME: Add the Encoding parsed fields as needed for checks,
     // e.g.: read/write or user/supervisor/machine privileges.
-  };
-
-  struct VTypeOp {
-    unsigned Val;
-  };
-
-  struct FRMOp {
-    YSXFPRndMode::RoundingMode FRM;
   };
 
   struct FenceOp {
@@ -401,10 +356,7 @@ struct YSXOperand final : public MCParsedAsmOperand {
     StringRef Tok;
     RegOp Reg;
     ExprOp Expr;
-    FPImmOp FPImm;
     SysRegOp SysReg;
-    VTypeOp VType;
-    FRMOp FRM;
     FenceOp Fence;
     RegListOp RegList;
     StackAdjOp StackAdj;
@@ -425,20 +377,11 @@ public:
     case KindTy::Expression:
       Expr = o.Expr;
       break;
-    case KindTy::FPImmediate:
-      FPImm = o.FPImm;
-      break;
     case KindTy::Token:
       Tok = o.Tok;
       break;
     case KindTy::SystemRegister:
       SysReg = o.SysReg;
-      break;
-    case KindTy::VType:
-      VType = o.VType;
-      break;
-    case KindTy::FRM:
-      FRM = o.FRM;
       break;
     case KindTy::Fence:
       Fence = o.Fence;
@@ -499,19 +442,6 @@ public:
            YSXMCRegisterClasses[YSX::GPRPairNoX0RegClassID].contains(
                Reg.Reg);
   }
-
-  bool isGPRF16() const {
-    return false;
-  }
-
-  bool isGPRF32() const {
-    return false;
-  }
-
-  bool isGPRAsFPR() const { return isGPR() && Reg.IsGPRAsFPR; }
-  bool isGPRAsFPR16() const { return false; }
-  bool isGPRAsFPR32() const { return false; }
-  bool isGPRPairAsFPR64() const { return false; }
 
   static bool evaluateConstantExpr(const MCExpr *Expr, int64_t &Imm) {
     if (auto CE = dyn_cast<MCConstantExpr>(Expr)) {
@@ -611,44 +541,9 @@ public:
 
   bool isCSRSystemRegister() const { return isSystemRegister(); }
 
-  // If the last operand of the vsetvli/vsetvli instruction is a constant
-  // expression, KindTy is Immediate.
-  bool isVTypeI10() const {
-    if (Kind == KindTy::VType)
-      return true;
-    return isUImm<10>();
-  }
-  bool isVTypeI11() const {
-    if (Kind == KindTy::VType)
-      return true;
-    return isUImm<11>();
-  }
-
-  bool isXRemovedSfmmVType() const {
-    return false;
-  }
-
   /// Return true if the operand is a valid for the fence instruction e.g.
   /// ('iorw').
   bool isFenceArg() const { return Kind == KindTy::Fence; }
-
-  /// Return true if the operand is a valid floating point rounding mode.
-  bool isFRMArg() const { return Kind == KindTy::FRM; }
-  bool isFRMArgLegacy() const { return Kind == KindTy::FRM; }
-  bool isRTZArg() const { return isFRMArg() && FRM.FRM == YSXFPRndMode::RTZ; }
-
-  /// Return true if the operand is a valid fli.s floating-point immediate.
-  bool isLoadFPImm() const {
-    if (isExpr())
-      return isUImm5();
-    if (Kind != KindTy::FPImmediate)
-      return false;
-    int Idx = YSXLoadFPImm::getLoadFPImm(
-        APFloat(APFloat::IEEEdouble(), APInt(64, getFPConst())));
-    // Don't allow decimal version of the minimum value. It is a different value
-    // for each supported data type.
-    return Idx >= 0 && Idx != 1;
-  }
 
   bool isImmXLenLI() const {
     int64_t Imm;
@@ -993,24 +888,9 @@ public:
     return Expr.Expr;
   }
 
-  uint64_t getFPConst() const {
-    assert(Kind == KindTy::FPImmediate && "Invalid type access!");
-    return FPImm.Val;
-  }
-
   StringRef getToken() const {
     assert(Kind == KindTy::Token && "Invalid type access!");
     return Tok;
-  }
-
-  unsigned getVType() const {
-    assert(Kind == KindTy::VType && "Invalid type access!");
-    return VType.Val;
-  }
-
-  YSXFPRndMode::RoundingMode getFRM() const {
-    assert(Kind == KindTy::FRM && "Invalid type access!");
-    return FRM.FRM;
   }
 
   unsigned getFence() const {
@@ -1032,26 +912,14 @@ public:
       MAI.printExpr(OS, *Expr.Expr);
       OS << ' ' << (Expr.IsRV64 ? "rv64" : "rv32") << '>';
       break;
-    case KindTy::FPImmediate:
-      OS << "<fpimm: " << FPImm.Val << ">";
-      break;
     case KindTy::Register:
-      OS << "<reg: " << RegName(Reg.Reg) << " (" << Reg.Reg.id()
-         << (Reg.IsGPRAsFPR ? ") GPRasFPR>" : ")>");
+      OS << "<reg: " << RegName(Reg.Reg) << " (" << Reg.Reg.id() << ")>";
       break;
     case KindTy::Token:
       OS << "'" << getToken() << "'";
       break;
     case KindTy::SystemRegister:
       OS << "<sysreg: " << getSysReg() << " (" << SysReg.Encoding << ")>";
-      break;
-    case KindTy::VType:
-      OS << "<vtype: " << getVType() << '>';
-      break;
-    case KindTy::FRM:
-      OS << "<frm: ";
-      roundingModeToString(getFRM());
-      OS << '>';
       break;
     case KindTy::Fence:
       OS << "<fence: ";
@@ -1084,10 +952,9 @@ public:
   }
 
   static std::unique_ptr<YSXOperand>
-  createReg(MCRegister Reg, SMLoc S, SMLoc E, bool IsGPRAsFPR = false) {
+  createReg(MCRegister Reg, SMLoc S, SMLoc E) {
     auto Op = std::make_unique<YSXOperand>(KindTy::Register);
     Op->Reg.Reg = Reg;
-    Op->Reg.IsGPRAsFPR = IsGPRAsFPR;
     Op->StartLoc = S;
     Op->EndLoc = E;
     return Op;
@@ -1103,14 +970,6 @@ public:
     return Op;
   }
 
-  static std::unique_ptr<YSXOperand> createFPImm(uint64_t Val, SMLoc S) {
-    auto Op = std::make_unique<YSXOperand>(KindTy::FPImmediate);
-    Op->FPImm.Val = Val;
-    Op->StartLoc = S;
-    Op->EndLoc = S;
-    return Op;
-  }
-
   static std::unique_ptr<YSXOperand> createSysReg(StringRef Str, SMLoc S,
                                                     unsigned Encoding) {
     auto Op = std::make_unique<YSXOperand>(KindTy::SystemRegister);
@@ -1122,26 +981,9 @@ public:
     return Op;
   }
 
-  static std::unique_ptr<YSXOperand>
-  createFRMArg(YSXFPRndMode::RoundingMode FRM, SMLoc S) {
-    auto Op = std::make_unique<YSXOperand>(KindTy::FRM);
-    Op->FRM.FRM = FRM;
-    Op->StartLoc = S;
-    Op->EndLoc = S;
-    return Op;
-  }
-
   static std::unique_ptr<YSXOperand> createFenceArg(unsigned Val, SMLoc S) {
     auto Op = std::make_unique<YSXOperand>(KindTy::Fence);
     Op->Fence.Val = Val;
-    Op->StartLoc = S;
-    Op->EndLoc = S;
-    return Op;
-  }
-
-  static std::unique_ptr<YSXOperand> createVType(unsigned VTypeI, SMLoc S) {
-    auto Op = std::make_unique<YSXOperand>(KindTy::VType);
-    Op->VType.Val = VTypeI;
     Op->StartLoc = S;
     Op->EndLoc = S;
     return Op;
@@ -1211,18 +1053,6 @@ public:
     Inst.addOperand(MCOperand::createImm(SignExtend64<10>(Imm)));
   }
 
-  void addFPImmOperands(MCInst &Inst, unsigned N) const {
-    assert(N == 1 && "Invalid number of operands!");
-    if (isExpr()) {
-      addExpr(Inst, getExpr(), isRV64Expr());
-      return;
-    }
-
-    int Imm = YSXLoadFPImm::getLoadFPImm(
-        APFloat(APFloat::IEEEdouble(), APInt(64, getFPConst())));
-    Inst.addOperand(MCOperand::createImm(Imm));
-  }
-
   void addFenceArgOperands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
     Inst.addOperand(MCOperand::createImm(Fence.Val));
@@ -1231,22 +1061,6 @@ public:
   void addCSRSystemRegisterOperands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
     Inst.addOperand(MCOperand::createImm(SysReg.Encoding));
-  }
-
-  // Support non-canonical syntax:
-  // "vsetivli rd, uimm, 0xabc" or "vsetvli rd, rs1, 0xabc"
-  // "vsetivli rd, uimm, (0xc << N)" or "vsetvli rd, rs1, (0xc << N)"
-  void addVTypeIOperands(MCInst &Inst, unsigned N) const {
-    assert(N == 1 && "Invalid number of operands!");
-    int64_t Imm = 0;
-    if (Kind == KindTy::Expression) {
-      [[maybe_unused]] bool IsConstantImm =
-          evaluateConstantExpr(getExpr(), Imm);
-      assert(IsConstantImm && "Invalid VTypeI Operand!");
-    } else {
-      Imm = getVType();
-    }
-    Inst.addOperand(MCOperand::createImm(Imm));
   }
 
   void addRegListOperands(MCInst &Inst, unsigned N) const {
@@ -1265,10 +1079,6 @@ public:
     Inst.addOperand(MCOperand::createImm(StackAdj.Val));
   }
 
-  void addFRMArgOperands(MCInst &Inst, unsigned N) const {
-    assert(N == 1 && "Invalid number of operands!");
-    Inst.addOperand(MCOperand::createImm(getFRM()));
-  }
 };
 } // end anonymous namespace.
 
@@ -1757,58 +1567,6 @@ ParseStatus YSXAsmParser::parseCSRSystemRegister(OperandVector &Operands) {
   return ParseStatus::NoMatch;
 }
 
-ParseStatus YSXAsmParser::parseFPImm(OperandVector &Operands) {
-  SMLoc S = getLoc();
-
-  // Parse special floats (inf/nan/min) representation.
-  if (getTok().is(AsmToken::Identifier)) {
-    StringRef Identifier = getTok().getIdentifier();
-    if (Identifier.compare_insensitive("inf") == 0) {
-      Operands.push_back(
-          YSXOperand::createExpr(MCConstantExpr::create(30, getContext()), S,
-                                   getTok().getEndLoc(), isRV64()));
-    } else if (Identifier.compare_insensitive("nan") == 0) {
-      Operands.push_back(
-          YSXOperand::createExpr(MCConstantExpr::create(31, getContext()), S,
-                                   getTok().getEndLoc(), isRV64()));
-    } else if (Identifier.compare_insensitive("min") == 0) {
-      Operands.push_back(
-          YSXOperand::createExpr(MCConstantExpr::create(1, getContext()), S,
-                                   getTok().getEndLoc(), isRV64()));
-    } else {
-      return TokError("invalid floating point literal");
-    }
-
-    Lex(); // Eat the token.
-
-    return ParseStatus::Success;
-  }
-
-  // Handle negation, as that still comes through as a separate token.
-  bool IsNegative = parseOptionalToken(AsmToken::Minus);
-
-  const AsmToken &Tok = getTok();
-  if (!Tok.is(AsmToken::Real))
-    return TokError("invalid floating point immediate");
-
-  // Parse FP representation.
-  APFloat RealVal(APFloat::IEEEdouble());
-  auto StatusOrErr =
-      RealVal.convertFromString(Tok.getString(), APFloat::rmTowardZero);
-  if (errorToBool(StatusOrErr.takeError()))
-    return TokError("invalid floating point representation");
-
-  if (IsNegative)
-    RealVal.changeSign();
-
-  Operands.push_back(YSXOperand::createFPImm(
-      RealVal.bitcastToAPInt().getZExtValue(), S));
-
-  Lex(); // Eat the token.
-
-  return ParseStatus::Success;
-}
-
 ParseStatus YSXAsmParser::parseExpression(OperandVector &Operands) {
   SMLoc S = getLoc();
   SMLoc E;
@@ -1993,91 +1751,6 @@ ParseStatus YSXAsmParser::parseJALOffset(OperandVector &Operands) {
   return parseExpression(Operands);
 }
 
-bool YSXAsmParser::parseVTypeToken(const AsmToken &Tok, VTypeState &State,
-                                     unsigned &Sew, unsigned &Lmul,
-                                     bool &Fractional, bool &TailAgnostic,
-                                     bool &MaskAgnostic, bool &AltFmt) {
-  return true;
-}
-
-ParseStatus YSXAsmParser::parseVTypeI(OperandVector &Operands) {
-  return ParseStatus::NoMatch;
-}
-
-bool YSXAsmParser::generateVTypeError(SMLoc ErrorLoc) {
-  return Error(
-      ErrorLoc,
-      "operand must be "
-      "e[8|16|32|64],m[1|2|4|8|f2|f4|f8],[ta|tu],[ma|mu]");
-}
-
-ParseStatus YSXAsmParser::parseXRemovedSfmmVType(OperandVector &Operands) {
-  (void)Operands;
-  SMLoc S = getLoc();
-  return generateXRemovedSfmmVTypeError(S);
-}
-
-bool YSXAsmParser::generateXRemovedSfmmVTypeError(SMLoc ErrorLoc) {
-  return Error(ErrorLoc, "operand must be e[8|16|16alt|32|64],w[1|2|4]");
-}
-
-ParseStatus YSXAsmParser::parseMaskReg(OperandVector &Operands) {
-  return ParseStatus::NoMatch;
-}
-
-ParseStatus YSXAsmParser::parseGPRAsFPR64(OperandVector &Operands) {
-  return ParseStatus::NoMatch;
-}
-
-ParseStatus YSXAsmParser::parseGPRAsFPR(OperandVector &Operands) {
-  if (getLexer().isNot(AsmToken::Identifier))
-    return ParseStatus::NoMatch;
-
-  StringRef Name = getLexer().getTok().getIdentifier();
-  MCRegister Reg = matchRegisterNameHelper(Name);
-
-  if (!Reg)
-    return ParseStatus::NoMatch;
-  SMLoc S = getLoc();
-  SMLoc E = getTok().getEndLoc();
-  getLexer().Lex();
-  Operands.push_back(YSXOperand::createReg(Reg, S, E, /*IsFPR=*/false));
-  return ParseStatus::Success;
-}
-
-ParseStatus YSXAsmParser::parseGPRPairAsFPR64(OperandVector &Operands) {
-  return ParseStatus::NoMatch;
-
-  if (getLexer().isNot(AsmToken::Identifier))
-    return ParseStatus::NoMatch;
-
-  StringRef Name = getLexer().getTok().getIdentifier();
-  MCRegister Reg = matchRegisterNameHelper(Name);
-
-  if (!Reg)
-    return ParseStatus::NoMatch;
-
-  if (!YSXMCRegisterClasses[YSX::GPRRegClassID].contains(Reg))
-    return ParseStatus::NoMatch;
-
-  if ((Reg - YSX::X0) & 1) {
-    // Only report the even register error if we have at least Zfinx so we know
-    // some FP is enabled. We already checked F earlier.
-    return ParseStatus::NoMatch;
-  }
-
-  SMLoc S = getLoc();
-  SMLoc E = getTok().getEndLoc();
-  getLexer().Lex();
-
-  const MCRegisterInfo *RI = getContext().getRegisterInfo();
-  MCRegister Pair = RI->getMatchingSuperReg(
-      Reg, YSX::sub_gpr_even,
-      &YSXMCRegisterClasses[YSX::GPRPairRegClassID]);
-  Operands.push_back(YSXOperand::createReg(Pair, S, E, /*isGPRAsFPR=*/true));
-  return ParseStatus::Success;
-}
-
 template <bool IsRV64>
 ParseStatus YSXAsmParser::parseGPRPair(OperandVector &Operands) {
   return parseGPRPair(Operands, IsRV64);
@@ -2117,23 +1790,6 @@ ParseStatus YSXAsmParser::parseGPRPair(OperandVector &Operands,
       Reg, YSX::sub_gpr_even,
       &YSXMCRegisterClasses[YSX::GPRPairRegClassID]);
   Operands.push_back(YSXOperand::createReg(Pair, S, E));
-  return ParseStatus::Success;
-}
-
-ParseStatus YSXAsmParser::parseFRMArg(OperandVector &Operands) {
-  if (getLexer().isNot(AsmToken::Identifier))
-    return TokError(
-        "operand must be a valid floating point rounding mode mnemonic");
-
-  StringRef Str = getLexer().getTok().getIdentifier();
-  YSXFPRndMode::RoundingMode FRM = YSXFPRndMode::stringToRoundingMode(Str);
-
-  if (FRM == YSXFPRndMode::Invalid)
-    return TokError(
-        "operand must be a valid floating point rounding mode mnemonic");
-
-  Operands.push_back(YSXOperand::createFRMArg(FRM, getLoc()));
-  Lex(); // Eat identifier token.
   return ParseStatus::Success;
 }
 
@@ -2541,8 +2197,6 @@ ParseStatus YSXAsmParser::parseDirective(AsmToken DirectiveID) {
     return parseDirectiveAttribute();
   if (IDVal == ".insn")
     return parseDirectiveInsn(DirectiveID.getLoc());
-  if (IDVal == ".variant_cc")
-    return parseDirectiveVariantCC();
 
   return ParseStatus::NoMatch;
 }
@@ -3010,19 +2664,6 @@ bool YSXAsmParser::parseDirectiveInsn(SMLoc L) {
                                  /*MatchingInlineAsm=*/false);
 }
 
-/// parseDirectiveVariantCC
-///  ::= .variant_cc symbol
-bool YSXAsmParser::parseDirectiveVariantCC() {
-  StringRef Name;
-  if (getParser().parseIdentifier(Name))
-    return TokError("expected symbol name");
-  if (parseEOL())
-    return true;
-  getTargetStreamer().emitDirectiveVariantCC(
-      *getContext().getOrCreateSymbol(Name));
-  return false;
-}
-
 void YSXAsmParser::emitToStreamer(MCStreamer &S, const MCInst &Inst) {
   MCInst CInst;
   bool Res = false;
@@ -3233,48 +2874,8 @@ bool YSXAsmParser::checkPseudoTLSDESCCall(MCInst &Inst,
   return false;
 }
 
-std::unique_ptr<YSXOperand> YSXAsmParser::defaultMaskRegOp() const {
-  return YSXOperand::createReg(MCRegister(), llvm::SMLoc(), llvm::SMLoc());
-}
-
-std::unique_ptr<YSXOperand> YSXAsmParser::defaultFRMArgOp() const {
-  return YSXOperand::createFRMArg(YSXFPRndMode::RoundingMode::DYN,
-                                    llvm::SMLoc());
-}
-
-std::unique_ptr<YSXOperand> YSXAsmParser::defaultFRMArgLegacyOp() const {
-  return YSXOperand::createFRMArg(YSXFPRndMode::RoundingMode::RNE,
-                                    llvm::SMLoc());
-}
-
 bool YSXAsmParser::validateInstruction(MCInst &Inst,
                                          OperandVector &Operands) {
-  unsigned Opcode = Inst.getOpcode();
-
-  const MCInstrDesc &MCID = MII.get(Opcode);
-  if (!(MCID.TSFlags & YSXII::ConstraintMask))
-    return false;
-
-  MCRegister DestReg = Inst.getOperand(0).getReg();
-  unsigned Offset = 0;
-  int TiedOp = MCID.getOperandConstraint(1, MCOI::TIED_TO);
-  if (TiedOp == 0)
-    Offset = 1;
-
-  // Operands[1] will be the first operand, DestReg.
-  SMLoc Loc = Operands[1]->getStartLoc();
-  if (MCID.TSFlags & YSXII::VS2Constraint) {
-    MCRegister CheckReg = Inst.getOperand(Offset + 1).getReg();
-    if (DestReg == CheckReg)
-      return Error(Loc, "the destination vector register group cannot overlap"
-                        " the source vector register group");
-  }
-  if ((MCID.TSFlags & YSXII::VS1Constraint) && Inst.getOperand(Offset + 2).isReg()) {
-    MCRegister CheckReg = Inst.getOperand(Offset + 2).getReg();
-    if (DestReg == CheckReg)
-      return Error(Loc, "the destination vector register group cannot overlap"
-                        " the source vector register group");
-  }
   return false;
 }
 

@@ -37,7 +37,6 @@ add_llvm_target(YSXCodeGen
   YSXLateBranchOpt.cpp
   YSXMachineFunctionInfo.cpp
   YSXPostRAExpandPseudoInsts.cpp
-  YSXPromoteConstant.cpp
   YSXRegisterInfo.cpp
   YSXSelectionDAGInfo.cpp
   YSXSubtarget.cpp

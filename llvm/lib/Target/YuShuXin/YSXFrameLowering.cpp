@@ -46,7 +46,7 @@ YSXFrameLowering::YSXFrameLowering(const YSXSubtarget &STI)
       STI(STI) {}
 
 // The register used to hold the frame pointer.
-static constexpr MCPhysReg FPReg = YSX::X8;
+static constexpr MCPhysReg FramePointerReg = YSX::X8;
 
 // The register used to hold the stack pointer.
 static constexpr MCPhysReg SPReg = YSX::X2;
@@ -59,7 +59,7 @@ static constexpr MCPhysReg RAReg = YSX::X1;
 // registers are saved on the stack. Zcmp uses the reverse order of save/restore
 // and Xqccmp on the stack, but this is handled when offsets are calculated.
 static const MCPhysReg FixedCSRFIMap[] = {
-    /*ra*/ RAReg,      /*s0*/ FPReg,      /*s1*/ YSX::X9,
+    /*ra*/ RAReg,      /*s0*/ FramePointerReg,      /*s1*/ YSX::X9,
     /*s2*/ YSX::X18, /*s3*/ YSX::X19, /*s4*/ YSX::X20,
     /*s5*/ YSX::X21, /*s6*/ YSX::X22, /*s7*/ YSX::X23,
     /*s8*/ YSX::X24, /*s9*/ YSX::X25, /*s10*/ YSX::X26,
@@ -71,7 +71,7 @@ static constexpr uint64_t QCIInterruptPushAmount = 96;
 
 static const std::pair<MCPhysReg, int8_t> FixedCSRFIQCIInterruptMap[] = {
     /* -1 is a gap for mepc/mnepc */
-    {/*fp*/ FPReg, -2},
+    {/*fp*/ FramePointerReg, -2},
     /* -3 is a gap for qc.mcause */
     {/*ra*/ RAReg, -4},
     /* -5 is reserved */
@@ -280,7 +280,7 @@ static int getLibCallID(const MachineFunction &MF,
   case /*s3*/  YSX::X19: return 4;
   case /*s2*/  YSX::X18: return 3;
   case /*s1*/  YSX::X9:  return 2;
-  case /*s0*/  FPReg:  return 1;
+  case /*s0*/  FramePointerReg:  return 1;
   case /*ra*/  RAReg:  return 0;
     // clang-format on
   }
@@ -774,23 +774,23 @@ void YSXFrameLowering::emitPrologue(MachineFunction &MF,
 
   // Generate new FP.
   if (hasFP(MF)) {
-    if (STI.isRegisterReservedByUser(FPReg))
+    if (STI.isRegisterReservedByUser(FramePointerReg))
       MF.getFunction().getContext().diagnose(DiagnosticInfoUnsupported{
           MF.getFunction(), "Frame pointer required, but has been reserved."});
     // The frame pointer does need to be reserved from register allocation.
-    assert(MF.getRegInfo().isReserved(FPReg) && "FP not reserved");
+    assert(MF.getRegInfo().isReserved(FramePointerReg) && "FP not reserved");
 
     // Some stack management variants automatically keep FP updated, so we don't
     // need an instruction to do so.
     if (!RVFI->hasImplicitFPUpdates(MF)) {
       RI->adjustReg(
-          MBB, MBBI, DL, FPReg, SPReg,
+          MBB, MBBI, DL, FramePointerReg, SPReg,
           StackOffset::getFixed(RealStackSize - RVFI->getVarArgsSaveSize()),
           MachineInstr::FrameSetup, getStackAlign());
     }
 
     if (NeedsDwarfCFI)
-      CFIBuilder.buildDefCFA(FPReg, RVFI->getVarArgsSaveSize());
+      CFIBuilder.buildDefCFA(FramePointerReg, RVFI->getVarArgsSaveSize());
   }
 
   uint64_t SecondSPAdjustAmount = 0;
@@ -953,7 +953,7 @@ void YSXFrameLowering::emitEpilogue(MachineFunction &MF,
   // have vector objects in stack.
   if (RestoreSPFromFP) {
     assert(hasFP(MF) && "frame pointer should not have been eliminated");
-    RI->adjustReg(MBB, FirstScalarCSRRestoreInsn, DL, SPReg, FPReg,
+    RI->adjustReg(MBB, FirstScalarCSRRestoreInsn, DL, SPReg, FramePointerReg,
                   StackOffset::getFixed(-FPOffset), MachineInstr::FrameDestroy,
                   getStackAlign());
   }
@@ -1097,7 +1097,7 @@ YSXFrameLowering::getFrameIndexReference(const MachineFunction &MF, int FI,
     FrameReg = RI->getFrameRegister(MF);
   }
 
-  if (FrameReg == FPReg) {
+  if (FrameReg == FramePointerReg) {
     Offset += StackOffset::getFixed(RVFI->getVarArgsSaveSize());
     return Offset;
   }
@@ -1122,7 +1122,7 @@ void YSXFrameLowering::determineCalleeSaves(MachineFunction &MF,
   // pointer.
   if (hasFP(MF)) {
     SavedRegs.set(RAReg);
-    SavedRegs.set(FPReg);
+    SavedRegs.set(FramePointerReg);
   }
   // Mark BP as used if function has dedicated base pointer.
   if (hasBP(MF))

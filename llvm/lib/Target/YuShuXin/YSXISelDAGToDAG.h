@@ -130,8 +130,6 @@ public:
 
   bool selectSimm5Shl2(SDValue N, SDValue &Simm5, SDValue &Shl2);
 
-  bool selectScalarFPAsInt(SDValue N, SDValue &Imm);
-
   void selectSF_VC_X_SE(SDNode *Node);
 
   // Return the RISC-V condition code that matches the given DAG integer

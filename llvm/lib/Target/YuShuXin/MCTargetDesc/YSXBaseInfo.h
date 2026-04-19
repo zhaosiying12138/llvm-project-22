@@ -14,11 +14,8 @@
 #define LLVM_LIB_TARGET_YSX_MCTARGETDESC_YSXBASEINFO_H
 
 #include "MCTargetDesc/YSXMCTargetDesc.h"
-#include "llvm/ADT/APFloat.h"
-#include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/StringSwitch.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/TargetParser/YSXISAInfo.h"
 #include "llvm/TargetParser/YSXTargetParser.h"
@@ -63,102 +60,12 @@ enum {
   InstFormatMask = 31,
   InstFormatShift = 0,
 
-  ConstraintShift = InstFormatShift + 5,
-  VS2Constraint = 0b001 << ConstraintShift,
-  VS1Constraint = 0b010 << ConstraintShift,
-  VMConstraint = 0b100 << ConstraintShift,
-  ConstraintMask = 0b111 << ConstraintShift,
-
-  VLMulShift = ConstraintShift + 3,
-  VLMulMask = 0b111 << VLMulShift,
-
-  // Is this a _TIED vector pseudo instruction. For these instructions we
-  // shouldn't skip the tied operand when converting to MC instructions.
-  IsTiedPseudoShift = VLMulShift + 3,
-  IsTiedPseudoMask = 1 << IsTiedPseudoShift,
-
-  // Does this instruction have a SEW operand. It will be the last explicit
-  // operand unless there is a vector policy operand. Used by YSXVec Pseudos.
-  HasSEWOpShift = IsTiedPseudoShift + 1,
-  HasSEWOpMask = 1 << HasSEWOpShift,
-
-  // Does this instruction have a VL operand. It will be the second to last
-  // explicit operand unless there is a vector policy operand. Used by YSXVec
-  // Pseudos.
-  HasVLOpShift = HasSEWOpShift + 1,
-  HasVLOpMask = 1 << HasVLOpShift,
-
-  // Does this instruction have a vector policy operand. It will be the last
-  // explicit operand. Used by YSXVec Pseudos.
-  HasVecPolicyOpShift = HasVLOpShift + 1,
-  HasVecPolicyOpMask = 1 << HasVecPolicyOpShift,
-
-  // Is this instruction a vector widening reduction instruction. Used by YSXVec
-  // Pseudos.
-  IsYSXVecWideningReductionShift = HasVecPolicyOpShift + 1,
-  IsYSXVecWideningReductionMask = 1 << IsYSXVecWideningReductionShift,
-
-  // Does this instruction care about mask policy. If it is not, the mask policy
-  // could be either agnostic or undisturbed. For example, unmasked, store, and
-  // reduction operations result would not be affected by mask policy, so
-  // compiler has free to select either one.
-  UsesMaskPolicyShift = IsYSXVecWideningReductionShift + 1,
-  UsesMaskPolicyMask = 1 << UsesMaskPolicyShift,
-
   // Indicates that the result can be considered sign extended from bit 31. Some
   // instructions with this flag aren't W instructions, but are either sign
   // extended from a smaller size, always outputs a small integer, or put zeros
   // in bits 63:31. Used by the SExtWRemoval pass.
-  IsSignExtendingOpWShift = UsesMaskPolicyShift + 1,
+  IsSignExtendingOpWShift = InstFormatShift + 5,
   IsSignExtendingOpWMask = 1ULL << IsSignExtendingOpWShift,
-
-  HasRoundModeOpShift = IsSignExtendingOpWShift + 1,
-  HasRoundModeOpMask = 1 << HasRoundModeOpShift,
-
-  UsesVXRMShift = HasRoundModeOpShift + 1,
-  UsesVXRMMask = 1 << UsesVXRMShift,
-
-  // Indicates whether these instructions can partially overlap between source
-  // registers and destination registers according to the vector spec.
-  // 0 -> not a vector pseudo
-  // 1 -> default value for vector pseudos. not widening or narrowing.
-  // 2 -> narrowing case
-  // 3 -> widening case
-  TargetOverlapConstraintTypeShift = UsesVXRMShift + 1,
-  TargetOverlapConstraintTypeMask = 3ULL << TargetOverlapConstraintTypeShift,
-
-  ElementsDependOnVLShift = TargetOverlapConstraintTypeShift + 2,
-  ElementsDependOnVLMask = 1ULL << ElementsDependOnVLShift,
-
-  ElementsDependOnMaskShift = ElementsDependOnVLShift + 1,
-  ElementsDependOnMaskMask = 1ULL << ElementsDependOnMaskShift,
-
-  // Indicates the EEW of a vector instruction's destination operand.
-  // 0 -> 1
-  // 1 -> SEW
-  // 2 -> SEW * 2
-  // 3 -> SEW * 4
-  DestEEWShift = ElementsDependOnMaskShift + 1,
-  DestEEWMask = 3ULL << DestEEWShift,
-
-  ReadsPastVLShift = DestEEWShift + 2,
-  ReadsPastVLMask = 1ULL << ReadsPastVLShift,
-
-  // 0 -> Don't care about altfmt bit in VTYPE.
-  // 1 -> Is not altfmt.
-  // 2 -> Is altfmt(BF16).
-  AltFmtTypeShift = ReadsPastVLShift + 1,
-  AltFmtTypeMask = 3ULL << AltFmtTypeShift,
-
-  // XRemovedSfmmbase
-  HasTWidenOpShift = AltFmtTypeShift + 2,
-  HasTWidenOpMask = 1ULL << HasTWidenOpShift,
-
-  HasTMOpShift = HasTWidenOpShift + 1,
-  HasTMOpMask = 1ULL << HasTMOpShift,
-
-  HasTKOpShift = HasTMOpShift + 1,
-  HasTKOpMask = 1ULL << HasTKOpShift,
 };
 
 // Helper functions to read TSFlags.
@@ -166,171 +73,9 @@ enum {
 static inline unsigned getFormat(uint64_t TSFlags) {
   return (TSFlags & InstFormatMask) >> InstFormatShift;
 }
-/// \returns the raw LMUL field for the instruction.
-static inline unsigned getLMul(uint64_t TSFlags) {
-  return (TSFlags & VLMulMask) >> VLMulShift;
-}
-/// \returns true if this a _TIED pseudo.
-static inline bool isTiedPseudo(uint64_t TSFlags) {
-  return TSFlags & IsTiedPseudoMask;
-}
-/// \returns true if there is a SEW operand for the instruction.
-static inline bool hasSEWOp(uint64_t TSFlags) {
-  return TSFlags & HasSEWOpMask;
-}
-/// \returns true if there is a VL operand for the instruction.
-static inline bool hasVLOp(uint64_t TSFlags) {
-  return TSFlags & HasVLOpMask;
-}
-/// \returns true if there is a vector policy operand for this instruction.
-static inline bool hasVecPolicyOp(uint64_t TSFlags) {
-  return TSFlags & HasVecPolicyOpMask;
-}
-/// \returns true if it is a vector widening reduction instruction.
-static inline bool isYSXVecWideningReduction(uint64_t TSFlags) {
-  return TSFlags & IsYSXVecWideningReductionMask;
-}
-/// \returns true if mask policy is valid for the instruction.
-static inline bool usesMaskPolicy(uint64_t TSFlags) {
-  return TSFlags & UsesMaskPolicyMask;
-}
-
-/// \returns true if there is a rounding mode operand for this instruction
-static inline bool hasRoundModeOp(uint64_t TSFlags) {
-  return TSFlags & HasRoundModeOpMask;
-}
-
-enum class AltFmtType { DontCare, NotAltFmt, AltFmt };
-static inline AltFmtType getAltFmtType(uint64_t TSFlags) {
-  return static_cast<AltFmtType>((TSFlags & AltFmtTypeMask) >> AltFmtTypeShift);
-}
-
-/// \returns true if this instruction uses vxrm
-static inline bool usesVXRM(uint64_t TSFlags) { return TSFlags & UsesVXRMMask; }
-
-/// \returns true if the elements in the body are affected by VL,
-/// e.g. vslide1down.vx/vredsum.vs/viota.m
-static inline bool elementsDependOnVL(uint64_t TSFlags) {
-  return TSFlags & ElementsDependOnVLMask;
-}
-
-/// \returns true if the elements in the body are affected by the mask,
-/// e.g. vredsum.vs/viota.m
-static inline bool elementsDependOnMask(uint64_t TSFlags) {
-  return TSFlags & ElementsDependOnMaskMask;
-}
-
-/// \returns true if the instruction may read elements past VL, e.g.
-/// vslidedown/vrgather
-static inline bool readsPastVL(uint64_t TSFlags) {
-  return TSFlags & ReadsPastVLMask;
-}
-
-// XRemovedSfmmbase
-static inline bool hasTWidenOp(uint64_t TSFlags) {
-  return TSFlags & HasTWidenOpMask;
-}
-
-static inline bool hasTMOp(uint64_t TSFlags) { return TSFlags & HasTMOpMask; }
-
-static inline bool hasTKOp(uint64_t TSFlags) { return TSFlags & HasTKOpMask; }
-
-static inline unsigned getTNOpNum(const MCInstrDesc &Desc) {
-  const uint64_t TSFlags = Desc.TSFlags;
-  assert(hasTWidenOp(TSFlags) && hasVLOp(TSFlags));
-  unsigned Offset = 3;
-  if (hasTKOp(TSFlags))
-    Offset = 4;
-  return Desc.getNumOperands() - Offset;
-}
-
-static inline unsigned getTMOpNum(const MCInstrDesc &Desc) {
-  const uint64_t TSFlags = Desc.TSFlags;
-  assert(hasTWidenOp(TSFlags) && hasTMOp(TSFlags));
-  if (hasTKOp(TSFlags))
-    return Desc.getNumOperands() - 5;
-  // vtzero.t
-  return Desc.getNumOperands() - 4;
-}
-
-static inline unsigned getTKOpNum(const MCInstrDesc &Desc) {
-  [[maybe_unused]] const uint64_t TSFlags = Desc.TSFlags;
-  assert(hasTWidenOp(TSFlags) && hasTKOp(TSFlags));
-  return Desc.getNumOperands() - 3;
-}
-
-static inline unsigned getVLOpNum(const MCInstrDesc &Desc) {
-  const uint64_t TSFlags = Desc.TSFlags;
-  // This method is only called if we expect to have a VL operand, and all
-  // instructions with VL also have SEW.
-  assert(hasSEWOp(TSFlags) && hasVLOp(TSFlags));
-  // In Xsfmmbase, TN is an alias for VL, so here we use the same TSFlags bit.
-  if (hasTWidenOp(TSFlags))
-    return getTNOpNum(Desc);
-  unsigned Offset = 2;
-  if (hasVecPolicyOp(TSFlags))
-    Offset = 3;
-  return Desc.getNumOperands() - Offset;
-}
-
 static inline MCRegister
 getTailExpandUseRegNo(const FeatureBitset &FeatureBits) {
   return YSX::X6;
-}
-
-static inline unsigned getSEWOpNum(const MCInstrDesc &Desc) {
-  const uint64_t TSFlags = Desc.TSFlags;
-  assert(hasSEWOp(TSFlags));
-  unsigned Offset = 1;
-  if (hasVecPolicyOp(TSFlags) || hasTWidenOp(TSFlags))
-    Offset = 2;
-  return Desc.getNumOperands() - Offset;
-}
-
-static inline unsigned getVecPolicyOpNum(const MCInstrDesc &Desc) {
-  assert(hasVecPolicyOp(Desc.TSFlags));
-  return Desc.getNumOperands() - 1;
-}
-
-/// \returns  the index to the rounding mode immediate value if any, otherwise
-/// returns -1.
-static inline int getFRMOpNum(const MCInstrDesc &Desc) {
-  const uint64_t TSFlags = Desc.TSFlags;
-  if (!hasRoundModeOp(TSFlags) || usesVXRM(TSFlags))
-    return -1;
-
-  if (hasTWidenOp(TSFlags) && hasTMOp(TSFlags))
-    return getTMOpNum(Desc) - 1;
-
-  // The operand order
-  // --------------------------------------
-  // | n-1 (if any)   | n-2  | n-3 | n-4 |
-  // | policy         | sew  | vl  | frm |
-  // --------------------------------------
-  return getVLOpNum(Desc) - 1;
-}
-
-/// \returns  the index to the rounding mode immediate value if any, otherwise
-/// returns -1.
-static inline int getVXRMOpNum(const MCInstrDesc &Desc) {
-  const uint64_t TSFlags = Desc.TSFlags;
-  if (!hasRoundModeOp(TSFlags) || !usesVXRM(TSFlags))
-    return -1;
-  // The operand order
-  // --------------------------------------
-  // | n-1 (if any)   | n-2  | n-3 | n-4  |
-  // | policy         | sew  | vl  | vxrm |
-  // --------------------------------------
-  return getVLOpNum(Desc) - 1;
-}
-
-// Is the first def operand tied to the first use operand. This is true for
-// vector pseudo instructions that have a merge operand for tail/mask
-// undisturbed. It's also true for vector FMA instructions where one of the
-// operands is also the destination register.
-static inline bool isFirstDefTiedToFirstUse(const MCInstrDesc &Desc) {
-  return Desc.getNumDefs() < Desc.getNumOperands() &&
-         Desc.getOperandConstraint(Desc.getNumDefs(), MCOI::TIED_TO) == 0;
 }
 
 // RISC-V Specific Machine Operand Flags
@@ -425,28 +170,11 @@ enum OperandType : unsigned {
   OPERAND_RLIST,
   OPERAND_RLIST_S0,
   OPERAND_STACKADJ,
-  // Operand is a 3-bit rounding mode, '111' indicates FRM register.
-  // Represents 'frm' argument passing to floating-point operations.
-  OPERAND_FRMARG,
-  // Operand is a 3-bit rounding mode where only RTZ is valid.
-  OPERAND_RTZARG,
   // Condition code used by select and short forward branch pseudos.
   OPERAND_COND_CODE,
   // Ordering for atomic pseudos.
   OPERAND_ATOMIC_ORDERING,
-  // Vector policy operand.
-  OPERAND_VEC_POLICY,
-  // Vector SEW operand. Stores in log2(SEW).
-  OPERAND_SEW,
-  // Special SEW for mask only instructions. Always 0.
-  OPERAND_SEW_MASK,
-  // Vector rounding mode for VXRM or FRM.
-  OPERAND_VEC_RM,
-  // Vtype operand for XRemovedSfmm extension.
-  OPERAND_XSFMM_VTYPE,
-  // XRemovedSfmm twiden operand.
-  OPERAND_XSFMM_TWIDEN,
-  OPERAND_LAST_YSX_IMM = OPERAND_XSFMM_TWIDEN,
+  OPERAND_LAST_YSX_IMM = OPERAND_ATOMIC_ORDERING,
 
   OPERAND_UIMM20_LUI,
   OPERAND_UIMM20_AUIPC,
@@ -456,12 +184,6 @@ enum OperandType : unsigned {
 
   OPERAND_BARE_SIMM32,
 
-  // Operand is either a register or uimm5, this is used by V extension pseudo
-  // instructions to represent a value that be passed as AVL to either vsetvli
-  // or vsetivli.
-  OPERAND_AVL,
-
-  OPERAND_VMASK,
 };
 } // namespace YSXOp
 
@@ -475,109 +197,6 @@ enum FenceField {
 };
 }
 
-// Describes the supported floating point rounding mode encodings.
-namespace YSXFPRndMode {
-enum RoundingMode {
-  RNE = 0,
-  RTZ = 1,
-  RDN = 2,
-  RUP = 3,
-  RMM = 4,
-  DYN = 7,
-  Invalid
-};
-
-inline static StringRef roundingModeToString(RoundingMode RndMode) {
-  switch (RndMode) {
-  default:
-    llvm_unreachable("Unknown floating point rounding mode");
-  case YSXFPRndMode::RNE:
-    return "rne";
-  case YSXFPRndMode::RTZ:
-    return "rtz";
-  case YSXFPRndMode::RDN:
-    return "rdn";
-  case YSXFPRndMode::RUP:
-    return "rup";
-  case YSXFPRndMode::RMM:
-    return "rmm";
-  case YSXFPRndMode::DYN:
-    return "dyn";
-  }
-}
-
-inline static RoundingMode stringToRoundingMode(StringRef Str) {
-  return StringSwitch<RoundingMode>(Str)
-      .Case("rne", YSXFPRndMode::RNE)
-      .Case("rtz", YSXFPRndMode::RTZ)
-      .Case("rdn", YSXFPRndMode::RDN)
-      .Case("rup", YSXFPRndMode::RUP)
-      .Case("rmm", YSXFPRndMode::RMM)
-      .Case("dyn", YSXFPRndMode::DYN)
-      .Default(YSXFPRndMode::Invalid);
-}
-
-inline static bool isValidRoundingMode(unsigned Mode) {
-  switch (Mode) {
-  default:
-    return false;
-  case YSXFPRndMode::RNE:
-  case YSXFPRndMode::RTZ:
-  case YSXFPRndMode::RDN:
-  case YSXFPRndMode::RUP:
-  case YSXFPRndMode::RMM:
-  case YSXFPRndMode::DYN:
-    return true;
-  }
-}
-} // namespace YSXFPRndMode
-
-namespace YSXVXRndMode {
-enum RoundingMode {
-  RNU = 0,
-  RNE = 1,
-  RDN = 2,
-  ROD = 3,
-  Invalid
-};
-
-inline static StringRef roundingModeToString(RoundingMode RndMode) {
-  switch (RndMode) {
-  default:
-    llvm_unreachable("Unknown vector fixed-point rounding mode");
-  case YSXVXRndMode::RNU:
-    return "rnu";
-  case YSXVXRndMode::RNE:
-    return "rne";
-  case YSXVXRndMode::RDN:
-    return "rdn";
-  case YSXVXRndMode::ROD:
-    return "rod";
-  }
-}
-
-inline static RoundingMode stringToRoundingMode(StringRef Str) {
-  return StringSwitch<RoundingMode>(Str)
-      .Case("rnu", YSXVXRndMode::RNU)
-      .Case("rne", YSXVXRndMode::RNE)
-      .Case("rdn", YSXVXRndMode::RDN)
-      .Case("rod", YSXVXRndMode::ROD)
-      .Default(YSXVXRndMode::Invalid);
-}
-
-inline static bool isValidRoundingMode(unsigned Mode) {
-  switch (Mode) {
-  default:
-    return false;
-  case YSXVXRndMode::RNU:
-  case YSXVXRndMode::RNE:
-  case YSXVXRndMode::RDN:
-  case YSXVXRndMode::ROD:
-    return true;
-  }
-}
-} // namespace YSXVXRndMode
-
 namespace YSXExceptFlags {
 enum ExceptionFlag {
   NX = 0x01, // Inexact
@@ -588,19 +207,6 @@ enum ExceptionFlag {
   ALL = 0x1F // Mask for all accrued exception flags
 };
 }
-
-//===----------------------------------------------------------------------===//
-// Floating-point Immediates
-//
-
-namespace YSXLoadFPImm {
-float getFPImm(unsigned Imm);
-
-/// getLoadFPImm - Return a 5-bit binary encoding of the floating-point
-/// immediate value. If the value cannot be represented as a 5-bit binary
-/// encoding, then return -1.
-int getLoadFPImm(APFloat FPImm);
-} // namespace YSXLoadFPImm
 
 namespace YSXSysReg {
 struct SysReg {
@@ -765,129 +371,6 @@ inline static unsigned getStackAdjBase(unsigned RlistVal, bool IsRV64) {
 
 void printRegList(unsigned RlistEncode, raw_ostream &OS);
 } // namespace YSXZC
-
-namespace YSX {
-static constexpr unsigned YSXVecBitsPerBlock = 64;
-static constexpr unsigned YSXVecBytesPerBlock = YSXVecBitsPerBlock / 8;
-
-struct VLSEGPseudo {
-  uint16_t NF : 4;
-  uint16_t Masked : 1;
-  uint16_t Strided : 1;
-  uint16_t FF : 1;
-  uint16_t Log2SEW : 3;
-  uint16_t LMUL : 3;
-  uint16_t Pseudo;
-};
-
-struct VLXSEGPseudo {
-  uint16_t NF : 4;
-  uint16_t Masked : 1;
-  uint16_t Ordered : 1;
-  uint16_t Log2SEW : 3;
-  uint16_t LMUL : 3;
-  uint16_t IndexLMUL : 3;
-  uint16_t Pseudo;
-};
-
-struct VSSEGPseudo {
-  uint16_t NF : 4;
-  uint16_t Masked : 1;
-  uint16_t Strided : 1;
-  uint16_t Log2SEW : 3;
-  uint16_t LMUL : 3;
-  uint16_t Pseudo;
-};
-
-struct VSXSEGPseudo {
-  uint16_t NF : 4;
-  uint16_t Masked : 1;
-  uint16_t Ordered : 1;
-  uint16_t Log2SEW : 3;
-  uint16_t LMUL : 3;
-  uint16_t IndexLMUL : 3;
-  uint16_t Pseudo;
-};
-
-struct VLEPseudo {
-  uint16_t Masked : 1;
-  uint16_t Strided : 1;
-  uint16_t FF : 1;
-  uint16_t Log2SEW : 3;
-  uint16_t LMUL : 3;
-  uint16_t Pseudo;
-};
-
-struct VSEPseudo {
-  uint16_t Masked : 1;
-  uint16_t Strided : 1;
-  uint16_t Log2SEW : 3;
-  uint16_t LMUL : 3;
-  uint16_t Pseudo;
-};
-
-struct VLX_VSXPseudo {
-  uint16_t Masked : 1;
-  uint16_t Ordered : 1;
-  uint16_t Log2SEW : 3;
-  uint16_t LMUL : 3;
-  uint16_t IndexLMUL : 3;
-  uint16_t Pseudo;
-};
-
-struct NDSVLNPseudo {
-  uint16_t Masked : 1;
-  uint16_t Unsigned : 1;
-  uint16_t Log2SEW : 3;
-  uint16_t LMUL : 3;
-  uint16_t Pseudo;
-};
-
-#define GET_YSXVSSEGTable_DECL
-#define GET_YSXVLSEGTable_DECL
-#define GET_YSXVLXSEGTable_DECL
-#define GET_YSXVSXSEGTable_DECL
-#define GET_YSXVLETable_DECL
-#define GET_YSXVSETable_DECL
-#define GET_YSXVLXTable_DECL
-#define GET_YSXVSXTable_DECL
-#define GET_YSXNDSVLNTable_DECL
-#include "YSXGenSearchableTables.inc"
-
-inline const VLSEGPseudo *getVLSEGPseudo(uint8_t, bool, bool, bool, uint8_t,
-                                         uint8_t) {
-  return nullptr;
-}
-inline const VLXSEGPseudo *getVLXSEGPseudo(uint8_t, bool, bool, uint8_t,
-                                           uint8_t, uint8_t) {
-  return nullptr;
-}
-inline const VSSEGPseudo *getVSSEGPseudo(uint8_t, bool, bool, uint8_t,
-                                         uint8_t) {
-  return nullptr;
-}
-inline const VSXSEGPseudo *getVSXSEGPseudo(uint8_t, bool, bool, uint8_t,
-                                           uint8_t, uint8_t) {
-  return nullptr;
-}
-inline const VLEPseudo *getVLEPseudo(bool, bool, bool, uint8_t, uint8_t) {
-  return nullptr;
-}
-inline const VSEPseudo *getVSEPseudo(bool, bool, uint8_t, uint8_t) {
-  return nullptr;
-}
-inline const VLX_VSXPseudo *getVLXPseudo(bool, bool, uint8_t, uint8_t,
-                                         uint8_t) {
-  return nullptr;
-}
-inline const VLX_VSXPseudo *getVSXPseudo(bool, bool, uint8_t, uint8_t,
-                                         uint8_t) {
-  return nullptr;
-}
-inline const NDSVLNPseudo *getNDSVLNPseudo(bool, bool, uint8_t, uint8_t) {
-  return nullptr;
-}
-} // namespace YSX
 
 } // namespace llvm
 

@@ -13,6 +13,7 @@
 
 #include "MCTargetDesc/YSXAsmBackend.h"
 #include "MCTargetDesc/YSXMCAsmInfo.h"
+#include "llvm/ADT/StringSwitch.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/Support/ErrorHandling.h"
 
