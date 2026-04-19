@@ -5268,6 +5268,7 @@ define i1 @cmpxchg_i8_monotonic_monotonic_val1(ptr %ptr, i8 signext %cmp, i8 sig
 ; RV64I-NEXT:    bnez a5, .LBB48_1
 ; RV64I-NEXT:  .LBB48_3:
 ; RV64I-NEXT:    and a0, a2, a4
+; RV64I-NEXT:    sext.w a0, a0
 ; RV64I-NEXT:    xor a0, a1, a0
 ; RV64I-NEXT:    seqz a0, a0
 ; RV64I-NEXT:    ret
@@ -5294,6 +5295,7 @@ define i1 @cmpxchg_i8_monotonic_monotonic_val1(ptr %ptr, i8 signext %cmp, i8 sig
 ; RV64IA-NEXT:    bnez a5, .LBB48_1
 ; RV64IA-NEXT:  .LBB48_3:
 ; RV64IA-NEXT:    and a0, a2, a4
+; RV64IA-NEXT:    sext.w a0, a0
 ; RV64IA-NEXT:    xor a0, a1, a0
 ; RV64IA-NEXT:    seqz a0, a0
 ; RV64IA-NEXT:    ret
@@ -5320,6 +5322,7 @@ define i1 @cmpxchg_i8_monotonic_monotonic_val1(ptr %ptr, i8 signext %cmp, i8 sig
 ; RV64I-ZALRSC-NEXT:    bnez a5, .LBB48_1
 ; RV64I-ZALRSC-NEXT:  .LBB48_3:
 ; RV64I-ZALRSC-NEXT:    and a0, a2, a4
+; RV64I-ZALRSC-NEXT:    sext.w a0, a0
 ; RV64I-ZALRSC-NEXT:    xor a0, a1, a0
 ; RV64I-ZALRSC-NEXT:    seqz a0, a0
 ; RV64I-ZALRSC-NEXT:    ret
@@ -5573,6 +5576,7 @@ define i1 @cmpxchg_i16_monotonic_monotonic_val1(ptr %ptr, i16 signext %cmp, i16 
 ; RV64I-NEXT:    bnez a4, .LBB50_1
 ; RV64I-NEXT:  .LBB50_3:
 ; RV64I-NEXT:    and a0, a2, a5
+; RV64I-NEXT:    sext.w a0, a0
 ; RV64I-NEXT:    xor a0, a1, a0
 ; RV64I-NEXT:    seqz a0, a0
 ; RV64I-NEXT:    ret
@@ -5600,6 +5604,7 @@ define i1 @cmpxchg_i16_monotonic_monotonic_val1(ptr %ptr, i16 signext %cmp, i16 
 ; RV64IA-NEXT:    bnez a4, .LBB50_1
 ; RV64IA-NEXT:  .LBB50_3:
 ; RV64IA-NEXT:    and a0, a2, a5
+; RV64IA-NEXT:    sext.w a0, a0
 ; RV64IA-NEXT:    xor a0, a1, a0
 ; RV64IA-NEXT:    seqz a0, a0
 ; RV64IA-NEXT:    ret
@@ -5627,6 +5632,7 @@ define i1 @cmpxchg_i16_monotonic_monotonic_val1(ptr %ptr, i16 signext %cmp, i16 
 ; RV64I-ZALRSC-NEXT:    bnez a4, .LBB50_1
 ; RV64I-ZALRSC-NEXT:  .LBB50_3:
 ; RV64I-ZALRSC-NEXT:    and a0, a2, a5
+; RV64I-ZALRSC-NEXT:    sext.w a0, a0
 ; RV64I-ZALRSC-NEXT:    xor a0, a1, a0
 ; RV64I-ZALRSC-NEXT:    seqz a0, a0
 ; RV64I-ZALRSC-NEXT:    ret
@@ -6849,8 +6855,9 @@ define signext i32 @atomicrmw_max_i32_monotonic_crossbb(ptr %a, i1 %c) nounwind 
 ; RV64I-NEXT:    ret
 ; RV64I-NEXT:  .LBB60_2: # %else
 ; RV64I-NEXT:    lw a0, 0(a1)
+; RV64I-NEXT:    li a3, 1
 ; RV64I-NEXT:    mv a2, a0
-; RV64I-NEXT:    bgtz a0, .LBB60_4
+; RV64I-NEXT:    blt a3, a0, .LBB60_4
 ; RV64I-NEXT:  # %bb.3: # %else
 ; RV64I-NEXT:    li a2, 1
 ; RV64I-NEXT:  .LBB60_4: # %else
@@ -6868,8 +6875,9 @@ define signext i32 @atomicrmw_max_i32_monotonic_crossbb(ptr %a, i1 %c) nounwind 
 ; RV64IA-NEXT:    ret
 ; RV64IA-NEXT:  .LBB60_2: # %else
 ; RV64IA-NEXT:    lw a0, 0(a1)
+; RV64IA-NEXT:    li a3, 1
 ; RV64IA-NEXT:    mv a2, a0
-; RV64IA-NEXT:    bgtz a0, .LBB60_4
+; RV64IA-NEXT:    blt a3, a0, .LBB60_4
 ; RV64IA-NEXT:  # %bb.3: # %else
 ; RV64IA-NEXT:    li a2, 1
 ; RV64IA-NEXT:  .LBB60_4: # %else
@@ -6887,8 +6895,9 @@ define signext i32 @atomicrmw_max_i32_monotonic_crossbb(ptr %a, i1 %c) nounwind 
 ; RV64I-ZALRSC-NEXT:    ret
 ; RV64I-ZALRSC-NEXT:  .LBB60_2: # %else
 ; RV64I-ZALRSC-NEXT:    lw a0, 0(a1)
+; RV64I-ZALRSC-NEXT:    li a3, 1
 ; RV64I-ZALRSC-NEXT:    mv a2, a0
-; RV64I-ZALRSC-NEXT:    bgtz a0, .LBB60_4
+; RV64I-ZALRSC-NEXT:    blt a3, a0, .LBB60_4
 ; RV64I-ZALRSC-NEXT:  # %bb.3: # %else
 ; RV64I-ZALRSC-NEXT:    li a2, 1
 ; RV64I-ZALRSC-NEXT:  .LBB60_4: # %else
@@ -7164,53 +7173,62 @@ define signext i32 @atomicrmw_umax_i32_monotonic_crossbb(ptr %a, i1 %c) nounwind
 ;
 ; RV64I-LABEL: atomicrmw_umax_i32_monotonic_crossbb:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    andi a1, a1, 1
-; RV64I-NEXT:    beqz a1, .LBB62_2
+; RV64I-NEXT:    andi a2, a1, 1
+; RV64I-NEXT:    mv a1, a0
+; RV64I-NEXT:    beqz a2, .LBB62_2
 ; RV64I-NEXT:  # %bb.1: # %then
-; RV64I-NEXT:    li a1, 1
-; RV64I-NEXT:    amomaxu.w a1, a1, (a0)
-; RV64I-NEXT:    sext.w a0, a1
+; RV64I-NEXT:    li a0, 1
+; RV64I-NEXT:    amomaxu.w a0, a0, (a1)
 ; RV64I-NEXT:    ret
 ; RV64I-NEXT:  .LBB62_2: # %else
-; RV64I-NEXT:    lw a1, 0(a0)
-; RV64I-NEXT:    seqz a2, a1
-; RV64I-NEXT:    addw a2, a1, a2
-; RV64I-NEXT:    sw a2, 0(a0)
-; RV64I-NEXT:    sext.w a0, a1
+; RV64I-NEXT:    lw a0, 0(a1)
+; RV64I-NEXT:    li a3, 1
+; RV64I-NEXT:    mv a2, a0
+; RV64I-NEXT:    bltu a3, a0, .LBB62_4
+; RV64I-NEXT:  # %bb.3: # %else
+; RV64I-NEXT:    li a2, 1
+; RV64I-NEXT:  .LBB62_4: # %else
+; RV64I-NEXT:    sw a2, 0(a1)
 ; RV64I-NEXT:    ret
 ;
 ; RV64IA-LABEL: atomicrmw_umax_i32_monotonic_crossbb:
 ; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    andi a1, a1, 1
-; RV64IA-NEXT:    beqz a1, .LBB62_2
+; RV64IA-NEXT:    andi a2, a1, 1
+; RV64IA-NEXT:    mv a1, a0
+; RV64IA-NEXT:    beqz a2, .LBB62_2
 ; RV64IA-NEXT:  # %bb.1: # %then
-; RV64IA-NEXT:    li a1, 1
-; RV64IA-NEXT:    amomaxu.w a1, a1, (a0)
-; RV64IA-NEXT:    sext.w a0, a1
+; RV64IA-NEXT:    li a0, 1
+; RV64IA-NEXT:    amomaxu.w a0, a0, (a1)
 ; RV64IA-NEXT:    ret
 ; RV64IA-NEXT:  .LBB62_2: # %else
-; RV64IA-NEXT:    lw a1, 0(a0)
-; RV64IA-NEXT:    seqz a2, a1
-; RV64IA-NEXT:    addw a2, a1, a2
-; RV64IA-NEXT:    sw a2, 0(a0)
-; RV64IA-NEXT:    sext.w a0, a1
+; RV64IA-NEXT:    lw a0, 0(a1)
+; RV64IA-NEXT:    li a3, 1
+; RV64IA-NEXT:    mv a2, a0
+; RV64IA-NEXT:    bltu a3, a0, .LBB62_4
+; RV64IA-NEXT:  # %bb.3: # %else
+; RV64IA-NEXT:    li a2, 1
+; RV64IA-NEXT:  .LBB62_4: # %else
+; RV64IA-NEXT:    sw a2, 0(a1)
 ; RV64IA-NEXT:    ret
 ;
 ; RV64I-ZALRSC-LABEL: atomicrmw_umax_i32_monotonic_crossbb:
 ; RV64I-ZALRSC:       # %bb.0:
-; RV64I-ZALRSC-NEXT:    andi a1, a1, 1
-; RV64I-ZALRSC-NEXT:    beqz a1, .LBB62_2
+; RV64I-ZALRSC-NEXT:    andi a2, a1, 1
+; RV64I-ZALRSC-NEXT:    mv a1, a0
+; RV64I-ZALRSC-NEXT:    beqz a2, .LBB62_2
 ; RV64I-ZALRSC-NEXT:  # %bb.1: # %then
-; RV64I-ZALRSC-NEXT:    li a1, 1
-; RV64I-ZALRSC-NEXT:    amomaxu.w a1, a1, (a0)
-; RV64I-ZALRSC-NEXT:    sext.w a0, a1
+; RV64I-ZALRSC-NEXT:    li a0, 1
+; RV64I-ZALRSC-NEXT:    amomaxu.w a0, a0, (a1)
 ; RV64I-ZALRSC-NEXT:    ret
 ; RV64I-ZALRSC-NEXT:  .LBB62_2: # %else
-; RV64I-ZALRSC-NEXT:    lw a1, 0(a0)
-; RV64I-ZALRSC-NEXT:    seqz a2, a1
-; RV64I-ZALRSC-NEXT:    addw a2, a1, a2
-; RV64I-ZALRSC-NEXT:    sw a2, 0(a0)
-; RV64I-ZALRSC-NEXT:    sext.w a0, a1
+; RV64I-ZALRSC-NEXT:    lw a0, 0(a1)
+; RV64I-ZALRSC-NEXT:    li a3, 1
+; RV64I-ZALRSC-NEXT:    mv a2, a0
+; RV64I-ZALRSC-NEXT:    bltu a3, a0, .LBB62_4
+; RV64I-ZALRSC-NEXT:  # %bb.3: # %else
+; RV64I-ZALRSC-NEXT:    li a2, 1
+; RV64I-ZALRSC-NEXT:  .LBB62_4: # %else
+; RV64I-ZALRSC-NEXT:    sw a2, 0(a1)
 ; RV64I-ZALRSC-NEXT:    ret
   br i1 %c, label %then, label %else
 

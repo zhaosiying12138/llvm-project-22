@@ -297,13 +297,8 @@ void YSXDAGToDAGISel::Select(SDNode *Node) {
     ReplaceNode(Node, selectImm(CurDAG, DL, VT, Imm, *Subtarget).getNode());
     return;
   }
-  case YSXISD::BuildGPRPair:
-  case YSXISD::BuildPairF64: {
-    if (Opcode == YSXISD::BuildPairF64 && !Subtarget->hasStdExtZdinx())
-      break;
-
-    assert((!Subtarget->is64Bit() || Opcode == YSXISD::BuildGPRPair) &&
-           "BuildPairF64 only handled here on rv32i_zdinx");
+  case YSXISD::BuildGPRPair: {
+    assert(!Subtarget->is64Bit() && "BuildGPRPair only handled on RV32");
 
     SDValue Ops[] = {
         CurDAG->getTargetConstant(YSX::GPRPairRegClassID, DL, MVT::i32),
@@ -316,30 +311,24 @@ void YSXDAGToDAGISel::Select(SDNode *Node) {
     ReplaceNode(Node, N);
     return;
   }
-  case YSXISD::SplitGPRPair:
-  case YSXISD::SplitF64: {
-    if (Subtarget->hasStdExtZdinx() || Opcode != YSXISD::SplitF64) {
-      assert((!Subtarget->is64Bit() || Opcode == YSXISD::SplitGPRPair) &&
-             "SplitF64 only handled here on rv32i_zdinx");
-
-      if (!SDValue(Node, 0).use_empty()) {
-        SDValue Lo = CurDAG->getTargetExtractSubreg(YSX::sub_gpr_even, DL,
-                                                    Node->getValueType(0),
-                                                    Node->getOperand(0));
-        ReplaceUses(SDValue(Node, 0), Lo);
-      }
-
-      if (!SDValue(Node, 1).use_empty()) {
-        SDValue Hi = CurDAG->getTargetExtractSubreg(
-            YSX::sub_gpr_odd, DL, Node->getValueType(1), Node->getOperand(0));
-        ReplaceUses(SDValue(Node, 1), Hi);
-      }
-
-      CurDAG->RemoveDeadNode(Node);
-      return;
+  case YSXISD::SplitGPRPair: {
+    assert(!Subtarget->is64Bit() && "SplitGPRPair only handled on RV32");
+    if (!SDValue(Node, 0).use_empty()) {
+      SDValue Lo = CurDAG->getTargetExtractSubreg(YSX::sub_gpr_even, DL,
+                                                  Node->getValueType(0),
+                                                  Node->getOperand(0));
+      ReplaceUses(SDValue(Node, 0), Lo);
     }
 
-    llvm_unreachable("YSX does not support SplitF64 selection");
+    if (!SDValue(Node, 1).use_empty()) {
+      SDValue Hi = CurDAG->getTargetExtractSubreg(YSX::sub_gpr_odd, DL,
+                                                  Node->getValueType(1),
+                                                  Node->getOperand(0));
+      ReplaceUses(SDValue(Node, 1), Hi);
+    }
+
+    CurDAG->RemoveDeadNode(Node);
+    return;
   }
   case ISD::SHL: {
     auto *N1C = dyn_cast<ConstantSDNode>(Node->getOperand(1));
@@ -1844,7 +1833,7 @@ bool YSXDAGToDAGISel::selectSHXADD_UWOp(SDValue N, unsigned ShAmt,
 }
 
 bool YSXDAGToDAGISel::orDisjoint(const SDNode *N) const {
-  assert(N->getOpcode() == ISD::OR || N->getOpcode() == YSXISD::OR_VL);
+  assert(N->getOpcode() == ISD::OR);
   if (N->getFlags().hasDisjoint())
     return true;
   return CurDAG->haveNoCommonBitsSet(N->getOperand(0), N->getOperand(1));
@@ -2077,13 +2066,6 @@ bool YSXDAGToDAGISel::selectScalarFPAsInt(SDValue N, SDValue &Imm) {
     Imm = N.getOperand(0);
     return true;
   }
-  // Allow moves from XLenVT to FP.
-  if (N.getOpcode() == YSXISD::FMV_H_X ||
-      N.getOpcode() == YSXISD::FMV_W_X_RV64) {
-    Imm = N.getOperand(0);
-    return true;
-  }
-
   // Otherwise, look for FP constants that can materialized with scalar int.
   ConstantFPSDNode *CFP = dyn_cast<ConstantFPSDNode>(N.getNode());
   if (!CFP)

@@ -14,8 +14,12 @@ define i32 @optbranch_32(i32 %Arg) {
 ;
 ; RV64-LABEL: optbranch_32:
 ; RV64:       # %bb.0: # %bb
-; RV64-NEXT:    addiw a0, a0, 1
-; RV64-NEXT:    bnez a0, .LBB0_2
+; RV64-NEXT:    slli a0, a0, 32
+; RV64-NEXT:    srli a0, a0, 32
+; RV64-NEXT:    addi a0, a0, 1
+; RV64-NEXT:    slli a1, a0, 32
+; RV64-NEXT:    srli a1, a1, 32
+; RV64-NEXT:    beq a1, a0, .LBB0_2
 ; RV64-NEXT:  # %bb.1: # %bb2
 ; RV64-NEXT:    li a0, -1
 ; RV64-NEXT:  .LBB0_2: # %bb3
@@ -49,7 +53,9 @@ define i64 @optbranch_64(i64 %Arg) {
 ; RV64-LABEL: optbranch_64:
 ; RV64:       # %bb.0: # %bb
 ; RV64-NEXT:    addi a0, a0, 1
-; RV64-NEXT:    bnez a0, .LBB1_2
+; RV64-NEXT:    seqz a1, a0
+; RV64-NEXT:    li a2, 1
+; RV64-NEXT:    bne a1, a2, .LBB1_2
 ; RV64-NEXT:  # %bb.1: # %bb2
 ; RV64-NEXT:    li a0, -1
 ; RV64-NEXT:  .LBB1_2: # %bb3

@@ -245,12 +245,14 @@ define zeroext i8 @atomic_load_i8_unordered(ptr %a) nounwind {
 ;
 ; RV64I-LABEL: atomic_load_i8_unordered:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    lbu a0, 0(a0)
+; RV64I-NEXT:    lb a0, 0(a0)
+; RV64I-NEXT:    zext.b a0, a0
 ; RV64I-NEXT:    ret
 ;
 ; RV64IA-LABEL: atomic_load_i8_unordered:
 ; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    lbu a0, 0(a0)
+; RV64IA-NEXT:    lb a0, 0(a0)
+; RV64IA-NEXT:    zext.b a0, a0
 ; RV64IA-NEXT:    ret
   %1 = load atomic i8, ptr %a unordered, align 1
   ret i8 %1
@@ -275,12 +277,14 @@ define zeroext i8 @atomic_load_i8_monotonic(ptr %a) nounwind {
 ;
 ; RV64I-LABEL: atomic_load_i8_monotonic:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    lbu a0, 0(a0)
+; RV64I-NEXT:    lb a0, 0(a0)
+; RV64I-NEXT:    zext.b a0, a0
 ; RV64I-NEXT:    ret
 ;
 ; RV64IA-LABEL: atomic_load_i8_monotonic:
 ; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    lbu a0, 0(a0)
+; RV64IA-NEXT:    lb a0, 0(a0)
+; RV64IA-NEXT:    zext.b a0, a0
 ; RV64IA-NEXT:    ret
   %1 = load atomic i8, ptr %a monotonic, align 1
   ret i8 %1
@@ -311,14 +315,16 @@ define zeroext i8 @atomic_load_i8_acquire(ptr %a) nounwind {
 ;
 ; RV64I-LABEL: atomic_load_i8_acquire:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    lbu a0, 0(a0)
+; RV64I-NEXT:    lb a0, 0(a0)
 ; RV64I-NEXT:    fence r, rw
+; RV64I-NEXT:    zext.b a0, a0
 ; RV64I-NEXT:    ret
 ;
 ; RV64IA-LABEL: atomic_load_i8_acquire:
 ; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    lbu a0, 0(a0)
+; RV64IA-NEXT:    lb a0, 0(a0)
 ; RV64IA-NEXT:    fence r, rw
+; RV64IA-NEXT:    zext.b a0, a0
 ; RV64IA-NEXT:    ret
 ; RV64IA-WMO-LABEL: atomic_load_i8_acquire:
 ; RV64IA-WMO:       # %bb.0:
@@ -392,14 +398,16 @@ define zeroext i8 @atomic_load_i8_seq_cst(ptr %a) nounwind {
 ; RV64I-LABEL: atomic_load_i8_seq_cst:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    fence rw, rw
-; RV64I-NEXT:    lbu a0, 0(a0)
+; RV64I-NEXT:    lb a0, 0(a0)
+; RV64I-NEXT:    zext.b a0, a0
 ; RV64I-NEXT:    fence r, rw
 ; RV64I-NEXT:    ret
 ;
 ; RV64IA-LABEL: atomic_load_i8_seq_cst:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    fence rw, rw
-; RV64IA-NEXT:    lbu a0, 0(a0)
+; RV64IA-NEXT:    lb a0, 0(a0)
+; RV64IA-NEXT:    zext.b a0, a0
 ; RV64IA-NEXT:    fence r, rw
 ; RV64IA-NEXT:    ret
 ; RV64IA-WMO-LABEL: atomic_load_i8_seq_cst:
@@ -463,12 +471,16 @@ define zeroext i16 @atomic_load_i16_unordered(ptr %a) nounwind {
 ;
 ; RV64I-LABEL: atomic_load_i16_unordered:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    lhu a0, 0(a0)
+; RV64I-NEXT:    lh a0, 0(a0)
+; RV64I-NEXT:    slli a0, a0, 48
+; RV64I-NEXT:    srli a0, a0, 48
 ; RV64I-NEXT:    ret
 ;
 ; RV64IA-LABEL: atomic_load_i16_unordered:
 ; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    lhu a0, 0(a0)
+; RV64IA-NEXT:    lh a0, 0(a0)
+; RV64IA-NEXT:    slli a0, a0, 48
+; RV64IA-NEXT:    srli a0, a0, 48
 ; RV64IA-NEXT:    ret
   %1 = load atomic i16, ptr %a unordered, align 2
   ret i16 %1
@@ -494,12 +506,16 @@ define zeroext i16 @atomic_load_i16_monotonic(ptr %a) nounwind {
 ;
 ; RV64I-LABEL: atomic_load_i16_monotonic:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    lhu a0, 0(a0)
+; RV64I-NEXT:    lh a0, 0(a0)
+; RV64I-NEXT:    slli a0, a0, 48
+; RV64I-NEXT:    srli a0, a0, 48
 ; RV64I-NEXT:    ret
 ;
 ; RV64IA-LABEL: atomic_load_i16_monotonic:
 ; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    lhu a0, 0(a0)
+; RV64IA-NEXT:    lh a0, 0(a0)
+; RV64IA-NEXT:    slli a0, a0, 48
+; RV64IA-NEXT:    srli a0, a0, 48
 ; RV64IA-NEXT:    ret
   %1 = load atomic i16, ptr %a monotonic, align 2
   ret i16 %1
@@ -531,14 +547,18 @@ define zeroext i16 @atomic_load_i16_acquire(ptr %a) nounwind {
 ;
 ; RV64I-LABEL: atomic_load_i16_acquire:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    lhu a0, 0(a0)
+; RV64I-NEXT:    lh a0, 0(a0)
 ; RV64I-NEXT:    fence r, rw
+; RV64I-NEXT:    slli a0, a0, 48
+; RV64I-NEXT:    srli a0, a0, 48
 ; RV64I-NEXT:    ret
 ;
 ; RV64IA-LABEL: atomic_load_i16_acquire:
 ; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    lhu a0, 0(a0)
+; RV64IA-NEXT:    lh a0, 0(a0)
 ; RV64IA-NEXT:    fence r, rw
+; RV64IA-NEXT:    slli a0, a0, 48
+; RV64IA-NEXT:    srli a0, a0, 48
 ; RV64IA-NEXT:    ret
 ; RV64IA-WMO-LABEL: atomic_load_i16_acquire:
 ; RV64IA-WMO:       # %bb.0:
@@ -615,14 +635,18 @@ define zeroext i16 @atomic_load_i16_seq_cst(ptr %a) nounwind {
 ; RV64I-LABEL: atomic_load_i16_seq_cst:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    fence rw, rw
-; RV64I-NEXT:    lhu a0, 0(a0)
+; RV64I-NEXT:    lh a0, 0(a0)
+; RV64I-NEXT:    slli a0, a0, 48
+; RV64I-NEXT:    srli a0, a0, 48
 ; RV64I-NEXT:    fence r, rw
 ; RV64I-NEXT:    ret
 ;
 ; RV64IA-LABEL: atomic_load_i16_seq_cst:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    fence rw, rw
-; RV64IA-NEXT:    lhu a0, 0(a0)
+; RV64IA-NEXT:    lh a0, 0(a0)
+; RV64IA-NEXT:    slli a0, a0, 48
+; RV64IA-NEXT:    srli a0, a0, 48
 ; RV64IA-NEXT:    fence r, rw
 ; RV64IA-NEXT:    ret
 ; RV64IA-WMO-LABEL: atomic_load_i16_seq_cst:
@@ -686,12 +710,16 @@ define zeroext i32 @atomic_load_i32_unordered(ptr %a) nounwind {
 ;
 ; RV64I-LABEL: atomic_load_i32_unordered:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    lwu a0, 0(a0)
+; RV64I-NEXT:    lw a0, 0(a0)
+; RV64I-NEXT:    slli a0, a0, 32
+; RV64I-NEXT:    srli a0, a0, 32
 ; RV64I-NEXT:    ret
 ;
 ; RV64IA-LABEL: atomic_load_i32_unordered:
 ; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    lwu a0, 0(a0)
+; RV64IA-NEXT:    lw a0, 0(a0)
+; RV64IA-NEXT:    slli a0, a0, 32
+; RV64IA-NEXT:    srli a0, a0, 32
 ; RV64IA-NEXT:    ret
   %1 = load atomic i32, ptr %a unordered, align 4
   ret i32 %1
@@ -715,12 +743,16 @@ define zeroext i32 @atomic_load_i32_monotonic(ptr %a) nounwind {
 ;
 ; RV64I-LABEL: atomic_load_i32_monotonic:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    lwu a0, 0(a0)
+; RV64I-NEXT:    lw a0, 0(a0)
+; RV64I-NEXT:    slli a0, a0, 32
+; RV64I-NEXT:    srli a0, a0, 32
 ; RV64I-NEXT:    ret
 ;
 ; RV64IA-LABEL: atomic_load_i32_monotonic:
 ; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    lwu a0, 0(a0)
+; RV64IA-NEXT:    lw a0, 0(a0)
+; RV64IA-NEXT:    slli a0, a0, 32
+; RV64IA-NEXT:    srli a0, a0, 32
 ; RV64IA-NEXT:    ret
   %1 = load atomic i32, ptr %a monotonic, align 4
   ret i32 %1
@@ -750,14 +782,18 @@ define zeroext i32 @atomic_load_i32_acquire(ptr %a) nounwind {
 ;
 ; RV64I-LABEL: atomic_load_i32_acquire:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    lwu a0, 0(a0)
+; RV64I-NEXT:    lw a0, 0(a0)
 ; RV64I-NEXT:    fence r, rw
+; RV64I-NEXT:    slli a0, a0, 32
+; RV64I-NEXT:    srli a0, a0, 32
 ; RV64I-NEXT:    ret
 ;
 ; RV64IA-LABEL: atomic_load_i32_acquire:
 ; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    lwu a0, 0(a0)
+; RV64IA-NEXT:    lw a0, 0(a0)
 ; RV64IA-NEXT:    fence r, rw
+; RV64IA-NEXT:    slli a0, a0, 32
+; RV64IA-NEXT:    srli a0, a0, 32
 ; RV64IA-NEXT:    ret
 ; RV64IA-WMO-LABEL: atomic_load_i32_acquire:
 ; RV64IA-WMO:       # %bb.0:
@@ -830,14 +866,18 @@ define zeroext i32 @atomic_load_i32_seq_cst(ptr %a) nounwind {
 ; RV64I-LABEL: atomic_load_i32_seq_cst:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    fence rw, rw
-; RV64I-NEXT:    lwu a0, 0(a0)
+; RV64I-NEXT:    lw a0, 0(a0)
+; RV64I-NEXT:    slli a0, a0, 32
+; RV64I-NEXT:    srli a0, a0, 32
 ; RV64I-NEXT:    fence r, rw
 ; RV64I-NEXT:    ret
 ;
 ; RV64IA-LABEL: atomic_load_i32_seq_cst:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    fence rw, rw
-; RV64IA-NEXT:    lwu a0, 0(a0)
+; RV64IA-NEXT:    lw a0, 0(a0)
+; RV64IA-NEXT:    slli a0, a0, 32
+; RV64IA-NEXT:    srli a0, a0, 32
 ; RV64IA-NEXT:    fence r, rw
 ; RV64IA-NEXT:    ret
 ; RV64IA-WMO-LABEL: atomic_load_i32_seq_cst:

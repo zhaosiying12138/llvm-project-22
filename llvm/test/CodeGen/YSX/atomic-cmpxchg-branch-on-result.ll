@@ -8,19 +8,24 @@
 define void @cmpxchg_and_branch1(ptr %ptr, i32 signext %cmp, i32 signext %val) nounwind {
 ; NOZACAS-LABEL: cmpxchg_and_branch1:
 ; NOZACAS:       # %bb.0: # %entry
+; NOZACAS-NEXT:    li a3, 1
 ; NOZACAS-NEXT:  .LBB0_1: # %do_cmpxchg
 ; NOZACAS-NEXT:    # =>This Loop Header: Depth=1
 ; NOZACAS-NEXT:    # Child Loop BB0_3 Depth 2
 ; NOZACAS-NEXT:  .LBB0_3: # %do_cmpxchg
 ; NOZACAS-NEXT:    # Parent Loop BB0_1 Depth=1
 ; NOZACAS-NEXT:    # => This Inner Loop Header: Depth=2
-; NOZACAS-NEXT:    lr.w.aqrl a3, (a0)
-; NOZACAS-NEXT:    bne a3, a1, .LBB0_1
+; NOZACAS-NEXT:    lr.w.aqrl a4, (a0)
+; NOZACAS-NEXT:    bne a4, a1, .LBB0_5
 ; NOZACAS-NEXT:  # %bb.4: # %do_cmpxchg
 ; NOZACAS-NEXT:    # in Loop: Header=BB0_3 Depth=2
-; NOZACAS-NEXT:    sc.w.rl a4, a2, (a0)
-; NOZACAS-NEXT:    bnez a4, .LBB0_3
-; NOZACAS-NEXT:  # %bb.5: # %do_cmpxchg
+; NOZACAS-NEXT:    sc.w.rl a5, a2, (a0)
+; NOZACAS-NEXT:    bnez a5, .LBB0_3
+; NOZACAS-NEXT:  .LBB0_5: # %do_cmpxchg
+; NOZACAS-NEXT:    # in Loop: Header=BB0_1 Depth=1
+; NOZACAS-NEXT:    xor a4, a4, a1
+; NOZACAS-NEXT:    seqz a4, a4
+; NOZACAS-NEXT:    bne a4, a3, .LBB0_1
 ; NOZACAS-NEXT:  # %bb.2: # %exit
 ; NOZACAS-NEXT:    ret
 ; ZACAS-LABEL: cmpxchg_and_branch1:
@@ -60,7 +65,9 @@ define void @cmpxchg_and_branch2(ptr %ptr, i32 signext %cmp, i32 signext %val) n
 ; NOZACAS-NEXT:    bnez a4, .LBB1_3
 ; NOZACAS-NEXT:  .LBB1_5: # %do_cmpxchg
 ; NOZACAS-NEXT:    # in Loop: Header=BB1_1 Depth=1
-; NOZACAS-NEXT:    beq a3, a1, .LBB1_1
+; NOZACAS-NEXT:    xor a3, a3, a1
+; NOZACAS-NEXT:    seqz a3, a3
+; NOZACAS-NEXT:    bnez a3, .LBB1_1
 ; NOZACAS-NEXT:  # %bb.2: # %exit
 ; NOZACAS-NEXT:    ret
 ; ZACAS-LABEL: cmpxchg_and_branch2:
@@ -162,7 +169,7 @@ define void @cmpxchg_masked_and_branch1(ptr %ptr, i8 signext %cmp, i8 signext %v
 ; NOZACAS-NEXT:    # => This Inner Loop Header: Depth=2
 ; NOZACAS-NEXT:    lr.w.aqrl a4, (a3)
 ; NOZACAS-NEXT:    and a5, a4, a0
-; NOZACAS-NEXT:    bne a5, a1, .LBB2_1
+; NOZACAS-NEXT:    bne a5, a1, .LBB2_5
 ; NOZACAS-NEXT:  # %bb.4: # %do_cmpxchg
 ; NOZACAS-NEXT:    # in Loop: Header=BB2_3 Depth=2
 ; NOZACAS-NEXT:    xor a5, a4, a2
@@ -170,7 +177,11 @@ define void @cmpxchg_masked_and_branch1(ptr %ptr, i8 signext %cmp, i8 signext %v
 ; NOZACAS-NEXT:    xor a5, a4, a5
 ; NOZACAS-NEXT:    sc.w.rl a5, a5, (a3)
 ; NOZACAS-NEXT:    bnez a5, .LBB2_3
-; NOZACAS-NEXT:  # %bb.5: # %do_cmpxchg
+; NOZACAS-NEXT:  .LBB2_5: # %do_cmpxchg
+; NOZACAS-NEXT:    # in Loop: Header=BB2_1 Depth=1
+; NOZACAS-NEXT:    and a4, a4, a0
+; NOZACAS-NEXT:    sext.w a4, a4
+; NOZACAS-NEXT:    bne a1, a4, .LBB2_1
 ; NOZACAS-NEXT:  # %bb.2: # %exit
 ; NOZACAS-NEXT:    ret
 ; RV64IA-ZACAS-LABEL: cmpxchg_masked_and_branch1:
@@ -318,6 +329,7 @@ define void @cmpxchg_masked_and_branch2(ptr %ptr, i8 signext %cmp, i8 signext %v
 ; NOZACAS-NEXT:  .LBB3_5: # %do_cmpxchg
 ; NOZACAS-NEXT:    # in Loop: Header=BB3_1 Depth=1
 ; NOZACAS-NEXT:    and a4, a4, a0
+; NOZACAS-NEXT:    sext.w a4, a4
 ; NOZACAS-NEXT:    beq a1, a4, .LBB3_1
 ; NOZACAS-NEXT:  # %bb.2: # %exit
 ; NOZACAS-NEXT:    ret

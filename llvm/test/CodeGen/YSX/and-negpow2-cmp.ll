@@ -28,7 +28,8 @@ define i1 @test1(i64 %x) {
 define i1 @test2(i32 signext %x) {
 ; CHECK-LABEL: test2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    srli a0, a0, 30
+; CHECK-NEXT:    lui a1, 786432
+; CHECK-NEXT:    and a0, a0, a1
 ; CHECK-NEXT:    seqz a0, a0
 ; CHECK-NEXT:    ret
   %a = and i32 %x, -1073741824
@@ -39,7 +40,8 @@ define i1 @test2(i32 signext %x) {
 define i1 @test3(i32 signext %x) {
 ; CHECK-LABEL: test3:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    srli a0, a0, 29
+; CHECK-NEXT:    lui a1, 917504
+; CHECK-NEXT:    and a0, a0, a1
 ; CHECK-NEXT:    snez a0, a0
 ; CHECK-NEXT:    ret
   %a = and i32 %x, -536870912
@@ -57,6 +59,7 @@ define i1 @test4(i64 %x) {
 ; CHECK-LABEL: test4:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    srli a0, a0, 46
+; CHECK-NEXT:    slli a0, a0, 46
 ; CHECK-NEXT:    seqz a0, a0
 ; CHECK-NEXT:    ret
   %a = and i64 %x, -70368744177664
@@ -73,7 +76,8 @@ define i1 @test5(i64 %x) {
 ;
 ; CHECK-LABEL: test5:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    sraiw a0, a0, 29
+; CHECK-NEXT:    srliw a0, a0, 29
+; CHECK-NEXT:    slli a0, a0, 29
 ; CHECK-NEXT:    seqz a0, a0
 ; CHECK-NEXT:    ret
   %a = and i64 %x, u0xE0000000
@@ -90,7 +94,8 @@ define i1 @test6(i64 %x) {
 ;
 ; CHECK-LABEL: test6:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    sraiw a0, a0, 29
+; CHECK-NEXT:    srliw a0, a0, 29
+; CHECK-NEXT:    slli a0, a0, 29
 ; CHECK-NEXT:    snez a0, a0
 ; CHECK-NEXT:    ret
   %a = and i64 %x, u0xE0000000
@@ -108,8 +113,11 @@ define i1 @test7(i64 %x) {
 ;
 ; CHECK-LABEL: test7:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    sraiw a0, a0, 29
-; CHECK-NEXT:    addi a0, a0, 2
+; CHECK-NEXT:    srliw a0, a0, 29
+; CHECK-NEXT:    li a1, 3
+; CHECK-NEXT:    slli a0, a0, 29
+; CHECK-NEXT:    slli a1, a1, 30
+; CHECK-NEXT:    xor a0, a0, a1
 ; CHECK-NEXT:    seqz a0, a0
 ; CHECK-NEXT:    ret
   %a = and i64 %x, u0xE0000000
@@ -127,8 +135,11 @@ define i1 @test8(i64 %x) {
 ;
 ; CHECK-LABEL: test8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    sraiw a0, a0, 20
-; CHECK-NEXT:    xori a0, a0, -2048
+; CHECK-NEXT:    srliw a0, a0, 20
+; CHECK-NEXT:    li a1, 1
+; CHECK-NEXT:    slli a0, a0, 20
+; CHECK-NEXT:    slli a1, a1, 31
+; CHECK-NEXT:    xor a0, a0, a1
 ; CHECK-NEXT:    snez a0, a0
 ; CHECK-NEXT:    ret
   %a = and i64 %x, u0xFFF00000
@@ -146,8 +157,10 @@ define i1 @test9(i64 %x) {
 ;
 ; CHECK-LABEL: test9:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    sraiw a0, a0, 16
-; CHECK-NEXT:    addi a0, a0, -2048
+; CHECK-NEXT:    srliw a0, a0, 16
+; CHECK-NEXT:    slli a0, a0, 16
+; CHECK-NEXT:    lui a1, 32768
+; CHECK-NEXT:    xor a0, a0, a1
 ; CHECK-NEXT:    seqz a0, a0
 ; CHECK-NEXT:    ret
   %a = and i64 %x, u0xFFFF0000
@@ -169,7 +182,8 @@ define i64 @test10(i64 %0) #0 {
 ; CHECK-LABEL: test10:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addiw a0, a0, -1
-; CHECK-NEXT:    sraiw a0, a0, 4
+; CHECK-NEXT:    srliw a0, a0, 4
+; CHECK-NEXT:    slli a0, a0, 4
 ; CHECK-NEXT:    snez a0, a0
 ; CHECK-NEXT:    ret
 entry:
@@ -195,8 +209,12 @@ define i64 @test11(i64 %0) #0 {
 ; CHECK-LABEL: test11:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addiw a0, a0, -1
-; CHECK-NEXT:    sraiw a0, a0, 4
-; CHECK-NEXT:    addi a0, a0, 1621
+; CHECK-NEXT:    lui a1, 524285
+; CHECK-NEXT:    srliw a0, a0, 4
+; CHECK-NEXT:    slli a1, a1, 1
+; CHECK-NEXT:    slli a0, a0, 4
+; CHECK-NEXT:    addi a1, a1, -1360
+; CHECK-NEXT:    xor a0, a0, a1
 ; CHECK-NEXT:    seqz a0, a0
 ; CHECK-NEXT:    ret
 entry:
@@ -221,7 +239,12 @@ define i64 @test12(i64 %0) #0 {
 ; CHECK-LABEL: test12:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addiw a0, a0, -16
-; CHECK-NEXT:    addiw a0, a0, 13
+; CHECK-NEXT:    li a1, 1
+; CHECK-NEXT:    slli a0, a0, 32
+; CHECK-NEXT:    slli a1, a1, 32
+; CHECK-NEXT:    srli a0, a0, 32
+; CHECK-NEXT:    addi a1, a1, -13
+; CHECK-NEXT:    xor a0, a0, a1
 ; CHECK-NEXT:    seqz a0, a0
 ; CHECK-NEXT:    ret
 entry:
@@ -250,7 +273,8 @@ define i64 @test13(i64 %0) #0 {
 ; CHECK-NEXT:    lui a1, 524288
 ; CHECK-NEXT:    addi a1, a1, -15
 ; CHECK-NEXT:    sub a0, a0, a1
-; CHECK-NEXT:    sraiw a0, a0, 31
+; CHECK-NEXT:    srliw a0, a0, 31
+; CHECK-NEXT:    slli a0, a0, 31
 ; CHECK-NEXT:    seqz a0, a0
 ; CHECK-NEXT:    ret
 entry:

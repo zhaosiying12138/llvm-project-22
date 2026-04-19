@@ -80,7 +80,8 @@ define i32 @pos_sel_constants(i32 signext %a) {
 ; CHECK-LABEL: pos_sel_constants:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    srli a0, a0, 63
-; CHECK-NEXT:    addiw a0, a0, -1
+; CHECK-NEXT:    xori a0, a0, 1
+; CHECK-NEXT:    negw a0, a0
 ; CHECK-NEXT:    andi a0, a0, 5
 ; CHECK-NEXT:    ret
   %tmp.1 = icmp sgt i32 %a, -1
@@ -123,7 +124,8 @@ define i32 @pos_sel_variable_and_zero(i32 signext %a, i32 signext %b) {
 ; CHECK-LABEL: pos_sel_variable_and_zero:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    srli a0, a0, 63
-; CHECK-NEXT:    addi a0, a0, -1
+; CHECK-NEXT:    xori a0, a0, 1
+; CHECK-NEXT:    neg a0, a0
 ; CHECK-NEXT:    and a0, a0, a1
 ; CHECK-NEXT:    ret
 ; RV32ZBB-LABEL: pos_sel_variable_and_zero:
@@ -270,7 +272,9 @@ define i64 @sraiw_andi(i32 signext %0, i32 signext %1) nounwind {
 ; CHECK-LABEL: sraiw_andi:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addw a0, a0, a1
-; CHECK-NEXT:    sraiw a0, a0, 31
+; CHECK-NEXT:    srliw a0, a0, 31
+; CHECK-NEXT:    xori a0, a0, 1
+; CHECK-NEXT:    addiw a0, a0, -1
 ; CHECK-NEXT:    andi a0, a0, 7
 ; CHECK-NEXT:    ret
 entry:

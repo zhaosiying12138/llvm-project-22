@@ -530,6 +530,7 @@ define zeroext i8 @zext_divuw_zext_zext_i8(i8 zeroext %a, i8 zeroext %b) nounwin
 ; RV64IM-LABEL: zext_divuw_zext_zext_i8:
 ; RV64IM:       # %bb.0:
 ; RV64IM-NEXT:    divuw a0, a0, a1
+; RV64IM-NEXT:    zext.b a0, a0
 ; RV64IM-NEXT:    ret
   %1 = udiv i8 %a, %b
   ret i8 %1
@@ -539,6 +540,8 @@ define zeroext i16 @zext_divuw_zext_zext_i16(i16 zeroext %a, i16 zeroext %b) nou
 ; RV64IM-LABEL: zext_divuw_zext_zext_i16:
 ; RV64IM:       # %bb.0:
 ; RV64IM-NEXT:    divuw a0, a0, a1
+; RV64IM-NEXT:    slli a0, a0, 48
+; RV64IM-NEXT:    srli a0, a0, 48
 ; RV64IM-NEXT:    ret
   %1 = udiv i16 %a, %b
   ret i16 %1
@@ -1391,6 +1394,7 @@ define zeroext i8 @zext_remuw_zext_zext_i8(i8 zeroext %a, i8 zeroext %b) nounwin
 ; RV64IM-LABEL: zext_remuw_zext_zext_i8:
 ; RV64IM:       # %bb.0:
 ; RV64IM-NEXT:    remuw a0, a0, a1
+; RV64IM-NEXT:    zext.b a0, a0
 ; RV64IM-NEXT:    ret
   %1 = urem i8 %a, %b
   ret i8 %1
@@ -1400,6 +1404,8 @@ define zeroext i16 @zext_remuw_zext_zext_i16(i16 zeroext %a, i16 zeroext %b) nou
 ; RV64IM-LABEL: zext_remuw_zext_zext_i16:
 ; RV64IM:       # %bb.0:
 ; RV64IM-NEXT:    remuw a0, a0, a1
+; RV64IM-NEXT:    slli a0, a0, 48
+; RV64IM-NEXT:    srli a0, a0, 48
 ; RV64IM-NEXT:    ret
   %1 = urem i16 %a, %b
   ret i16 %1

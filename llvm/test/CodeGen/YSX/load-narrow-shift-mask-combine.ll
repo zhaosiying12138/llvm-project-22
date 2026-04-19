@@ -16,8 +16,9 @@ define ptr @narrow_to_lbu(ptr %a, ptr %b) {
 ;
 ; RV64I-LABEL: narrow_to_lbu:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    lbu a0, 0(a0)
-; RV64I-NEXT:    slli a0, a0, 4
+; RV64I-NEXT:    lh a0, 0(a0)
+; RV64I-NEXT:    slli a0, a0, 56
+; RV64I-NEXT:    srli a0, a0, 52
 ; RV64I-NEXT:    add a0, a1, a0
 ; RV64I-NEXT:    ret
   %1 = load i16, ptr %a, align 2
@@ -38,8 +39,9 @@ define ptr @narrow_to_lhu(ptr %a, ptr %b) {
 ;
 ; RV64I-LABEL: narrow_to_lhu:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    lhu a0, 0(a0)
-; RV64I-NEXT:    slli a0, a0, 4
+; RV64I-NEXT:    lw a0, 0(a0)
+; RV64I-NEXT:    slli a0, a0, 48
+; RV64I-NEXT:    srli a0, a0, 44
 ; RV64I-NEXT:    add a0, a1, a0
 ; RV64I-NEXT:    ret
   %1 = load i32, ptr %a, align 4
@@ -60,8 +62,9 @@ define ptr @narrow_to_lwu(ptr %a, ptr %b) {
 ;
 ; RV64I-LABEL: narrow_to_lwu:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    lwu a0, 0(a0)
-; RV64I-NEXT:    slli a0, a0, 4
+; RV64I-NEXT:    ld a0, 0(a0)
+; RV64I-NEXT:    slli a0, a0, 32
+; RV64I-NEXT:    srli a0, a0, 28
 ; RV64I-NEXT:    add a0, a1, a0
 ; RV64I-NEXT:    ret
   %1 = load i64, ptr %a, align 8

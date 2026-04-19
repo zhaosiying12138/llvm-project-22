@@ -120,14 +120,6 @@ public:
 
   bool shouldExpandCttzElements(EVT VT) const override;
 
-  /// Return the cost of LMUL for linear operations.
-  InstructionCost getLMULCost(MVT VT) const;
-
-  InstructionCost getVRGatherVVCost(MVT VT) const;
-  InstructionCost getVRGatherVICost(MVT VT) const;
-  InstructionCost getVSlideVXCost(MVT VT) const;
-  InstructionCost getVSlideVICost(MVT VT) const;
-
   // Provide custom lowering hooks for some operations.
   SDValue LowerOperation(SDValue Op, SelectionDAG &DAG) const override;
   void ReplaceNodeResults(SDNode *N, SmallVectorImpl<SDValue> &Results,
@@ -340,46 +332,7 @@ public:
       unsigned NumParts, MVT PartVT, EVT ValueVT,
       std::optional<CallingConv::ID> CC) const override;
 
-  // Return the value of VLMax for the given vector type (i.e. SEW and LMUL)
-  SDValue computeVLMax(MVT VecVT, const SDLoc &DL, SelectionDAG &DAG) const;
-
-  static RISCVVType::VLMUL getLMUL(MVT VT);
-  inline static unsigned computeVLMAX(unsigned VectorBits, unsigned EltSize,
-                                      unsigned MinSize) {
-    // Original equation:
-    //   VLMAX = (VectorBits / EltSize) * LMUL
-    //   where LMUL = MinSize / YSX::YSXVecBitsPerBlock
-    // The following equations have been reordered to prevent loss of precision
-    // when calculating fractional LMUL.
-    return ((VectorBits / EltSize) * MinSize) / YSX::YSXVecBitsPerBlock;
-  }
-
-  // Return inclusive (low, high) bounds on the value of VLMAX for the
-  // given scalable container type given known bounds on VLEN.
-  static std::pair<unsigned, unsigned>
-  computeVLMAXBounds(MVT ContainerVT, const YSXSubtarget &Subtarget);
-
-  /// Given a vector (either fixed or scalable), return the scalable vector
-  /// corresponding to a vector register (i.e. an m1 register group).
-  static MVT getM1VT(MVT VT) {
-    unsigned EltSizeInBits = VT.getVectorElementType().getSizeInBits();
-    assert(EltSizeInBits <= YSX::YSXVecBitsPerBlock && "Unexpected vector MVT");
-    return MVT::getScalableVectorVT(VT.getVectorElementType(),
-                                    YSX::YSXVecBitsPerBlock / EltSizeInBits);
-  }
-
-  static unsigned getRegClassIDForLMUL(RISCVVType::VLMUL LMul);
-  static unsigned getSubregIndexByMVT(MVT VT, unsigned Index);
-  static unsigned getRegClassIDForVecVT(MVT VT);
-  static std::pair<unsigned, unsigned>
-  decomposeSubvectorInsertExtractToSubRegs(MVT VecVT, MVT SubVecVT,
-                                           unsigned InsertExtractIdx,
-                                           const YSXRegisterInfo *TRI);
-  MVT getContainerForFixedLengthVector(MVT VT) const;
-
   bool shouldRemoveExtendFromGSIndex(SDValue Extend, EVT DataVT) const override;
-
-  bool isLegalElementTypeForYSXVec(EVT ScalarTy) const;
 
   bool shouldConvertFpToSat(unsigned Op, EVT FPVT, EVT VT) const override;
 
@@ -410,20 +363,6 @@ public:
   /// If the target has a standard location for the stack protector cookie,
   /// returns the address of that location. Otherwise, returns nullptr.
   Value *getIRStackGuard(IRBuilderBase &IRB) const override;
-
-  /// Returns whether or not generating a interleaved load/store intrinsic for
-  /// this type will be legal.
-  bool isLegalInterleavedAccessType(VectorType *VTy, unsigned Factor,
-                                    Align Alignment, unsigned AddrSpace,
-                                    const DataLayout &) const;
-
-  /// Return true if a stride load store of the given result type and
-  /// alignment is legal.
-  bool isLegalStridedLoadStore(EVT DataType, Align Alignment) const;
-
-  /// Return true if a fault-only-first load of the given result type and
-  /// alignment is legal.
-  bool isLegalFirstFaultLoad(EVT DataType, Align Alignment) const;
 
   unsigned getMaxSupportedInterleaveFactor() const override { return 1; }
 
@@ -479,12 +418,6 @@ public:
   bool isReassocProfitable(SelectionDAG &DAG, SDValue N0,
                            SDValue N1) const override;
 
-  /// Match a mask which "spreads" the leading elements of a vector evenly
-  /// across the result.  Factor is the spread amount, and Index is the
-  /// offset applied.
-  static bool isSpreadMask(ArrayRef<int> Mask, unsigned Factor,
-                           unsigned &Index);
-
 private:
   void analyzeInputArgs(MachineFunction &MF, CCState &CCInfo,
                         const SmallVectorImpl<ISD::InputArg> &Ins, bool IsRet,
@@ -515,84 +448,17 @@ private:
   SDValue lowerRETURNADDR(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerShiftLeftParts(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerShiftRightParts(SDValue Op, SelectionDAG &DAG, bool IsSRA) const;
-  SDValue lowerSPLAT_VECTOR_PARTS(SDValue Op, SelectionDAG &DAG) const;
-  SDValue lowerVectorMaskSplat(SDValue Op, SelectionDAG &DAG) const;
-  SDValue lowerVectorMaskExt(SDValue Op, SelectionDAG &DAG,
-                             int64_t ExtTrueVal) const;
-  SDValue lowerVectorMaskTruncLike(SDValue Op, SelectionDAG &DAG) const;
-  SDValue lowerVectorTruncLike(SDValue Op, SelectionDAG &DAG) const;
-  SDValue lowerVectorFPExtendOrRoundLike(SDValue Op, SelectionDAG &DAG) const;
-  SDValue lowerINSERT_VECTOR_ELT(SDValue Op, SelectionDAG &DAG) const;
-  SDValue lowerEXTRACT_VECTOR_ELT(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerINTRINSIC_WO_CHAIN(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerINTRINSIC_W_CHAIN(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerINTRINSIC_VOID(SDValue Op, SelectionDAG &DAG) const;
-  SDValue lowerVPREDUCE(SDValue Op, SelectionDAG &DAG) const;
-  SDValue lowerVECREDUCE(SDValue Op, SelectionDAG &DAG) const;
-  SDValue lowerVectorMaskVecReduction(SDValue Op, SelectionDAG &DAG,
-                                      bool IsVP) const;
-  SDValue lowerFPVECREDUCE(SDValue Op, SelectionDAG &DAG) const;
-  SDValue lowerINSERT_SUBVECTOR(SDValue Op, SelectionDAG &DAG) const;
-  SDValue lowerEXTRACT_SUBVECTOR(SDValue Op, SelectionDAG &DAG) const;
-  SDValue lowerVECTOR_DEINTERLEAVE(SDValue Op, SelectionDAG &DAG) const;
-  SDValue lowerVECTOR_INTERLEAVE(SDValue Op, SelectionDAG &DAG) const;
-  SDValue lowerSTEP_VECTOR(SDValue Op, SelectionDAG &DAG) const;
-  SDValue lowerVECTOR_REVERSE(SDValue Op, SelectionDAG &DAG) const;
-  SDValue lowerVECTOR_SPLICE(SDValue Op, SelectionDAG &DAG) const;
-  SDValue lowerABS(SDValue Op, SelectionDAG &DAG) const;
-  SDValue lowerMaskedLoad(SDValue Op, SelectionDAG &DAG) const;
-  SDValue lowerLoadFF(SDValue Op, SelectionDAG &DAG) const;
-  SDValue lowerMaskedStore(SDValue Op, SelectionDAG &DAG) const;
-  SDValue lowerVectorCompress(SDValue Op, SelectionDAG &DAG) const;
-  SDValue lowerFixedLengthVectorFCOPYSIGNToYSXVec(SDValue Op,
-                                               SelectionDAG &DAG) const;
-  SDValue lowerMaskedGather(SDValue Op, SelectionDAG &DAG) const;
-  SDValue lowerMaskedScatter(SDValue Op, SelectionDAG &DAG) const;
-  SDValue lowerFixedLengthVectorLoadToYSXVec(SDValue Op, SelectionDAG &DAG) const;
-  SDValue lowerFixedLengthVectorStoreToYSXVec(SDValue Op, SelectionDAG &DAG) const;
-  SDValue lowerToScalableOp(SDValue Op, SelectionDAG &DAG) const;
-  SDValue LowerIS_FPCLASS(SDValue Op, SelectionDAG &DAG) const;
-  SDValue lowerVPOp(SDValue Op, SelectionDAG &DAG) const;
-  SDValue lowerLogicVPOp(SDValue Op, SelectionDAG &DAG) const;
-  SDValue lowerVPExtMaskOp(SDValue Op, SelectionDAG &DAG) const;
-  SDValue lowerVPSetCCMaskOp(SDValue Op, SelectionDAG &DAG) const;
-  SDValue lowerVPMergeMask(SDValue Op, SelectionDAG &DAG) const;
-  SDValue lowerVPSpliceExperimental(SDValue Op, SelectionDAG &DAG) const;
-  SDValue lowerVPReverseExperimental(SDValue Op, SelectionDAG &DAG) const;
-  SDValue lowerVPFPIntConvOp(SDValue Op, SelectionDAG &DAG) const;
-  SDValue lowerVPStridedLoad(SDValue Op, SelectionDAG &DAG) const;
-  SDValue lowerVPStridedStore(SDValue Op, SelectionDAG &DAG) const;
-  SDValue lowerVPCttzElements(SDValue Op, SelectionDAG &DAG) const;
-  SDValue lowerGET_ROUNDING(SDValue Op, SelectionDAG &DAG) const;
-  SDValue lowerSET_ROUNDING(SDValue Op, SelectionDAG &DAG) const;
-  SDValue lowerGET_FPENV(SDValue Op, SelectionDAG &DAG) const;
-  SDValue lowerSET_FPENV(SDValue Op, SelectionDAG &DAG) const;
-  SDValue lowerRESET_FPENV(SDValue Op, SelectionDAG &DAG) const;
-  SDValue lowerGET_FPMODE(SDValue Op, SelectionDAG &DAG) const;
-  SDValue lowerSET_FPMODE(SDValue Op, SelectionDAG &DAG) const;
-  SDValue lowerRESET_FPMODE(SDValue Op, SelectionDAG &DAG) const;
 
   SDValue lowerEH_DWARF_CFA(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerCTLZ_CTTZ_ZERO_UNDEF(SDValue Op, SelectionDAG &DAG) const;
 
-  SDValue lowerStrictFPExtendOrRoundLike(SDValue Op, SelectionDAG &DAG) const;
-
-  SDValue lowerVectorStrictFSetcc(SDValue Op, SelectionDAG &DAG) const;
-
   SDValue lowerDYNAMIC_STACKALLOC(SDValue Op, SelectionDAG &DAG) const;
-
-  SDValue expandUnalignedYSXVecLoad(SDValue Op, SelectionDAG &DAG) const;
-  SDValue expandUnalignedYSXVecStore(SDValue Op, SelectionDAG &DAG) const;
-
-  SDValue expandUnalignedVPLoad(SDValue Op, SelectionDAG &DAG) const;
-  SDValue expandUnalignedVPStore(SDValue Op, SelectionDAG &DAG) const;
 
   SDValue lowerINIT_TRAMPOLINE(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerADJUST_TRAMPOLINE(SDValue Op, SelectionDAG &DAG) const;
-  SDValue lowerPARTIAL_REDUCE_MLA(SDValue Op, SelectionDAG &DAG) const;
-
-  SDValue lowerXAndesBfHCvtBFloat16Load(SDValue Op, SelectionDAG &DAG) const;
-  SDValue lowerXAndesBfHCvtBFloat16Store(SDValue Op, SelectionDAG &DAG) const;
 
   bool isEligibleForTailCallOptimization(
       CCState &CCInfo, CallLoweringInfo &CLI, MachineFunction &MF,
@@ -603,8 +469,6 @@ private:
   void validateCCReservedRegs(
       const SmallVectorImpl<std::pair<llvm::Register, llvm::SDValue>> &Regs,
       MachineFunction &MF) const;
-
-  bool useYSXVecForFixedLengthVectorVT(MVT VT) const;
 
   MVT getVPExplicitVectorLengthTy() const override;
 

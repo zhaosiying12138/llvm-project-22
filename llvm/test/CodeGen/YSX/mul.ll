@@ -455,16 +455,14 @@ define i32 @muli32_p10(i32 %a) nounwind {
 ;
 ; RV64I-LABEL: muli32_p10:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    slliw a1, a0, 1
-; RV64I-NEXT:    slliw a0, a0, 3
-; RV64I-NEXT:    addw a0, a0, a1
+; RV64I-NEXT:    li a1, 10
+; RV64I-NEXT:    mulw a0, a0, a1
 ; RV64I-NEXT:    ret
 ;
 ; RV64IM-LABEL: muli32_p10:
 ; RV64IM:       # %bb.0:
-; RV64IM-NEXT:    slliw a1, a0, 1
-; RV64IM-NEXT:    slliw a0, a0, 3
-; RV64IM-NEXT:    addw a0, a0, a1
+; RV64IM-NEXT:    li a1, 10
+; RV64IM-NEXT:    mulw a0, a0, a1
 ; RV64IM-NEXT:    ret
   %1 = mul i32 %a, 10
   ret i32 %1
@@ -487,16 +485,14 @@ define i32 @muli32_p14(i32 %a) nounwind {
 ;
 ; RV64I-LABEL: muli32_p14:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    slliw a1, a0, 1
-; RV64I-NEXT:    slliw a0, a0, 4
-; RV64I-NEXT:    subw a0, a0, a1
+; RV64I-NEXT:    li a1, 14
+; RV64I-NEXT:    mulw a0, a0, a1
 ; RV64I-NEXT:    ret
 ;
 ; RV64IM-LABEL: muli32_p14:
 ; RV64IM:       # %bb.0:
-; RV64IM-NEXT:    slliw a1, a0, 1
-; RV64IM-NEXT:    slliw a0, a0, 4
-; RV64IM-NEXT:    subw a0, a0, a1
+; RV64IM-NEXT:    li a1, 14
+; RV64IM-NEXT:    mulw a0, a0, a1
 ; RV64IM-NEXT:    ret
   %1 = mul i32 %a, 14
   ret i32 %1
@@ -519,16 +515,14 @@ define i32 @muli32_p18(i32 %a) nounwind {
 ;
 ; RV64I-LABEL: muli32_p18:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    slliw a1, a0, 1
-; RV64I-NEXT:    slliw a0, a0, 4
-; RV64I-NEXT:    addw a0, a0, a1
+; RV64I-NEXT:    li a1, 18
+; RV64I-NEXT:    mulw a0, a0, a1
 ; RV64I-NEXT:    ret
 ;
 ; RV64IM-LABEL: muli32_p18:
 ; RV64IM:       # %bb.0:
-; RV64IM-NEXT:    slliw a1, a0, 1
-; RV64IM-NEXT:    slliw a0, a0, 4
-; RV64IM-NEXT:    addw a0, a0, a1
+; RV64IM-NEXT:    li a1, 18
+; RV64IM-NEXT:    mulw a0, a0, a1
 ; RV64IM-NEXT:    ret
   %1 = mul i32 %a, 18
   ret i32 %1
@@ -551,16 +545,14 @@ define i32 @muli32_p28(i32 %a) nounwind {
 ;
 ; RV64I-LABEL: muli32_p28:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    slliw a1, a0, 2
-; RV64I-NEXT:    slliw a0, a0, 5
-; RV64I-NEXT:    subw a0, a0, a1
+; RV64I-NEXT:    li a1, 28
+; RV64I-NEXT:    mulw a0, a0, a1
 ; RV64I-NEXT:    ret
 ;
 ; RV64IM-LABEL: muli32_p28:
 ; RV64IM:       # %bb.0:
-; RV64IM-NEXT:    slliw a1, a0, 2
-; RV64IM-NEXT:    slliw a0, a0, 5
-; RV64IM-NEXT:    subw a0, a0, a1
+; RV64IM-NEXT:    li a1, 28
+; RV64IM-NEXT:    mulw a0, a0, a1
 ; RV64IM-NEXT:    ret
   %1 = mul i32 %a, 28
   ret i32 %1
@@ -583,16 +575,14 @@ define i32 @muli32_p30(i32 %a) nounwind {
 ;
 ; RV64I-LABEL: muli32_p30:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    slliw a1, a0, 1
-; RV64I-NEXT:    slliw a0, a0, 5
-; RV64I-NEXT:    subw a0, a0, a1
+; RV64I-NEXT:    li a1, 30
+; RV64I-NEXT:    mulw a0, a0, a1
 ; RV64I-NEXT:    ret
 ;
 ; RV64IM-LABEL: muli32_p30:
 ; RV64IM:       # %bb.0:
-; RV64IM-NEXT:    slliw a1, a0, 1
-; RV64IM-NEXT:    slliw a0, a0, 5
-; RV64IM-NEXT:    subw a0, a0, a1
+; RV64IM-NEXT:    li a1, 30
+; RV64IM-NEXT:    mulw a0, a0, a1
 ; RV64IM-NEXT:    ret
   %1 = mul i32 %a, 30
   ret i32 %1
@@ -615,16 +605,14 @@ define i32 @muli32_p34(i32 %a) nounwind {
 ;
 ; RV64I-LABEL: muli32_p34:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    slliw a1, a0, 1
-; RV64I-NEXT:    slliw a0, a0, 5
-; RV64I-NEXT:    addw a0, a0, a1
+; RV64I-NEXT:    li a1, 34
+; RV64I-NEXT:    mulw a0, a0, a1
 ; RV64I-NEXT:    ret
 ;
 ; RV64IM-LABEL: muli32_p34:
 ; RV64IM:       # %bb.0:
-; RV64IM-NEXT:    slliw a1, a0, 1
-; RV64IM-NEXT:    slliw a0, a0, 5
-; RV64IM-NEXT:    addw a0, a0, a1
+; RV64IM-NEXT:    li a1, 34
+; RV64IM-NEXT:    mulw a0, a0, a1
 ; RV64IM-NEXT:    ret
   %1 = mul i32 %a, 34
   ret i32 %1
@@ -647,16 +635,14 @@ define i32 @muli32_p36(i32 %a) nounwind {
 ;
 ; RV64I-LABEL: muli32_p36:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    slliw a1, a0, 2
-; RV64I-NEXT:    slliw a0, a0, 5
-; RV64I-NEXT:    addw a0, a0, a1
+; RV64I-NEXT:    li a1, 36
+; RV64I-NEXT:    mulw a0, a0, a1
 ; RV64I-NEXT:    ret
 ;
 ; RV64IM-LABEL: muli32_p36:
 ; RV64IM:       # %bb.0:
-; RV64IM-NEXT:    slliw a1, a0, 2
-; RV64IM-NEXT:    slliw a0, a0, 5
-; RV64IM-NEXT:    addw a0, a0, a1
+; RV64IM-NEXT:    li a1, 36
+; RV64IM-NEXT:    mulw a0, a0, a1
 ; RV64IM-NEXT:    ret
   %1 = mul i32 %a, 36
   ret i32 %1
@@ -679,16 +665,14 @@ define i32 @muli32_p56(i32 %a) nounwind {
 ;
 ; RV64I-LABEL: muli32_p56:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    slliw a1, a0, 3
-; RV64I-NEXT:    slliw a0, a0, 6
-; RV64I-NEXT:    subw a0, a0, a1
+; RV64I-NEXT:    li a1, 56
+; RV64I-NEXT:    mulw a0, a0, a1
 ; RV64I-NEXT:    ret
 ;
 ; RV64IM-LABEL: muli32_p56:
 ; RV64IM:       # %bb.0:
-; RV64IM-NEXT:    slliw a1, a0, 3
-; RV64IM-NEXT:    slliw a0, a0, 6
-; RV64IM-NEXT:    subw a0, a0, a1
+; RV64IM-NEXT:    li a1, 56
+; RV64IM-NEXT:    mulw a0, a0, a1
 ; RV64IM-NEXT:    ret
   %1 = mul i32 %a, 56
   ret i32 %1
@@ -711,16 +695,14 @@ define i32 @muli32_p60(i32 %a) nounwind {
 ;
 ; RV64I-LABEL: muli32_p60:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    slliw a1, a0, 2
-; RV64I-NEXT:    slliw a0, a0, 6
-; RV64I-NEXT:    subw a0, a0, a1
+; RV64I-NEXT:    li a1, 60
+; RV64I-NEXT:    mulw a0, a0, a1
 ; RV64I-NEXT:    ret
 ;
 ; RV64IM-LABEL: muli32_p60:
 ; RV64IM:       # %bb.0:
-; RV64IM-NEXT:    slliw a1, a0, 2
-; RV64IM-NEXT:    slliw a0, a0, 6
-; RV64IM-NEXT:    subw a0, a0, a1
+; RV64IM-NEXT:    li a1, 60
+; RV64IM-NEXT:    mulw a0, a0, a1
 ; RV64IM-NEXT:    ret
   %1 = mul i32 %a, 60
   ret i32 %1
@@ -743,16 +725,14 @@ define i32 @muli32_p62(i32 %a) nounwind {
 ;
 ; RV64I-LABEL: muli32_p62:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    slliw a1, a0, 1
-; RV64I-NEXT:    slliw a0, a0, 6
-; RV64I-NEXT:    subw a0, a0, a1
+; RV64I-NEXT:    li a1, 62
+; RV64I-NEXT:    mulw a0, a0, a1
 ; RV64I-NEXT:    ret
 ;
 ; RV64IM-LABEL: muli32_p62:
 ; RV64IM:       # %bb.0:
-; RV64IM-NEXT:    slliw a1, a0, 1
-; RV64IM-NEXT:    slliw a0, a0, 6
-; RV64IM-NEXT:    subw a0, a0, a1
+; RV64IM-NEXT:    li a1, 62
+; RV64IM-NEXT:    mulw a0, a0, a1
 ; RV64IM-NEXT:    ret
   %1 = mul i32 %a, 62
   ret i32 %1
@@ -803,16 +783,14 @@ define i32 @muli32_p66(i32 %a) nounwind {
 ;
 ; RV64I-LABEL: muli32_p66:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    slliw a1, a0, 1
-; RV64I-NEXT:    slliw a0, a0, 6
-; RV64I-NEXT:    addw a0, a0, a1
+; RV64I-NEXT:    li a1, 66
+; RV64I-NEXT:    mulw a0, a0, a1
 ; RV64I-NEXT:    ret
 ;
 ; RV64IM-LABEL: muli32_p66:
 ; RV64IM:       # %bb.0:
-; RV64IM-NEXT:    slliw a1, a0, 1
-; RV64IM-NEXT:    slliw a0, a0, 6
-; RV64IM-NEXT:    addw a0, a0, a1
+; RV64IM-NEXT:    li a1, 66
+; RV64IM-NEXT:    mulw a0, a0, a1
 ; RV64IM-NEXT:    ret
   %1 = mul i32 %a, 66
   ret i32 %1
@@ -951,16 +929,14 @@ define i64 @muli64_p72(i64 %a) nounwind {
 ;
 ; RV64I-LABEL: muli64_p72:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    slli a1, a0, 3
-; RV64I-NEXT:    slli a0, a0, 6
-; RV64I-NEXT:    add a0, a0, a1
+; RV64I-NEXT:    li a1, 72
+; RV64I-NEXT:    mul a0, a0, a1
 ; RV64I-NEXT:    ret
 ;
 ; RV64IM-LABEL: muli64_p72:
 ; RV64IM:       # %bb.0:
-; RV64IM-NEXT:    slli a1, a0, 3
-; RV64IM-NEXT:    slli a0, a0, 6
-; RV64IM-NEXT:    add a0, a0, a1
+; RV64IM-NEXT:    li a1, 72
+; RV64IM-NEXT:    mul a0, a0, a1
 ; RV64IM-NEXT:    ret
   %1 = mul i64 %a, 72
   ret i64 %1
@@ -993,16 +969,14 @@ define i64 @muli64_p68(i64 %a) nounwind {
 ;
 ; RV64I-LABEL: muli64_p68:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    slli a1, a0, 2
-; RV64I-NEXT:    slli a0, a0, 6
-; RV64I-NEXT:    add a0, a0, a1
+; RV64I-NEXT:    li a1, 68
+; RV64I-NEXT:    mul a0, a0, a1
 ; RV64I-NEXT:    ret
 ;
 ; RV64IM-LABEL: muli64_p68:
 ; RV64IM:       # %bb.0:
-; RV64IM-NEXT:    slli a1, a0, 2
-; RV64IM-NEXT:    slli a0, a0, 6
-; RV64IM-NEXT:    add a0, a0, a1
+; RV64IM-NEXT:    li a1, 68
+; RV64IM-NEXT:    mul a0, a0, a1
 ; RV64IM-NEXT:    ret
   %1 = mul i64 %a, 68
   ret i64 %1
@@ -1172,16 +1146,14 @@ define i32 @muli32_p384(i32 %a) nounwind {
 ;
 ; RV64I-LABEL: muli32_p384:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    slliw a1, a0, 7
-; RV64I-NEXT:    slliw a0, a0, 8
-; RV64I-NEXT:    addw a0, a0, a1
+; RV64I-NEXT:    li a1, 384
+; RV64I-NEXT:    mulw a0, a0, a1
 ; RV64I-NEXT:    ret
 ;
 ; RV64IM-LABEL: muli32_p384:
 ; RV64IM:       # %bb.0:
-; RV64IM-NEXT:    slliw a1, a0, 7
-; RV64IM-NEXT:    slliw a0, a0, 8
-; RV64IM-NEXT:    addw a0, a0, a1
+; RV64IM-NEXT:    li a1, 384
+; RV64IM-NEXT:    mulw a0, a0, a1
 ; RV64IM-NEXT:    ret
   %1 = mul i32 %a, 384
   ret i32 %1
@@ -1204,16 +1176,14 @@ define i32 @muli32_p12288(i32 %a) nounwind {
 ;
 ; RV64I-LABEL: muli32_p12288:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    slliw a1, a0, 12
-; RV64I-NEXT:    slliw a0, a0, 13
-; RV64I-NEXT:    addw a0, a0, a1
+; RV64I-NEXT:    lui a1, 3
+; RV64I-NEXT:    mulw a0, a0, a1
 ; RV64I-NEXT:    ret
 ;
 ; RV64IM-LABEL: muli32_p12288:
 ; RV64IM:       # %bb.0:
-; RV64IM-NEXT:    slliw a1, a0, 12
-; RV64IM-NEXT:    slliw a0, a0, 13
-; RV64IM-NEXT:    addw a0, a0, a1
+; RV64IM-NEXT:    lui a1, 3
+; RV64IM-NEXT:    mulw a0, a0, a1
 ; RV64IM-NEXT:    ret
   %1 = mul i32 %a, 12288
   ret i32 %1
@@ -2073,17 +2043,15 @@ define i64 @muland_demand(i64 %x) nounwind {
 ; RV64I-LABEL: muland_demand:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    andi a0, a0, -8
-; RV64I-NEXT:    slli a1, a0, 2
-; RV64I-NEXT:    slli a0, a0, 3
-; RV64I-NEXT:    add a0, a0, a1
+; RV64I-NEXT:    li a1, 12
+; RV64I-NEXT:    mul a0, a0, a1
 ; RV64I-NEXT:    ret
 ;
 ; RV64IM-LABEL: muland_demand:
 ; RV64IM:       # %bb.0:
 ; RV64IM-NEXT:    andi a0, a0, -8
-; RV64IM-NEXT:    slli a1, a0, 2
-; RV64IM-NEXT:    slli a0, a0, 3
-; RV64IM-NEXT:    add a0, a0, a1
+; RV64IM-NEXT:    li a1, 12
+; RV64IM-NEXT:    mul a0, a0, a1
 ; RV64IM-NEXT:    ret
   %and = and i64 %x, 4611686018427387896
   %mul = mul i64 %and, 12
@@ -2111,16 +2079,16 @@ define i64 @mulzext_demand(i32 signext %x) nounwind {
 ;
 ; RV64I-LABEL: mulzext_demand:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    slli a1, a0, 32
-; RV64I-NEXT:    slli a0, a0, 33
-; RV64I-NEXT:    add a0, a0, a1
+; RV64I-NEXT:    li a1, 3
+; RV64I-NEXT:    slli a1, a1, 32
+; RV64I-NEXT:    mul a0, a0, a1
 ; RV64I-NEXT:    ret
 ;
 ; RV64IM-LABEL: mulzext_demand:
 ; RV64IM:       # %bb.0:
-; RV64IM-NEXT:    slli a1, a0, 32
-; RV64IM-NEXT:    slli a0, a0, 33
-; RV64IM-NEXT:    add a0, a0, a1
+; RV64IM-NEXT:    li a1, 3
+; RV64IM-NEXT:    slli a1, a1, 32
+; RV64IM-NEXT:    mul a0, a0, a1
 ; RV64IM-NEXT:    ret
   %ext = zext i32 %x to i64
   %mul = mul i64 %ext, 12884901888

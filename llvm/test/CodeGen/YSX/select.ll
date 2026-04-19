@@ -12,10 +12,11 @@ define i16 @select_xor_1(i16 %A, i8 %cond) {
 ;
 ; CHECK-LABEL: select_xor_1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    slli a1, a1, 63
-; CHECK-NEXT:    srai a1, a1, 63
-; CHECK-NEXT:    andi a1, a1, 43
-; CHECK-NEXT:    xor a0, a0, a1
+; CHECK-NEXT:    andi a1, a1, 1
+; CHECK-NEXT:    beqz a1, .LBB0_2
+; CHECK-NEXT:  # %bb.1: # %entry
+; CHECK-NEXT:    xori a0, a0, 43
+; CHECK-NEXT:  .LBB0_2: # %entry
 ; CHECK-NEXT:    ret
 ; RV64IMXVTCONDOPS-LABEL: select_xor_1:
 ; RV64IMXVTCONDOPS:       # %bb.0: # %entry
@@ -62,10 +63,11 @@ define i16 @select_xor_1b(i16 %A, i8 %cond) {
 ;
 ; CHECK-LABEL: select_xor_1b:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    slli a1, a1, 63
-; CHECK-NEXT:    srai a1, a1, 63
-; CHECK-NEXT:    andi a1, a1, 43
-; CHECK-NEXT:    xor a0, a0, a1
+; CHECK-NEXT:    andi a1, a1, 1
+; CHECK-NEXT:    beqz a1, .LBB1_2
+; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    xori a0, a0, 43
+; CHECK-NEXT:  .LBB1_2: # %entry
 ; CHECK-NEXT:    ret
 ; RV64IMXVTCONDOPS-LABEL: select_xor_1b:
 ; RV64IMXVTCONDOPS:       # %bb.0: # %entry
@@ -115,10 +117,11 @@ define i32 @select_xor_2(i32 %A, i32 %B, i8 %cond) {
 ;
 ; CHECK-LABEL: select_xor_2:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    slli a2, a2, 63
-; CHECK-NEXT:    srai a2, a2, 63
-; CHECK-NEXT:    and a1, a2, a1
-; CHECK-NEXT:    xor a0, a0, a1
+; CHECK-NEXT:    andi a2, a2, 1
+; CHECK-NEXT:    beqz a2, .LBB2_2
+; CHECK-NEXT:  # %bb.1: # %entry
+; CHECK-NEXT:    xor a0, a1, a0
+; CHECK-NEXT:  .LBB2_2: # %entry
 ; CHECK-NEXT:    ret
 ; RV64IMXVTCONDOPS-LABEL: select_xor_2:
 ; RV64IMXVTCONDOPS:       # %bb.0: # %entry
@@ -161,10 +164,11 @@ define i32 @select_xor_2b(i32 %A, i32 %B, i8 %cond) {
 ;
 ; CHECK-LABEL: select_xor_2b:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    slli a2, a2, 63
-; CHECK-NEXT:    srai a2, a2, 63
-; CHECK-NEXT:    and a1, a2, a1
-; CHECK-NEXT:    xor a0, a0, a1
+; CHECK-NEXT:    andi a2, a2, 1
+; CHECK-NEXT:    beqz a2, .LBB3_2
+; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    xor a0, a1, a0
+; CHECK-NEXT:  .LBB3_2: # %entry
 ; CHECK-NEXT:    ret
 ; RV64IMXVTCONDOPS-LABEL: select_xor_2b:
 ; RV64IMXVTCONDOPS:       # %bb.0: # %entry
@@ -198,9 +202,10 @@ define i16 @select_xor_3(i16 %A, i8 %cond) {
 ; CHECK-LABEL: select_xor_3:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    andi a1, a1, 1
-; CHECK-NEXT:    addiw a1, a1, -1
-; CHECK-NEXT:    andi a1, a1, 43
-; CHECK-NEXT:    xor a0, a0, a1
+; CHECK-NEXT:    bnez a1, .LBB4_2
+; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    xori a0, a0, 43
+; CHECK-NEXT:  .LBB4_2: # %entry
 ; CHECK-NEXT:    ret
 ; RV32IXQCI-LABEL: select_xor_3:
 ; RV32IXQCI:       # %bb.0: # %entry
@@ -224,9 +229,10 @@ define i16 @select_xor_3b(i16 %A, i8 %cond) {
 ; CHECK-LABEL: select_xor_3b:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    andi a1, a1, 1
-; CHECK-NEXT:    addiw a1, a1, -1
-; CHECK-NEXT:    andi a1, a1, 43
-; CHECK-NEXT:    xor a0, a0, a1
+; CHECK-NEXT:    bnez a1, .LBB5_2
+; CHECK-NEXT:  # %bb.1: # %entry
+; CHECK-NEXT:    xori a0, a0, 43
+; CHECK-NEXT:  .LBB5_2: # %entry
 ; CHECK-NEXT:    ret
 ; RV32IXQCI-LABEL: select_xor_3b:
 ; RV32IXQCI:       # %bb.0: # %entry
@@ -256,9 +262,10 @@ define i32 @select_xor_4(i32 %A, i32 %B, i8 %cond) {
 ; CHECK-LABEL: select_xor_4:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    andi a2, a2, 1
-; CHECK-NEXT:    addi a2, a2, -1
-; CHECK-NEXT:    and a1, a2, a1
-; CHECK-NEXT:    xor a0, a0, a1
+; CHECK-NEXT:    bnez a2, .LBB6_2
+; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    xor a0, a1, a0
+; CHECK-NEXT:  .LBB6_2: # %entry
 ; CHECK-NEXT:    ret
 ; RV64IMXVTCONDOPS-LABEL: select_xor_4:
 ; RV64IMXVTCONDOPS:       # %bb.0: # %entry
@@ -302,9 +309,10 @@ define i32 @select_xor_4b(i32 %A, i32 %B, i8 %cond) {
 ; CHECK-LABEL: select_xor_4b:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    andi a2, a2, 1
-; CHECK-NEXT:    addi a2, a2, -1
-; CHECK-NEXT:    and a1, a2, a1
-; CHECK-NEXT:    xor a0, a0, a1
+; CHECK-NEXT:    bnez a2, .LBB7_2
+; CHECK-NEXT:  # %bb.1: # %entry
+; CHECK-NEXT:    xor a0, a1, a0
+; CHECK-NEXT:  .LBB7_2: # %entry
 ; CHECK-NEXT:    ret
 ; RV64IMXVTCONDOPS-LABEL: select_xor_4b:
 ; RV64IMXVTCONDOPS:       # %bb.0: # %entry
@@ -344,9 +352,12 @@ define i32 @select_xor_5(i1 zeroext %cond, i32 %x) {
 ;
 ; CHECK-LABEL: select_xor_5:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a0, a0, -1
-; CHECK-NEXT:    and a0, a0, a1
-; CHECK-NEXT:    xori a0, a0, 128
+; CHECK-NEXT:    bnez a0, .LBB8_2
+; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    xori a0, a1, 128
+; CHECK-NEXT:    ret
+; CHECK-NEXT:  .LBB8_2:
+; CHECK-NEXT:    li a0, 128
 ; CHECK-NEXT:    ret
 ; RV64IMXVTCONDOPS-LABEL: select_xor_5:
 ; RV64IMXVTCONDOPS:       # %bb.0:
@@ -383,10 +394,11 @@ define i32 @select_or(i32 %A, i32 %B, i8 %cond) {
 ;
 ; CHECK-LABEL: select_or:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    slli a2, a2, 63
-; CHECK-NEXT:    srai a2, a2, 63
-; CHECK-NEXT:    and a1, a2, a1
-; CHECK-NEXT:    or a0, a0, a1
+; CHECK-NEXT:    andi a2, a2, 1
+; CHECK-NEXT:    beqz a2, .LBB9_2
+; CHECK-NEXT:  # %bb.1: # %entry
+; CHECK-NEXT:    or a0, a1, a0
+; CHECK-NEXT:  .LBB9_2: # %entry
 ; CHECK-NEXT:    ret
 ; RV64IMXVTCONDOPS-LABEL: select_or:
 ; RV64IMXVTCONDOPS:       # %bb.0: # %entry
@@ -429,10 +441,11 @@ define i32 @select_or_b(i32 %A, i32 %B, i8 %cond) {
 ;
 ; CHECK-LABEL: select_or_b:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    slli a2, a2, 63
-; CHECK-NEXT:    srai a2, a2, 63
-; CHECK-NEXT:    and a1, a2, a1
-; CHECK-NEXT:    or a0, a0, a1
+; CHECK-NEXT:    andi a2, a2, 1
+; CHECK-NEXT:    beqz a2, .LBB10_2
+; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    or a0, a1, a0
+; CHECK-NEXT:  .LBB10_2: # %entry
 ; CHECK-NEXT:    ret
 ; RV64IMXVTCONDOPS-LABEL: select_or_b:
 ; RV64IMXVTCONDOPS:       # %bb.0: # %entry
@@ -473,10 +486,11 @@ define i32 @select_or_1(i32 %A, i32 %B, i32 %cond) {
 ;
 ; CHECK-LABEL: select_or_1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    slli a2, a2, 63
-; CHECK-NEXT:    srai a2, a2, 63
-; CHECK-NEXT:    and a1, a2, a1
-; CHECK-NEXT:    or a0, a0, a1
+; CHECK-NEXT:    andi a2, a2, 1
+; CHECK-NEXT:    beqz a2, .LBB11_2
+; CHECK-NEXT:  # %bb.1: # %entry
+; CHECK-NEXT:    or a0, a1, a0
+; CHECK-NEXT:  .LBB11_2: # %entry
 ; CHECK-NEXT:    ret
 ; RV64IMXVTCONDOPS-LABEL: select_or_1:
 ; RV64IMXVTCONDOPS:       # %bb.0: # %entry
@@ -519,10 +533,11 @@ define i32 @select_or_1b(i32 %A, i32 %B, i32 %cond) {
 ;
 ; CHECK-LABEL: select_or_1b:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    slli a2, a2, 63
-; CHECK-NEXT:    srai a2, a2, 63
-; CHECK-NEXT:    and a1, a2, a1
-; CHECK-NEXT:    or a0, a0, a1
+; CHECK-NEXT:    andi a2, a2, 1
+; CHECK-NEXT:    beqz a2, .LBB12_2
+; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    or a0, a1, a0
+; CHECK-NEXT:  .LBB12_2: # %entry
 ; CHECK-NEXT:    ret
 ; RV64IMXVTCONDOPS-LABEL: select_or_1b:
 ; RV64IMXVTCONDOPS:       # %bb.0: # %entry
@@ -564,9 +579,10 @@ define i32 @select_or_2(i32 %A, i32 %B, i8 %cond) {
 ; CHECK-LABEL: select_or_2:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    andi a2, a2, 1
-; CHECK-NEXT:    addi a2, a2, -1
-; CHECK-NEXT:    and a1, a2, a1
-; CHECK-NEXT:    or a0, a0, a1
+; CHECK-NEXT:    bnez a2, .LBB13_2
+; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    or a0, a1, a0
+; CHECK-NEXT:  .LBB13_2: # %entry
 ; CHECK-NEXT:    ret
 ; RV64IMXVTCONDOPS-LABEL: select_or_2:
 ; RV64IMXVTCONDOPS:       # %bb.0: # %entry
@@ -610,9 +626,10 @@ define i32 @select_or_2b(i32 %A, i32 %B, i8 %cond) {
 ; CHECK-LABEL: select_or_2b:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    andi a2, a2, 1
-; CHECK-NEXT:    addi a2, a2, -1
-; CHECK-NEXT:    and a1, a2, a1
-; CHECK-NEXT:    or a0, a0, a1
+; CHECK-NEXT:    bnez a2, .LBB14_2
+; CHECK-NEXT:  # %bb.1: # %entry
+; CHECK-NEXT:    or a0, a1, a0
+; CHECK-NEXT:  .LBB14_2: # %entry
 ; CHECK-NEXT:    ret
 ; RV64IMXVTCONDOPS-LABEL: select_or_2b:
 ; RV64IMXVTCONDOPS:       # %bb.0: # %entry
@@ -654,9 +671,10 @@ define i32 @select_or_3(i32 %A, i32 %B, i32 %cond) {
 ; CHECK-LABEL: select_or_3:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    andi a2, a2, 1
-; CHECK-NEXT:    addi a2, a2, -1
-; CHECK-NEXT:    and a1, a2, a1
-; CHECK-NEXT:    or a0, a0, a1
+; CHECK-NEXT:    bnez a2, .LBB15_2
+; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    or a0, a1, a0
+; CHECK-NEXT:  .LBB15_2: # %entry
 ; CHECK-NEXT:    ret
 ; RV64IMXVTCONDOPS-LABEL: select_or_3:
 ; RV64IMXVTCONDOPS:       # %bb.0: # %entry
@@ -700,9 +718,10 @@ define i32 @select_or_3b(i32 %A, i32 %B, i32 %cond) {
 ; CHECK-LABEL: select_or_3b:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    andi a2, a2, 1
-; CHECK-NEXT:    addi a2, a2, -1
-; CHECK-NEXT:    and a1, a2, a1
-; CHECK-NEXT:    or a0, a0, a1
+; CHECK-NEXT:    bnez a2, .LBB16_2
+; CHECK-NEXT:  # %bb.1: # %entry
+; CHECK-NEXT:    or a0, a1, a0
+; CHECK-NEXT:  .LBB16_2: # %entry
 ; CHECK-NEXT:    ret
 ; RV64IMXVTCONDOPS-LABEL: select_or_3b:
 ; RV64IMXVTCONDOPS:       # %bb.0: # %entry
@@ -742,9 +761,12 @@ define i32 @select_or_4(i1 zeroext %cond, i32 %x) {
 ;
 ; CHECK-LABEL: select_or_4:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a0, a0, -1
-; CHECK-NEXT:    and a0, a0, a1
-; CHECK-NEXT:    ori a0, a0, 128
+; CHECK-NEXT:    bnez a0, .LBB17_2
+; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    ori a0, a1, 128
+; CHECK-NEXT:    ret
+; CHECK-NEXT:  .LBB17_2:
+; CHECK-NEXT:    li a0, 128
 ; CHECK-NEXT:    ret
 ; RV64IMXVTCONDOPS-LABEL: select_or_4:
 ; RV64IMXVTCONDOPS:       # %bb.0:
@@ -780,9 +802,11 @@ define i32 @select_add_1(i1 zeroext %cond, i32 %a, i32 %b) {
 ;
 ; CHECK-LABEL: select_add_1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    negw a0, a0
-; CHECK-NEXT:    and a0, a0, a1
-; CHECK-NEXT:    addw a0, a2, a0
+; CHECK-NEXT:    beqz a0, .LBB18_2
+; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    addw a2, a1, a2
+; CHECK-NEXT:  .LBB18_2: # %entry
+; CHECK-NEXT:    mv a0, a2
 ; CHECK-NEXT:    ret
 ; RV64IMXVTCONDOPS-LABEL: select_add_1:
 ; RV64IMXVTCONDOPS:       # %bb.0: # %entry
@@ -823,9 +847,11 @@ define i32 @select_add_2(i1 zeroext %cond, i32 %a, i32 %b) {
 ;
 ; CHECK-LABEL: select_add_2:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addiw a0, a0, -1
-; CHECK-NEXT:    and a0, a0, a2
-; CHECK-NEXT:    addw a0, a1, a0
+; CHECK-NEXT:    bnez a0, .LBB19_2
+; CHECK-NEXT:  # %bb.1: # %entry
+; CHECK-NEXT:    addw a1, a1, a2
+; CHECK-NEXT:  .LBB19_2: # %entry
+; CHECK-NEXT:    mv a0, a1
 ; CHECK-NEXT:    ret
 ; RV64IMXVTCONDOPS-LABEL: select_add_2:
 ; RV64IMXVTCONDOPS:       # %bb.0: # %entry
@@ -866,9 +892,11 @@ define i32 @select_add_3(i1 zeroext %cond, i32 %a) {
 ;
 ; CHECK-LABEL: select_add_3:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addiw a0, a0, -1
-; CHECK-NEXT:    andi a0, a0, 42
-; CHECK-NEXT:    addw a0, a1, a0
+; CHECK-NEXT:    bnez a0, .LBB20_2
+; CHECK-NEXT:  # %bb.1: # %entry
+; CHECK-NEXT:    addiw a1, a1, 42
+; CHECK-NEXT:  .LBB20_2: # %entry
+; CHECK-NEXT:    mv a0, a1
 ; CHECK-NEXT:    ret
 ; RV64IMXVTCONDOPS-LABEL: select_add_3:
 ; RV64IMXVTCONDOPS:       # %bb.0: # %entry
@@ -912,9 +940,12 @@ define i32 @select_add_4(i1 zeroext %cond, i32 %x) {
 ;
 ; CHECK-LABEL: select_add_4:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addiw a0, a0, -1
-; CHECK-NEXT:    and a0, a0, a1
-; CHECK-NEXT:    addiw a0, a0, 128
+; CHECK-NEXT:    bnez a0, .LBB21_2
+; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    addiw a0, a1, 128
+; CHECK-NEXT:    ret
+; CHECK-NEXT:  .LBB21_2:
+; CHECK-NEXT:    li a0, 128
 ; CHECK-NEXT:    ret
 ; RV64IMXVTCONDOPS-LABEL: select_add_4:
 ; RV64IMXVTCONDOPS:       # %bb.0:
@@ -958,9 +989,12 @@ define i64 @select_add_5(i1 zeroext %cond, i64 %x) {
 ;
 ; CHECK-LABEL: select_add_5:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a0, a0, -1
-; CHECK-NEXT:    and a0, a0, a1
-; CHECK-NEXT:    addi a0, a0, 128
+; CHECK-NEXT:    bnez a0, .LBB22_2
+; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    addi a0, a1, 128
+; CHECK-NEXT:    ret
+; CHECK-NEXT:  .LBB22_2:
+; CHECK-NEXT:    li a0, 128
 ; CHECK-NEXT:    ret
 ; RV64IMXVTCONDOPS-LABEL: select_add_5:
 ; RV64IMXVTCONDOPS:       # %bb.0:
@@ -1012,11 +1046,13 @@ define i64 @select_add_6(i1 zeroext %cond, i64 %x) {
 ;
 ; CHECK-LABEL: select_add_6:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a0, a0, -1
-; CHECK-NEXT:    and a0, a0, a1
-; CHECK-NEXT:    lui a1, 14
-; CHECK-NEXT:    addi a1, a1, 1005
-; CHECK-NEXT:    add a0, a0, a1
+; CHECK-NEXT:    mv a2, a0
+; CHECK-NEXT:    lui a0, 14
+; CHECK-NEXT:    addi a0, a0, 1005
+; CHECK-NEXT:    bnez a2, .LBB23_2
+; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    add a0, a1, a0
+; CHECK-NEXT:  .LBB23_2:
 ; CHECK-NEXT:    ret
 ; RV64IMXVTCONDOPS-LABEL: select_add_6:
 ; RV64IMXVTCONDOPS:       # %bb.0:
@@ -1123,9 +1159,11 @@ define i32 @select_sub_2(i1 zeroext %cond, i32 %a, i32 %b) {
 ;
 ; CHECK-LABEL: select_sub_2:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addiw a0, a0, -1
-; CHECK-NEXT:    and a0, a0, a2
-; CHECK-NEXT:    subw a0, a1, a0
+; CHECK-NEXT:    bnez a0, .LBB25_2
+; CHECK-NEXT:  # %bb.1: # %entry
+; CHECK-NEXT:    subw a1, a1, a2
+; CHECK-NEXT:  .LBB25_2: # %entry
+; CHECK-NEXT:    mv a0, a1
 ; CHECK-NEXT:    ret
 ; RV64IMXVTCONDOPS-LABEL: select_sub_2:
 ; RV64IMXVTCONDOPS:       # %bb.0: # %entry
@@ -1166,9 +1204,11 @@ define i32 @select_sub_3(i1 zeroext %cond, i32 %a) {
 ;
 ; CHECK-LABEL: select_sub_3:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addiw a0, a0, -1
-; CHECK-NEXT:    andi a0, a0, 42
-; CHECK-NEXT:    subw a0, a1, a0
+; CHECK-NEXT:    bnez a0, .LBB26_2
+; CHECK-NEXT:  # %bb.1: # %entry
+; CHECK-NEXT:    addiw a1, a1, -42
+; CHECK-NEXT:  .LBB26_2: # %entry
+; CHECK-NEXT:    mv a0, a1
 ; CHECK-NEXT:    ret
 ; RV64IMXVTCONDOPS-LABEL: select_sub_3:
 ; RV64IMXVTCONDOPS:       # %bb.0: # %entry
@@ -1631,9 +1671,11 @@ define i32 @select_shl_2(i1 zeroext %cond, i32 %a, i32 %b) {
 ;
 ; CHECK-LABEL: select_shl_2:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addiw a0, a0, -1
-; CHECK-NEXT:    and a0, a0, a2
-; CHECK-NEXT:    sllw a0, a1, a0
+; CHECK-NEXT:    bnez a0, .LBB35_2
+; CHECK-NEXT:  # %bb.1: # %entry
+; CHECK-NEXT:    sllw a1, a1, a2
+; CHECK-NEXT:  .LBB35_2: # %entry
+; CHECK-NEXT:    mv a0, a1
 ; CHECK-NEXT:    ret
 ; RV64IMXVTCONDOPS-LABEL: select_shl_2:
 ; RV64IMXVTCONDOPS:       # %bb.0: # %entry
@@ -1742,9 +1784,11 @@ define i32 @select_ashr_2(i1 zeroext %cond, i32 %a, i32 %b) {
 ;
 ; CHECK-LABEL: select_ashr_2:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addiw a0, a0, -1
-; CHECK-NEXT:    and a0, a0, a2
-; CHECK-NEXT:    sraw a0, a1, a0
+; CHECK-NEXT:    bnez a0, .LBB38_2
+; CHECK-NEXT:  # %bb.1: # %entry
+; CHECK-NEXT:    sraw a1, a1, a2
+; CHECK-NEXT:  .LBB38_2: # %entry
+; CHECK-NEXT:    mv a0, a1
 ; CHECK-NEXT:    ret
 ; RV64IMXVTCONDOPS-LABEL: select_ashr_2:
 ; RV64IMXVTCONDOPS:       # %bb.0: # %entry
@@ -1853,9 +1897,11 @@ define i32 @select_lshr_2(i1 zeroext %cond, i32 %a, i32 %b) {
 ;
 ; CHECK-LABEL: select_lshr_2:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addiw a0, a0, -1
-; CHECK-NEXT:    and a0, a0, a2
-; CHECK-NEXT:    srlw a0, a1, a0
+; CHECK-NEXT:    bnez a0, .LBB41_2
+; CHECK-NEXT:  # %bb.1: # %entry
+; CHECK-NEXT:    srlw a1, a1, a2
+; CHECK-NEXT:  .LBB41_2: # %entry
+; CHECK-NEXT:    mv a0, a1
 ; CHECK-NEXT:    ret
 ; RV64IMXVTCONDOPS-LABEL: select_lshr_2:
 ; RV64IMXVTCONDOPS:       # %bb.0: # %entry
