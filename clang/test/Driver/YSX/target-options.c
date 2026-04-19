@@ -7,6 +7,8 @@
 // RUN: %clang --target=ysx64 -ffixed-x5 -### -c %s 2>&1 | FileCheck %s --check-prefix=FIXED
 // RUN: %clang --target=ysx64-unknown-elf -ffixed-x5 -c %s -o %t-fixed-x5.o
 // RUN: %clang --target=ysx64-linux-gnu -### %s 2>&1 | FileCheck %s --check-prefix=LINUX
+// RUN: %clang --target=ysx64-unknown-managarm-mlibc -### %s 2>&1 | FileCheck %s --check-prefix=MANAGARM
+// RUN: %clang --target=ysx64-pc-hurd-gnu -### %s 2>&1 | FileCheck %s --check-prefix=HURD
 // RUN: %clang -### %s --target=ysx64-unknown-linux-gnu --rtlib=platform --unwindlib=platform -fuse-ld= -no-pie --gcc-toolchain=%S/../Inputs/multilib_riscv_linux_sdk --sysroot=%S/../Inputs/multilib_riscv_linux_sdk/sysroot 2>&1 | FileCheck %s --check-prefix=LINUX-MULTI
 // RUN: %clang -### %s --target=ysx64-unknown-elf 2>&1 | FileCheck %s --check-prefix=BAREMETAL --implicit-check-not="rv64imac" --implicit-check-not="rv64imafdc"
 // RUN: %clang --target=ysx64 --print-supported-extensions 2>&1 | FileCheck %s --check-prefix=EXTS --implicit-check-not="RISC-V" --implicit-check-not="{{^}}    f " --implicit-check-not="{{^}}    d " --implicit-check-not="{{^}}    c " --implicit-check-not="{{^}}    v "
@@ -25,7 +27,9 @@
 // RUN: printf 'void f(void) __attribute__((target("arch=+v"))); void f(void){}\n' | not %clang --target=ysx64-unknown-elf -S -emit-llvm -x c - -o - 2>&1 | FileCheck %s --check-prefix=ATTRERR --implicit-check-not="target-features"
 // RUN: printf 'void f(void) __attribute__((target("arch=rv64imaf"))); void f(void){}\n' | not %clang --target=ysx64-unknown-elf -S -emit-llvm -x c - -o - 2>&1 | FileCheck %s --check-prefix=ATTRERR --implicit-check-not="target-features"
 // RUN: printf 'void f(void) __attribute__((target("arch=+64bit"))); void f(void){}\n' | not %clang --target=ysx64-unknown-elf -S -emit-llvm -x c - -o - 2>&1 | FileCheck %s --check-prefix=ATTRERR --implicit-check-not="target-features"
+// RUN: printf 'void f(void) __attribute__((target("+reserve-x0"))); void f(void){}\n' | not %clang --target=ysx64-unknown-elf -S -emit-llvm -x c - -o - 2>&1 | FileCheck %s --check-prefix=ATTRERR --implicit-check-not="target-features"
 // RUN: not %clang --target=ysx64-unknown-elf -Xclang -target-feature -Xclang +v -dM -E -x c /dev/null 2>&1 | FileCheck %s --check-prefix=FEATUREERR --implicit-check-not=__riscv_vector --implicit-check-not=__riscv_v
+// RUN: not %clang --target=ysx64-unknown-elf -Xclang -target-feature -Xclang +reserve-x0 -c %s 2>&1 | FileCheck %s --check-prefix=FEATUREERR
 // RUN: not %clang --target=ysx64-unknown-elf -Xclang -target-feature -Xclang -i -c %s 2>&1 | FileCheck %s --check-prefix=REQFEATUREERR
 // RUN: printf 'void f(double x){ asm volatile("" :: "f"(x)); }\n' | not %clang --target=ysx64-unknown-elf -x c -fsyntax-only - 2>&1 | FileCheck %s --check-prefix=ASMFP
 // RUN: printf 'void f(long x){ asm volatile("" :: "vr"(x)); }\n' | not %clang --target=ysx64-unknown-elf -x c -fsyntax-only - 2>&1 | FileCheck %s --check-prefix=ASMV
@@ -68,6 +72,8 @@
 // ABIERR: unsupported argument 'lp64d' to option '-mabi='
 // RVVBITS: error: unsupported option '-mrvv-vector-bits=' for target 'ysx64'
 // LINUX: "-dynamic-linker" "/lib/ld-linux-riscv64-lp64.so.1"
+// MANAGARM: "-dynamic-linker" "/lib/riscv64-managarm/ld-riscv64-lp64.so"
+// HURD: "-dynamic-linker" "/lib/ld-riscv64-lp64.so.1"
 // LINUX-MULTI: "{{.*}}Inputs/multilib_riscv_linux_sdk/lib/gcc/riscv64-unknown-linux-gnu/7.2.0/lib64/lp64/crtbegin.o"
 // LINUX-MULTI: "-L{{.*}}Inputs/multilib_riscv_linux_sdk/lib/gcc/riscv64-unknown-linux-gnu/7.2.0/lib64/lp64"
 // BAREMETAL: "-triple" "ysx64-unknown-unknown-elf"

@@ -34,6 +34,7 @@ std::string Managarm::getMultiarchTriple(const Driver &D,
   case llvm::Triple::aarch64:
     return "aarch64-managarm-" + TargetTriple.getEnvironmentName().str();
   case llvm::Triple::riscv64:
+  case llvm::Triple::ysx64:
     return "riscv64-managarm-" + TargetTriple.getEnvironmentName().str();
   }
 }
@@ -120,7 +121,8 @@ std::string Managarm::getDynamicLinker(const ArgList &Args) const {
   switch (getTriple().getArch()) {
   case llvm::Triple::aarch64:
     return "/lib/aarch64-managarm/ld.so";
-  case llvm::Triple::riscv64: {
+  case llvm::Triple::riscv64:
+  case llvm::Triple::ysx64: {
     StringRef ABIName = tools::riscv::getRISCVABI(Args, getTriple());
     return ("/lib/riscv64-managarm/ld-riscv64-" + ABIName + ".so").str();
   }

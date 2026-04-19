@@ -38,6 +38,7 @@ std::string Hurd::getMultiarchTriple(const Driver &D,
     return "aarch64-gnu";
 
   case llvm::Triple::riscv64:
+  case llvm::Triple::ysx64:
     return "riscv64-gnu";
 
   case llvm::Triple::x86:
@@ -78,10 +79,11 @@ static StringRef getOSLibDir(const llvm::Triple &Triple, const ArgList &Args) {
 Hurd::Hurd(const Driver &D, const llvm::Triple &Triple, const ArgList &Args)
     : Generic_ELF(D, Triple, Args) {
   GCCInstallation.TripleToDebianMultiarch = [](const llvm::Triple &T) {
-    StringRef TripleStr = T.str();
-    StringRef DebianMultiarch =
-        T.getArch() == llvm::Triple::x86 ? "i386-gnu" : TripleStr;
-    return DebianMultiarch;
+    if (T.getArch() == llvm::Triple::x86)
+      return StringRef("i386-gnu");
+    if (T.getArch() == llvm::Triple::ysx64)
+      return StringRef("riscv64-gnu");
+    return StringRef(T.str());
   };
 
   GCCInstallation.init(Triple, Args);
@@ -151,6 +153,7 @@ std::string Hurd::getDynamicLinker(const ArgList &Args) const {
   case llvm::Triple::aarch64:
     return "/lib/ld-aarch64.so.1";
   case llvm::Triple::riscv64:
+  case llvm::Triple::ysx64:
     return "/lib/ld-riscv64-lp64.so.1";
   case llvm::Triple::x86:
     return "/lib/ld.so";

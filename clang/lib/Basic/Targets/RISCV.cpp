@@ -386,7 +386,8 @@ static bool isYSXReservedGPRFeature(StringRef Feature) {
     return false;
 
   unsigned RegNo;
-  return !Feature.empty() && !Feature.getAsInteger(10, RegNo) && RegNo < 32;
+  return !Feature.empty() && !Feature.getAsInteger(10, RegNo) && RegNo > 0 &&
+         RegNo < 32;
 }
 
 static bool isYSXAllowedFeatureName(StringRef Feature) {
