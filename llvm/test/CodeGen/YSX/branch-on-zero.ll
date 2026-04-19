@@ -3,14 +3,6 @@
 ; RUN:   | FileCheck %s -check-prefixes=RV64
 
 define i32 @optbranch_32(i32 %Arg) {
-; RV32-LABEL: optbranch_32:
-; RV32:       # %bb.0: # %bb
-; RV32-NEXT:    addi a0, a0, 1
-; RV32-NEXT:    bnez a0, .LBB0_2
-; RV32-NEXT:  # %bb.1: # %bb2
-; RV32-NEXT:    li a0, -1
-; RV32-NEXT:  .LBB0_2: # %bb3
-; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: optbranch_32:
 ; RV64:       # %bb.0: # %bb
@@ -37,18 +29,6 @@ bb3:
 }
 
 define i64 @optbranch_64(i64 %Arg) {
-; RV32-LABEL: optbranch_64:
-; RV32:       # %bb.0: # %bb
-; RV32-NEXT:    addi a0, a0, 1
-; RV32-NEXT:    seqz a2, a0
-; RV32-NEXT:    add a1, a1, a2
-; RV32-NEXT:    or a2, a0, a1
-; RV32-NEXT:    bnez a2, .LBB1_2
-; RV32-NEXT:  # %bb.1: # %bb2
-; RV32-NEXT:    li a0, -1
-; RV32-NEXT:    li a1, -1
-; RV32-NEXT:  .LBB1_2: # %bb3
-; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: optbranch_64:
 ; RV64:       # %bb.0: # %bb
@@ -73,19 +53,6 @@ bb3:
 }
 
 define i32 @test_lshr(i32 %v) {
-; RV32-LABEL: test_lshr:
-; RV32:       # %bb.0: # %entry
-; RV32-NEXT:    li a1, 0
-; RV32-NEXT:    beqz a0, .LBB2_2
-; RV32-NEXT:  .LBB2_1: # %for.body
-; RV32-NEXT:    # =>This Inner Loop Header: Depth=1
-; RV32-NEXT:    andi a2, a0, 1
-; RV32-NEXT:    srli a0, a0, 1
-; RV32-NEXT:    add a1, a1, a2
-; RV32-NEXT:    bnez a0, .LBB2_1
-; RV32-NEXT:  .LBB2_2: # %for.end
-; RV32-NEXT:    mv a0, a1
-; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: test_lshr:
 ; RV64:       # %bb.0: # %entry
@@ -124,26 +91,6 @@ for.end:                                          ; preds = %for.body, %entry
 }
 
 define i32 @test_lshr2(ptr nocapture %x, ptr nocapture readonly %y, i32 %n) {
-; RV32-LABEL: test_lshr2:
-; RV32:       # %bb.0: # %entry
-; RV32-NEXT:    srli a2, a2, 2
-; RV32-NEXT:    beqz a2, .LBB3_3
-; RV32-NEXT:  # %bb.1: # %while.body.preheader
-; RV32-NEXT:    slli a2, a2, 2
-; RV32-NEXT:    add a2, a1, a2
-; RV32-NEXT:  .LBB3_2: # %while.body
-; RV32-NEXT:    # =>This Inner Loop Header: Depth=1
-; RV32-NEXT:    lw a3, 0(a1)
-; RV32-NEXT:    addi a4, a1, 4
-; RV32-NEXT:    slli a3, a3, 1
-; RV32-NEXT:    addi a1, a0, 4
-; RV32-NEXT:    sw a3, 0(a0)
-; RV32-NEXT:    mv a0, a1
-; RV32-NEXT:    mv a1, a4
-; RV32-NEXT:    bne a4, a2, .LBB3_2
-; RV32-NEXT:  .LBB3_3: # %while.end
-; RV32-NEXT:    li a0, 0
-; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: test_lshr2:
 ; RV64:       # %bb.0: # %entry

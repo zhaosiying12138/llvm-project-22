@@ -789,12 +789,9 @@ void YSXFrameLowering::emitEpilogue(MachineFunction &MF,
   // necessary if the stack pointer was modified, meaning the stack size is
   // unknown.
   //
-  // In order to make sure the stack point is right through the EH region,
-  // we also need to restore stack pointer from the frame pointer if we
-  // don't preserve stack space within prologue/epilogue for outgoing variables,
-  // normally it's just checking the variable sized object is present or not
-  // is enough, but we also don't preserve that at prologue/epilogue when
-  // have vector objects in stack.
+  // Keep the stack pointer correct through the EH region by restoring it from
+  // the frame pointer when variable-sized objects or outgoing-variable stack
+  // space prevent preserving the adjustment across the epilogue.
   if (RestoreSPFromFP) {
     assert(hasFP(MF) && "frame pointer should not have been eliminated");
     RI->adjustReg(MBB, FirstScalarCSRRestoreInsn, DL, SPReg, FramePointerReg,

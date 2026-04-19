@@ -3,10 +3,6 @@
 ; RUN:   | FileCheck %s --check-prefix=RV64I
 
 define void @cast0(ptr addrspace(1) %ptr) {
-; RV32I-LABEL: cast0:
-; RV32I:       # %bb.0:
-; RV32I-NEXT:    sw zero, 0(a0)
-; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: cast0:
 ; RV64I:       # %bb.0:
@@ -18,18 +14,6 @@ define void @cast0(ptr addrspace(1) %ptr) {
 }
 
 define void @cast1(ptr %ptr) {
-; RV32I-LABEL: cast1:
-; RV32I:       # %bb.0:
-; RV32I-NEXT:    addi sp, sp, -16
-; RV32I-NEXT:    .cfi_def_cfa_offset 16
-; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    .cfi_offset ra, -4
-; RV32I-NEXT:    call foo
-; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    .cfi_restore ra
-; RV32I-NEXT:    addi sp, sp, 16
-; RV32I-NEXT:    .cfi_def_cfa_offset 0
-; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: cast1:
 ; RV64I:       # %bb.0:

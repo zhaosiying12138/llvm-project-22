@@ -3,118 +3,7 @@
 ; RUN:   | FileCheck -check-prefixes=RV64I %s
 
 define signext i32 @foo(i32 signext %a, ptr %b) nounwind {
-; RV32I-LABEL: foo:
-; RV32I:       # %bb.0:
-; RV32I-NEXT:    lw a2, 0(a1)
-; RV32I-NEXT:    beq a0, a2, .LBB0_2
-; RV32I-NEXT:  # %bb.1:
-; RV32I-NEXT:    mv a0, a2
-; RV32I-NEXT:  .LBB0_2:
-; RV32I-NEXT:    lw a2, 0(a1)
-; RV32I-NEXT:    bne a0, a2, .LBB0_4
-; RV32I-NEXT:  # %bb.3:
-; RV32I-NEXT:    mv a0, a2
-; RV32I-NEXT:  .LBB0_4:
-; RV32I-NEXT:    lw a2, 0(a1)
-; RV32I-NEXT:    bltu a2, a0, .LBB0_6
-; RV32I-NEXT:  # %bb.5:
-; RV32I-NEXT:    mv a0, a2
-; RV32I-NEXT:  .LBB0_6:
-; RV32I-NEXT:    lw a2, 0(a1)
-; RV32I-NEXT:    bgeu a0, a2, .LBB0_8
-; RV32I-NEXT:  # %bb.7:
-; RV32I-NEXT:    mv a0, a2
-; RV32I-NEXT:  .LBB0_8:
-; RV32I-NEXT:    lw a2, 0(a1)
-; RV32I-NEXT:    bltu a0, a2, .LBB0_10
-; RV32I-NEXT:  # %bb.9:
-; RV32I-NEXT:    mv a0, a2
-; RV32I-NEXT:  .LBB0_10:
-; RV32I-NEXT:    lw a2, 0(a1)
-; RV32I-NEXT:    bgeu a2, a0, .LBB0_12
-; RV32I-NEXT:  # %bb.11:
-; RV32I-NEXT:    mv a0, a2
-; RV32I-NEXT:  .LBB0_12:
-; RV32I-NEXT:    lw a2, 0(a1)
-; RV32I-NEXT:    blt a2, a0, .LBB0_14
-; RV32I-NEXT:  # %bb.13:
-; RV32I-NEXT:    mv a0, a2
-; RV32I-NEXT:  .LBB0_14:
-; RV32I-NEXT:    lw a2, 0(a1)
-; RV32I-NEXT:    bge a0, a2, .LBB0_16
-; RV32I-NEXT:  # %bb.15:
-; RV32I-NEXT:    mv a0, a2
-; RV32I-NEXT:  .LBB0_16:
-; RV32I-NEXT:    lw a2, 0(a1)
-; RV32I-NEXT:    blt a0, a2, .LBB0_18
-; RV32I-NEXT:  # %bb.17:
-; RV32I-NEXT:    mv a0, a2
-; RV32I-NEXT:  .LBB0_18:
-; RV32I-NEXT:    lw a2, 0(a1)
-; RV32I-NEXT:    bge a2, a0, .LBB0_20
-; RV32I-NEXT:  # %bb.19:
-; RV32I-NEXT:    mv a0, a2
-; RV32I-NEXT:  .LBB0_20:
-; RV32I-NEXT:    lw a2, 0(a1)
-; RV32I-NEXT:    blez a2, .LBB0_22
-; RV32I-NEXT:  # %bb.21:
-; RV32I-NEXT:    mv a0, a2
-; RV32I-NEXT:  .LBB0_22:
-; RV32I-NEXT:    lw a3, 0(a1)
-; RV32I-NEXT:    bgez a2, .LBB0_24
-; RV32I-NEXT:  # %bb.23:
-; RV32I-NEXT:    mv a0, a3
-; RV32I-NEXT:  .LBB0_24:
-; RV32I-NEXT:    lw a3, 0(a1)
-; RV32I-NEXT:    li a4, 1024
-; RV32I-NEXT:    blt a4, a3, .LBB0_26
-; RV32I-NEXT:  # %bb.25:
-; RV32I-NEXT:    mv a0, a3
-; RV32I-NEXT:  .LBB0_26:
-; RV32I-NEXT:    lw a1, 0(a1)
-; RV32I-NEXT:    li a3, 2046
-; RV32I-NEXT:    bltu a3, a2, .LBB0_28
-; RV32I-NEXT:  # %bb.27:
-; RV32I-NEXT:    mv a0, a1
-; RV32I-NEXT:  .LBB0_28:
-; RV32I-NEXT:    ret
 ;
-; RV32IXQCI-LABEL: foo:
-; RV32IXQCI:       # %bb.0:
-; RV32IXQCI-NEXT:    lw a2, 0(a1)
-; RV32IXQCI-NEXT:    lw a3, 0(a1)
-; RV32IXQCI-NEXT:    lw a4, 0(a1)
-; RV32IXQCI-NEXT:    lw a5, 0(a1)
-; RV32IXQCI-NEXT:    qc.mvne a0, a0, a2, a2
-; RV32IXQCI-NEXT:    qc.mveq a0, a0, a3, a3
-; RV32IXQCI-NEXT:    lw a2, 0(a1)
-; RV32IXQCI-NEXT:    qc.mvgeu a0, a4, a0, a4
-; RV32IXQCI-NEXT:    lw a3, 0(a1)
-; RV32IXQCI-NEXT:    qc.mvltu a0, a0, a5, a5
-; RV32IXQCI-NEXT:    lw a4, 0(a1)
-; RV32IXQCI-NEXT:    qc.mvgeu a0, a0, a2, a2
-; RV32IXQCI-NEXT:    lw a2, 0(a1)
-; RV32IXQCI-NEXT:    qc.mvltu a0, a3, a0, a3
-; RV32IXQCI-NEXT:    lw a3, 0(a1)
-; RV32IXQCI-NEXT:    qc.mvge a0, a4, a0, a4
-; RV32IXQCI-NEXT:    lw a4, 0(a1)
-; RV32IXQCI-NEXT:    qc.mvlt a0, a0, a2, a2
-; RV32IXQCI-NEXT:    lw a2, 0(a1)
-; RV32IXQCI-NEXT:    qc.mvge a0, a0, a3, a3
-; RV32IXQCI-NEXT:    lw a3, 0(a1)
-; RV32IXQCI-NEXT:    qc.mvlt a0, a4, a0, a4
-; RV32IXQCI-NEXT:    lw a4, 0(a1)
-; RV32IXQCI-NEXT:    lw a1, 0(a1)
-; RV32IXQCI-NEXT:    blez a2, .LBB0_2
-; RV32IXQCI-NEXT:  # %bb.1:
-; RV32IXQCI-NEXT:    mv a0, a2
-; RV32IXQCI-NEXT:  .LBB0_2:
-; RV32IXQCI-NEXT:    qc.mvlti a0, a2, 0, a3
-; RV32IXQCI-NEXT:    li a3, 1024
-; RV32IXQCI-NEXT:    qc.mvge a0, a3, a4, a4
-; RV32IXQCI-NEXT:    li a3, 2046
-; RV32IXQCI-NEXT:    qc.mvgeu a0, a3, a2, a1
-; RV32IXQCI-NEXT:    ret
 ;
 ; RV64I-LABEL: foo:
 ; RV64I:       # %bb.0:
@@ -307,44 +196,7 @@ define signext i32 @foo(i32 signext %a, ptr %b) nounwind {
 ; Test that we can ComputeNumSignBits across basic blocks when the live out is
 ; YSXISD::SELECT_CC. There should be no slli+srai or sext.h in the output.
 define signext i16 @numsignbits(i16 signext %0, i16 signext %1, i16 signext %2, i16 signext %3) nounwind {
-; RV32I-LABEL: numsignbits:
-; RV32I:       # %bb.0:
-; RV32I-NEXT:    addi sp, sp, -16
-; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    mv s0, a3
-; RV32I-NEXT:    beqz a0, .LBB1_2
-; RV32I-NEXT:  # %bb.1:
-; RV32I-NEXT:    mv s0, a2
-; RV32I-NEXT:  .LBB1_2:
-; RV32I-NEXT:    beqz a1, .LBB1_4
-; RV32I-NEXT:  # %bb.3:
-; RV32I-NEXT:    mv a0, s0
-; RV32I-NEXT:    call bar
-; RV32I-NEXT:  .LBB1_4:
-; RV32I-NEXT:    mv a0, s0
-; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    addi sp, sp, 16
-; RV32I-NEXT:    ret
 ;
-; RV32IXQCI-LABEL: numsignbits:
-; RV32IXQCI:       # %bb.0:
-; RV32IXQCI-NEXT:    addi sp, sp, -16
-; RV32IXQCI-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32IXQCI-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
-; RV32IXQCI-NEXT:    mv s0, a2
-; RV32IXQCI-NEXT:    qc.mveqi s0, a0, 0, a3
-; RV32IXQCI-NEXT:    beqz a1, .LBB1_2
-; RV32IXQCI-NEXT:  # %bb.1:
-; RV32IXQCI-NEXT:    mv a0, s0
-; RV32IXQCI-NEXT:    call bar
-; RV32IXQCI-NEXT:  .LBB1_2:
-; RV32IXQCI-NEXT:    mv a0, s0
-; RV32IXQCI-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; RV32IXQCI-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
-; RV32IXQCI-NEXT:    addi sp, sp, 16
-; RV32IXQCI-NEXT:    ret
 ;
 ; RV64I-LABEL: numsignbits:
 ; RV64I:       # %bb.0:
@@ -398,24 +250,7 @@ define signext i16 @numsignbits(i16 signext %0, i16 signext %1, i16 signext %2, 
 declare void @bar(i16 signext)
 
 define i32 @select_sge_int16min(i32 signext %x, i32 signext %y, i32 signext %z) {
-; RV32I-LABEL: select_sge_int16min:
-; RV32I:       # %bb.0:
-; RV32I-NEXT:    lui a3, 1048560
-; RV32I-NEXT:    addi a3, a3, -1
-; RV32I-NEXT:    blt a3, a0, .LBB2_2
-; RV32I-NEXT:  # %bb.1:
-; RV32I-NEXT:    mv a1, a2
-; RV32I-NEXT:  .LBB2_2:
-; RV32I-NEXT:    mv a0, a1
-; RV32I-NEXT:    ret
 ;
-; RV32IXQCI-LABEL: select_sge_int16min:
-; RV32IXQCI:       # %bb.0:
-; RV32IXQCI-NEXT:    lui a3, 1048560
-; RV32IXQCI-NEXT:    addi a3, a3, -1
-; RV32IXQCI-NEXT:    qc.mvge a1, a3, a0, a2
-; RV32IXQCI-NEXT:    mv a0, a1
-; RV32IXQCI-NEXT:    ret
 ;
 ; RV64I-LABEL: select_sge_int16min:
 ; RV64I:       # %bb.0:
@@ -440,37 +275,7 @@ define i32 @select_sge_int16min(i32 signext %x, i32 signext %y, i32 signext %z) 
 }
 
 define i64 @select_sge_int32min(i64 %x, i64 %y, i64 %z) {
-; RV32I-LABEL: select_sge_int32min:
-; RV32I:       # %bb.0:
-; RV32I-NEXT:    li a6, -1
-; RV32I-NEXT:    bne a1, a6, .LBB3_2
-; RV32I-NEXT:  # %bb.1:
-; RV32I-NEXT:    srli a0, a0, 31
-; RV32I-NEXT:    j .LBB3_3
-; RV32I-NEXT:  .LBB3_2:
-; RV32I-NEXT:    srli a1, a1, 31
-; RV32I-NEXT:    xori a0, a1, 1
-; RV32I-NEXT:  .LBB3_3:
-; RV32I-NEXT:    bnez a0, .LBB3_5
-; RV32I-NEXT:  # %bb.4:
-; RV32I-NEXT:    mv a2, a4
-; RV32I-NEXT:    mv a3, a5
-; RV32I-NEXT:  .LBB3_5:
-; RV32I-NEXT:    mv a0, a2
-; RV32I-NEXT:    mv a1, a3
-; RV32I-NEXT:    ret
 ;
-; RV32IXQCI-LABEL: select_sge_int32min:
-; RV32IXQCI:       # %bb.0:
-; RV32IXQCI-NEXT:    srli a6, a0, 31
-; RV32IXQCI-NEXT:    srli a0, a1, 31
-; RV32IXQCI-NEXT:    xori a0, a0, 1
-; RV32IXQCI-NEXT:    qc.mveqi a0, a1, -1, a6
-; RV32IXQCI-NEXT:    qc.mveqi a2, a0, 0, a4
-; RV32IXQCI-NEXT:    qc.mveqi a3, a0, 0, a5
-; RV32IXQCI-NEXT:    mv a0, a2
-; RV32IXQCI-NEXT:    mv a1, a3
-; RV32IXQCI-NEXT:    ret
 ;
 ; RV64I-LABEL: select_sge_int32min:
 ; RV64I:       # %bb.0:

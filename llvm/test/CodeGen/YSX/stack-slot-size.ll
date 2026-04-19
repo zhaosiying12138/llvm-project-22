@@ -12,23 +12,6 @@ declare void @callee160(i160)
 declare void @callee161(i161)
 
 define i32 @caller129() nounwind {
-; RV32I-LABEL: caller129:
-; RV32I:       # %bb.0:
-; RV32I-NEXT:    addi sp, sp, -32
-; RV32I-NEXT:    sw ra, 28(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    li a0, 42
-; RV32I-NEXT:    sw a0, 24(sp)
-; RV32I-NEXT:    sw zero, 16(sp)
-; RV32I-NEXT:    mv a0, sp
-; RV32I-NEXT:    sw zero, 0(sp)
-; RV32I-NEXT:    sw zero, 4(sp)
-; RV32I-NEXT:    sw zero, 8(sp)
-; RV32I-NEXT:    sw zero, 12(sp)
-; RV32I-NEXT:    call callee129
-; RV32I-NEXT:    lw a0, 24(sp)
-; RV32I-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    addi sp, sp, 32
-; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: caller129:
 ; RV64I:       # %bb.0:
@@ -52,23 +35,6 @@ define i32 @caller129() nounwind {
 }
 
 define i32 @caller160() nounwind {
-; RV32I-LABEL: caller160:
-; RV32I:       # %bb.0:
-; RV32I-NEXT:    addi sp, sp, -32
-; RV32I-NEXT:    sw ra, 28(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    li a0, 42
-; RV32I-NEXT:    sw a0, 24(sp)
-; RV32I-NEXT:    sw zero, 16(sp)
-; RV32I-NEXT:    mv a0, sp
-; RV32I-NEXT:    sw zero, 0(sp)
-; RV32I-NEXT:    sw zero, 4(sp)
-; RV32I-NEXT:    sw zero, 8(sp)
-; RV32I-NEXT:    sw zero, 12(sp)
-; RV32I-NEXT:    call callee160
-; RV32I-NEXT:    lw a0, 24(sp)
-; RV32I-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    addi sp, sp, 32
-; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: caller160:
 ; RV64I:       # %bb.0:
@@ -92,24 +58,6 @@ define i32 @caller160() nounwind {
 }
 
 define i32 @caller161() nounwind {
-; RV32I-LABEL: caller161:
-; RV32I:       # %bb.0:
-; RV32I-NEXT:    addi sp, sp, -32
-; RV32I-NEXT:    sw ra, 28(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    li a0, 42
-; RV32I-NEXT:    sw a0, 24(sp)
-; RV32I-NEXT:    sw zero, 16(sp)
-; RV32I-NEXT:    sw zero, 20(sp)
-; RV32I-NEXT:    mv a0, sp
-; RV32I-NEXT:    sw zero, 0(sp)
-; RV32I-NEXT:    sw zero, 4(sp)
-; RV32I-NEXT:    sw zero, 8(sp)
-; RV32I-NEXT:    sw zero, 12(sp)
-; RV32I-NEXT:    call callee161
-; RV32I-NEXT:    lw a0, 24(sp)
-; RV32I-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    addi sp, sp, 32
-; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: caller161:
 ; RV64I:       # %bb.0:

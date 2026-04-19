@@ -5,19 +5,14 @@
 # which are valid for the current set of features
 
 ad x1, x1, x1
-# CHECK-RV32: did you mean: add, addi, and, andi, la
 # CHECK-RV64: did you mean: add, addi, addw, and, andi, la, ld, sd
 # CHECK-NEXT: ad x1, x1, x1
 
 fl ft0, 0(sp)
-# CHECK-RV32I: did you mean: la, lb, lh, li, lw
-# CHECK-RV32IF: did you mean: flw, la, lb, lh, li, lw
 # CHECK-RV64I: did you mean: la, lb, ld, lh, li, lw
-# CHECK-RV64IF: did you mean: flw, la, lb, ld, lh, li, lw
 # CHECK-NEXT: fl ft0, 0(sp)
 
 addc x1, x1, x1
-# CHECK-RV32: did you mean: add, addi
 # CHECK-RV64: did you mean: add, addi, addw
 # CHECK-NEXT: addc x1, x1, x1
 

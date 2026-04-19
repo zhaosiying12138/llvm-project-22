@@ -5,15 +5,6 @@
 @a = external global [2 x [2 x i32]], align 4
 
 define dso_local void @test() {
-; RV32-LABEL: test:
-; RV32:       # %bb.0: # %entry
-; RV32-NEXT:    #APP
-; RV32-NEXT:    # var a+12 test
-; RV32-NEXT:    #NO_APP
-; RV32-NEXT:    #APP
-; RV32-NEXT:    # var a+12 test
-; RV32-NEXT:    #NO_APP
-; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: test:
 ; RV64:       # %bb.0: # %entry
@@ -34,18 +25,6 @@ entry:
 
 ; Function Attrs: nofree nosync nounwind readnone
 define dso_local ptr @test_label() {
-; RV32-LABEL: test_label:
-; RV32:       # %bb.0: # %entry
-; RV32-NEXT:  .Ltmp0: # Block address taken
-; RV32-NEXT:  # %bb.1: # %L1
-; RV32-NEXT:    #APP
-; RV32-NEXT:    # .Ltmp0
-; RV32-NEXT:    #NO_APP
-; RV32-NEXT:    #APP
-; RV32-NEXT:    lui a0, %hi(.Ltmp0)
-; RV32-NEXT:    addi a0, a0, %lo(.Ltmp0)
-; RV32-NEXT:    #NO_APP
-; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: test_label:
 ; RV64:       # %bb.0: # %entry

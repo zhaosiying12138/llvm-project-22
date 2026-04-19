@@ -2,11 +2,6 @@
 ; RUN: llc < %s -mtriple=ysx64 | FileCheck %s --check-prefixes=RV64
 
 define signext i32 @test1(i32 signext %x) {
-; RV32-LABEL: test1:
-; RV32:       # %bb.0:
-; RV32-NEXT:    slli a0, a0, 1
-; RV32-NEXT:    addi a0, a0, 1
-; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: test1:
 ; RV64:       # %bb.0:
@@ -19,11 +14,6 @@ define signext i32 @test1(i32 signext %x) {
 }
 
 define i64 @test2(i64 %x) {
-; RV32-LABEL: test2:
-; RV32:       # %bb.0:
-; RV32-NEXT:    andi a0, a0, -4
-; RV32-NEXT:    addi a0, a0, 2
-; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: test2:
 ; RV64:       # %bb.0:
@@ -36,11 +26,6 @@ define i64 @test2(i64 %x) {
 }
 
 define signext i32 @test3(i32 signext %x) {
-; RV32-LABEL: test3:
-; RV32:       # %bb.0:
-; RV32-NEXT:    slli a0, a0, 3
-; RV32-NEXT:    addi a0, a0, 6
-; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: test3:
 ; RV64:       # %bb.0:
@@ -53,14 +38,6 @@ define signext i32 @test3(i32 signext %x) {
 }
 
 define i64 @test4(i64 %x) {
-; RV32-LABEL: test4:
-; RV32:       # %bb.0:
-; RV32-NEXT:    srli a2, a0, 28
-; RV32-NEXT:    slli a1, a1, 4
-; RV32-NEXT:    slli a0, a0, 4
-; RV32-NEXT:    or a1, a1, a2
-; RV32-NEXT:    addi a0, a0, 13
-; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: test4:
 ; RV64:       # %bb.0:
@@ -73,11 +50,6 @@ define i64 @test4(i64 %x) {
 }
 
 define signext i32 @test5(i32 signext %x) {
-; RV32-LABEL: test5:
-; RV32:       # %bb.0:
-; RV32-NEXT:    srli a0, a0, 24
-; RV32-NEXT:    addi a0, a0, 256
-; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: test5:
 ; RV64:       # %bb.0:
@@ -90,12 +62,6 @@ define signext i32 @test5(i32 signext %x) {
 }
 
 define i64 @test6(i64 %x) {
-; RV32-LABEL: test6:
-; RV32:       # %bb.0:
-; RV32-NEXT:    srli a1, a1, 22
-; RV32-NEXT:    addi a0, a1, 1024
-; RV32-NEXT:    li a1, 0
-; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: test6:
 ; RV64:       # %bb.0:
@@ -108,10 +74,6 @@ define i64 @test6(i64 %x) {
 }
 
 define signext i32 @test7(i32 signext %x) {
-; RV32-LABEL: test7:
-; RV32:       # %bb.0:
-; RV32-NEXT:    addi a0, a0, 1
-; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: test7:
 ; RV64:       # %bb.0:
@@ -122,40 +84,6 @@ define signext i32 @test7(i32 signext %x) {
 }
 
 define void @pr128468(ptr %0, i32 signext %1, i32 signext %2) {
-; RV32-LABEL: pr128468:
-; RV32:       # %bb.0:
-; RV32-NEXT:    slli a3, a1, 3
-; RV32-NEXT:    add a3, a0, a3
-; RV32-NEXT:    lw a2, 4(a3)
-; RV32-NEXT:    bgez a2, .LBB7_6
-; RV32-NEXT:  # %bb.1:
-; RV32-NEXT:    slli a2, a1, 1
-; RV32-NEXT:    addi a2, a2, 1
-; RV32-NEXT:    beq a2, a1, .LBB7_6
-; RV32-NEXT:  # %bb.2: # %.preheader
-; RV32-NEXT:    addi a3, a3, 4
-; RV32-NEXT:    j .LBB7_4
-; RV32-NEXT:  .LBB7_3: # in Loop: Header=BB7_4 Depth=1
-; RV32-NEXT:    mv a2, a1
-; RV32-NEXT:    addi a3, a3, 4
-; RV32-NEXT:    beq a1, a1, .LBB7_6
-; RV32-NEXT:  .LBB7_4: # =>This Inner Loop Header: Depth=1
-; RV32-NEXT:    slli a1, a1, 2
-; RV32-NEXT:    add a1, a0, a1
-; RV32-NEXT:    lw a4, 0(a1)
-; RV32-NEXT:    mv a1, a2
-; RV32-NEXT:    sw a4, 0(a3)
-; RV32-NEXT:    slli a3, a2, 3
-; RV32-NEXT:    add a3, a0, a3
-; RV32-NEXT:    lw a2, 4(a3)
-; RV32-NEXT:    bgez a2, .LBB7_3
-; RV32-NEXT:  # %bb.5: # in Loop: Header=BB7_4 Depth=1
-; RV32-NEXT:    slli a2, a1, 1
-; RV32-NEXT:    addi a2, a2, 1
-; RV32-NEXT:    addi a3, a3, 4
-; RV32-NEXT:    bne a2, a1, .LBB7_4
-; RV32-NEXT:  .LBB7_6:
-; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: pr128468:
 ; RV64:       # %bb.0:

@@ -14,14 +14,6 @@ define i8 @f0() #0 nounwind {
 ; RV64I-NEXT:    lbu a0, 0(sp)
 ; RV64I-NEXT:    addi sp, sp, 64
 ; RV64I-NEXT:    ret
-; RV32I-LABEL: f0:
-; RV32I:       # %bb.0: # %entry
-; RV32I-NEXT:    addi sp, sp, -64
-; RV32I-NEXT:    li a0, 3
-; RV32I-NEXT:    sb a0, 0(sp)
-; RV32I-NEXT:    lbu a0, 0(sp)
-; RV32I-NEXT:    addi sp, sp, 64
-; RV32I-NEXT:    ret
 entry:
   %a = alloca i8, i64 64
   %b = getelementptr inbounds i8, ptr %a, i64 63
@@ -44,19 +36,6 @@ define i8 @f1() #0 nounwind {
 ; RV64I-NEXT:    addi a1, a1, 16
 ; RV64I-NEXT:    add sp, sp, a1
 ; RV64I-NEXT:    ret
-; RV32I-LABEL: f1:
-; RV32I:       # %bb.0: # %entry
-; RV32I-NEXT:    lui a0, 1
-; RV32I-NEXT:    sub sp, sp, a0
-; RV32I-NEXT:    sw zero, 0(sp)
-; RV32I-NEXT:    addi sp, sp, -16
-; RV32I-NEXT:    li a0, 3
-; RV32I-NEXT:    sb a0, 16(sp)
-; RV32I-NEXT:    lbu a0, 16(sp)
-; RV32I-NEXT:    lui a1, 1
-; RV32I-NEXT:    addi a1, a1, 16
-; RV32I-NEXT:    add sp, sp, a1
-; RV32I-NEXT:    ret
 entry:
   %a = alloca i8, i64 4096
   %b = getelementptr inbounds i8, ptr %a, i64 63
@@ -85,25 +64,6 @@ define i8 @f2() #0 nounwind {
 ; RV64I-NEXT:    addi a1, a1, 16
 ; RV64I-NEXT:    add sp, sp, a1
 ; RV64I-NEXT:    ret
-; RV32I-LABEL: f2:
-; RV32I:       # %bb.0: # %entry
-; RV32I-NEXT:    lui a0, 16
-; RV32I-NEXT:    sub t1, sp, a0
-; RV32I-NEXT:    lui t2, 1
-; RV32I-NEXT:  .LBB2_1: # %entry
-; RV32I-NEXT:    # =>This Inner Loop Header: Depth=1
-; RV32I-NEXT:    sub sp, sp, t2
-; RV32I-NEXT:    sw zero, 0(sp)
-; RV32I-NEXT:    bne sp, t1, .LBB2_1
-; RV32I-NEXT:  # %bb.2: # %entry
-; RV32I-NEXT:    addi sp, sp, -16
-; RV32I-NEXT:    li a0, 3
-; RV32I-NEXT:    sb a0, 16(sp)
-; RV32I-NEXT:    lbu a0, 16(sp)
-; RV32I-NEXT:    lui a1, 16
-; RV32I-NEXT:    addi a1, a1, 16
-; RV32I-NEXT:    add sp, sp, a1
-; RV32I-NEXT:    ret
 entry:
   %a = alloca i8, i64 65536
   %b = getelementptr inbounds i8, ptr %a, i64 63
@@ -129,22 +89,6 @@ define i8 @f3() #0 "stack-probe-size"="32768" nounwind {
 ; RV64I-NEXT:    addi a1, a1, 16
 ; RV64I-NEXT:    add sp, sp, a1
 ; RV64I-NEXT:    ret
-; RV32I-LABEL: f3:
-; RV32I:       # %bb.0: # %entry
-; RV32I-NEXT:    lui a0, 8
-; RV32I-NEXT:    sub sp, sp, a0
-; RV32I-NEXT:    sw zero, 0(sp)
-; RV32I-NEXT:    lui a0, 8
-; RV32I-NEXT:    sub sp, sp, a0
-; RV32I-NEXT:    sw zero, 0(sp)
-; RV32I-NEXT:    addi sp, sp, -16
-; RV32I-NEXT:    li a0, 3
-; RV32I-NEXT:    sb a0, 16(sp)
-; RV32I-NEXT:    lbu a0, 16(sp)
-; RV32I-NEXT:    lui a1, 16
-; RV32I-NEXT:    addi a1, a1, 16
-; RV32I-NEXT:    add sp, sp, a1
-; RV32I-NEXT:    ret
 entry:
   %a = alloca i8, i64 65536
   %b = getelementptr inbounds i8, ptr %a, i64 63
@@ -167,18 +111,6 @@ define i8 @f4() nounwind {
 ; RV64I-NEXT:    addi a1, a1, 16
 ; RV64I-NEXT:    add sp, sp, a1
 ; RV64I-NEXT:    ret
-; RV32I-LABEL: f4:
-; RV32I:       # %bb.0: # %entry
-; RV32I-NEXT:    lui a0, 16
-; RV32I-NEXT:    addi a0, a0, 16
-; RV32I-NEXT:    sub sp, sp, a0
-; RV32I-NEXT:    li a0, 3
-; RV32I-NEXT:    sb a0, 16(sp)
-; RV32I-NEXT:    lbu a0, 16(sp)
-; RV32I-NEXT:    lui a1, 16
-; RV32I-NEXT:    addi a1, a1, 16
-; RV32I-NEXT:    add sp, sp, a1
-; RV32I-NEXT:    ret
 entry:
   %a = alloca i8, i64 65536
   %b = getelementptr inbounds i8, ptr %a, i64 63
@@ -207,25 +139,6 @@ define i8 @f5() #0 "stack-probe-size"="65536" nounwind {
 ; RV64I-NEXT:    addi a1, a1, 16
 ; RV64I-NEXT:    add sp, sp, a1
 ; RV64I-NEXT:    ret
-; RV32I-LABEL: f5:
-; RV32I:       # %bb.0: # %entry
-; RV32I-NEXT:    lui a0, 256
-; RV32I-NEXT:    sub t1, sp, a0
-; RV32I-NEXT:    lui t2, 16
-; RV32I-NEXT:  .LBB5_1: # %entry
-; RV32I-NEXT:    # =>This Inner Loop Header: Depth=1
-; RV32I-NEXT:    sub sp, sp, t2
-; RV32I-NEXT:    sw zero, 0(sp)
-; RV32I-NEXT:    bne sp, t1, .LBB5_1
-; RV32I-NEXT:  # %bb.2: # %entry
-; RV32I-NEXT:    addi sp, sp, -16
-; RV32I-NEXT:    li a0, 3
-; RV32I-NEXT:    sb a0, 16(sp)
-; RV32I-NEXT:    lbu a0, 16(sp)
-; RV32I-NEXT:    lui a1, 256
-; RV32I-NEXT:    addi a1, a1, 16
-; RV32I-NEXT:    add sp, sp, a1
-; RV32I-NEXT:    ret
 entry:
   %a = alloca i8, i64 1048576
   %b = getelementptr inbounds i8, ptr %a, i64 63
@@ -254,25 +167,6 @@ define i8 @f6() #0 nounwind {
 ; RV64I-NEXT:    addi a1, a1, 16
 ; RV64I-NEXT:    add sp, sp, a1
 ; RV64I-NEXT:    ret
-; RV32I-LABEL: f6:
-; RV32I:       # %bb.0: # %entry
-; RV32I-NEXT:    lui a0, 262144
-; RV32I-NEXT:    sub t1, sp, a0
-; RV32I-NEXT:    lui t2, 1
-; RV32I-NEXT:  .LBB6_1: # %entry
-; RV32I-NEXT:    # =>This Inner Loop Header: Depth=1
-; RV32I-NEXT:    sub sp, sp, t2
-; RV32I-NEXT:    sw zero, 0(sp)
-; RV32I-NEXT:    bne sp, t1, .LBB6_1
-; RV32I-NEXT:  # %bb.2: # %entry
-; RV32I-NEXT:    addi sp, sp, -16
-; RV32I-NEXT:    li a0, 3
-; RV32I-NEXT:    sb a0, 16(sp)
-; RV32I-NEXT:    lbu a0, 16(sp)
-; RV32I-NEXT:    lui a1, 262144
-; RV32I-NEXT:    addi a1, a1, 16
-; RV32I-NEXT:    add sp, sp, a1
-; RV32I-NEXT:    ret
 entry:
   %a = alloca i8, i64 1073741824
   %b = getelementptr inbounds i8, ptr %a, i64 63
@@ -303,27 +197,6 @@ define i8 @f7() #0 "stack-probe-size"="65536" nounwind {
 ; RV64I-NEXT:    addi a1, a1, -1520
 ; RV64I-NEXT:    add sp, sp, a1
 ; RV64I-NEXT:    ret
-; RV32I-LABEL: f7:
-; RV32I:       # %bb.0: # %entry
-; RV32I-NEXT:    lui a0, 244128
-; RV32I-NEXT:    sub t1, sp, a0
-; RV32I-NEXT:    lui t2, 16
-; RV32I-NEXT:  .LBB7_1: # %entry
-; RV32I-NEXT:    # =>This Inner Loop Header: Depth=1
-; RV32I-NEXT:    sub sp, sp, t2
-; RV32I-NEXT:    sw zero, 0(sp)
-; RV32I-NEXT:    bne sp, t1, .LBB7_1
-; RV32I-NEXT:  # %bb.2: # %entry
-; RV32I-NEXT:    lui a0, 13
-; RV32I-NEXT:    addi a0, a0, -1520
-; RV32I-NEXT:    sub sp, sp, a0
-; RV32I-NEXT:    li a0, 3
-; RV32I-NEXT:    sb a0, 9(sp)
-; RV32I-NEXT:    lbu a0, 9(sp)
-; RV32I-NEXT:    lui a1, 244141
-; RV32I-NEXT:    addi a1, a1, -1520
-; RV32I-NEXT:    add sp, sp, a1
-; RV32I-NEXT:    ret
 entry:
   %a = alloca i8, i64 1000000007
   %b = getelementptr inbounds i8, ptr %a, i64 101

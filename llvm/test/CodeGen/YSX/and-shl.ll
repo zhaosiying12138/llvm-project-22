@@ -3,11 +3,6 @@
 ; RUN:   | FileCheck %s -check-prefix=RV64I
 
 define i32 @and_0xfff_shl_2(i32 %x) {
-; RV32I-LABEL: and_0xfff_shl_2:
-; RV32I:       # %bb.0:
-; RV32I-NEXT:    slli a0, a0, 20
-; RV32I-NEXT:    srli a0, a0, 18
-; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: and_0xfff_shl_2:
 ; RV64I:       # %bb.0:
@@ -20,11 +15,6 @@ define i32 @and_0xfff_shl_2(i32 %x) {
 }
 
 define i32 @and_0x7ff_shl_2(i32 %x) {
-; RV32I-LABEL: and_0x7ff_shl_2:
-; RV32I:       # %bb.0:
-; RV32I-NEXT:    andi a0, a0, 2047
-; RV32I-NEXT:    slli a0, a0, 2
-; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: and_0x7ff_shl_2:
 ; RV64I:       # %bb.0:
@@ -37,12 +27,6 @@ define i32 @and_0x7ff_shl_2(i32 %x) {
 }
 
 define i64 @and_0xffffffff_shl_2(i64 %x) {
-; RV32I-LABEL: and_0xffffffff_shl_2:
-; RV32I:       # %bb.0:
-; RV32I-NEXT:    slli a2, a0, 2
-; RV32I-NEXT:    srli a1, a0, 30
-; RV32I-NEXT:    mv a0, a2
-; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: and_0xffffffff_shl_2:
 ; RV64I:       # %bb.0:
@@ -55,13 +39,6 @@ define i64 @and_0xffffffff_shl_2(i64 %x) {
 }
 
 define i32 @and_0xfff_shl_2_multi_use(i32 %x) {
-; RV32I-LABEL: and_0xfff_shl_2_multi_use:
-; RV32I:       # %bb.0:
-; RV32I-NEXT:    slli a0, a0, 20
-; RV32I-NEXT:    srli a0, a0, 20
-; RV32I-NEXT:    slli a1, a0, 2
-; RV32I-NEXT:    add a0, a0, a1
-; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: and_0xfff_shl_2_multi_use:
 ; RV64I:       # %bb.0:
@@ -77,12 +54,6 @@ define i32 @and_0xfff_shl_2_multi_use(i32 %x) {
 }
 
 define i64 @and_0xfff_shl_33(i64 %x) {
-; RV32I-LABEL: and_0xfff_shl_33:
-; RV32I:       # %bb.0:
-; RV32I-NEXT:    slli a0, a0, 20
-; RV32I-NEXT:    srli a1, a0, 19
-; RV32I-NEXT:    li a0, 0
-; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: and_0xfff_shl_33:
 ; RV64I:       # %bb.0:

@@ -2,13 +2,6 @@
 ; RUN: llc -mtriple=ysx64 %s -o - | FileCheck %s --check-prefix=RV64
 
 define i32 @xori64i32(i64 %a) {
-; RV32-LABEL: xori64i32:
-; RV32:       # %bb.0:
-; RV32-NEXT:    srai a1, a1, 31
-; RV32-NEXT:    lui a0, 524288
-; RV32-NEXT:    addi a0, a0, -1
-; RV32-NEXT:    xor a0, a1, a0
-; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: xori64i32:
 ; RV64:       # %bb.0:
@@ -24,13 +17,6 @@ define i32 @xori64i32(i64 %a) {
 }
 
 define i64 @selecti64i64(i64 %a) {
-; RV32-LABEL: selecti64i64:
-; RV32:       # %bb.0:
-; RV32-NEXT:    srai a1, a1, 31
-; RV32-NEXT:    lui a0, 524288
-; RV32-NEXT:    addi a0, a0, -1
-; RV32-NEXT:    xor a0, a1, a0
-; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: selecti64i64:
 ; RV64:       # %bb.0:
@@ -45,13 +31,6 @@ define i64 @selecti64i64(i64 %a) {
 }
 
 define i32 @selecti64i32(i64 %a) {
-; RV32-LABEL: selecti64i32:
-; RV32:       # %bb.0:
-; RV32-NEXT:    srli a1, a1, 31
-; RV32-NEXT:    xori a0, a1, 1
-; RV32-NEXT:    lui a1, 524288
-; RV32-NEXT:    sub a0, a1, a0
-; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: selecti64i32:
 ; RV64:       # %bb.0:
@@ -66,13 +45,6 @@ define i32 @selecti64i32(i64 %a) {
 }
 
 define i64 @selecti32i64(i32 %a) {
-; RV32-LABEL: selecti32i64:
-; RV32:       # %bb.0:
-; RV32-NEXT:    srai a1, a0, 31
-; RV32-NEXT:    lui a0, 524288
-; RV32-NEXT:    addi a0, a0, -1
-; RV32-NEXT:    xor a0, a1, a0
-; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: selecti32i64:
 ; RV64:       # %bb.0:
@@ -89,11 +61,6 @@ define i64 @selecti32i64(i32 %a) {
 
 
 define i8 @xori32i8(i32 %a) {
-; RV32-LABEL: xori32i8:
-; RV32:       # %bb.0:
-; RV32-NEXT:    srai a0, a0, 31
-; RV32-NEXT:    xori a0, a0, 84
-; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: xori32i8:
 ; RV64:       # %bb.0:
@@ -107,11 +74,6 @@ define i8 @xori32i8(i32 %a) {
 }
 
 define i32 @selecti32i32(i32 %a) {
-; RV32-LABEL: selecti32i32:
-; RV32:       # %bb.0:
-; RV32-NEXT:    srai a0, a0, 31
-; RV32-NEXT:    xori a0, a0, 84
-; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: selecti32i32:
 ; RV64:       # %bb.0:
@@ -124,11 +86,6 @@ define i32 @selecti32i32(i32 %a) {
 }
 
 define i8 @selecti32i8(i32 %a) {
-; RV32-LABEL: selecti32i8:
-; RV32:       # %bb.0:
-; RV32-NEXT:    srai a0, a0, 31
-; RV32-NEXT:    xori a0, a0, 84
-; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: selecti32i8:
 ; RV64:       # %bb.0:
@@ -141,12 +98,6 @@ define i8 @selecti32i8(i32 %a) {
 }
 
 define i32 @selecti8i32(i8 %a) {
-; RV32-LABEL: selecti8i32:
-; RV32:       # %bb.0:
-; RV32-NEXT:    slli a0, a0, 24
-; RV32-NEXT:    srai a0, a0, 31
-; RV32-NEXT:    xori a0, a0, 84
-; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: selecti8i32:
 ; RV64:       # %bb.0:
@@ -160,14 +111,6 @@ define i32 @selecti8i32(i8 %a) {
 }
 
 define i32 @icmpasreq(i32 %input, i32 %a, i32 %b) {
-; RV32-LABEL: icmpasreq:
-; RV32:       # %bb.0:
-; RV32-NEXT:    bltz a0, .LBB8_2
-; RV32-NEXT:  # %bb.1:
-; RV32-NEXT:    mv a1, a2
-; RV32-NEXT:  .LBB8_2:
-; RV32-NEXT:    mv a0, a1
-; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: icmpasreq:
 ; RV64:       # %bb.0:
@@ -185,14 +128,6 @@ define i32 @icmpasreq(i32 %input, i32 %a, i32 %b) {
 }
 
 define i32 @icmpasrne(i32 %input, i32 %a, i32 %b) {
-; RV32-LABEL: icmpasrne:
-; RV32:       # %bb.0:
-; RV32-NEXT:    bgez a0, .LBB9_2
-; RV32-NEXT:  # %bb.1:
-; RV32-NEXT:    mv a1, a2
-; RV32-NEXT:  .LBB9_2:
-; RV32-NEXT:    mv a0, a1
-; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: icmpasrne:
 ; RV64:       # %bb.0:
@@ -210,16 +145,6 @@ define i32 @icmpasrne(i32 %input, i32 %a, i32 %b) {
 }
 
 define i32 @oneusecmp(i32 %a, i32 %b, i32 %d) {
-; RV32-LABEL: oneusecmp:
-; RV32:       # %bb.0:
-; RV32-NEXT:    srai a3, a0, 31
-; RV32-NEXT:    xori a3, a3, 127
-; RV32-NEXT:    bltz a0, .LBB10_2
-; RV32-NEXT:  # %bb.1:
-; RV32-NEXT:    mv a2, a1
-; RV32-NEXT:  .LBB10_2:
-; RV32-NEXT:    add a0, a3, a2
-; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: oneusecmp:
 ; RV64:       # %bb.0:
@@ -240,16 +165,6 @@ define i32 @oneusecmp(i32 %a, i32 %b, i32 %d) {
 }
 
 define i32 @xor_branch_imm_ret(i32 %x) nounwind {
-; RV32-LABEL: xor_branch_imm_ret:
-; RV32:       # %bb.0: # %entry
-; RV32-NEXT:    xori a0, a0, -1365
-; RV32-NEXT:    beqz a0, .LBB11_2
-; RV32-NEXT:  # %bb.1: # %if.then
-; RV32-NEXT:    ret
-; RV32-NEXT:  .LBB11_2: # %if.end
-; RV32-NEXT:    addi sp, sp, -16
-; RV32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32-NEXT:    call abort
 ;
 ; RV64-LABEL: xor_branch_imm_ret:
 ; RV64:       # %bb.0: # %entry
@@ -274,18 +189,6 @@ if.end:
 }
 
 define i32 @xor_branch_ret(i32 %x) nounwind {
-; RV32-LABEL: xor_branch_ret:
-; RV32:       # %bb.0: # %entry
-; RV32-NEXT:    li a1, 1
-; RV32-NEXT:    slli a1, a1, 11
-; RV32-NEXT:    beq a0, a1, .LBB12_2
-; RV32-NEXT:  # %bb.1: # %if.then
-; RV32-NEXT:    xor a0, a0, a1
-; RV32-NEXT:    ret
-; RV32-NEXT:  .LBB12_2: # %if.end
-; RV32-NEXT:    addi sp, sp, -16
-; RV32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32-NEXT:    call abort
 ;
 ; RV64-LABEL: xor_branch_ret:
 ; RV64:       # %bb.0: # %entry

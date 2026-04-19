@@ -3,11 +3,6 @@
 ; RUN:   | FileCheck %s -check-prefix=RV64I
 
 define void @sext_shl_trunc_same_size(i16 %x, i32 %y, ptr %res) {
-; RV32I-LABEL: sext_shl_trunc_same_size:
-; RV32I:       # %bb.0:
-; RV32I-NEXT:    sll a0, a0, a1
-; RV32I-NEXT:    sh a0, 0(a2)
-; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: sext_shl_trunc_same_size:
 ; RV64I:       # %bb.0:
@@ -22,11 +17,6 @@ define void @sext_shl_trunc_same_size(i16 %x, i32 %y, ptr %res) {
 }
 
 define void @zext_shl_trunc_same_size(i16 %x, i32 %y, ptr %res) {
-; RV32I-LABEL: zext_shl_trunc_same_size:
-; RV32I:       # %bb.0:
-; RV32I-NEXT:    sll a0, a0, a1
-; RV32I-NEXT:    sh a0, 0(a2)
-; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: zext_shl_trunc_same_size:
 ; RV64I:       # %bb.0:
@@ -41,11 +31,6 @@ define void @zext_shl_trunc_same_size(i16 %x, i32 %y, ptr %res) {
 }
 
 define void @sext_shl_trunc_smaller(i16 %x, i32 %y, ptr %res) {
-; RV32I-LABEL: sext_shl_trunc_smaller:
-; RV32I:       # %bb.0:
-; RV32I-NEXT:    sll a0, a0, a1
-; RV32I-NEXT:    sb a0, 0(a2)
-; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: sext_shl_trunc_smaller:
 ; RV64I:       # %bb.0:
@@ -60,11 +45,6 @@ define void @sext_shl_trunc_smaller(i16 %x, i32 %y, ptr %res) {
 }
 
 define void @zext_shl_trunc_smaller(i16 %x, i32 %y, ptr %res) {
-; RV32I-LABEL: zext_shl_trunc_smaller:
-; RV32I:       # %bb.0:
-; RV32I-NEXT:    sll a0, a0, a1
-; RV32I-NEXT:    sb a0, 0(a2)
-; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: zext_shl_trunc_smaller:
 ; RV64I:       # %bb.0:
@@ -81,14 +61,6 @@ define void @zext_shl_trunc_smaller(i16 %x, i32 %y, ptr %res) {
 ; negative test - demanding 1 high-bit too many to change the extend
 
 define signext i17 @sext_shl_trunc_larger(i16 %x, i32 %y) {
-; RV32I-LABEL: sext_shl_trunc_larger:
-; RV32I:       # %bb.0:
-; RV32I-NEXT:    slli a0, a0, 16
-; RV32I-NEXT:    srai a0, a0, 16
-; RV32I-NEXT:    sll a0, a0, a1
-; RV32I-NEXT:    slli a0, a0, 15
-; RV32I-NEXT:    srai a0, a0, 15
-; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: sext_shl_trunc_larger:
 ; RV64I:       # %bb.0:
@@ -107,14 +79,6 @@ define signext i17 @sext_shl_trunc_larger(i16 %x, i32 %y) {
 ; negative test - demanding 1 high-bit too many to change the extend
 
 define zeroext i17 @zext_shl_trunc_larger(i16 %x, i32 %y) {
-; RV32I-LABEL: zext_shl_trunc_larger:
-; RV32I:       # %bb.0:
-; RV32I-NEXT:    slli a0, a0, 16
-; RV32I-NEXT:    srli a0, a0, 16
-; RV32I-NEXT:    sll a0, a0, a1
-; RV32I-NEXT:    slli a0, a0, 15
-; RV32I-NEXT:    srli a0, a0, 15
-; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: zext_shl_trunc_larger:
 ; RV64I:       # %bb.0:
@@ -131,12 +95,6 @@ define zeroext i17 @zext_shl_trunc_larger(i16 %x, i32 %y) {
 }
 
 define i32 @sext_shl_mask(i16 %x, i32 %y) {
-; RV32I-LABEL: sext_shl_mask:
-; RV32I:       # %bb.0:
-; RV32I-NEXT:    sll a0, a0, a1
-; RV32I-NEXT:    slli a0, a0, 16
-; RV32I-NEXT:    srli a0, a0, 16
-; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: sext_shl_mask:
 ; RV64I:       # %bb.0:
@@ -151,12 +109,6 @@ define i32 @sext_shl_mask(i16 %x, i32 %y) {
 }
 
 define i32 @zext_shl_mask(i16 %x, i32 %y) {
-; RV32I-LABEL: zext_shl_mask:
-; RV32I:       # %bb.0:
-; RV32I-NEXT:    sll a0, a0, a1
-; RV32I-NEXT:    slli a0, a0, 16
-; RV32I-NEXT:    srli a0, a0, 16
-; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: zext_shl_mask:
 ; RV64I:       # %bb.0:
@@ -173,14 +125,6 @@ define i32 @zext_shl_mask(i16 %x, i32 %y) {
 ; negative test - demanding a bit that could change with sext
 
 define i32 @sext_shl_mask_higher(i16 %x, i32 %y) {
-; RV32I-LABEL: sext_shl_mask_higher:
-; RV32I:       # %bb.0:
-; RV32I-NEXT:    slli a0, a0, 16
-; RV32I-NEXT:    srai a0, a0, 16
-; RV32I-NEXT:    sll a0, a0, a1
-; RV32I-NEXT:    lui a1, 16
-; RV32I-NEXT:    and a0, a0, a1
-; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: sext_shl_mask_higher:
 ; RV64I:       # %bb.0:
@@ -199,14 +143,6 @@ define i32 @sext_shl_mask_higher(i16 %x, i32 %y) {
 ; negative test - demanding a bit that could change with zext
 
 define i32 @zext_shl_mask_higher(i16 %x, i32 %y) {
-; RV32I-LABEL: zext_shl_mask_higher:
-; RV32I:       # %bb.0:
-; RV32I-NEXT:    slli a0, a0, 16
-; RV32I-NEXT:    srli a0, a0, 16
-; RV32I-NEXT:    sll a0, a0, a1
-; RV32I-NEXT:    lui a1, 16
-; RV32I-NEXT:    and a0, a0, a1
-; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: zext_shl_mask_higher:
 ; RV64I:       # %bb.0:
@@ -225,14 +161,6 @@ define i32 @zext_shl_mask_higher(i16 %x, i32 %y) {
 ; May need some, but not all of the bits set by the 'or'.
 
 define i32 @set_shl_mask(i32 %x, i32 %y) {
-; RV32I-LABEL: set_shl_mask:
-; RV32I:       # %bb.0:
-; RV32I-NEXT:    lui a2, 16
-; RV32I-NEXT:    addi a3, a2, 1
-; RV32I-NEXT:    or a0, a0, a3
-; RV32I-NEXT:    sll a0, a0, a1
-; RV32I-NEXT:    and a0, a0, a2
-; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: set_shl_mask:
 ; RV64I:       # %bb.0:

@@ -5,17 +5,6 @@
 declare void @notdead(ptr)
 
 define ptr @test_frameaddress_0() nounwind {
-; RV32I-LABEL: test_frameaddress_0:
-; RV32I:       # %bb.0:
-; RV32I-NEXT:    addi sp, sp, -16
-; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    addi s0, sp, 16
-; RV32I-NEXT:    mv a0, s0
-; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    addi sp, sp, 16
-; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: test_frameaddress_0:
 ; RV64I:       # %bb.0:
@@ -33,18 +22,6 @@ define ptr @test_frameaddress_0() nounwind {
 }
 
 define ptr @test_frameaddress_2() nounwind {
-; RV32I-LABEL: test_frameaddress_2:
-; RV32I:       # %bb.0:
-; RV32I-NEXT:    addi sp, sp, -16
-; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    addi s0, sp, 16
-; RV32I-NEXT:    lw a0, -8(s0)
-; RV32I-NEXT:    lw a0, -8(a0)
-; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    addi sp, sp, 16
-; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: test_frameaddress_2:
 ; RV64I:       # %bb.0:
@@ -63,21 +40,6 @@ define ptr @test_frameaddress_2() nounwind {
 }
 
 define ptr @test_frameaddress_3_alloca() nounwind {
-; RV32I-LABEL: test_frameaddress_3_alloca:
-; RV32I:       # %bb.0:
-; RV32I-NEXT:    addi sp, sp, -112
-; RV32I-NEXT:    sw ra, 108(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    sw s0, 104(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    addi s0, sp, 112
-; RV32I-NEXT:    addi a0, s0, -108
-; RV32I-NEXT:    call notdead
-; RV32I-NEXT:    lw a0, -8(s0)
-; RV32I-NEXT:    lw a0, -8(a0)
-; RV32I-NEXT:    lw a0, -8(a0)
-; RV32I-NEXT:    lw ra, 108(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s0, 104(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    addi sp, sp, 112
-; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: test_frameaddress_3_alloca:
 ; RV64I:       # %bb.0:
@@ -101,10 +63,6 @@ define ptr @test_frameaddress_3_alloca() nounwind {
 }
 
 define ptr @test_returnaddress_0() nounwind {
-; RV32I-LABEL: test_returnaddress_0:
-; RV32I:       # %bb.0:
-; RV32I-NEXT:    mv a0, ra
-; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: test_returnaddress_0:
 ; RV64I:       # %bb.0:
@@ -115,19 +73,6 @@ define ptr @test_returnaddress_0() nounwind {
 }
 
 define ptr @test_returnaddress_2() nounwind {
-; RV32I-LABEL: test_returnaddress_2:
-; RV32I:       # %bb.0:
-; RV32I-NEXT:    addi sp, sp, -16
-; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    addi s0, sp, 16
-; RV32I-NEXT:    lw a0, -8(s0)
-; RV32I-NEXT:    lw a0, -8(a0)
-; RV32I-NEXT:    lw a0, -4(a0)
-; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    addi sp, sp, 16
-; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: test_returnaddress_2:
 ; RV64I:       # %bb.0:

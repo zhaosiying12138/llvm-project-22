@@ -1,4 +1,4 @@
-//===-- YSXTargetMachine.cpp - Define TargetMachine for RISC-V ----------===//
+//===-- YSXTargetMachine.cpp - Define TargetMachine for YSX -------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Implements the info about RISC-V target spec.
+// Implements the YSX target machine.
 //
 //===----------------------------------------------------------------------===//
 
@@ -20,7 +20,6 @@
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/CodeGen/MIRParser/MIParser.h"
 #include "llvm/CodeGen/MIRYamlMapping.h"
-#include "llvm/CodeGen/GlobalISel/CSEInfo.h"
 #include "llvm/CodeGen/MachineScheduler.h"
 #include "llvm/CodeGen/MacroFusion.h"
 #include "llvm/CodeGen/Passes.h"
@@ -53,7 +52,7 @@ static cl::opt<bool>
 
 static cl::opt<bool> EnableYSXCopyPropagation(
     "ysx-enable-copy-propagation",
-    cl::desc("Enable the copy propagation with RISC-V copy instr"),
+    cl::desc("Enable the copy propagation with YSX copy instructions"),
     cl::init(true), cl::Hidden);
 
 static cl::opt<bool> EnableYSXDeadRegisterElimination(
@@ -75,12 +74,12 @@ static cl::opt<bool>
 
 static cl::opt<bool>
     EnableMachinePipeliner("ysx-enable-pipeliner",
-                           cl::desc("Enable Machine Pipeliner for RISC-V"),
+                           cl::desc("Enable Machine Pipeliner for YSX"),
                            cl::init(false), cl::Hidden);
 
 static cl::opt<bool> EnableCFIInstrInserter(
     "ysx-enable-cfi-instr-inserter",
-    cl::desc("Enable CFI Instruction Inserter for RISC-V"), cl::init(false),
+    cl::desc("Enable CFI Instruction Inserter for YSX"), cl::init(false),
     cl::Hidden);
 
 extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeYSXTarget() {
@@ -128,11 +127,11 @@ YSXTargetMachine::YSXTargetMachine(const Target &T, const Triple &TT,
       TLOF(createTLOF(TT)) {
   initAsmInfo();
 
-  // RISC-V supports the MachineOutliner.
+  // YSX supports the MachineOutliner.
   setMachineOutliner(true);
   setSupportsDefaultOutlining(true);
 
-  // RISC-V supports the debug entry values.
+  // YSX supports the debug entry values.
   setSupportsDebugEntryValues(true);
 
   if (TT.isOSFuchsia() && !TT.isArch64Bit())
@@ -190,7 +189,7 @@ YSXTargetMachine::getTargetTransformInfo(const Function &F) const {
   return TargetTransformInfo(std::make_unique<YSXTTIImpl>(this, F));
 }
 
-// A RISC-V hart has a single byte-addressable address space of 2^XLEN bytes
+// A YSX64 hart has a single byte-addressable address space of 2^XLEN bytes
 // for all memory accesses, so it is reasonable to assume that an
 // implementation has no-op address space casts. If an implementation makes a
 // change to this, they can override it here.
@@ -261,16 +260,11 @@ public:
   void addFastRegAlloc() override;
   bool addILPOpts() override;
 
-  std::unique_ptr<CSEConfigBase> getCSEConfig() const override;
 };
 } // namespace
 
 TargetPassConfig *YSXTargetMachine::createPassConfig(PassManagerBase &PM) {
   return new YSXPassConfig(*this, PM);
-}
-
-std::unique_ptr<CSEConfigBase> YSXPassConfig::getCSEConfig() const {
-  return getStandardCSEConfigForOpt(TM->getOptLevel());
 }
 
 bool YSXPassConfig::addRegAssignAndRewriteFast() {

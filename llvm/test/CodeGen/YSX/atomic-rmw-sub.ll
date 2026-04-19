@@ -7,34 +7,8 @@
 ; RUN:   | FileCheck -check-prefixes=RV64I-ZALRSC %s
 
 define i32 @atomicrmw_sub_i32_constant(ptr %a) nounwind {
-; RV32I-LABEL: atomicrmw_sub_i32_constant:
-; RV32I:       # %bb.0:
-; RV32I-NEXT:    addi sp, sp, -16
-; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    li a1, 1
-; RV32I-NEXT:    li a2, 5
-; RV32I-NEXT:    call __atomic_fetch_sub_4
-; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    addi sp, sp, 16
-; RV32I-NEXT:    ret
 ;
-; RV32IA-LABEL: atomicrmw_sub_i32_constant:
-; RV32IA:       # %bb.0:
-; RV32IA-NEXT:    li a1, -1
-; RV32IA-NEXT:    amoadd.w.aqrl a0, a1, (a0)
-; RV32IA-NEXT:    ret
 ;
-; RV32I-ZALRSC-LABEL: atomicrmw_sub_i32_constant:
-; RV32I-ZALRSC:       # %bb.0:
-; RV32I-ZALRSC-NEXT:    li a2, 1
-; RV32I-ZALRSC-NEXT:  .LBB0_1: # =>This Inner Loop Header: Depth=1
-; RV32I-ZALRSC-NEXT:    lr.w.aqrl a1, (a0)
-; RV32I-ZALRSC-NEXT:    sub a3, a1, a2
-; RV32I-ZALRSC-NEXT:    sc.w.rl a3, a3, (a0)
-; RV32I-ZALRSC-NEXT:    bnez a3, .LBB0_1
-; RV32I-ZALRSC-NEXT:  # %bb.2:
-; RV32I-ZALRSC-NEXT:    mv a0, a1
-; RV32I-ZALRSC-NEXT:    ret
 ;
 ; RV64I-LABEL: atomicrmw_sub_i32_constant:
 ; RV64I:       # %bb.0:
@@ -58,41 +32,8 @@ define i32 @atomicrmw_sub_i32_constant(ptr %a) nounwind {
 }
 
 define i64 @atomicrmw_sub_i64_constant(ptr %a) nounwind {
-; RV32I-LABEL: atomicrmw_sub_i64_constant:
-; RV32I:       # %bb.0:
-; RV32I-NEXT:    addi sp, sp, -16
-; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    li a1, 1
-; RV32I-NEXT:    li a3, 5
-; RV32I-NEXT:    li a2, 0
-; RV32I-NEXT:    call __atomic_fetch_sub_8
-; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    addi sp, sp, 16
-; RV32I-NEXT:    ret
 ;
-; RV32IA-LABEL: atomicrmw_sub_i64_constant:
-; RV32IA:       # %bb.0:
-; RV32IA-NEXT:    addi sp, sp, -16
-; RV32IA-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32IA-NEXT:    li a1, 1
-; RV32IA-NEXT:    li a3, 5
-; RV32IA-NEXT:    li a2, 0
-; RV32IA-NEXT:    call __atomic_fetch_sub_8
-; RV32IA-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; RV32IA-NEXT:    addi sp, sp, 16
-; RV32IA-NEXT:    ret
 ;
-; RV32I-ZALRSC-LABEL: atomicrmw_sub_i64_constant:
-; RV32I-ZALRSC:       # %bb.0:
-; RV32I-ZALRSC-NEXT:    addi sp, sp, -16
-; RV32I-ZALRSC-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32I-ZALRSC-NEXT:    li a1, 1
-; RV32I-ZALRSC-NEXT:    li a3, 5
-; RV32I-ZALRSC-NEXT:    li a2, 0
-; RV32I-ZALRSC-NEXT:    call __atomic_fetch_sub_8
-; RV32I-ZALRSC-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; RV32I-ZALRSC-NEXT:    addi sp, sp, 16
-; RV32I-ZALRSC-NEXT:    ret
 ;
 ; RV64I-LABEL: atomicrmw_sub_i64_constant:
 ; RV64I:       # %bb.0:
@@ -116,34 +57,8 @@ define i64 @atomicrmw_sub_i64_constant(ptr %a) nounwind {
 }
 
 define i32 @atomicrmw_sub_i32_neg(ptr %a, i32 %x, i32 %y) nounwind {
-; RV32I-LABEL: atomicrmw_sub_i32_neg:
-; RV32I:       # %bb.0:
-; RV32I-NEXT:    addi sp, sp, -16
-; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    sub a1, a1, a2
-; RV32I-NEXT:    li a2, 5
-; RV32I-NEXT:    call __atomic_fetch_sub_4
-; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    addi sp, sp, 16
-; RV32I-NEXT:    ret
 ;
-; RV32IA-LABEL: atomicrmw_sub_i32_neg:
-; RV32IA:       # %bb.0:
-; RV32IA-NEXT:    sub a2, a2, a1
-; RV32IA-NEXT:    amoadd.w.aqrl a0, a2, (a0)
-; RV32IA-NEXT:    ret
 ;
-; RV32I-ZALRSC-LABEL: atomicrmw_sub_i32_neg:
-; RV32I-ZALRSC:       # %bb.0:
-; RV32I-ZALRSC-NEXT:    sub a2, a1, a2
-; RV32I-ZALRSC-NEXT:  .LBB2_1: # =>This Inner Loop Header: Depth=1
-; RV32I-ZALRSC-NEXT:    lr.w.aqrl a1, (a0)
-; RV32I-ZALRSC-NEXT:    sub a3, a1, a2
-; RV32I-ZALRSC-NEXT:    sc.w.rl a3, a3, (a0)
-; RV32I-ZALRSC-NEXT:    bnez a3, .LBB2_1
-; RV32I-ZALRSC-NEXT:  # %bb.2:
-; RV32I-ZALRSC-NEXT:    mv a0, a1
-; RV32I-ZALRSC-NEXT:    ret
 ;
 ; RV64I-LABEL: atomicrmw_sub_i32_neg:
 ; RV64I:       # %bb.0:
@@ -168,47 +83,8 @@ define i32 @atomicrmw_sub_i32_neg(ptr %a, i32 %x, i32 %y) nounwind {
 }
 
 define i64 @atomicrmw_sub_i64_neg(ptr %a, i64 %x, i64 %y) nounwind {
-; RV32I-LABEL: atomicrmw_sub_i64_neg:
-; RV32I:       # %bb.0:
-; RV32I-NEXT:    addi sp, sp, -16
-; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    sltu a5, a1, a3
-; RV32I-NEXT:    sub a2, a2, a4
-; RV32I-NEXT:    sub a2, a2, a5
-; RV32I-NEXT:    sub a1, a1, a3
-; RV32I-NEXT:    li a3, 5
-; RV32I-NEXT:    call __atomic_fetch_sub_8
-; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    addi sp, sp, 16
-; RV32I-NEXT:    ret
 ;
-; RV32IA-LABEL: atomicrmw_sub_i64_neg:
-; RV32IA:       # %bb.0:
-; RV32IA-NEXT:    addi sp, sp, -16
-; RV32IA-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32IA-NEXT:    sltu a5, a1, a3
-; RV32IA-NEXT:    sub a2, a2, a4
-; RV32IA-NEXT:    sub a2, a2, a5
-; RV32IA-NEXT:    sub a1, a1, a3
-; RV32IA-NEXT:    li a3, 5
-; RV32IA-NEXT:    call __atomic_fetch_sub_8
-; RV32IA-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; RV32IA-NEXT:    addi sp, sp, 16
-; RV32IA-NEXT:    ret
 ;
-; RV32I-ZALRSC-LABEL: atomicrmw_sub_i64_neg:
-; RV32I-ZALRSC:       # %bb.0:
-; RV32I-ZALRSC-NEXT:    addi sp, sp, -16
-; RV32I-ZALRSC-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32I-ZALRSC-NEXT:    sltu a5, a1, a3
-; RV32I-ZALRSC-NEXT:    sub a2, a2, a4
-; RV32I-ZALRSC-NEXT:    sub a2, a2, a5
-; RV32I-ZALRSC-NEXT:    sub a1, a1, a3
-; RV32I-ZALRSC-NEXT:    li a3, 5
-; RV32I-ZALRSC-NEXT:    call __atomic_fetch_sub_8
-; RV32I-ZALRSC-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; RV32I-ZALRSC-NEXT:    addi sp, sp, 16
-; RV32I-ZALRSC-NEXT:    ret
 ;
 ; RV64I-LABEL: atomicrmw_sub_i64_neg:
 ; RV64I:       # %bb.0:

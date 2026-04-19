@@ -147,25 +147,9 @@ class Pseudo<dag outs, dag ins, list<dag> pattern, string opcodestr = "", string
   let Size = 4;
 }
 
-class PseudoQuietFCMP<DAGOperand Ty>
-    : Pseudo<(outs GPR:$rd), (ins Ty:$rs1, Ty:$rs2), []> {
-  let hasSideEffects = 1;
-  let mayLoad = 0;
-  let mayStore = 0;
-}
-
 // Pseudo load instructions.
 class PseudoLoad<string opcodestr, DAGOperand rdty = GPR>
     : Pseudo<(outs rdty:$rd), (ins bare_symbol:$addr), [], opcodestr, "$rd, $addr"> {
-  let hasSideEffects = 0;
-  let mayLoad = 1;
-  let mayStore = 0;
-  let isCodeGenOnly = 0;
-  let isAsmParserOnly = 1;
-}
-
-class PseudoFloatLoad<string opcodestr, RegisterClass rdty>
-    : Pseudo<(outs GPR:$tmp, rdty:$rd), (ins bare_symbol:$addr), [], opcodestr, "$rd, $addr, $tmp"> {
   let hasSideEffects = 0;
   let mayLoad = 1;
   let mayStore = 0;

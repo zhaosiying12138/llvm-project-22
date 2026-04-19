@@ -7,10 +7,6 @@
 ; with the remainder zero, we can replace it with SLLI + SLRI
 
 define i32 @and32_0x7ff(i32 %x) {
-; RV32I-LABEL: and32_0x7ff:
-; RV32I:       # %bb.0:
-; RV32I-NEXT:    andi a0, a0, 2047
-; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: and32_0x7ff:
 ; RV64I:       # %bb.0:
@@ -21,11 +17,6 @@ define i32 @and32_0x7ff(i32 %x) {
 }
 
 define i32 @and32_0xfff(i32 %x) {
-; RV32I-LABEL: and32_0xfff:
-; RV32I:       # %bb.0:
-; RV32I-NEXT:    slli a0, a0, 20
-; RV32I-NEXT:    srli a0, a0, 20
-; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: and32_0xfff:
 ; RV64I:       # %bb.0:
@@ -37,11 +28,6 @@ define i32 @and32_0xfff(i32 %x) {
 }
 
 define i64 @and64_0x7ff(i64 %x) {
-; RV32I-LABEL: and64_0x7ff:
-; RV32I:       # %bb.0:
-; RV32I-NEXT:    andi a0, a0, 2047
-; RV32I-NEXT:    li a1, 0
-; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: and64_0x7ff:
 ; RV64I:       # %bb.0:
@@ -52,12 +38,6 @@ define i64 @and64_0x7ff(i64 %x) {
 }
 
 define i64 @and64_0xfff(i64 %x) {
-; RV32I-LABEL: and64_0xfff:
-; RV32I:       # %bb.0:
-; RV32I-NEXT:    slli a0, a0, 20
-; RV32I-NEXT:    srli a0, a0, 20
-; RV32I-NEXT:    li a1, 0
-; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: and64_0xfff:
 ; RV64I:       # %bb.0:
@@ -73,11 +53,6 @@ define i64 @and64_0xfff(i64 %x) {
 ; with the remainder zero, we can replace it with SRLI + SLLI.
 
 define i32 @and32_0x7ffff000(i32 %x) {
-; RV32I-LABEL: and32_0x7ffff000:
-; RV32I:       # %bb.0:
-; RV32I-NEXT:    lui a1, 524287
-; RV32I-NEXT:    and a0, a0, a1
-; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: and32_0x7ffff000:
 ; RV64I:       # %bb.0:
@@ -89,11 +64,6 @@ define i32 @and32_0x7ffff000(i32 %x) {
 }
 
 define i32 @and32_0xfffff000(i32 %x) {
-; RV32I-LABEL: and32_0xfffff000:
-; RV32I:       # %bb.0:
-; RV32I-NEXT:    lui a1, 1048575
-; RV32I-NEXT:    and a0, a0, a1
-; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: and32_0xfffff000:
 ; RV64I:       # %bb.0:
@@ -105,10 +75,6 @@ define i32 @and32_0xfffff000(i32 %x) {
 }
 
 define i32 @and32_0xfffffa00(i32 %x) {
-; RV32I-LABEL: and32_0xfffffa00:
-; RV32I:       # %bb.0:
-; RV32I-NEXT:    andi a0, a0, -1536
-; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: and32_0xfffffa00:
 ; RV64I:       # %bb.0:
@@ -119,13 +85,6 @@ define i32 @and32_0xfffffa00(i32 %x) {
 }
 
 define i64 @and64_0x7ffffffffffff000(i64 %x) {
-; RV32I-LABEL: and64_0x7ffffffffffff000:
-; RV32I:       # %bb.0:
-; RV32I-NEXT:    lui a2, 1048575
-; RV32I-NEXT:    slli a1, a1, 1
-; RV32I-NEXT:    and a0, a0, a2
-; RV32I-NEXT:    srli a1, a1, 1
-; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: and64_0x7ffffffffffff000:
 ; RV64I:       # %bb.0:
@@ -138,11 +97,6 @@ define i64 @and64_0x7ffffffffffff000(i64 %x) {
 }
 
 define i64 @and64_0xfffffffffffff000(i64 %x) {
-; RV32I-LABEL: and64_0xfffffffffffff000:
-; RV32I:       # %bb.0:
-; RV32I-NEXT:    lui a2, 1048575
-; RV32I-NEXT:    and a0, a0, a2
-; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: and64_0xfffffffffffff000:
 ; RV64I:       # %bb.0:
@@ -154,10 +108,6 @@ define i64 @and64_0xfffffffffffff000(i64 %x) {
 }
 
 define i64 @and64_0xfffffffffffffa00(i64 %x) {
-; RV32I-LABEL: and64_0xfffffffffffffa00:
-; RV32I:       # %bb.0:
-; RV32I-NEXT:    andi a0, a0, -1536
-; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: and64_0xfffffffffffffa00:
 ; RV64I:       # %bb.0:
@@ -168,10 +118,6 @@ define i64 @and64_0xfffffffffffffa00(i64 %x) {
 }
 
 define i64 @and64_0xffffffff00000000(i64 %x) {
-; RV32I-LABEL: and64_0xffffffff00000000:
-; RV32I:       # %bb.0:
-; RV32I-NEXT:    li a0, 0
-; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: and64_0xffffffff00000000:
 ; RV64I:       # %bb.0:
@@ -183,12 +129,6 @@ define i64 @and64_0xffffffff00000000(i64 %x) {
 }
 
 define i64 @and64_0x7fffffff00000000(i64 %x) {
-; RV32I-LABEL: and64_0x7fffffff00000000:
-; RV32I:       # %bb.0:
-; RV32I-NEXT:    slli a1, a1, 1
-; RV32I-NEXT:    srli a1, a1, 1
-; RV32I-NEXT:    li a0, 0
-; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: and64_0x7fffffff00000000:
 ; RV64I:       # %bb.0:
@@ -202,11 +142,6 @@ define i64 @and64_0x7fffffff00000000(i64 %x) {
 }
 
 define i64 @and64_0xffffffff80000000(i64 %x) {
-; RV32I-LABEL: and64_0xffffffff80000000:
-; RV32I:       # %bb.0:
-; RV32I-NEXT:    lui a2, 524288
-; RV32I-NEXT:    and a0, a0, a2
-; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: and64_0xffffffff80000000:
 ; RV64I:       # %bb.0:
@@ -218,11 +153,6 @@ define i64 @and64_0xffffffff80000000(i64 %x) {
 }
 
 define i64 @and64_0x00000000fffffff8(i64 %x) {
-; RV32I-LABEL: and64_0x00000000fffffff8:
-; RV32I:       # %bb.0:
-; RV32I-NEXT:    andi a0, a0, -8
-; RV32I-NEXT:    li a1, 0
-; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: and64_0x00000000fffffff8:
 ; RV64I:       # %bb.0:

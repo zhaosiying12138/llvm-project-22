@@ -15,12 +15,6 @@
 ; NOTE: This test has to pass in 0 to the inline asm, because that's the only
 ; value `x0` (`zero`) can take.
 define i32 @explicit_register_x0() nounwind {
-; RV32I-LABEL: explicit_register_x0:
-; RV32I:       # %bb.0:
-; RV32I-NEXT:    #APP
-; RV32I-NEXT:    addi a0, zero, 0
-; RV32I-NEXT:    #NO_APP
-; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: explicit_register_x0:
 ; RV64I:       # %bb.0:
@@ -35,12 +29,6 @@ define i32 @explicit_register_x0() nounwind {
 ; NOTE: This test has to pass in 0 to the inline asm, because that's the only
 ; value that `zero` (`x0`) can take.
 define i32 @explicit_register_zero() nounwind {
-; RV32I-LABEL: explicit_register_zero:
-; RV32I:       # %bb.0:
-; RV32I-NEXT:    #APP
-; RV32I-NEXT:    addi a0, zero, 0
-; RV32I-NEXT:    #NO_APP
-; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: explicit_register_zero:
 ; RV64I:       # %bb.0:
@@ -54,17 +42,6 @@ define i32 @explicit_register_zero() nounwind {
 
 ; NOTE: This test uses `x1` (`ra`) as an input, so it should be saved.
 define i32 @explicit_register_x1(i32 %a) nounwind {
-; RV32I-LABEL: explicit_register_x1:
-; RV32I:       # %bb.0:
-; RV32I-NEXT:    addi sp, sp, -16
-; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    mv ra, a0
-; RV32I-NEXT:    #APP
-; RV32I-NEXT:    addi a0, ra, 0
-; RV32I-NEXT:    #NO_APP
-; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    addi sp, sp, 16
-; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: explicit_register_x1:
 ; RV64I:       # %bb.0:
@@ -83,17 +60,6 @@ define i32 @explicit_register_x1(i32 %a) nounwind {
 
 ; NOTE: This test uses `ra` (`x1`) as an input, so it should be saved.
 define i32 @explicit_register_ra(i32 %a) nounwind {
-; RV32I-LABEL: explicit_register_ra:
-; RV32I:       # %bb.0:
-; RV32I-NEXT:    addi sp, sp, -16
-; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    mv ra, a0
-; RV32I-NEXT:    #APP
-; RV32I-NEXT:    addi a0, ra, 0
-; RV32I-NEXT:    #NO_APP
-; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    addi sp, sp, 16
-; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: explicit_register_ra:
 ; RV64I:       # %bb.0:
@@ -111,13 +77,6 @@ define i32 @explicit_register_ra(i32 %a) nounwind {
 }
 
 define i32 @explicit_register_x2(i32 %a) nounwind {
-; RV32I-LABEL: explicit_register_x2:
-; RV32I:       # %bb.0:
-; RV32I-NEXT:    mv sp, a0
-; RV32I-NEXT:    #APP
-; RV32I-NEXT:    addi a0, sp, 0
-; RV32I-NEXT:    #NO_APP
-; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: explicit_register_x2:
 ; RV64I:       # %bb.0:
@@ -131,13 +90,6 @@ define i32 @explicit_register_x2(i32 %a) nounwind {
 }
 
 define i32 @explicit_register_sp(i32 %a) nounwind {
-; RV32I-LABEL: explicit_register_sp:
-; RV32I:       # %bb.0:
-; RV32I-NEXT:    mv sp, a0
-; RV32I-NEXT:    #APP
-; RV32I-NEXT:    addi a0, sp, 0
-; RV32I-NEXT:    #NO_APP
-; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: explicit_register_sp:
 ; RV64I:       # %bb.0:
@@ -152,13 +104,6 @@ define i32 @explicit_register_sp(i32 %a) nounwind {
 
 ; NOTE: This test uses `x3` (`gp`) as an input, so it should be saved.
 define i32 @explicit_register_x3(i32 %a) nounwind {
-; RV32I-LABEL: explicit_register_x3:
-; RV32I:       # %bb.0:
-; RV32I-NEXT:    mv gp, a0
-; RV32I-NEXT:    #APP
-; RV32I-NEXT:    addi a0, gp, 0
-; RV32I-NEXT:    #NO_APP
-; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: explicit_register_x3:
 ; RV64I:       # %bb.0:
@@ -173,13 +118,6 @@ define i32 @explicit_register_x3(i32 %a) nounwind {
 
 ; NOTE: This test uses `gp` (`x3`) as an input, so it should be saved.
 define i32 @explicit_register_gp(i32 %a) nounwind {
-; RV32I-LABEL: explicit_register_gp:
-; RV32I:       # %bb.0:
-; RV32I-NEXT:    mv gp, a0
-; RV32I-NEXT:    #APP
-; RV32I-NEXT:    addi a0, gp, 0
-; RV32I-NEXT:    #NO_APP
-; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: explicit_register_gp:
 ; RV64I:       # %bb.0:
@@ -194,13 +132,6 @@ define i32 @explicit_register_gp(i32 %a) nounwind {
 
 ; NOTE: This test uses `x4` (`tp`) as an input, so it should be saved.
 define i32 @explicit_register_x4(i32 %a) nounwind {
-; RV32I-LABEL: explicit_register_x4:
-; RV32I:       # %bb.0:
-; RV32I-NEXT:    mv tp, a0
-; RV32I-NEXT:    #APP
-; RV32I-NEXT:    addi a0, tp, 0
-; RV32I-NEXT:    #NO_APP
-; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: explicit_register_x4:
 ; RV64I:       # %bb.0:
@@ -215,13 +146,6 @@ define i32 @explicit_register_x4(i32 %a) nounwind {
 
 ; NOTE: This test uses `tp` (`x4`) as an input, so it should be saved.
 define i32 @explicit_register_tp(i32 %a) nounwind {
-; RV32I-LABEL: explicit_register_tp:
-; RV32I:       # %bb.0:
-; RV32I-NEXT:    mv tp, a0
-; RV32I-NEXT:    #APP
-; RV32I-NEXT:    addi a0, tp, 0
-; RV32I-NEXT:    #NO_APP
-; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: explicit_register_tp:
 ; RV64I:       # %bb.0:
@@ -235,13 +159,6 @@ define i32 @explicit_register_tp(i32 %a) nounwind {
 }
 
 define i32 @explicit_register_x5(i32 %a) nounwind {
-; RV32I-LABEL: explicit_register_x5:
-; RV32I:       # %bb.0:
-; RV32I-NEXT:    mv t0, a0
-; RV32I-NEXT:    #APP
-; RV32I-NEXT:    addi a0, t0, 0
-; RV32I-NEXT:    #NO_APP
-; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: explicit_register_x5:
 ; RV64I:       # %bb.0:
@@ -255,13 +172,6 @@ define i32 @explicit_register_x5(i32 %a) nounwind {
 }
 
 define i32 @explicit_register_t0(i32 %a) nounwind {
-; RV32I-LABEL: explicit_register_t0:
-; RV32I:       # %bb.0:
-; RV32I-NEXT:    mv t0, a0
-; RV32I-NEXT:    #APP
-; RV32I-NEXT:    addi a0, t0, 0
-; RV32I-NEXT:    #NO_APP
-; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: explicit_register_t0:
 ; RV64I:       # %bb.0:
@@ -275,13 +185,6 @@ define i32 @explicit_register_t0(i32 %a) nounwind {
 }
 
 define i32 @explicit_register_x6(i32 %a) nounwind {
-; RV32I-LABEL: explicit_register_x6:
-; RV32I:       # %bb.0:
-; RV32I-NEXT:    mv t1, a0
-; RV32I-NEXT:    #APP
-; RV32I-NEXT:    addi a0, t1, 0
-; RV32I-NEXT:    #NO_APP
-; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: explicit_register_x6:
 ; RV64I:       # %bb.0:
@@ -295,13 +198,6 @@ define i32 @explicit_register_x6(i32 %a) nounwind {
 }
 
 define i32 @explicit_register_t1(i32 %a) nounwind {
-; RV32I-LABEL: explicit_register_t1:
-; RV32I:       # %bb.0:
-; RV32I-NEXT:    mv t1, a0
-; RV32I-NEXT:    #APP
-; RV32I-NEXT:    addi a0, t1, 0
-; RV32I-NEXT:    #NO_APP
-; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: explicit_register_t1:
 ; RV64I:       # %bb.0:
@@ -315,13 +211,6 @@ define i32 @explicit_register_t1(i32 %a) nounwind {
 }
 
 define i32 @explicit_register_x7(i32 %a) nounwind {
-; RV32I-LABEL: explicit_register_x7:
-; RV32I:       # %bb.0:
-; RV32I-NEXT:    mv t2, a0
-; RV32I-NEXT:    #APP
-; RV32I-NEXT:    addi a0, t2, 0
-; RV32I-NEXT:    #NO_APP
-; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: explicit_register_x7:
 ; RV64I:       # %bb.0:
@@ -335,13 +224,6 @@ define i32 @explicit_register_x7(i32 %a) nounwind {
 }
 
 define i32 @explicit_register_t2(i32 %a) nounwind {
-; RV32I-LABEL: explicit_register_t2:
-; RV32I:       # %bb.0:
-; RV32I-NEXT:    mv t2, a0
-; RV32I-NEXT:    #APP
-; RV32I-NEXT:    addi a0, t2, 0
-; RV32I-NEXT:    #NO_APP
-; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: explicit_register_t2:
 ; RV64I:       # %bb.0:
@@ -356,17 +238,6 @@ define i32 @explicit_register_t2(i32 %a) nounwind {
 
 ; NOTE: This test uses `x8` (`s0`, `fp`) as an input, so it should be saved.
 define i32 @explicit_register_x8(i32 %a) nounwind {
-; RV32I-LABEL: explicit_register_x8:
-; RV32I:       # %bb.0:
-; RV32I-NEXT:    addi sp, sp, -16
-; RV32I-NEXT:    sw s0, 12(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    mv s0, a0
-; RV32I-NEXT:    #APP
-; RV32I-NEXT:    addi a0, s0, 0
-; RV32I-NEXT:    #NO_APP
-; RV32I-NEXT:    lw s0, 12(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    addi sp, sp, 16
-; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: explicit_register_x8:
 ; RV64I:       # %bb.0:
@@ -385,17 +256,6 @@ define i32 @explicit_register_x8(i32 %a) nounwind {
 
 ; NOTE: This test uses `s0` (`x8`, `fp`) as an input, so it should be saved.
 define i32 @explicit_register_s0(i32 %a) nounwind {
-; RV32I-LABEL: explicit_register_s0:
-; RV32I:       # %bb.0:
-; RV32I-NEXT:    addi sp, sp, -16
-; RV32I-NEXT:    sw s0, 12(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    mv s0, a0
-; RV32I-NEXT:    #APP
-; RV32I-NEXT:    addi a0, s0, 0
-; RV32I-NEXT:    #NO_APP
-; RV32I-NEXT:    lw s0, 12(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    addi sp, sp, 16
-; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: explicit_register_s0:
 ; RV64I:       # %bb.0:
@@ -414,17 +274,6 @@ define i32 @explicit_register_s0(i32 %a) nounwind {
 
 ; NOTE: This test uses `fp` (`x8`, `s0`) as an input, so it should be saved.
 define i32 @explicit_register_fp(i32 %a) nounwind {
-; RV32I-LABEL: explicit_register_fp:
-; RV32I:       # %bb.0:
-; RV32I-NEXT:    addi sp, sp, -16
-; RV32I-NEXT:    sw s0, 12(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    mv s0, a0
-; RV32I-NEXT:    #APP
-; RV32I-NEXT:    addi a0, s0, 0
-; RV32I-NEXT:    #NO_APP
-; RV32I-NEXT:    lw s0, 12(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    addi sp, sp, 16
-; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: explicit_register_fp:
 ; RV64I:       # %bb.0:
@@ -443,17 +292,6 @@ define i32 @explicit_register_fp(i32 %a) nounwind {
 
 ; NOTE: This test uses `x9` (`s1`) as an input, so it should be saved.
 define i32 @explicit_register_x9(i32 %a) nounwind {
-; RV32I-LABEL: explicit_register_x9:
-; RV32I:       # %bb.0:
-; RV32I-NEXT:    addi sp, sp, -16
-; RV32I-NEXT:    sw s1, 12(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    mv s1, a0
-; RV32I-NEXT:    #APP
-; RV32I-NEXT:    addi a0, s1, 0
-; RV32I-NEXT:    #NO_APP
-; RV32I-NEXT:    lw s1, 12(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    addi sp, sp, 16
-; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: explicit_register_x9:
 ; RV64I:       # %bb.0:
@@ -472,17 +310,6 @@ define i32 @explicit_register_x9(i32 %a) nounwind {
 
 ; NOTE: This test uses `s1` (`x9`) as an input, so it should be saved.
 define i32 @explicit_register_s1(i32 %a) nounwind {
-; RV32I-LABEL: explicit_register_s1:
-; RV32I:       # %bb.0:
-; RV32I-NEXT:    addi sp, sp, -16
-; RV32I-NEXT:    sw s1, 12(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    mv s1, a0
-; RV32I-NEXT:    #APP
-; RV32I-NEXT:    addi a0, s1, 0
-; RV32I-NEXT:    #NO_APP
-; RV32I-NEXT:    lw s1, 12(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    addi sp, sp, 16
-; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: explicit_register_s1:
 ; RV64I:       # %bb.0:
@@ -500,12 +327,6 @@ define i32 @explicit_register_s1(i32 %a) nounwind {
 }
 
 define i32 @explicit_register_x10(i32 %a) nounwind {
-; RV32I-LABEL: explicit_register_x10:
-; RV32I:       # %bb.0:
-; RV32I-NEXT:    #APP
-; RV32I-NEXT:    addi a0, a0, 0
-; RV32I-NEXT:    #NO_APP
-; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: explicit_register_x10:
 ; RV64I:       # %bb.0:
@@ -518,12 +339,6 @@ define i32 @explicit_register_x10(i32 %a) nounwind {
 }
 
 define i32 @explicit_register_a0(i32 %a) nounwind {
-; RV32I-LABEL: explicit_register_a0:
-; RV32I:       # %bb.0:
-; RV32I-NEXT:    #APP
-; RV32I-NEXT:    addi a0, a0, 0
-; RV32I-NEXT:    #NO_APP
-; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: explicit_register_a0:
 ; RV64I:       # %bb.0:
@@ -536,13 +351,6 @@ define i32 @explicit_register_a0(i32 %a) nounwind {
 }
 
 define i32 @explicit_register_x11(i32 %a) nounwind {
-; RV32I-LABEL: explicit_register_x11:
-; RV32I:       # %bb.0:
-; RV32I-NEXT:    mv a1, a0
-; RV32I-NEXT:    #APP
-; RV32I-NEXT:    addi a0, a1, 0
-; RV32I-NEXT:    #NO_APP
-; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: explicit_register_x11:
 ; RV64I:       # %bb.0:
@@ -556,13 +364,6 @@ define i32 @explicit_register_x11(i32 %a) nounwind {
 }
 
 define i32 @explicit_register_a1(i32 %a) nounwind {
-; RV32I-LABEL: explicit_register_a1:
-; RV32I:       # %bb.0:
-; RV32I-NEXT:    mv a1, a0
-; RV32I-NEXT:    #APP
-; RV32I-NEXT:    addi a0, a1, 0
-; RV32I-NEXT:    #NO_APP
-; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: explicit_register_a1:
 ; RV64I:       # %bb.0:
@@ -576,13 +377,6 @@ define i32 @explicit_register_a1(i32 %a) nounwind {
 }
 
 define i32 @explicit_register_x12(i32 %a) nounwind {
-; RV32I-LABEL: explicit_register_x12:
-; RV32I:       # %bb.0:
-; RV32I-NEXT:    mv a2, a0
-; RV32I-NEXT:    #APP
-; RV32I-NEXT:    addi a0, a2, 0
-; RV32I-NEXT:    #NO_APP
-; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: explicit_register_x12:
 ; RV64I:       # %bb.0:
@@ -596,13 +390,6 @@ define i32 @explicit_register_x12(i32 %a) nounwind {
 }
 
 define i32 @explicit_register_a2(i32 %a) nounwind {
-; RV32I-LABEL: explicit_register_a2:
-; RV32I:       # %bb.0:
-; RV32I-NEXT:    mv a2, a0
-; RV32I-NEXT:    #APP
-; RV32I-NEXT:    addi a0, a2, 0
-; RV32I-NEXT:    #NO_APP
-; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: explicit_register_a2:
 ; RV64I:       # %bb.0:
@@ -616,13 +403,6 @@ define i32 @explicit_register_a2(i32 %a) nounwind {
 }
 
 define i32 @explicit_register_x13(i32 %a) nounwind {
-; RV32I-LABEL: explicit_register_x13:
-; RV32I:       # %bb.0:
-; RV32I-NEXT:    mv a3, a0
-; RV32I-NEXT:    #APP
-; RV32I-NEXT:    addi a0, a3, 0
-; RV32I-NEXT:    #NO_APP
-; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: explicit_register_x13:
 ; RV64I:       # %bb.0:
@@ -636,13 +416,6 @@ define i32 @explicit_register_x13(i32 %a) nounwind {
 }
 
 define i32 @explicit_register_a3(i32 %a) nounwind {
-; RV32I-LABEL: explicit_register_a3:
-; RV32I:       # %bb.0:
-; RV32I-NEXT:    mv a3, a0
-; RV32I-NEXT:    #APP
-; RV32I-NEXT:    addi a0, a3, 0
-; RV32I-NEXT:    #NO_APP
-; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: explicit_register_a3:
 ; RV64I:       # %bb.0:
@@ -656,13 +429,6 @@ define i32 @explicit_register_a3(i32 %a) nounwind {
 }
 
 define i32 @explicit_register_x14(i32 %a) nounwind {
-; RV32I-LABEL: explicit_register_x14:
-; RV32I:       # %bb.0:
-; RV32I-NEXT:    mv a4, a0
-; RV32I-NEXT:    #APP
-; RV32I-NEXT:    addi a0, a4, 0
-; RV32I-NEXT:    #NO_APP
-; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: explicit_register_x14:
 ; RV64I:       # %bb.0:
@@ -676,13 +442,6 @@ define i32 @explicit_register_x14(i32 %a) nounwind {
 }
 
 define i32 @explicit_register_a4(i32 %a) nounwind {
-; RV32I-LABEL: explicit_register_a4:
-; RV32I:       # %bb.0:
-; RV32I-NEXT:    mv a4, a0
-; RV32I-NEXT:    #APP
-; RV32I-NEXT:    addi a0, a4, 0
-; RV32I-NEXT:    #NO_APP
-; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: explicit_register_a4:
 ; RV64I:       # %bb.0:
@@ -696,13 +455,6 @@ define i32 @explicit_register_a4(i32 %a) nounwind {
 }
 
 define i32 @explicit_register_x15(i32 %a) nounwind {
-; RV32I-LABEL: explicit_register_x15:
-; RV32I:       # %bb.0:
-; RV32I-NEXT:    mv a5, a0
-; RV32I-NEXT:    #APP
-; RV32I-NEXT:    addi a0, a5, 0
-; RV32I-NEXT:    #NO_APP
-; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: explicit_register_x15:
 ; RV64I:       # %bb.0:
@@ -716,13 +468,6 @@ define i32 @explicit_register_x15(i32 %a) nounwind {
 }
 
 define i32 @explicit_register_a5(i32 %a) nounwind {
-; RV32I-LABEL: explicit_register_a5:
-; RV32I:       # %bb.0:
-; RV32I-NEXT:    mv a5, a0
-; RV32I-NEXT:    #APP
-; RV32I-NEXT:    addi a0, a5, 0
-; RV32I-NEXT:    #NO_APP
-; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: explicit_register_a5:
 ; RV64I:       # %bb.0:
@@ -736,13 +481,6 @@ define i32 @explicit_register_a5(i32 %a) nounwind {
 }
 
 define i32 @explicit_register_x16(i32 %a) nounwind {
-; RV32I-LABEL: explicit_register_x16:
-; RV32I:       # %bb.0:
-; RV32I-NEXT:    mv a6, a0
-; RV32I-NEXT:    #APP
-; RV32I-NEXT:    addi a0, a6, 0
-; RV32I-NEXT:    #NO_APP
-; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: explicit_register_x16:
 ; RV64I:       # %bb.0:
@@ -756,13 +494,6 @@ define i32 @explicit_register_x16(i32 %a) nounwind {
 }
 
 define i32 @explicit_register_a6(i32 %a) nounwind {
-; RV32I-LABEL: explicit_register_a6:
-; RV32I:       # %bb.0:
-; RV32I-NEXT:    mv a6, a0
-; RV32I-NEXT:    #APP
-; RV32I-NEXT:    addi a0, a6, 0
-; RV32I-NEXT:    #NO_APP
-; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: explicit_register_a6:
 ; RV64I:       # %bb.0:
@@ -776,13 +507,6 @@ define i32 @explicit_register_a6(i32 %a) nounwind {
 }
 
 define i32 @explicit_register_x17(i32 %a) nounwind {
-; RV32I-LABEL: explicit_register_x17:
-; RV32I:       # %bb.0:
-; RV32I-NEXT:    mv a7, a0
-; RV32I-NEXT:    #APP
-; RV32I-NEXT:    addi a0, a7, 0
-; RV32I-NEXT:    #NO_APP
-; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: explicit_register_x17:
 ; RV64I:       # %bb.0:
@@ -796,13 +520,6 @@ define i32 @explicit_register_x17(i32 %a) nounwind {
 }
 
 define i32 @explicit_register_a7(i32 %a) nounwind {
-; RV32I-LABEL: explicit_register_a7:
-; RV32I:       # %bb.0:
-; RV32I-NEXT:    mv a7, a0
-; RV32I-NEXT:    #APP
-; RV32I-NEXT:    addi a0, a7, 0
-; RV32I-NEXT:    #NO_APP
-; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: explicit_register_a7:
 ; RV64I:       # %bb.0:
@@ -817,17 +534,6 @@ define i32 @explicit_register_a7(i32 %a) nounwind {
 
 ; NOTE: This test uses `x18` (`s2`) as an input, so it should be saved.
 define i32 @explicit_register_x18(i32 %a) nounwind {
-; RV32I-LABEL: explicit_register_x18:
-; RV32I:       # %bb.0:
-; RV32I-NEXT:    addi sp, sp, -16
-; RV32I-NEXT:    sw s2, 12(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    mv s2, a0
-; RV32I-NEXT:    #APP
-; RV32I-NEXT:    addi a0, s2, 0
-; RV32I-NEXT:    #NO_APP
-; RV32I-NEXT:    lw s2, 12(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    addi sp, sp, 16
-; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: explicit_register_x18:
 ; RV64I:       # %bb.0:
@@ -846,17 +552,6 @@ define i32 @explicit_register_x18(i32 %a) nounwind {
 
 ; NOTE: This test uses `s2` (`x18`) as an input, so it should be saved.
 define i32 @explicit_register_s2(i32 %a) nounwind {
-; RV32I-LABEL: explicit_register_s2:
-; RV32I:       # %bb.0:
-; RV32I-NEXT:    addi sp, sp, -16
-; RV32I-NEXT:    sw s2, 12(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    mv s2, a0
-; RV32I-NEXT:    #APP
-; RV32I-NEXT:    addi a0, s2, 0
-; RV32I-NEXT:    #NO_APP
-; RV32I-NEXT:    lw s2, 12(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    addi sp, sp, 16
-; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: explicit_register_s2:
 ; RV64I:       # %bb.0:
@@ -875,17 +570,6 @@ define i32 @explicit_register_s2(i32 %a) nounwind {
 
 ; NOTE: This test uses `x19` (`s3`) as an input, so it should be saved.
 define i32 @explicit_register_x19(i32 %a) nounwind {
-; RV32I-LABEL: explicit_register_x19:
-; RV32I:       # %bb.0:
-; RV32I-NEXT:    addi sp, sp, -16
-; RV32I-NEXT:    sw s3, 12(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    mv s3, a0
-; RV32I-NEXT:    #APP
-; RV32I-NEXT:    addi a0, s3, 0
-; RV32I-NEXT:    #NO_APP
-; RV32I-NEXT:    lw s3, 12(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    addi sp, sp, 16
-; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: explicit_register_x19:
 ; RV64I:       # %bb.0:
@@ -904,17 +588,6 @@ define i32 @explicit_register_x19(i32 %a) nounwind {
 
 ; NOTE: This test uses `s3` (`x19`) as an input, so it should be saved.
 define i32 @explicit_register_s3(i32 %a) nounwind {
-; RV32I-LABEL: explicit_register_s3:
-; RV32I:       # %bb.0:
-; RV32I-NEXT:    addi sp, sp, -16
-; RV32I-NEXT:    sw s3, 12(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    mv s3, a0
-; RV32I-NEXT:    #APP
-; RV32I-NEXT:    addi a0, s3, 0
-; RV32I-NEXT:    #NO_APP
-; RV32I-NEXT:    lw s3, 12(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    addi sp, sp, 16
-; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: explicit_register_s3:
 ; RV64I:       # %bb.0:
@@ -933,17 +606,6 @@ define i32 @explicit_register_s3(i32 %a) nounwind {
 
 ; NOTE: This test uses `x20` (`s4`) as an input, so it should be saved.
 define i32 @explicit_register_x20(i32 %a) nounwind {
-; RV32I-LABEL: explicit_register_x20:
-; RV32I:       # %bb.0:
-; RV32I-NEXT:    addi sp, sp, -16
-; RV32I-NEXT:    sw s4, 12(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    mv s4, a0
-; RV32I-NEXT:    #APP
-; RV32I-NEXT:    addi a0, s4, 0
-; RV32I-NEXT:    #NO_APP
-; RV32I-NEXT:    lw s4, 12(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    addi sp, sp, 16
-; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: explicit_register_x20:
 ; RV64I:       # %bb.0:
@@ -962,17 +624,6 @@ define i32 @explicit_register_x20(i32 %a) nounwind {
 
 ; NOTE: This test uses `s4` (`x20`) as an input, so it should be saved.
 define i32 @explicit_register_s4(i32 %a) nounwind {
-; RV32I-LABEL: explicit_register_s4:
-; RV32I:       # %bb.0:
-; RV32I-NEXT:    addi sp, sp, -16
-; RV32I-NEXT:    sw s4, 12(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    mv s4, a0
-; RV32I-NEXT:    #APP
-; RV32I-NEXT:    addi a0, s4, 0
-; RV32I-NEXT:    #NO_APP
-; RV32I-NEXT:    lw s4, 12(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    addi sp, sp, 16
-; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: explicit_register_s4:
 ; RV64I:       # %bb.0:
@@ -991,17 +642,6 @@ define i32 @explicit_register_s4(i32 %a) nounwind {
 
 ; NOTE: This test uses `x21` (`s5`) as an input, so it should be saved.
 define i32 @explicit_register_x21(i32 %a) nounwind {
-; RV32I-LABEL: explicit_register_x21:
-; RV32I:       # %bb.0:
-; RV32I-NEXT:    addi sp, sp, -16
-; RV32I-NEXT:    sw s5, 12(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    mv s5, a0
-; RV32I-NEXT:    #APP
-; RV32I-NEXT:    addi a0, s5, 0
-; RV32I-NEXT:    #NO_APP
-; RV32I-NEXT:    lw s5, 12(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    addi sp, sp, 16
-; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: explicit_register_x21:
 ; RV64I:       # %bb.0:
@@ -1020,17 +660,6 @@ define i32 @explicit_register_x21(i32 %a) nounwind {
 
 ; NOTE: This test uses `s5` (`x21`) as an input, so it should be saved.
 define i32 @explicit_register_s5(i32 %a) nounwind {
-; RV32I-LABEL: explicit_register_s5:
-; RV32I:       # %bb.0:
-; RV32I-NEXT:    addi sp, sp, -16
-; RV32I-NEXT:    sw s5, 12(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    mv s5, a0
-; RV32I-NEXT:    #APP
-; RV32I-NEXT:    addi a0, s5, 0
-; RV32I-NEXT:    #NO_APP
-; RV32I-NEXT:    lw s5, 12(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    addi sp, sp, 16
-; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: explicit_register_s5:
 ; RV64I:       # %bb.0:
@@ -1049,17 +678,6 @@ define i32 @explicit_register_s5(i32 %a) nounwind {
 
 ; NOTE: This test uses `x22` (`s6`) as an input, so it should be saved.
 define i32 @explicit_register_x22(i32 %a) nounwind {
-; RV32I-LABEL: explicit_register_x22:
-; RV32I:       # %bb.0:
-; RV32I-NEXT:    addi sp, sp, -16
-; RV32I-NEXT:    sw s6, 12(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    mv s6, a0
-; RV32I-NEXT:    #APP
-; RV32I-NEXT:    addi a0, s6, 0
-; RV32I-NEXT:    #NO_APP
-; RV32I-NEXT:    lw s6, 12(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    addi sp, sp, 16
-; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: explicit_register_x22:
 ; RV64I:       # %bb.0:
@@ -1078,17 +696,6 @@ define i32 @explicit_register_x22(i32 %a) nounwind {
 
 ; NOTE: This test uses `s6` (`x22`) as an input, so it should be saved.
 define i32 @explicit_register_s6(i32 %a) nounwind {
-; RV32I-LABEL: explicit_register_s6:
-; RV32I:       # %bb.0:
-; RV32I-NEXT:    addi sp, sp, -16
-; RV32I-NEXT:    sw s6, 12(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    mv s6, a0
-; RV32I-NEXT:    #APP
-; RV32I-NEXT:    addi a0, s6, 0
-; RV32I-NEXT:    #NO_APP
-; RV32I-NEXT:    lw s6, 12(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    addi sp, sp, 16
-; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: explicit_register_s6:
 ; RV64I:       # %bb.0:
@@ -1107,17 +714,6 @@ define i32 @explicit_register_s6(i32 %a) nounwind {
 
 ; NOTE: This test uses `x23` (`s7`) as an input, so it should be saved.
 define i32 @explicit_register_x23(i32 %a) nounwind {
-; RV32I-LABEL: explicit_register_x23:
-; RV32I:       # %bb.0:
-; RV32I-NEXT:    addi sp, sp, -16
-; RV32I-NEXT:    sw s7, 12(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    mv s7, a0
-; RV32I-NEXT:    #APP
-; RV32I-NEXT:    addi a0, s7, 0
-; RV32I-NEXT:    #NO_APP
-; RV32I-NEXT:    lw s7, 12(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    addi sp, sp, 16
-; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: explicit_register_x23:
 ; RV64I:       # %bb.0:
@@ -1136,17 +732,6 @@ define i32 @explicit_register_x23(i32 %a) nounwind {
 
 ; NOTE: This test uses `s7` (`x23`) as an input, so it should be saved.
 define i32 @explicit_register_s7(i32 %a) nounwind {
-; RV32I-LABEL: explicit_register_s7:
-; RV32I:       # %bb.0:
-; RV32I-NEXT:    addi sp, sp, -16
-; RV32I-NEXT:    sw s7, 12(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    mv s7, a0
-; RV32I-NEXT:    #APP
-; RV32I-NEXT:    addi a0, s7, 0
-; RV32I-NEXT:    #NO_APP
-; RV32I-NEXT:    lw s7, 12(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    addi sp, sp, 16
-; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: explicit_register_s7:
 ; RV64I:       # %bb.0:
@@ -1165,17 +750,6 @@ define i32 @explicit_register_s7(i32 %a) nounwind {
 
 ; NOTE: This test uses `x24` (`s8`) as an input, so it should be saved.
 define i32 @explicit_register_x24(i32 %a) nounwind {
-; RV32I-LABEL: explicit_register_x24:
-; RV32I:       # %bb.0:
-; RV32I-NEXT:    addi sp, sp, -16
-; RV32I-NEXT:    sw s8, 12(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    mv s8, a0
-; RV32I-NEXT:    #APP
-; RV32I-NEXT:    addi a0, s8, 0
-; RV32I-NEXT:    #NO_APP
-; RV32I-NEXT:    lw s8, 12(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    addi sp, sp, 16
-; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: explicit_register_x24:
 ; RV64I:       # %bb.0:
@@ -1194,17 +768,6 @@ define i32 @explicit_register_x24(i32 %a) nounwind {
 
 ; NOTE: This test uses `s8` (`x24`) as an input, so it should be saved.
 define i32 @explicit_register_s8(i32 %a) nounwind {
-; RV32I-LABEL: explicit_register_s8:
-; RV32I:       # %bb.0:
-; RV32I-NEXT:    addi sp, sp, -16
-; RV32I-NEXT:    sw s8, 12(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    mv s8, a0
-; RV32I-NEXT:    #APP
-; RV32I-NEXT:    addi a0, s8, 0
-; RV32I-NEXT:    #NO_APP
-; RV32I-NEXT:    lw s8, 12(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    addi sp, sp, 16
-; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: explicit_register_s8:
 ; RV64I:       # %bb.0:
@@ -1223,17 +786,6 @@ define i32 @explicit_register_s8(i32 %a) nounwind {
 
 ; NOTE: This test uses `x25` (`s9`) as an input, so it should be saved.
 define i32 @explicit_register_x25(i32 %a) nounwind {
-; RV32I-LABEL: explicit_register_x25:
-; RV32I:       # %bb.0:
-; RV32I-NEXT:    addi sp, sp, -16
-; RV32I-NEXT:    sw s9, 12(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    mv s9, a0
-; RV32I-NEXT:    #APP
-; RV32I-NEXT:    addi a0, s9, 0
-; RV32I-NEXT:    #NO_APP
-; RV32I-NEXT:    lw s9, 12(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    addi sp, sp, 16
-; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: explicit_register_x25:
 ; RV64I:       # %bb.0:
@@ -1252,17 +804,6 @@ define i32 @explicit_register_x25(i32 %a) nounwind {
 
 ; NOTE: This test uses `s9` (`x25`) as an input, so it should be saved.
 define i32 @explicit_register_s9(i32 %a) nounwind {
-; RV32I-LABEL: explicit_register_s9:
-; RV32I:       # %bb.0:
-; RV32I-NEXT:    addi sp, sp, -16
-; RV32I-NEXT:    sw s9, 12(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    mv s9, a0
-; RV32I-NEXT:    #APP
-; RV32I-NEXT:    addi a0, s9, 0
-; RV32I-NEXT:    #NO_APP
-; RV32I-NEXT:    lw s9, 12(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    addi sp, sp, 16
-; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: explicit_register_s9:
 ; RV64I:       # %bb.0:
@@ -1281,17 +822,6 @@ define i32 @explicit_register_s9(i32 %a) nounwind {
 
 ; NOTE: This test uses `x26` (`s10`) as an input, so it should be saved.
 define i32 @explicit_register_x26(i32 %a) nounwind {
-; RV32I-LABEL: explicit_register_x26:
-; RV32I:       # %bb.0:
-; RV32I-NEXT:    addi sp, sp, -16
-; RV32I-NEXT:    sw s10, 12(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    mv s10, a0
-; RV32I-NEXT:    #APP
-; RV32I-NEXT:    addi a0, s10, 0
-; RV32I-NEXT:    #NO_APP
-; RV32I-NEXT:    lw s10, 12(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    addi sp, sp, 16
-; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: explicit_register_x26:
 ; RV64I:       # %bb.0:
@@ -1310,17 +840,6 @@ define i32 @explicit_register_x26(i32 %a) nounwind {
 
 ; NOTE: This test uses `s10` (`x28`) as an input, so it should be saved.
 define i32 @explicit_register_s10(i32 %a) nounwind {
-; RV32I-LABEL: explicit_register_s10:
-; RV32I:       # %bb.0:
-; RV32I-NEXT:    addi sp, sp, -16
-; RV32I-NEXT:    sw s10, 12(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    mv s10, a0
-; RV32I-NEXT:    #APP
-; RV32I-NEXT:    addi a0, s10, 0
-; RV32I-NEXT:    #NO_APP
-; RV32I-NEXT:    lw s10, 12(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    addi sp, sp, 16
-; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: explicit_register_s10:
 ; RV64I:       # %bb.0:
@@ -1339,17 +858,6 @@ define i32 @explicit_register_s10(i32 %a) nounwind {
 
 ; NOTE: This test uses `x27` (`s11`) as an input, so it should be saved.
 define i32 @explicit_register_x27(i32 %a) nounwind {
-; RV32I-LABEL: explicit_register_x27:
-; RV32I:       # %bb.0:
-; RV32I-NEXT:    addi sp, sp, -16
-; RV32I-NEXT:    sw s11, 12(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    mv s11, a0
-; RV32I-NEXT:    #APP
-; RV32I-NEXT:    addi a0, s11, 0
-; RV32I-NEXT:    #NO_APP
-; RV32I-NEXT:    lw s11, 12(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    addi sp, sp, 16
-; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: explicit_register_x27:
 ; RV64I:       # %bb.0:
@@ -1368,17 +876,6 @@ define i32 @explicit_register_x27(i32 %a) nounwind {
 
 ; NOTE: This test uses `s11` (`x27`) as an input, so it should be saved.
 define i32 @explicit_register_s11(i32 %a) nounwind {
-; RV32I-LABEL: explicit_register_s11:
-; RV32I:       # %bb.0:
-; RV32I-NEXT:    addi sp, sp, -16
-; RV32I-NEXT:    sw s11, 12(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    mv s11, a0
-; RV32I-NEXT:    #APP
-; RV32I-NEXT:    addi a0, s11, 0
-; RV32I-NEXT:    #NO_APP
-; RV32I-NEXT:    lw s11, 12(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    addi sp, sp, 16
-; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: explicit_register_s11:
 ; RV64I:       # %bb.0:
@@ -1396,13 +893,6 @@ define i32 @explicit_register_s11(i32 %a) nounwind {
 }
 
 define i32 @explicit_register_x28(i32 %a) nounwind {
-; RV32I-LABEL: explicit_register_x28:
-; RV32I:       # %bb.0:
-; RV32I-NEXT:    mv t3, a0
-; RV32I-NEXT:    #APP
-; RV32I-NEXT:    addi a0, t3, 0
-; RV32I-NEXT:    #NO_APP
-; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: explicit_register_x28:
 ; RV64I:       # %bb.0:
@@ -1416,13 +906,6 @@ define i32 @explicit_register_x28(i32 %a) nounwind {
 }
 
 define i32 @explicit_register_t3(i32 %a) nounwind {
-; RV32I-LABEL: explicit_register_t3:
-; RV32I:       # %bb.0:
-; RV32I-NEXT:    mv t3, a0
-; RV32I-NEXT:    #APP
-; RV32I-NEXT:    addi a0, t3, 0
-; RV32I-NEXT:    #NO_APP
-; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: explicit_register_t3:
 ; RV64I:       # %bb.0:
@@ -1436,13 +919,6 @@ define i32 @explicit_register_t3(i32 %a) nounwind {
 }
 
 define i32 @explicit_register_x29(i32 %a) nounwind {
-; RV32I-LABEL: explicit_register_x29:
-; RV32I:       # %bb.0:
-; RV32I-NEXT:    mv t4, a0
-; RV32I-NEXT:    #APP
-; RV32I-NEXT:    addi a0, t4, 0
-; RV32I-NEXT:    #NO_APP
-; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: explicit_register_x29:
 ; RV64I:       # %bb.0:
@@ -1456,13 +932,6 @@ define i32 @explicit_register_x29(i32 %a) nounwind {
 }
 
 define i32 @explicit_register_t4(i32 %a) nounwind {
-; RV32I-LABEL: explicit_register_t4:
-; RV32I:       # %bb.0:
-; RV32I-NEXT:    mv t4, a0
-; RV32I-NEXT:    #APP
-; RV32I-NEXT:    addi a0, t4, 0
-; RV32I-NEXT:    #NO_APP
-; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: explicit_register_t4:
 ; RV64I:       # %bb.0:
@@ -1476,13 +945,6 @@ define i32 @explicit_register_t4(i32 %a) nounwind {
 }
 
 define i32 @explicit_register_x30(i32 %a) nounwind {
-; RV32I-LABEL: explicit_register_x30:
-; RV32I:       # %bb.0:
-; RV32I-NEXT:    mv t5, a0
-; RV32I-NEXT:    #APP
-; RV32I-NEXT:    addi a0, t5, 0
-; RV32I-NEXT:    #NO_APP
-; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: explicit_register_x30:
 ; RV64I:       # %bb.0:
@@ -1496,13 +958,6 @@ define i32 @explicit_register_x30(i32 %a) nounwind {
 }
 
 define i32 @explicit_register_t5(i32 %a) nounwind {
-; RV32I-LABEL: explicit_register_t5:
-; RV32I:       # %bb.0:
-; RV32I-NEXT:    mv t5, a0
-; RV32I-NEXT:    #APP
-; RV32I-NEXT:    addi a0, t5, 0
-; RV32I-NEXT:    #NO_APP
-; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: explicit_register_t5:
 ; RV64I:       # %bb.0:
@@ -1516,13 +971,6 @@ define i32 @explicit_register_t5(i32 %a) nounwind {
 }
 
 define i32 @explicit_register_x31(i32 %a) nounwind {
-; RV32I-LABEL: explicit_register_x31:
-; RV32I:       # %bb.0:
-; RV32I-NEXT:    mv t6, a0
-; RV32I-NEXT:    #APP
-; RV32I-NEXT:    addi a0, t6, 0
-; RV32I-NEXT:    #NO_APP
-; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: explicit_register_x31:
 ; RV64I:       # %bb.0:
@@ -1536,13 +984,6 @@ define i32 @explicit_register_x31(i32 %a) nounwind {
 }
 
 define i32 @explicit_register_t6(i32 %a) nounwind {
-; RV32I-LABEL: explicit_register_t6:
-; RV32I:       # %bb.0:
-; RV32I-NEXT:    mv t6, a0
-; RV32I-NEXT:    #APP
-; RV32I-NEXT:    addi a0, t6, 0
-; RV32I-NEXT:    #NO_APP
-; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: explicit_register_t6:
 ; RV64I:       # %bb.0:
