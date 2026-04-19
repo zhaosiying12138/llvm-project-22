@@ -60,7 +60,7 @@ for deterministic verification.
 ## MUTABLE SECTION
 <!-- Update each round with justification for changes -->
 
-### Plan Version: 11 (Updated: Round 5)
+### Plan Version: 13 (Updated: Round 6)
 
 #### Plan Evolution Log
 <!-- Document any changes to the plan with justification -->
@@ -79,13 +79,15 @@ for deterministic verification.
 | 4 | Implemented the Round-4 MC/feature-surface pruning slice | Replaced `YSXFeatures.td` with a small rv64ima-oriented feature file, removed symbolic CSR records, removed default MC visibility for `fence.i`, CSR/counter aliases, privileged/debug/hypervisor mnemonics, and added negative MC tests for the reviewed examples | AC-2 advanced for MC; AC-3 advanced for feature records but remains open because large unsupported lowering/selection/metadata/pass surfaces are still present |
 | 4 review | Rejected the Round-4 completion claim and kept task3/task6 active | `clang --target=ysx64-unknown-elf -c` now reaches the YSX backend with many unsupported negative RISCV feature flags and fatally rejects its own default invocation; `clang --target=ysx64-unknown-elf -march=rv64ima -c` fails the same way. Source review also finds retained vector/FP/vendor/RV32/compressed support in `YSXISelLowering.cpp`, `YSXISelDAGToDAG.cpp`, `YSXInstrInfo.cpp`, `YSXInstrFormats.td`, frame/subtarget helpers, and pass declarations. | AC-2 and AC-4 are blocked by the Clang compile regression; AC-3 remains unmet |
 | 5 | Fixed the supported Clang compile path and added real compile coverage | YSX feature filtering now ignores inherited disabled RISCV features before subtarget parsing while still rejecting enabled unsupported features; `clang/test/Driver/YSX/target-options.c` now compiles default `ysx64-unknown-elf` and explicit `-march=rv64ima`; focused YSX lit and RISCV+YSX build validation pass | AC-2 and AC-4 compile-path blocker resolved; AC-3 remains active for source-surface pruning |
+| 5 review | Verified the Round-5 compile-path fix but rejected completion | Default and explicit `rv64ima` Clang compiles now produce ELF64 RISC-V relocatable objects in the available YSX-only and combined builds, and enabled `rv64imaf`/`+v` still reject. However, Round 5 deliberately queued AC-3 pruning, Clang still routes `ysx64` through `RISCV64TargetInfo`, `-###` still exposes the RISCV disabled feature universe, and predefines still expose `__riscv_v_intrinsic`. | AC-2 and AC-4 advanced for the compile path; AC-2/AC-3 remain blocked by residual visible/source unsupported surfaces |
+| 6 | Implemented a YSX-specific Clang/TargetParser frontend surface | `ysx64` now routes to `YSX64TargetInfo`, driver feature emission no longer calls RISCV all-extension expansion for YSX, `YSXISAInfo` is no longer a `RISCVISAInfo` alias, `-###` only emits rv64ima positive features plus relax, and YSX tests cover absence of RISCV vector macros/types/builtins | AC-2 frontend-surface leak resolved; AC-3 advanced for TargetParser/Clang plumbing but remains blocked by backend source pruning |
 
 #### Active Tasks
 <!-- Mainline tasks only: each task must directly advance the current round objective and carry routing metadata -->
 | Task | Target AC | Status | Tag | Owner | Notes |
 |------|-----------|--------|-----|-------|-------|
-| task3: Finish pruning YSX to the actual `rv64ima` source surface | AC-2, AC-3 | active after Round-5 implementation | coding | Claude | The feature-validation compile blocker is fixed, but retained vector/FP/vendor/RV32/compressed lowering, selection, metadata, pass declarations, false-return compatibility helpers, and Clang/RISCV parser exposure still need deletion or replacement with YSX-only rv64ima code. |
-| task6: Revalidate after source pruning and Clang/MC surface fixes | AC-1, AC-2, AC-4 | active after Round-5 implementation | coding | Claude | Round 5 added and validated real Clang compile coverage for default `ysx64-unknown-elf` and explicit `-march=rv64ima`; keep rerunning YSX-only and RISCV+YSX validation after the remaining AC-3 pruning slices. |
+| task3: Finish pruning YSX to the actual `rv64ima` source surface | AC-2, AC-3 | active after Round-6 implementation | coding | Claude | Clang/TargetParser no longer exposes the inherited RISCV frontend surface, but retained vector/FP/vendor/RV32/compressed lowering, selection, metadata, pass declarations, false-return compatibility helpers, and backend vector helpers still need deletion or replacement with YSX-only rv64ima code. |
+| task6: Revalidate after source pruning and Clang/MC surface fixes | AC-1, AC-2, AC-4 | active after Round-6 implementation | coding | Claude | Round 6 validated the YSX-only lit subset, YSX-only smoke compiles, combined RISCV+YSX static build, combined smoke compiles, unsupported extension rejection, and RISCV zero-diff; keep rerunning after remaining backend pruning slices. |
 
 ### Blocking Side Issues
 <!-- Only issues that directly block current mainline progress belong here -->
@@ -110,7 +112,8 @@ for deterministic verification.
 | AC-1, AC-2 | task4: Add LLVM/Clang `ysx64` plumbing and unique YSX option names | 0 | 0 | `llvm/include/llvm/TargetParser/Triple.h`, `llvm/lib/TargetParser/Triple.cpp`, `clang/lib/Basic/Targets.cpp`, `clang/lib/Driver/ToolChains/Clang.cpp`; combined static build + smoke tests for both targets pass |
 | AC-4 | task5: Create YSX-owned LLVM and Clang tests from rv64ima-applicable RISCV subsets | 0 | 0 | `llvm/test/CodeGen/YSX`, `llvm/test/MC/YSX`, `clang/test/CodeGen/YSX`, `clang/test/Driver/YSX`; 129-test YSX suite passes |
 | AC-2, AC-4 | Round-4 MC CSR/privileged/Zifencei visible-surface fix | 4 | 4 | Manual `llvm-mc -triple=ysx64-unknown-elf` checks now reject `fence.i`, `csrr`, counter aliases, `mret`/`sret`/`wfi`/`dret`, `sfence.vma`, and `hfence.vvma`; `llvm/test/MC/YSX/unsupported-features.s` contains negative coverage for these examples. |
-| AC-2, AC-4 | Round-5 Clang compile-path fix | 5 | pending review | `clang --target=ysx64-unknown-elf -c` and `clang --target=ysx64-unknown-elf -march=rv64ima -c` both produce ELF objects in YSX-only and combined builds; enabled unsupported `rv64imaf`/`rv64imac` and backend `+f`/`+v` remain rejected; YSX lit subset passes with 130 tests. |
+| AC-2, AC-4 | Round-5 Clang compile-path fix | 5 | 5 review | `clang --target=ysx64-unknown-elf -c` and `clang --target=ysx64-unknown-elf -march=rv64ima -c` both produce ELF64 RISC-V relocatable objects in available YSX-only and combined builds; enabled unsupported `rv64imaf`/`rv64imac` and backend `+f`/`+v` remain rejected. Review could not rerun lit because the external build test root is read-only in this sandbox. |
+| AC-2, AC-3, AC-4 | Round-6 Clang/TargetParser frontend-surface fix | 6 | pending review | `clang --target=ysx64-unknown-elf -### -c` now emits only `+i`, `+m`, `+a`, `+zmmul`, `+zaamo`, `+zalrsc`, and `+relax`; YSX predefines no longer include `__riscv_v_intrinsic` or `__riscv_vector`; RVV builtin/type probes fail; YSX-only lit and combined RISCV+YSX build validation pass. |
 
 ### Explicitly Deferred
 <!-- Items here require strong justification -->

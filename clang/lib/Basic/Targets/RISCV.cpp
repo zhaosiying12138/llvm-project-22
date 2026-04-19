@@ -222,8 +222,10 @@ void RISCVTargetInfo::getTargetDefines(const LangOptions &Opts,
   if (ISAInfo->hasExtension("zve32x"))
     Builder.defineMacro("__riscv_vector");
 
-  // Currently we support the v1.0 RISC-V V intrinsics.
-  Builder.defineMacro("__riscv_v_intrinsic", Twine(getVersionValue(1, 0)));
+  // Currently RISC-V supports the v1.0 V intrinsics.  YSX deliberately keeps
+  // the RISC-V-compatible base macros but does not expose the vector frontend.
+  if (!getTriple().isYSX64())
+    Builder.defineMacro("__riscv_v_intrinsic", Twine(getVersionValue(1, 0)));
 
   auto VScale = getVScaleRange(Opts, ArmStreamingKind::NotStreaming);
   if (VScale && VScale->first && VScale->first == VScale->second)
@@ -336,6 +338,11 @@ RISCVTargetInfo::getTargetBuiltins() const {
       {&RVVAndes::BuiltinStrings, RVVAndes::BuiltinInfos, "__builtin_rvv_"},
       {&BuiltinStrings, BuiltinInfos},
   };
+}
+
+llvm::SmallVector<Builtin::InfosShard>
+YSX64TargetInfo::getTargetBuiltins() const {
+  return {{&BuiltinStrings, BuiltinInfos}};
 }
 
 bool RISCVTargetInfo::initFeatureMap(

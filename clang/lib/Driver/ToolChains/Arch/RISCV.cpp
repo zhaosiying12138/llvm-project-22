@@ -49,62 +49,18 @@ static bool getArchFeatures(const Driver &D, StringRef Arch,
   return true;
 }
 
-static bool isValidRISCVCPU(const Driver &D, const Arg *A,
-                            const llvm::Triple &Triple, StringRef Mcpu) {
-  bool Is64Bit = Triple.isRISCV64();
-  if (!llvm::RISCV::parseCPU(Mcpu, Is64Bit)) {
-    // Try inverting Is64Bit in case the CPU is valid, but for the wrong target.
-    if (llvm::RISCV::parseCPU(Mcpu, !Is64Bit))
-      D.Diag(clang::diag::err_drv_invalid_riscv_cpu_name_for_target)
-          << Mcpu << Is64Bit;
-    else
-      D.Diag(clang::diag::err_drv_unsupported_option_argument)
-          << A->getSpelling() << Mcpu;
-    return false;
-  }
-  return true;
+static void addYSXArchFeatures(std::vector<StringRef> &Features) {
+  Features.push_back("+i");
+  Features.push_back("+m");
+  Features.push_back("+a");
+  Features.push_back("+zmmul");
+  Features.push_back("+zaamo");
+  Features.push_back("+zalrsc");
 }
 
-void riscv::getRISCVTargetFeatures(const Driver &D, const llvm::Triple &Triple,
-                                   const ArgList &Args,
-                                   std::vector<StringRef> &Features) {
-  std::string MArch = getRISCVArch(Args, Triple);
-
-  if (Triple.isYSX64() && MArch != "rv64ima") {
-    D.Diag(diag::err_drv_invalid_riscv_arch_name)
-        << MArch << "YuShuXin only supports -march=rv64ima";
-    return;
-  }
-
-  if (!getArchFeatures(D, MArch, Features, Args))
-    return;
-
-  bool CPUFastScalarUnaligned = false;
-  bool CPUFastVectorUnaligned = false;
-
-  // If users give march and mcpu, get std extension feature from MArch
-  // and other features (ex. mirco architecture feature) from mcpu
-  if (Arg *A = Args.getLastArg(options::OPT_mcpu_EQ)) {
-    StringRef CPU = A->getValue();
-    if (CPU == "native")
-      CPU = llvm::sys::getHostCPUName();
-
-    if (Triple.isYSX64() && CPU != "generic" && CPU != "generic-rv64") {
-      D.Diag(clang::diag::err_drv_unsupported_option_argument)
-          << A->getSpelling() << CPU;
-      return;
-    }
-
-    if (!isValidRISCVCPU(D, A, Triple, CPU))
-      return;
-
-    if (llvm::RISCV::hasFastScalarUnalignedAccess(CPU))
-      CPUFastScalarUnaligned = true;
-    if (llvm::RISCV::hasFastVectorUnalignedAccess(CPU))
-      CPUFastVectorUnaligned = true;
-  }
-
-// Handle features corresponding to "-ffixed-X" options
+static void addReservedRegisterFeatures(const ArgList &Args,
+                                        std::vector<StringRef> &Features) {
+// Handle features corresponding to "-ffixed-X" options.
 #define RESERVE_REG(REG)                                                       \
   if (Args.hasArg(options::OPT_ffixed_##REG))                                  \
     Features.push_back("+reserve-" #REG);
@@ -140,12 +96,95 @@ void riscv::getRISCVTargetFeatures(const Driver &D, const llvm::Triple &Triple,
   RESERVE_REG(x30)
   RESERVE_REG(x31)
 #undef RESERVE_REG
+}
 
-  // -mrelax is default, unless -mno-relax is specified.
+static void addRelaxFeature(const ArgList &Args,
+                            std::vector<StringRef> &Features) {
   if (Args.hasFlag(options::OPT_mrelax, options::OPT_mno_relax, true))
     Features.push_back("+relax");
   else
     Features.push_back("-relax");
+}
+
+static bool isValidRISCVCPU(const Driver &D, const Arg *A,
+                            const llvm::Triple &Triple, StringRef Mcpu) {
+  bool Is64Bit = Triple.isRISCV64();
+  if (!llvm::RISCV::parseCPU(Mcpu, Is64Bit)) {
+    // Try inverting Is64Bit in case the CPU is valid, but for the wrong target.
+    if (llvm::RISCV::parseCPU(Mcpu, !Is64Bit))
+      D.Diag(clang::diag::err_drv_invalid_riscv_cpu_name_for_target)
+          << Mcpu << Is64Bit;
+    else
+      D.Diag(clang::diag::err_drv_unsupported_option_argument)
+          << A->getSpelling() << Mcpu;
+    return false;
+  }
+  return true;
+}
+
+void riscv::getRISCVTargetFeatures(const Driver &D, const llvm::Triple &Triple,
+                                   const ArgList &Args,
+                                   std::vector<StringRef> &Features) {
+  std::string MArch = getRISCVArch(Args, Triple);
+
+  if (Triple.isYSX64() && MArch != "rv64ima") {
+    D.Diag(diag::err_drv_invalid_riscv_arch_name)
+        << MArch << "YuShuXin only supports -march=rv64ima";
+    return;
+  }
+
+  if (Triple.isYSX64()) {
+    addYSXArchFeatures(Features);
+
+    if (Arg *A = Args.getLastArg(options::OPT_mcpu_EQ)) {
+      StringRef CPU = A->getValue();
+      if (CPU == "native")
+        CPU = llvm::sys::getHostCPUName();
+
+      if (CPU != "generic" && CPU != "generic-rv64") {
+        D.Diag(clang::diag::err_drv_unsupported_option_argument)
+            << A->getSpelling() << CPU;
+        return;
+      }
+    }
+
+    addReservedRegisterFeatures(Args, Features);
+    addRelaxFeature(Args, Features);
+    handleTargetFeaturesGroup(D, Triple, Args, Features,
+                              options::OPT_m_riscv_Features_Group);
+    return;
+  }
+
+  if (!getArchFeatures(D, MArch, Features, Args))
+    return;
+
+  bool CPUFastScalarUnaligned = false;
+  bool CPUFastVectorUnaligned = false;
+
+  // If users give march and mcpu, get std extension feature from MArch
+  // and other features (ex. mirco architecture feature) from mcpu
+  if (Arg *A = Args.getLastArg(options::OPT_mcpu_EQ)) {
+    StringRef CPU = A->getValue();
+    if (CPU == "native")
+      CPU = llvm::sys::getHostCPUName();
+
+    if (Triple.isYSX64() && CPU != "generic" && CPU != "generic-rv64") {
+      D.Diag(clang::diag::err_drv_unsupported_option_argument)
+          << A->getSpelling() << CPU;
+      return;
+    }
+
+    if (!isValidRISCVCPU(D, A, Triple, CPU))
+      return;
+
+    if (llvm::RISCV::hasFastScalarUnalignedAccess(CPU))
+      CPUFastScalarUnaligned = true;
+    if (llvm::RISCV::hasFastVectorUnalignedAccess(CPU))
+      CPUFastVectorUnaligned = true;
+  }
+
+  addReservedRegisterFeatures(Args, Features);
+  addRelaxFeature(Args, Features);
 
   // If -mstrict-align, -mno-strict-align, -mscalar-strict-align, or
   // -mno-scalar-strict-align is passed, use it. Otherwise, the

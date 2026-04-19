@@ -231,6 +231,49 @@ public:
       MaxAtomicInlineWidth = 64;
   }
 };
+
+class LLVM_LIBRARY_VISIBILITY YSX64TargetInfo : public RISCV64TargetInfo {
+public:
+  YSX64TargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
+      : RISCV64TargetInfo(Triple, Opts) {
+    HasRISCVVTypes = false;
+  }
+
+  bool setABI(const std::string &Name) override {
+    if (Name == "lp64") {
+      ABI = Name;
+      return true;
+    }
+    return false;
+  }
+
+  llvm::SmallVector<Builtin::InfosShard> getTargetBuiltins() const override;
+
+  CallingConvCheckResult checkCallingConvention(CallingConv CC) const override {
+    return CC == CC_C ? CCCR_OK : CCCR_Warning;
+  }
+
+  bool isValidCPUName(StringRef Name) const override {
+    return Name == "generic" || Name == "generic-rv64";
+  }
+
+  void fillValidCPUList(SmallVectorImpl<StringRef> &Values) const override {
+    Values.append({"generic", "generic-rv64"});
+  }
+
+  bool isValidTuneCPUName(StringRef Name) const override {
+    return isValidCPUName(Name);
+  }
+
+  void fillValidTuneCPUList(SmallVectorImpl<StringRef> &Values) const override {
+    fillValidCPUList(Values);
+  }
+
+  bool supportsTargetAttributeTune() const override { return false; }
+  bool supportsCpuSupports() const override { return false; }
+  bool supportsCpuIs() const override { return false; }
+  bool supportsCpuInit() const override { return false; }
+};
 } // namespace targets
 } // namespace clang
 
