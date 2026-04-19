@@ -52,6 +52,13 @@
 # RUN: printf ".insn r 67, 0, 0, x1, x2, x3\n" | not llvm-mc -triple=ysx64 - 2>&1 | FileCheck %s --check-prefix=INSN-OPCODE
 # RUN: printf ".insn r 11, 0, 0, x1, x2, x3\n" | not llvm-mc -triple=ysx64 - 2>&1 | FileCheck %s --check-prefix=INSN-OPCODE
 # RUN: printf ".insn r4 MADD, 0, 0, x1, x2, x3, x4\n" | not llvm-mc -triple=ysx64 - 2>&1 | FileCheck %s --check-prefix=INSN-FORMAT
+# RUN: printf ".reloc ., R_RISCV_RVC_BRANCH, sym\n" | not llvm-mc -triple=ysx64 -filetype=obj -o /dev/null - 2>&1 | FileCheck %s --check-prefix=RELOC
+# RUN: printf ".reloc ., R_RISCV_RVC_JUMP, sym\n" | not llvm-mc -triple=ysx64 -filetype=obj -o /dev/null - 2>&1 | FileCheck %s --check-prefix=RELOC
+# RUN: printf ".reloc ., R_RISCV_VENDOR, sym\n" | not llvm-mc -triple=ysx64 -filetype=obj -o /dev/null - 2>&1 | FileCheck %s --check-prefix=RELOC
+# RUN: printf ".reloc ., R_RISCV_CUSTOM192, sym\n" | not llvm-mc -triple=ysx64 -filetype=obj -o /dev/null - 2>&1 | FileCheck %s --check-prefix=RELOC
+# RUN: printf ".reloc ., R_RISCV_QC_ABS20_U, sym\n" | not llvm-mc -triple=ysx64 -filetype=obj -o /dev/null - 2>&1 | FileCheck %s --check-prefix=RELOC
+# RUN: printf ".reloc ., R_RISCV_NDS_BRANCH_10, sym\n" | not llvm-mc -triple=ysx64 -filetype=obj -o /dev/null - 2>&1 | FileCheck %s --check-prefix=RELOC
+# RUN: printf ".reloc ., R_RISCV_CHERIOT1_COMPARTMENT_HI, sym\n" | not llvm-mc -triple=ysx64 -filetype=obj -o /dev/null - 2>&1 | FileCheck %s --check-prefix=RELOC
 
 # CHECK: LLVM ERROR: YSX only supports the rv64ima ISA
 
@@ -63,6 +70,7 @@
 # INSN16: error: 16-bit instruction encodings are not allowed
 # INSN-OPCODE: error: opcode must be a retained rv64ima major opcode name or value in the range
 # INSN-FORMAT: error: invalid instruction format
+# RELOC: error: unknown relocation name
 # HELP: Available features for this target:
 # HELP-NOT: 32bit
 # HELP-NOT: log-vrgather
