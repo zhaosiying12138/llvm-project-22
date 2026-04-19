@@ -144,8 +144,6 @@ public:
   unsigned getXLen() const {
     return 64;
   }
-  bool useMIPSLoadStorePairs() const;
-  bool useMIPSCCMovInsn() const;
   unsigned getFLen() const {
     return 0;
   }

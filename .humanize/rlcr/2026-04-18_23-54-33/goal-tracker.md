@@ -60,7 +60,7 @@ for deterministic verification.
 ## MUTABLE SECTION
 <!-- Update each round with justification for changes -->
 
-### Plan Version: 55 (Updated: Round 27 implementation)
+### Plan Version: 57 (Updated: Round 28 implementation)
 
 #### Plan Evolution Log
 <!-- Document any changes to the plan with justification -->
@@ -123,19 +123,21 @@ for deterministic verification.
 | 26 | Completed broad inactive removed-surface YSX test cleanup | Removed stale inactive check blocks for compressed, RVE, FP, Zicfilp, Zabha/Zalasr, XAndes, SFB, CCMOV, and VTCONDOPS surfaces from 13 YSX CodeGen tests. Current YSX backend line count is 26,038 versus RISCV's 136,068, and YSX focused tests are 48,338 lines. | AC-4 advanced by removing the reviewed broad stale copied test surfaces; focused 132-test YSX lit, targeted 13-test lit, YSX-only build, combined RISCV+YSX static build, smoke/negative probes, broadened stale-prefix scan, `git diff --check`, and RISCV zero-diff all pass pending Codex review. |
 | 26 review | Rejected full Round-26 completion because inactive removed CCMOV/MIPS select checks remain | A broader inactive-prefix and mnemonic scan found `RV64I-CCMOV` and `RV64-MIPS` check blocks with `mips.ccmov` expectations in `select-and.ll`, `select-or.ll`, `select-cc.ll`, and `select-cond.ll`; these are inactive copied removed-surface checks outside Claude's stale-prefix regex. | AC-4 remains unmet; task5/task6 stay active for a final CCMOV/MIPS test cleanup and revalidation. |
 | 27 | Removed final inactive CCMOV/MIPS YSX select checks | Removed inactive `RV64I-CCMOV` and `RV64-MIPS` copied check blocks with `mips.ccmov` expectations from `select-and.ll`, `select-or.ll`, `select-cc.ll`, and `select-cond.ll`. Current YSX backend line count is 26,038 versus RISCV's 136,068, and YSX focused tests are 48,096 lines. | AC-4 advanced by removing the reviewed final stale CCMOV/MIPS copied test surface; focused 4-test lit, focused 132-test YSX lit, YSX-only build, combined RISCV+YSX static build, smoke/negative probes, CCMOV/MIPS scan, stale-prefix scans, `git diff --check`, and RISCV zero-diff all pass pending Codex review. |
+| 27 review | Rejected full Round-27 completion while verifying the final stale test cleanup | Review confirmed the inactive `RV64I-CCMOV`/`RV64-MIPS` check blocks and `mips.ccmov` expectations are gone from YSX tests, and the Round-25 stale-prefix scan is clean. A broader source scan found residual copied MIPS/CCMov/load-store-pair scaffolding in `YSXSubtarget.*` and `YSXInstrInfo.*`, including `useMIPSCCMovInsn()` and `useMIPSLoadStorePairs()`, so AC-3 source pruning is still incomplete. | AC-4 is verified for the reviewed test blocker; AC-3 remains unmet and task3/task6 stay active for source cleanup plus revalidation. |
+| 28 | Removed residual copied MIPS/CCMov/load-store-pair source scaffolding | Deleted unused `useMIPSLoadStorePairs()`/`useMIPSCCMovInsn()` hooks from `YSXSubtarget.*` and dead load/store-pair helper declarations/definitions plus the stale MIPS comment from `YSXInstrInfo.*`. Current YSX backend line count is 25,987 versus RISCV's 136,068, and YSX focused tests are 48,096 lines. | AC-3 advanced by removing the reviewed source residue; YSX-only build, combined RISCV+YSX static build, focused 132-test YSX lit, smoke/negative probes, MIPS/CCMov source/test scan, stale-prefix scans, `git diff --check`, and RISCV zero-diff all pass pending Codex review. |
 
 #### Active Tasks
 <!-- Mainline tasks only: each task must directly advance the current round objective and carry routing metadata -->
 | Task | Target AC | Status | Tag | Owner | Notes |
 |------|-----------|--------|-----|-------|-------|
-| task5 follow-up: Trim stale inactive unsupported YSX test check blocks | AC-4 | implemented in Round 27, pending Codex review | coding | Claude | Remaining inactive `RV64I-CCMOV` and `RV64-MIPS` copied check blocks with `mips.ccmov` expectations were removed from `select-and.ll`, `select-or.ll`, `select-cc.ll`, and `select-cond.ll`; CCMOV/MIPS and stale-prefix scans are clean. |
-| task6: Revalidate after final source/test cleanup | AC-1, AC-2, AC-4 | implemented in Round 27, pending Codex review | coding | Claude | Focused changed-test lit, focused YSX lit suite, YSX-only build, RISCV+YSX combined build, smoke/negative probes, `git diff --check`, and RISCV source/test zero-diff all pass after the final stale-test cleanup. |
+| task3 follow-up: Remove residual copied MIPS/CCMov/load-store-pair source scaffolding | AC-3 | implemented in Round 28, pending Codex review | coding | Claude | Deleted the unused `useMIPSLoadStorePairs()`/`useMIPSCCMovInsn()` subtarget declarations and definitions, removed the dead load/store-pair helper declarations/definitions and stale MIPS comment from `YSXInstrInfo.*`, and confirmed no `MIPS`, `CCMov`, `ccmov`, or `mips.ccmov` source/test residue remains. |
+| task6: Revalidate after residual source cleanup | AC-1, AC-2, AC-3, AC-4 | implemented in Round 28, pending Codex review | coding | Claude | Focused YSX lit, YSX-only build, RISCV+YSX combined build, smoke/negative probes, `git diff --check`, RISCV source/test zero-diff, and broad MIPS/CCMov plus stale removed-surface scans all pass after deleting the residual source scaffolding. |
 
 ### Blocking Side Issues
 <!-- Only issues that directly block current mainline progress belong here -->
 | Issue | Discovered Round | Blocking AC | Resolution Path |
 |-------|-----------------|-------------|-----------------|
-| YSX-owned tests still contain inactive removed-extension check blocks | 24 review, expanded in 25 and 26 reviews | AC-4 | Addressed in Round 27 by removing the remaining inactive `RV64I-CCMOV`/`RV64-MIPS` copied select blocks with `mips.ccmov` expectations from the four reviewed YSX CodeGen tests; validation and scans now pass, pending Codex review. |
+| Residual copied MIPS/CCMov/load-store-pair source scaffolding remains in YSX | 27 review | AC-3 | Addressed in Round 28 by removing the unused `useMIPSLoadStorePairs()` and `useMIPSCCMovInsn()` hooks from `YSXSubtarget.*`, deleting the dead `YSXInstrInfo` load/store-pair helper declarations/definitions and stale MIPS comment, and revalidating builds/tests plus broad source/test scans, pending Codex review. |
 
 ### Queued Side Issues
 <!-- Non-blocking issues stay queued and must NOT replace the round objective -->
@@ -173,6 +175,7 @@ for deterministic verification.
 | AC-3, AC-4 | Round-22 selector-source pruning slice | 22 | 22 review partial | Review verified the named scaled-address, SHXADD, SiFive, and vector-combine selector markers have no YSX matches; retained `.insn` and smoke compile paths work; unsupported feature, CSR, scalable-vector IR, direct vector intrinsic, removed `.insn`, and `.insn r4` probes reject; `git diff --check HEAD^..HEAD` and RISCV zero-diff pass. Full lit could not be rerun in the Codex sandbox because the external Clang test exec root is read-only. |
 | AC-3, AC-4 | Round-23 SFB/scheduler/custom-ISD source-pruning slice | 23 | 23 review partial | Review verified the required source scan has no matches and the changed SFB/CCMOV/scheduler/custom-ISD residue is gone. Full completion is rejected because `.reloc` still accepts copied RISC-V compressed/vendor/custom relocation names, so task3/task6 remain active. |
 | AC-2, AC-3, AC-4 | Round-24 `.reloc` relocation-name pruning slice | 24 | 24 review partial | Review verified broad RISCV relocation-name imports are gone from YSX, reviewed compressed/vendor/custom/nonstandard `.reloc` names reject, retained `R_RISCV_32` `.reloc` assembles, `llvm/test/MC/YSX/unsupported-features.s` passes, `git diff --check HEAD^..HEAD` is clean, and RISCV diff remains zero. Full completion is rejected because stale inactive removed-extension check blocks remain in YSX tests. |
+| AC-4 | Round-27 final inactive CCMOV/MIPS select-check cleanup | 27 | 27 review | Review verified the inactive `RV64I-CCMOV` and `RV64-MIPS` copied check blocks with `mips.ccmov` expectations are gone from `select-and.ll`, `select-or.ll`, `select-cc.ll`, and `select-cond.ll`; the exact CCMOV/MIPS test scan and Round-25 stale-prefix scan are clean, and RISCV source/test zero-diff plus `git diff --check HEAD^..HEAD` pass. |
 
 ### Explicitly Deferred
 <!-- Items here require strong justification -->

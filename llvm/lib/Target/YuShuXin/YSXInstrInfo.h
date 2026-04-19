@@ -307,11 +307,6 @@ public:
 
   bool isHighLatencyDef(int Opc) const override;
 
-  /// Return true if pairing the given load or store may be paired with another.
-  static bool isPairableLdStInstOpc(unsigned Opc);
-
-  static bool isLdStSafeToPair(const MachineInstr &LdSt,
-                               const TargetRegisterInfo *TRI);
 #define GET_INSTRINFO_HELPER_DECLS
 #include "YSXGenInstrInfo.inc"
 

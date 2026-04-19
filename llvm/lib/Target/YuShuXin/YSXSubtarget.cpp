@@ -226,11 +226,3 @@ void YSXSubtarget::overridePostRASchedPolicy(
     Policy.OnlyBottomUp = false;
   }
 }
-
-bool YSXSubtarget::useMIPSLoadStorePairs() const {
-  return false;
-}
-
-bool YSXSubtarget::useMIPSCCMovInsn() const {
-  return false;
-}
