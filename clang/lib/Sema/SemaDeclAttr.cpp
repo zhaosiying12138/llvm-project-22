@@ -3421,9 +3421,13 @@ bool Sema::checkTargetAttr(SourceLocation LiteralLoc, StringRef AttrStr) {
 
   for (const auto &Feature : ParsedAttrs.Features) {
     auto CurFeature = StringRef(Feature).drop_front(); // remove + or -.
-    if (!Context.getTargetInfo().isValidFeatureName(CurFeature))
+    if (!Context.getTargetInfo().isValidFeatureName(CurFeature)) {
+      if (Context.getTargetInfo().getTriple().isYSX64())
+        return Diag(LiteralLoc, diag::err_invalid_feature_combination)
+               << "YSX only supports the rv64ima ISA";
       return Diag(LiteralLoc, diag::warn_unsupported_target_attribute)
              << Unsupported << None << CurFeature << Target;
+    }
   }
 
   TargetInfo::BranchProtectionInfo BPI{};

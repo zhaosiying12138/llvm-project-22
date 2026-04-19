@@ -345,6 +345,234 @@ YSX64TargetInfo::getTargetBuiltins() const {
   return {{&BuiltinStrings, BuiltinInfos}};
 }
 
+static constexpr const char *YSXUnsupportedFeatureMsg =
+    "YSX only supports the rv64ima ISA";
+static constexpr const char *YSXRequiredFeatureMsg =
+    "YSX requires the rv64ima ISA";
+
+static bool isYSXRequiredFeatureName(StringRef Feature) {
+  return Feature == "i" || Feature == "m" || Feature == "a" ||
+         Feature == "zmmul" || Feature == "zaamo" || Feature == "zalrsc" ||
+         Feature == "64bit";
+}
+
+static bool isYSXReservedGPRFeature(StringRef Feature) {
+  if (!Feature.consume_front("reserve-x"))
+    return false;
+
+  unsigned RegNo;
+  return !Feature.empty() && !Feature.getAsInteger(10, RegNo) && RegNo < 32;
+}
+
+static bool isYSXAllowedFeatureName(StringRef Feature) {
+  return isYSXRequiredFeatureName(Feature) || Feature == "relax" ||
+         isYSXReservedGPRFeature(Feature);
+}
+
+static bool isYSXAllowedUserFeatureName(StringRef Feature) {
+  return Feature != "64bit" && isYSXAllowedFeatureName(Feature);
+}
+
+static void appendYSXDefaultFeatures(std::vector<std::string> &Features) {
+  Features.push_back("+i");
+  Features.push_back("+m");
+  Features.push_back("+a");
+  Features.push_back("+zmmul");
+  Features.push_back("+zaamo");
+  Features.push_back("+zalrsc");
+}
+
+static bool appendNormalizedYSXFeature(StringRef RawFeature,
+                                       std::vector<std::string> &Features,
+                                       DiagnosticsEngine &Diags) {
+  if (RawFeature.empty())
+    return true;
+
+  bool Enable;
+  if (RawFeature.consume_front("+"))
+    Enable = true;
+  else if (RawFeature.consume_front("-"))
+    Enable = false;
+  else {
+    Diags.Report(diag::err_invalid_feature_combination)
+        << YSXUnsupportedFeatureMsg;
+    return false;
+  }
+
+  std::string LowerFeature = RawFeature.lower();
+  StringRef Feature(LowerFeature);
+  if (!isYSXAllowedFeatureName(Feature)) {
+    Diags.Report(diag::err_invalid_feature_combination)
+        << YSXUnsupportedFeatureMsg;
+    return false;
+  }
+
+  if (!Enable && isYSXRequiredFeatureName(Feature)) {
+    Diags.Report(diag::err_invalid_feature_combination)
+        << YSXRequiredFeatureMsg;
+    return false;
+  }
+
+  std::string NormalizedFeature;
+  NormalizedFeature.push_back(Enable ? '+' : '-');
+  NormalizedFeature += LowerFeature;
+  Features.push_back(std::move(NormalizedFeature));
+  return true;
+}
+
+static bool buildYSXFeatureList(const std::vector<std::string> &FeaturesVec,
+                                std::vector<std::string> &Features,
+                                DiagnosticsEngine &Diags) {
+  appendYSXDefaultFeatures(Features);
+  for (StringRef Feature : FeaturesVec)
+    if (!appendNormalizedYSXFeature(Feature, Features, Diags))
+      return false;
+  return true;
+}
+
+bool YSX64TargetInfo::validateAsmConstraint(
+    const char *&Name, TargetInfo::ConstraintInfo &Info) const {
+  switch (*Name) {
+  default:
+    return false;
+  case 'I':
+    Info.setRequiresImmediate(-2048, 2047);
+    return true;
+  case 'J':
+    Info.setRequiresImmediate(0);
+    return true;
+  case 'A':
+    Info.setAllowsMemory();
+    return true;
+  case 's':
+  case 'S':
+  case 'R':
+    Info.setAllowsRegister();
+    return true;
+  }
+}
+
+std::string YSX64TargetInfo::convertConstraint(const char *&Constraint) const {
+  if (*Constraint == 'c' || *Constraint == 'v')
+    return TargetInfo::convertConstraint(Constraint);
+  return RISCVTargetInfo::convertConstraint(Constraint);
+}
+
+bool YSX64TargetInfo::initFeatureMap(
+    llvm::StringMap<bool> &Features, DiagnosticsEngine &Diags, StringRef CPU,
+    const std::vector<std::string> &FeaturesVec) const {
+  Features["64bit"] = true;
+
+  std::vector<std::string> YSXFeatures;
+  if (!buildYSXFeatureList(FeaturesVec, YSXFeatures, Diags))
+    return false;
+
+  return TargetInfo::initFeatureMap(Features, Diags, CPU, YSXFeatures);
+}
+
+bool YSX64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
+                                           DiagnosticsEngine &Diags) {
+  std::vector<std::string> YSXFeatures;
+  if (!buildYSXFeatureList(Features, YSXFeatures, Diags))
+    return false;
+
+  std::vector<std::string> ISAFeatures;
+  appendYSXDefaultFeatures(ISAFeatures);
+  auto ParseResult = llvm::RISCVISAInfo::parseFeatures(64, ISAFeatures);
+  if (!ParseResult) {
+    std::string Buffer;
+    llvm::raw_string_ostream OutputErrMsg(Buffer);
+    handleAllErrors(ParseResult.takeError(), [&](llvm::StringError &ErrMsg) {
+      OutputErrMsg << ErrMsg.getMessage();
+    });
+    Diags.Report(diag::err_invalid_feature_combination) << OutputErrMsg.str();
+    return false;
+  }
+  ISAInfo = std::move(*ParseResult);
+
+  if (ABI.empty())
+    ABI = "lp64";
+  return true;
+}
+
+static void handleYSXArchExtension(StringRef AttrString,
+                                   std::vector<std::string> &Features) {
+  SmallVector<StringRef, 4> Exts;
+  AttrString.split(Exts, ",");
+  for (StringRef Ext : Exts) {
+    Ext = Ext.trim();
+    if (Ext.empty())
+      continue;
+
+    char Sign = Ext.front();
+    if (Sign != '+' && Sign != '-') {
+      Features.push_back(Ext.str());
+      continue;
+    }
+
+    StringRef ExtName = Ext.drop_front();
+    std::string TargetFeature =
+        llvm::RISCVISAInfo::getTargetFeatureForExtension(ExtName);
+    if (TargetFeature.empty())
+      TargetFeature = ExtName.lower();
+
+    std::string Feature;
+    Feature.push_back(Sign);
+    Feature += TargetFeature;
+    Features.push_back(std::move(Feature));
+  }
+}
+
+ParsedTargetAttr YSX64TargetInfo::parseTargetAttr(StringRef Features) const {
+  ParsedTargetAttr Ret;
+  if (Features == "default")
+    return Ret;
+
+  SmallVector<StringRef, 4> AttrFeatures;
+  Features.split(AttrFeatures, ";");
+  bool FoundArch = false;
+
+  for (StringRef Feature : AttrFeatures) {
+    Feature = Feature.trim();
+    StringRef AttrString = Feature.split("=").second.trim();
+
+    if (Feature.starts_with("arch=")) {
+      Ret.Features.clear();
+      if (FoundArch)
+        Ret.Duplicate = "arch=";
+      FoundArch = true;
+
+      if (AttrString.starts_with("+") || AttrString.starts_with("-")) {
+        handleYSXArchExtension(AttrString, Ret.Features);
+      } else if (AttrString.lower() == "rv64ima") {
+        appendYSXDefaultFeatures(Ret.Features);
+      } else {
+        std::string InvalidArch = "+";
+        InvalidArch += AttrString.lower();
+        Ret.Features.push_back(std::move(InvalidArch));
+      }
+    } else if (Feature.starts_with("cpu=")) {
+      if (!Ret.CPU.empty())
+        Ret.Duplicate = "cpu=";
+      Ret.CPU = AttrString;
+    } else if (Feature.starts_with("tune=")) {
+      if (!Ret.Tune.empty())
+        Ret.Duplicate = "tune=";
+      Ret.Tune = AttrString;
+    } else if (Feature.starts_with("priority")) {
+      // Priority is only used for function multiversioning.
+    } else if (Feature.starts_with("+") || Feature.starts_with("-")) {
+      handleYSXArchExtension(Feature, Ret.Features);
+    }
+  }
+  return Ret;
+}
+
+bool YSX64TargetInfo::isValidFeatureName(StringRef Name) const {
+  std::string LowerName = Name.lower();
+  return isYSXAllowedUserFeatureName(LowerName);
+}
+
 bool RISCVTargetInfo::initFeatureMap(
     llvm::StringMap<bool> &Features, DiagnosticsEngine &Diags, StringRef CPU,
     const std::vector<std::string> &FeaturesVec) const {

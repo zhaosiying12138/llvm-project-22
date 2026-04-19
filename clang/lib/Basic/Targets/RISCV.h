@@ -30,7 +30,7 @@ protected:
   std::unique_ptr<llvm::RISCVISAInfo> ISAInfo;
 
 private:
-  bool FastScalarUnalignedAccess;
+  bool FastScalarUnalignedAccess = false;
   bool HasExperimental = false;
 
 public:
@@ -248,6 +248,21 @@ public:
   }
 
   llvm::SmallVector<Builtin::InfosShard> getTargetBuiltins() const override;
+
+  bool validateAsmConstraint(const char *&Name,
+                             TargetInfo::ConstraintInfo &Info) const override;
+  std::string convertConstraint(const char *&Constraint) const override;
+
+  bool
+  initFeatureMap(llvm::StringMap<bool> &Features, DiagnosticsEngine &Diags,
+                 StringRef CPU,
+                 const std::vector<std::string> &FeaturesVec) const override;
+
+  bool handleTargetFeatures(std::vector<std::string> &Features,
+                            DiagnosticsEngine &Diags) override;
+
+  ParsedTargetAttr parseTargetAttr(StringRef Str) const override;
+  bool isValidFeatureName(StringRef Name) const override;
 
   CallingConvCheckResult checkCallingConvention(CallingConv CC) const override {
     return CC == CC_C ? CCCR_OK : CCCR_Warning;

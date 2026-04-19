@@ -9,6 +9,13 @@
 // RUN: not %clang --target=ysx64 -mabi=lp64d -c %s 2>&1 | FileCheck %s --check-prefix=ABIERR
 // RUN: printf 'typedef __rvv_int8m1_t t;\n' | not %clang --target=ysx64-unknown-elf -x c -fsyntax-only - 2>&1 | FileCheck %s --check-prefix=VTYPE
 // RUN: printf 'void f(void){ (void)__builtin_rvv_vsetvli(0, 0, 0); }\n' | not %clang --target=ysx64-unknown-elf -x c -fsyntax-only - 2>&1 | FileCheck %s --check-prefix=VBUILTIN
+// RUN: printf 'void f(void) __attribute__((target("arch=rv64ima"))); void f(void){}\n' | %clang --target=ysx64-unknown-elf -S -emit-llvm -x c - -o - | FileCheck %s --check-prefix=ATTRIR --implicit-check-not="+v" --implicit-check-not="+f" --implicit-check-not="+d" --implicit-check-not="+zve" --implicit-check-not="+zvl"
+// RUN: printf 'void f(void) __attribute__((target("arch=+v"))); void f(void){}\n' | not %clang --target=ysx64-unknown-elf -S -emit-llvm -x c - -o - 2>&1 | FileCheck %s --check-prefix=ATTRERR --implicit-check-not="target-features"
+// RUN: printf 'void f(void) __attribute__((target("arch=rv64imaf"))); void f(void){}\n' | not %clang --target=ysx64-unknown-elf -S -emit-llvm -x c - -o - 2>&1 | FileCheck %s --check-prefix=ATTRERR --implicit-check-not="target-features"
+// RUN: printf 'void f(void) __attribute__((target("arch=+64bit"))); void f(void){}\n' | not %clang --target=ysx64-unknown-elf -S -emit-llvm -x c - -o - 2>&1 | FileCheck %s --check-prefix=ATTRERR --implicit-check-not="target-features"
+// RUN: not %clang --target=ysx64-unknown-elf -Xclang -target-feature -Xclang +v -dM -E -x c /dev/null 2>&1 | FileCheck %s --check-prefix=FEATUREERR --implicit-check-not=__riscv_vector --implicit-check-not=__riscv_v
+// RUN: printf 'void f(double x){ asm volatile("" :: "f"(x)); }\n' | not %clang --target=ysx64-unknown-elf -x c -fsyntax-only - 2>&1 | FileCheck %s --check-prefix=ASMFP
+// RUN: printf 'void f(long x){ asm volatile("" :: "vr"(x)); }\n' | not %clang --target=ysx64-unknown-elf -x c -fsyntax-only - 2>&1 | FileCheck %s --check-prefix=ASMV
 
 // CHECK: "-target-cpu" "generic-rv64"
 // CHECK: "-target-feature" "+i"
@@ -38,5 +45,10 @@
 // ABIERR: unsupported argument 'lp64d' to option '-mabi='
 // VTYPE: error: unknown type name '__rvv_int8m1_t'
 // VBUILTIN: error: use of unknown builtin '__builtin_rvv_vsetvli'
+// ATTRIR: "target-features"="+64bit,+a,+i,+m,+relax,+zaamo,+zalrsc,+zmmul"
+// ATTRERR: error: invalid feature combination: YSX only supports the rv64ima ISA
+// FEATUREERR: error: invalid feature combination: YSX only supports the rv64ima ISA
+// ASMFP: error: invalid input constraint 'f' in asm
+// ASMV: error: invalid input constraint 'vr' in asm
 
 int x;
