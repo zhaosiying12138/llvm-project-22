@@ -26,14 +26,9 @@ enum : uint8_t {
   // The IsVRegClass value of this RegisterClass.
   IsVRegClassShift = 0,
   IsVRegClassShiftMask = 0b1 << IsVRegClassShift,
-  // The VLMul value of this RegisterClass. This value is valid iff IsVRegClass
-  // is true.
-  VLMulShift = IsVRegClassShift + 1,
-  VLMulShiftMask = 0b11 << VLMulShift,
-
   // The NF value of this RegisterClass. This value is valid iff IsVRegClass is
   // true.
-  NFShift = VLMulShift + 2,
+  NFShift = IsVRegClassShift + 1,
   NFShiftMask = 0b111 << NFShift,
 };
 
@@ -47,12 +42,6 @@ enum {
 /// \returns the IsVRegClass for the register class.
 static inline bool isVRegClass(uint8_t TSFlags) {
   return (TSFlags & IsVRegClassShiftMask) >> IsVRegClassShift;
-}
-
-/// \returns the LMUL for the register class.
-static inline RISCVVType::VLMUL getLMul(uint8_t TSFlags) {
-  return static_cast<RISCVVType::VLMUL>((TSFlags & VLMulShiftMask) >>
-                                        VLMulShift);
 }
 
 /// \returns the NF for the register class.

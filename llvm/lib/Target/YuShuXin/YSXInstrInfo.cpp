@@ -1582,268 +1582,30 @@ MachineTraceStrategy YSXInstrInfo::getMachineCombinerTraceStrategy() const {
 
 void YSXInstrInfo::finalizeInsInstrs(
     MachineInstr &Root, unsigned &Pattern,
-    SmallVectorImpl<MachineInstr *> &InsInstrs) const {
-#if 0
-  int16_t FrmOpIdx =
-      YSX::getNamedOperandIdx(Root.getOpcode(), YSX::OpName::frm);
-  if (FrmOpIdx < 0) {
-    assert(all_of(InsInstrs,
-                  [](MachineInstr *MI) {
-                    return YSX::getNamedOperandIdx(MI->getOpcode(),
-                                                     YSX::OpName::frm) < 0;
-                  }) &&
-           "New instructions require FRM whereas the old one does not have it");
-    return;
-  }
-
-  const MachineOperand &FRM = Root.getOperand(FrmOpIdx);
-  MachineFunction &MF = *Root.getMF();
-
-  for (auto *NewMI : InsInstrs) {
-    // We'd already added the FRM operand.
-    if (static_cast<unsigned>(YSX::getNamedOperandIdx(
-            NewMI->getOpcode(), YSX::OpName::frm)) != NewMI->getNumOperands())
-      continue;
-    MachineInstrBuilder MIB(MF, NewMI);
-    MIB.add(FRM);
-    if (FRM.getImm() == YSXFPRndMode::DYN)
-      MIB.addUse(YSX::FRM, RegState::Implicit);
-  }
-#endif
-}
+    SmallVectorImpl<MachineInstr *> &InsInstrs) const {}
 
 static bool isFADD(unsigned Opc) {
-#if 0
-  switch (Opc) {
-  default:
-    return false;
-  case YSX::FADD_H:
-  case YSX::FADD_S:
-  case YSX::FADD_D:
-    return true;
-  }
-#endif
   return false;
 }
-
-#if 0
-static bool isFSUB(unsigned Opc) {
-#if 0
-  switch (Opc) {
-  default:
-    return false;
-  case YSX::FSUB_H:
-  case YSX::FSUB_S:
-  case YSX::FSUB_D:
-    return true;
-  }
-#endif
-  return false;
-}
-#endif
 
 static bool isFMUL(unsigned Opc) {
-#if 0
-  switch (Opc) {
-  default:
-    return false;
-  case YSX::FMUL_H:
-  case YSX::FMUL_S:
-  case YSX::FMUL_D:
-    return true;
-  }
-#endif
   return false;
 }
 
 bool YSXInstrInfo::isVectorAssociativeAndCommutative(const MachineInstr &Inst,
                                                        bool Invert) const {
-#if 0
-#define OPCODE_LMUL_CASE(OPC)                                                  \
-  case YSX::OPC##_M1:                                                        \
-  case YSX::OPC##_M2:                                                        \
-  case YSX::OPC##_M4:                                                        \
-  case YSX::OPC##_M8:                                                        \
-  case YSX::OPC##_MF2:                                                       \
-  case YSX::OPC##_MF4:                                                       \
-  case YSX::OPC##_MF8
-
-#define OPCODE_LMUL_MASK_CASE(OPC)                                             \
-  case YSX::OPC##_M1_MASK:                                                   \
-  case YSX::OPC##_M2_MASK:                                                   \
-  case YSX::OPC##_M4_MASK:                                                   \
-  case YSX::OPC##_M8_MASK:                                                   \
-  case YSX::OPC##_MF2_MASK:                                                  \
-  case YSX::OPC##_MF4_MASK:                                                  \
-  case YSX::OPC##_MF8_MASK
-
-  unsigned Opcode = Inst.getOpcode();
-  if (Invert) {
-    if (auto InvOpcode = getInverseOpcode(Opcode))
-      Opcode = *InvOpcode;
-    else
-      return false;
-  }
-
-  // clang-format off
-  switch (Opcode) {
-  default:
-    return false;
-  OPCODE_LMUL_CASE(PseudoVADD_VV):
-  OPCODE_LMUL_MASK_CASE(PseudoVADD_VV):
-  OPCODE_LMUL_CASE(PseudoVMUL_VV):
-  OPCODE_LMUL_MASK_CASE(PseudoVMUL_VV):
-    return true;
-  }
-  // clang-format on
-
-#undef OPCODE_LMUL_MASK_CASE
-#undef OPCODE_LMUL_CASE
-#endif
   return false;
 }
 
 bool YSXInstrInfo::areYSXVecInstsReassociable(const MachineInstr &Root,
                                              const MachineInstr &Prev) const {
   return false;
-#if 0
-  if (!areOpcodesEqualOrInverse(Root.getOpcode(), Prev.getOpcode()))
-    return false;
-
-  assert(Root.getMF() == Prev.getMF());
-  const MachineRegisterInfo *MRI = &Root.getMF()->getRegInfo();
-  const TargetRegisterInfo *TRI = MRI->getTargetRegisterInfo();
-
-  // Make sure vtype operands are also the same.
-  const MCInstrDesc &Desc = get(Root.getOpcode());
-  const uint64_t TSFlags = Desc.TSFlags;
-
-  auto checkImmOperand = [&](unsigned OpIdx) {
-    return Root.getOperand(OpIdx).getImm() == Prev.getOperand(OpIdx).getImm();
-  };
-
-  auto checkRegOperand = [&](unsigned OpIdx) {
-    return Root.getOperand(OpIdx).getReg() == Prev.getOperand(OpIdx).getReg();
-  };
-
-  // PassThru
-  // TODO: Potentially we can loosen the condition to consider Root to be
-  // associable with Prev if Root has NoReg as passthru. In which case we
-  // also need to loosen the condition on vector policies between these.
-  if (!checkRegOperand(1))
-    return false;
-
-  // SEW
-  if (YSXII::hasSEWOp(TSFlags) &&
-      !checkImmOperand(YSXII::getSEWOpNum(Desc)))
-    return false;
-
-  // Mask
-  if (YSXII::usesMaskPolicy(TSFlags)) {
-    const MachineBasicBlock *MBB = Root.getParent();
-    const MachineBasicBlock::const_reverse_iterator It1(&Root);
-    const MachineBasicBlock::const_reverse_iterator It2(&Prev);
-    Register MI1VReg;
-
-    bool SeenMI2 = false;
-    for (auto End = MBB->rend(), It = It1; It != End; ++It) {
-      if (It == It2) {
-        SeenMI2 = true;
-        if (!MI1VReg.isValid())
-          // There is no V0 def between Root and Prev; they're sharing the
-          // same V0.
-          break;
-      }
-
-      if (It->modifiesRegister(YSX::V0, TRI)) {
-        Register SrcReg = It->getOperand(1).getReg();
-        // If it's not VReg it'll be more difficult to track its defs, so
-        // bailing out here just to be safe.
-        if (!SrcReg.isVirtual())
-          return false;
-
-        if (!MI1VReg.isValid()) {
-          // This is the V0 def for Root.
-          MI1VReg = SrcReg;
-          continue;
-        }
-
-        // Some random mask updates.
-        if (!SeenMI2)
-          continue;
-
-        // This is the V0 def for Prev; check if it's the same as that of
-        // Root.
-        if (MI1VReg != SrcReg)
-          return false;
-        else
-          break;
-      }
-    }
-
-    // If we haven't encountered Prev, it's likely that this function was
-    // called in a wrong way (e.g. Root is before Prev).
-    assert(SeenMI2 && "Prev is expected to appear before Root");
-  }
-
-  // Tail / Mask policies
-  if (YSXII::hasVecPolicyOp(TSFlags) &&
-      !checkImmOperand(YSXII::getVecPolicyOpNum(Desc)))
-    return false;
-
-  // VL
-  if (YSXII::hasVLOp(TSFlags)) {
-    unsigned OpIdx = YSXII::getVLOpNum(Desc);
-    const MachineOperand &Op1 = Root.getOperand(OpIdx);
-    const MachineOperand &Op2 = Prev.getOperand(OpIdx);
-    if (Op1.getType() != Op2.getType())
-      return false;
-    switch (Op1.getType()) {
-    case MachineOperand::MO_Register:
-      if (Op1.getReg() != Op2.getReg())
-        return false;
-      break;
-    case MachineOperand::MO_Immediate:
-      if (Op1.getImm() != Op2.getImm())
-        return false;
-      break;
-    default:
-      llvm_unreachable("Unrecognized VL operand type");
-    }
-  }
-
-  // Rounding modes
-  if (YSXII::hasRoundModeOp(TSFlags) &&
-      !checkImmOperand(YSXII::getVLOpNum(Desc) - 1))
-    return false;
-
-  return true;
-#endif
 }
 
-// Most of our YSXVec pseudos have passthru operand, so the real operands
-// start from index = 2.
 bool YSXInstrInfo::hasReassociableVectorSibling(const MachineInstr &Inst,
                                                   bool &Commuted) const {
-  const MachineBasicBlock *MBB = Inst.getParent();
-  const MachineRegisterInfo &MRI = MBB->getParent()->getRegInfo();
-  assert(YSXII::isFirstDefTiedToFirstUse(get(Inst.getOpcode())) &&
-         "Expect the present of passthrough operand.");
-  MachineInstr *MI1 = MRI.getUniqueVRegDef(Inst.getOperand(2).getReg());
-  MachineInstr *MI2 = MRI.getUniqueVRegDef(Inst.getOperand(3).getReg());
-
-  // If only one operand has the same or inverse opcode and it's the second
-  // source operand, the operands must be commuted.
-  Commuted = !areYSXVecInstsReassociable(Inst, *MI1) &&
-             areYSXVecInstsReassociable(Inst, *MI2);
-  if (Commuted)
-    std::swap(MI1, MI2);
-
-  return areYSXVecInstsReassociable(Inst, *MI1) &&
-         (isVectorAssociativeAndCommutative(*MI1) ||
-          isVectorAssociativeAndCommutative(*MI1, /* Invert */ true)) &&
-         hasReassociableOperands(*MI1, MBB) &&
-         MRI.hasOneNonDBGUse(MI1->getOperand(0).getReg());
+  Commuted = false;
+  return false;
 }
 
 bool YSXInstrInfo::hasReassociableOperands(
@@ -1873,27 +1635,15 @@ void YSXInstrInfo::getReassociateOperandIndices(
     const MachineInstr &Root, unsigned Pattern,
     std::array<unsigned, 5> &OperandIndices) const {
   TargetInstrInfo::getReassociateOperandIndices(Root, Pattern, OperandIndices);
-  if (YSX::getYSXVecMCOpcode(Root.getOpcode())) {
-    // Skip the passthrough operand, so increment all indices by one.
-    for (unsigned I = 0; I < 5; ++I)
-      ++OperandIndices[I];
-  }
 }
 
 bool YSXInstrInfo::hasReassociableSibling(const MachineInstr &Inst,
                                             bool &Commuted) const {
-  if (isVectorAssociativeAndCommutative(Inst) ||
-      isVectorAssociativeAndCommutative(Inst, /*Invert=*/true))
-    return hasReassociableVectorSibling(Inst, Commuted);
-
   return TargetInstrInfo::hasReassociableSibling(Inst, Commuted);
 }
 
 bool YSXInstrInfo::isAssociativeAndCommutative(const MachineInstr &Inst,
                                                  bool Invert) const {
-  if (isVectorAssociativeAndCommutative(Inst, Invert))
-    return true;
-
   unsigned Opc = Inst.getOpcode();
   if (Invert) {
     auto InverseOpcode = getInverseOpcode(Opc);
@@ -1936,74 +1686,6 @@ bool YSXInstrInfo::isAssociativeAndCommutative(const MachineInstr &Inst,
 
 std::optional<unsigned>
 YSXInstrInfo::getInverseOpcode(unsigned Opcode) const {
-#if 0
-#define YSXVec_OPC_LMUL_CASE(OPC, INV)                                            \
-  case YSX::OPC##_M1:                                                        \
-    return YSX::INV##_M1;                                                    \
-  case YSX::OPC##_M2:                                                        \
-    return YSX::INV##_M2;                                                    \
-  case YSX::OPC##_M4:                                                        \
-    return YSX::INV##_M4;                                                    \
-  case YSX::OPC##_M8:                                                        \
-    return YSX::INV##_M8;                                                    \
-  case YSX::OPC##_MF2:                                                       \
-    return YSX::INV##_MF2;                                                   \
-  case YSX::OPC##_MF4:                                                       \
-    return YSX::INV##_MF4;                                                   \
-  case YSX::OPC##_MF8:                                                       \
-    return YSX::INV##_MF8
-
-#define YSXVec_OPC_LMUL_MASK_CASE(OPC, INV)                                       \
-  case YSX::OPC##_M1_MASK:                                                   \
-    return YSX::INV##_M1_MASK;                                               \
-  case YSX::OPC##_M2_MASK:                                                   \
-    return YSX::INV##_M2_MASK;                                               \
-  case YSX::OPC##_M4_MASK:                                                   \
-    return YSX::INV##_M4_MASK;                                               \
-  case YSX::OPC##_M8_MASK:                                                   \
-    return YSX::INV##_M8_MASK;                                               \
-  case YSX::OPC##_MF2_MASK:                                                  \
-    return YSX::INV##_MF2_MASK;                                              \
-  case YSX::OPC##_MF4_MASK:                                                  \
-    return YSX::INV##_MF4_MASK;                                              \
-  case YSX::OPC##_MF8_MASK:                                                  \
-    return YSX::INV##_MF8_MASK
-
-  switch (Opcode) {
-  default:
-    return std::nullopt;
-  case YSX::FADD_H:
-    return YSX::FSUB_H;
-  case YSX::FADD_S:
-    return YSX::FSUB_S;
-  case YSX::FADD_D:
-    return YSX::FSUB_D;
-  case YSX::FSUB_H:
-    return YSX::FADD_H;
-  case YSX::FSUB_S:
-    return YSX::FADD_S;
-  case YSX::FSUB_D:
-    return YSX::FADD_D;
-  case YSX::ADD:
-    return YSX::SUB;
-  case YSX::SUB:
-    return YSX::ADD;
-  case YSX::ADDW:
-    return YSX::SUBW;
-  case YSX::SUBW:
-    return YSX::ADDW;
-    // clang-format off
-  YSXVec_OPC_LMUL_CASE(PseudoVADD_VV, PseudoVSUB_VV);
-  YSXVec_OPC_LMUL_MASK_CASE(PseudoVADD_VV, PseudoVSUB_VV);
-  YSXVec_OPC_LMUL_CASE(PseudoVSUB_VV, PseudoVADD_VV);
-  YSXVec_OPC_LMUL_MASK_CASE(PseudoVSUB_VV, PseudoVADD_VV);
-    // clang-format on
-  }
-
-#undef YSXVec_OPC_LMUL_MASK_CASE
-#undef YSXVec_OPC_LMUL_CASE
-#endif
-
   switch (Opcode) {
   default:
     return std::nullopt;

@@ -22826,7 +22826,8 @@ static MachineBasicBlock *emitVFROUND_NOEXCEPT_MASK(MachineInstr &MI,
                                      /*IsImp*/ true));
 
   // Emit a VFCVT_F_X
-  RISCVVType::VLMUL LMul = YSXII::getLMul(MI.getDesc().TSFlags);
+  RISCVVType::VLMUL LMul =
+      static_cast<RISCVVType::VLMUL>(YSXII::getLMul(MI.getDesc().TSFlags));
   unsigned Log2SEW = MI.getOperand(YSXII::getSEWOpNum(MI.getDesc())).getImm();
   // There is no E8 variant for VFCVT_F_X.
   assert(Log2SEW >= 4);
