@@ -532,68 +532,9 @@ bool YSXRegisterInfo::getRegAllocationHints(
 
   // This is all of the compressible binary instructions. If an instruction
   // needs GPRC register class operands \p NeedGPRC will be set to true.
-  auto isCompressible = [](const MachineInstr &MI, bool &NeedGPRC) {
+  auto isCompressible = [](const MachineInstr &, bool &NeedGPRC) {
     NeedGPRC = false;
     return false;
-#if 0
-    switch (MI.getOpcode()) {
-    default:
-      return false;
-    case YSX::AND:
-    case YSX::OR:
-    case YSX::XOR:
-    case YSX::SUB:
-    case YSX::ADDW:
-    case YSX::SUBW:
-      NeedGPRC = true;
-      return true;
-    case YSX::ANDI: {
-      NeedGPRC = true;
-      if (!MI.getOperand(2).isImm())
-        return false;
-      int64_t Imm = MI.getOperand(2).getImm();
-      if (isInt<6>(Imm))
-        return true;
-      // c.zext.b
-      return Subtarget.hasStdExtZcb() && Imm == 255;
-    }
-    case YSX::SRAI:
-    case YSX::SRLI:
-      NeedGPRC = true;
-      return true;
-    case YSX::ADD:
-    case YSX::SLLI:
-      return true;
-    case YSX::ADDI:
-    case YSX::ADDIW:
-      return MI.getOperand(2).isImm() && isInt<6>(MI.getOperand(2).getImm());
-    case YSX::MUL:
-    case YSX::SEXT_B:
-    case YSX::SEXT_H:
-    case YSX::ZEXT_H_RV32:
-    case YSX::ZEXT_H_RV64:
-      // c.mul, c.sext.b, c.sext.h, c.zext.h
-      NeedGPRC = true;
-      return Subtarget.hasStdExtZcb();
-    case YSX::ADD_UW:
-      // c.zext.w
-      NeedGPRC = true;
-      return Subtarget.hasStdExtZcb() && MI.getOperand(2).isReg() &&
-             MI.getOperand(2).getReg() == YSX::X0;
-    case YSX::XORI:
-      // c.not
-      NeedGPRC = true;
-      return Subtarget.hasStdExtZcb() && MI.getOperand(2).isImm() &&
-             MI.getOperand(2).getImm() == -1;
-    case YSX::QC_EXTU:
-      return MI.getOperand(2).getImm() >= 6 && MI.getOperand(3).getImm() == 0;
-    case YSX::BSETI:
-    case YSX::BEXTI:
-      // qc.c.bseti, qc.c.bexti
-      NeedGPRC = true;
-      return Subtarget.hasVendorXRemovedQcibm() && MI.getOperand(2).getImm() != 0;
-    }
-#endif
   };
 
   // Returns true if this operand is compressible. For non-registers it always

@@ -2939,9 +2939,6 @@ static SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
 
   SDLoc DL(Op);
 
-  if (false && Subtarget.isRV32() && Subtarget.enablePExtSIMDCodeGen()) {
-  }
-
   // Proper support for f16 requires Zvfh. bf16 always requires special
   // handling. We need to cast the scalar to integer and create an integer
   // build_vector.

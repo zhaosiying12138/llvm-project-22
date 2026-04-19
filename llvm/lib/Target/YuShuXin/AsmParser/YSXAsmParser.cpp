@@ -3200,94 +3200,11 @@ void YSXAsmParser::emitPseudoExtend(MCInst &Inst, bool SignExtend,
 
 void YSXAsmParser::emitVMSGE(MCInst &Inst, unsigned Opcode, SMLoc IDLoc,
                                MCStreamer &Out) {
+  (void)Inst;
+  (void)Opcode;
+  (void)IDLoc;
+  (void)Out;
   return;
-#if 0
-  if (Inst.getNumOperands() == 3) {
-    // unmasked va >= x
-    //
-    //  pseudoinstruction: vmsge{u}.vx vd, va, x
-    //  expansion: vmslt{u}.vx vd, va, x; vmnand.mm vd, vd, vd
-    emitToStreamer(Out, MCInstBuilder(Opcode)
-                            .addOperand(Inst.getOperand(0))
-                            .addOperand(Inst.getOperand(1))
-                            .addOperand(Inst.getOperand(2))
-                            .addReg(MCRegister())
-                            .setLoc(IDLoc));
-    emitToStreamer(Out, MCInstBuilder(YSX::VMNAND_MM)
-                            .addOperand(Inst.getOperand(0))
-                            .addOperand(Inst.getOperand(0))
-                            .addOperand(Inst.getOperand(0))
-                            .setLoc(IDLoc));
-  } else if (Inst.getNumOperands() == 4) {
-    // masked va >= x, vd != v0
-    //
-    //  pseudoinstruction: vmsge{u}.vx vd, va, x, v0.t
-    //  expansion: vmslt{u}.vx vd, va, x, v0.t; vmxor.mm vd, vd, v0
-    assert(Inst.getOperand(0).getReg() != YSX::V0 &&
-           "The destination register should not be V0.");
-    emitToStreamer(Out, MCInstBuilder(Opcode)
-                            .addOperand(Inst.getOperand(0))
-                            .addOperand(Inst.getOperand(1))
-                            .addOperand(Inst.getOperand(2))
-                            .addOperand(Inst.getOperand(3))
-                            .setLoc(IDLoc));
-    emitToStreamer(Out, MCInstBuilder(YSX::VMXOR_MM)
-                            .addOperand(Inst.getOperand(0))
-                            .addOperand(Inst.getOperand(0))
-                            .addReg(YSX::V0)
-                            .setLoc(IDLoc));
-  } else if (Inst.getNumOperands() == 5 &&
-             Inst.getOperand(0).getReg() == YSX::V0) {
-    // masked va >= x, vd == v0
-    //
-    //  pseudoinstruction: vmsge{u}.vx vd, va, x, v0.t, vt
-    //  expansion: vmslt{u}.vx vt, va, x;  vmandn.mm vd, vd, vt
-    assert(Inst.getOperand(0).getReg() == YSX::V0 &&
-           "The destination register should be V0.");
-    assert(Inst.getOperand(1).getReg() != YSX::V0 &&
-           "The temporary vector register should not be V0.");
-    emitToStreamer(Out, MCInstBuilder(Opcode)
-                            .addOperand(Inst.getOperand(1))
-                            .addOperand(Inst.getOperand(2))
-                            .addOperand(Inst.getOperand(3))
-                            .addReg(MCRegister())
-                            .setLoc(IDLoc));
-    emitToStreamer(Out, MCInstBuilder(YSX::VMANDN_MM)
-                            .addOperand(Inst.getOperand(0))
-                            .addOperand(Inst.getOperand(0))
-                            .addOperand(Inst.getOperand(1))
-                            .setLoc(IDLoc));
-  } else if (Inst.getNumOperands() == 5) {
-    // masked va >= x, any vd
-    //
-    // pseudoinstruction: vmsge{u}.vx vd, va, x, v0.t, vt
-    // expansion: vmslt{u}.vx vt, va, x; vmandn.mm vt, v0, vt;
-    //            vmandn.mm vd, vd, v0;  vmor.mm vd, vt, vd
-    assert(Inst.getOperand(1).getReg() != YSX::V0 &&
-           "The temporary vector register should not be V0.");
-    emitToStreamer(Out, MCInstBuilder(Opcode)
-                            .addOperand(Inst.getOperand(1))
-                            .addOperand(Inst.getOperand(2))
-                            .addOperand(Inst.getOperand(3))
-                            .addReg(MCRegister())
-                            .setLoc(IDLoc));
-    emitToStreamer(Out, MCInstBuilder(YSX::VMANDN_MM)
-                            .addOperand(Inst.getOperand(1))
-                            .addReg(YSX::V0)
-                            .addOperand(Inst.getOperand(1))
-                            .setLoc(IDLoc));
-    emitToStreamer(Out, MCInstBuilder(YSX::VMANDN_MM)
-                            .addOperand(Inst.getOperand(0))
-                            .addOperand(Inst.getOperand(0))
-                            .addReg(YSX::V0)
-                            .setLoc(IDLoc));
-    emitToStreamer(Out, MCInstBuilder(YSX::VMOR_MM)
-                            .addOperand(Inst.getOperand(0))
-                            .addOperand(Inst.getOperand(1))
-                            .addOperand(Inst.getOperand(0))
-                            .setLoc(IDLoc));
-  }
-#endif
 }
 
 bool YSXAsmParser::checkPseudoAddTPRel(MCInst &Inst,
@@ -3460,68 +3377,6 @@ bool YSXAsmParser::processInstruction(MCInst &Inst, SMLoc IDLoc,
   case YSX::PseudoZEXT_W:
     emitPseudoExtend(Inst, /*SignExtend=*/false, /*Width=*/32, IDLoc, Out);
     return false;
-#if 0
-  case YSX::PseudoVMSGEU_VX:
-  case YSX::PseudoVMSGEU_VX_M:
-  case YSX::PseudoVMSGEU_VX_M_T:
-    emitVMSGE(Inst, YSX::VMSLTU_VX, IDLoc, Out);
-    return false;
-  case YSX::PseudoVMSGE_VX:
-  case YSX::PseudoVMSGE_VX_M:
-  case YSX::PseudoVMSGE_VX_M_T:
-    emitVMSGE(Inst, YSX::VMSLT_VX, IDLoc, Out);
-    return false;
-  case YSX::PseudoVMSGE_VI:
-  case YSX::PseudoVMSLT_VI: {
-    // These instructions are signed and so is immediate so we can subtract one
-    // and change the opcode.
-    int64_t Imm = Inst.getOperand(2).getImm();
-    unsigned Opc = Inst.getOpcode() == YSX::PseudoVMSGE_VI ? YSX::VMSGT_VI
-                                                             : YSX::VMSLE_VI;
-    emitToStreamer(Out, MCInstBuilder(Opc)
-                            .addOperand(Inst.getOperand(0))
-                            .addOperand(Inst.getOperand(1))
-                            .addImm(Imm - 1)
-                            .addOperand(Inst.getOperand(3))
-                            .setLoc(IDLoc));
-    return false;
-  }
-  case YSX::PseudoVMSGEU_VI:
-  case YSX::PseudoVMSLTU_VI: {
-    int64_t Imm = Inst.getOperand(2).getImm();
-    // Unsigned comparisons are tricky because the immediate is signed. If the
-    // immediate is 0 we can't just subtract one. vmsltu.vi v0, v1, 0 is always
-    // false, but vmsle.vi v0, v1, -1 is always true. Instead we use
-    // vmsne v0, v1, v1 which is always false.
-    if (Imm == 0) {
-      unsigned Opc = Inst.getOpcode() == YSX::PseudoVMSGEU_VI
-                         ? YSX::VMSEQ_VV
-                         : YSX::VMSNE_VV;
-      emitToStreamer(Out, MCInstBuilder(Opc)
-                              .addOperand(Inst.getOperand(0))
-                              .addOperand(Inst.getOperand(1))
-                              .addOperand(Inst.getOperand(1))
-                              .addOperand(Inst.getOperand(3))
-                              .setLoc(IDLoc));
-    } else {
-      // Other immediate values can subtract one like signed.
-      unsigned Opc = Inst.getOpcode() == YSX::PseudoVMSGEU_VI
-                         ? YSX::VMSGTU_VI
-                         : YSX::VMSLEU_VI;
-      emitToStreamer(Out, MCInstBuilder(Opc)
-                              .addOperand(Inst.getOperand(0))
-                              .addOperand(Inst.getOperand(1))
-                              .addImm(Imm - 1)
-                              .addOperand(Inst.getOperand(3))
-                              .setLoc(IDLoc));
-    }
-
-    return false;
-  }
-  case YSX::PseudoCV_ELW:
-    emitLoadStoreSymbol(Inst, YSX::CV_ELW, IDLoc, Out, /*HasTmpReg=*/false);
-    return false;
-#endif
   }
 
   emitToStreamer(Out, Inst);

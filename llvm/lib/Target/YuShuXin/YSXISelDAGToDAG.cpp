@@ -256,7 +256,6 @@ void YSXDAGToDAGISel::Select(SDNode *Node) {
   // Instruction Selection not handled by the auto-generated tablegen selection
   // should be handled here.
   unsigned Opcode = Node->getOpcode();
-  MVT XLenVT = Subtarget->getXLenVT();
   SDLoc DL(Node);
   MVT VT = Node->getSimpleValueType(0);
 
@@ -859,16 +858,7 @@ void YSXDAGToDAGISel::Select(SDNode *Node) {
   case ISD::LOAD: {
     if (tryIndexedLoad(Node))
       return;
-
-    if (false && Subtarget->hasVendorXCVmem() && !Subtarget->is64Bit()) {
-    }
     break;
-  }
-  case YSXISD::SD_RV32: {
-    llvm_unreachable("YSX does not support RV32 pair stores");
-  }
-  case YSXISD::PPACK_DH: {
-    llvm_unreachable("YSX does not support packed-SIMD selection");
   }
   case ISD::INTRINSIC_WO_CHAIN: {
     unsigned IntNo = Node->getConstantOperandVal(0);
@@ -923,120 +913,6 @@ void YSXDAGToDAGISel::Select(SDNode *Node) {
       }
     }
     break;
-  case ISD::INSERT_SUBVECTOR:
-  case YSXISD::TUPLE_INSERT: {
-    SDValue V = Node->getOperand(0);
-    SDValue SubV = Node->getOperand(1);
-    SDLoc DL(SubV);
-    auto Idx = Node->getConstantOperandVal(2);
-    MVT SubVecVT = SubV.getSimpleValueType();
-
-    const YSXTargetLowering &TLI = *Subtarget->getTargetLowering();
-    MVT SubVecContainerVT = SubVecVT;
-    // Establish the correct scalable-vector types for any fixed-length type.
-    if (SubVecVT.isFixedLengthVector()) {
-      SubVecContainerVT = TLI.getContainerForFixedLengthVector(SubVecVT);
-      TypeSize VecRegSize = TypeSize::getScalable(YSX::YSXVecBitsPerBlock);
-      [[maybe_unused]] bool ExactlyVecRegSized =
-          Subtarget->expandVScale(SubVecVT.getSizeInBits())
-              .isKnownMultipleOf(Subtarget->expandVScale(VecRegSize));
-      assert(isPowerOf2_64(Subtarget->expandVScale(SubVecVT.getSizeInBits())
-                               .getKnownMinValue()));
-      assert(Idx == 0 && (ExactlyVecRegSized || V.isUndef()));
-    }
-    MVT ContainerVT = VT;
-    if (VT.isFixedLengthVector())
-      ContainerVT = TLI.getContainerForFixedLengthVector(VT);
-
-    const auto *TRI = Subtarget->getRegisterInfo();
-    unsigned SubRegIdx;
-    std::tie(SubRegIdx, Idx) =
-        YSXTargetLowering::decomposeSubvectorInsertExtractToSubRegs(
-            ContainerVT, SubVecContainerVT, Idx, TRI);
-
-    // If the Idx hasn't been completely eliminated then this is a subvector
-    // insert which doesn't naturally align to a vector register. These must
-    // be handled using instructions to manipulate the vector registers.
-    if (Idx != 0)
-      break;
-
-    RISCVVType::VLMUL SubVecLMUL =
-        YSXTargetLowering::getLMUL(SubVecContainerVT);
-    [[maybe_unused]] bool IsSubVecPartReg =
-        SubVecLMUL == RISCVVType::VLMUL::LMUL_F2 ||
-        SubVecLMUL == RISCVVType::VLMUL::LMUL_F4 ||
-        SubVecLMUL == RISCVVType::VLMUL::LMUL_F8;
-    assert((V.getValueType().isRISCVVectorTuple() || !IsSubVecPartReg ||
-            V.isUndef()) &&
-           "Expecting lowering to have created legal INSERT_SUBVECTORs when "
-           "the subvector is smaller than a full-sized register");
-
-    // If we haven't set a SubRegIdx, then we must be going between
-    // equally-sized LMUL groups (e.g. VR -> VR). This can be done as a copy.
-    if (SubRegIdx == YSX::NoSubRegister) {
-      unsigned InRegClassID =
-          YSXTargetLowering::getRegClassIDForVecVT(ContainerVT);
-      assert(YSXTargetLowering::getRegClassIDForVecVT(SubVecContainerVT) ==
-                 InRegClassID &&
-             "Unexpected subvector extraction");
-      SDValue RC = CurDAG->getTargetConstant(InRegClassID, DL, XLenVT);
-      SDNode *NewNode = CurDAG->getMachineNode(TargetOpcode::COPY_TO_REGCLASS,
-                                               DL, VT, SubV, RC);
-      ReplaceNode(Node, NewNode);
-      return;
-    }
-
-    SDValue Insert = CurDAG->getTargetInsertSubreg(SubRegIdx, DL, VT, V, SubV);
-    ReplaceNode(Node, Insert.getNode());
-    return;
-  }
-  case ISD::EXTRACT_SUBVECTOR:
-  case YSXISD::TUPLE_EXTRACT: {
-    SDValue V = Node->getOperand(0);
-    auto Idx = Node->getConstantOperandVal(1);
-    MVT InVT = V.getSimpleValueType();
-    SDLoc DL(V);
-
-    const YSXTargetLowering &TLI = *Subtarget->getTargetLowering();
-    MVT SubVecContainerVT = VT;
-    // Establish the correct scalable-vector types for any fixed-length type.
-    if (VT.isFixedLengthVector()) {
-      assert(Idx == 0);
-      SubVecContainerVT = TLI.getContainerForFixedLengthVector(VT);
-    }
-    if (InVT.isFixedLengthVector())
-      InVT = TLI.getContainerForFixedLengthVector(InVT);
-
-    const auto *TRI = Subtarget->getRegisterInfo();
-    unsigned SubRegIdx;
-    std::tie(SubRegIdx, Idx) =
-        YSXTargetLowering::decomposeSubvectorInsertExtractToSubRegs(
-            InVT, SubVecContainerVT, Idx, TRI);
-
-    // If the Idx hasn't been completely eliminated then this is a subvector
-    // extract which doesn't naturally align to a vector register. These must
-    // be handled using instructions to manipulate the vector registers.
-    if (Idx != 0)
-      break;
-
-    // If we haven't set a SubRegIdx, then we must be going between
-    // equally-sized LMUL types (e.g. VR -> VR). This can be done as a copy.
-    if (SubRegIdx == YSX::NoSubRegister) {
-      unsigned InRegClassID = YSXTargetLowering::getRegClassIDForVecVT(InVT);
-      assert(YSXTargetLowering::getRegClassIDForVecVT(SubVecContainerVT) ==
-                 InRegClassID &&
-             "Unexpected subvector extraction");
-      SDValue RC = CurDAG->getTargetConstant(InRegClassID, DL, XLenVT);
-      SDNode *NewNode =
-          CurDAG->getMachineNode(TargetOpcode::COPY_TO_REGCLASS, DL, VT, V, RC);
-      ReplaceNode(Node, NewNode);
-      return;
-    }
-
-    SDValue Extract = CurDAG->getTargetExtractSubreg(SubRegIdx, DL, VT, V);
-    ReplaceNode(Node, Extract.getNode());
-    return;
-  }
   case ISD::PREFETCH:
     unsigned Locality = Node->getConstantOperandVal(3);
     if (Locality > 2)
@@ -2021,13 +1897,6 @@ bool YSXDAGToDAGISel::selectNegImm(SDValue N, SDValue &Val) {
     switch (U->getOpcode()) {
     case ISD::ADD:
       break;
-    case YSXISD::VMV_V_X_VL:
-      if (!all_of(U->users(), [](const SDNode *V) {
-            return V->getOpcode() == ISD::ADD ||
-                   V->getOpcode() == YSXISD::ADD_VL;
-          }))
-        return false;
-      break;
     default:
       return false;
     }
@@ -2052,15 +1921,6 @@ bool YSXDAGToDAGISel::selectInvLogicImm(SDValue N, SDValue &Val) {
     case ISD::OR:
     case ISD::XOR:
       if (!(Subtarget->hasStdExtZbb() || Subtarget->hasStdExtZbkb()))
-        return false;
-      break;
-    case YSXISD::VMV_V_X_VL:
-      if (!Subtarget->hasStdExtZvkb())
-        return false;
-      if (!all_of(U->users(), [](const SDNode *V) {
-            return V->getOpcode() == ISD::AND ||
-                   V->getOpcode() == YSXISD::AND_VL;
-          }))
         return false;
       break;
     default:
