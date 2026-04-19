@@ -176,266 +176,11 @@ bool YSXInstrInfo::isReMaterializableImpl(
   return TargetInstrInfo::isReMaterializableImpl(MI);
 }
 
-#if 0
-static bool forwardCopyWillClobberTuple(unsigned DstReg, unsigned SrcReg,
-                                        unsigned NumRegs) {
-  return DstReg > SrcReg && (DstReg - SrcReg) < NumRegs;
-}
-
-static bool isConvertibleToVMV_V_V(const YSXSubtarget &STI,
-                                   const MachineBasicBlock &MBB,
-                                   MachineBasicBlock::const_iterator MBBI,
-                                   MachineBasicBlock::const_iterator &DefMBBI,
-                                   YSXVType::VLMUL LMul) {
-  return false;
-#if 0
-  if (PreferWholeRegisterMove)
-    return false;
-
-  assert(MBBI->getOpcode() == TargetOpcode::COPY &&
-         "Unexpected COPY instruction.");
-  Register SrcReg = MBBI->getOperand(1).getReg();
-  const TargetRegisterInfo *TRI = STI.getRegisterInfo();
-
-  bool FoundDef = false;
-  bool FirstVSetVLI = false;
-  unsigned FirstSEW = 0;
-  while (MBBI != MBB.begin()) {
-    --MBBI;
-    if (MBBI->isMetaInstruction())
-      continue;
-
-    if (YSXInstrInfo::isVectorConfigInstr(*MBBI)) {
-      // There is a vsetvli between COPY and source define instruction.
-      // vy = def_vop ...  (producing instruction)
-      // ...
-      // vsetvli
-      // ...
-      // vx = COPY vy
-      if (!FoundDef) {
-        if (!FirstVSetVLI) {
-          FirstVSetVLI = true;
-          unsigned FirstVType = MBBI->getOperand(2).getImm();
-          YSXVType::VLMUL FirstLMul = YSXVType::getVLMUL(FirstVType);
-          FirstSEW = YSXVType::getSEW(FirstVType);
-          // The first encountered vsetvli must have the same lmul as the
-          // register class of COPY.
-          if (FirstLMul != LMul)
-            return false;
-        }
-        // Only permit `vsetvli x0, x0, vtype` between COPY and the source
-        // define instruction.
-        if (!YSXInstrInfo::isVLPreservingConfig(*MBBI))
-          return false;
-        continue;
-      }
-
-      // MBBI is the first vsetvli before the producing instruction.
-      unsigned VType = MBBI->getOperand(2).getImm();
-      // If there is a vsetvli between COPY and the producing instruction.
-      if (FirstVSetVLI) {
-        // If SEW is different, return false.
-        if (YSXVType::getSEW(VType) != FirstSEW)
-          return false;
-      }
-
-      // If the vsetvli is tail undisturbed, keep the whole register move.
-      if (!YSXVType::isTailAgnostic(VType))
-        return false;
-
-      // The checking is conservative. We only have register classes for
-      // LMUL = 1/2/4/8. We should be able to convert vmv1r.v to vmv.v.v
-      // for fractional LMUL operations. However, we could not use the vsetvli
-      // lmul for widening operations. The result of widening operation is
-      // 2 x LMUL.
-      return LMul == YSXVType::getVLMUL(VType);
-    } else if (MBBI->isInlineAsm() || MBBI->isCall()) {
-      return false;
-    } else if (MBBI->getNumDefs()) {
-      // Check all the instructions which will change VL.
-      // For example, vleff has implicit def VL.
-      if (MBBI->modifiesRegister(YSX::VL, /*TRI=*/nullptr))
-        return false;
-
-      // Only converting whole register copies to vmv.v.v when the defining
-      // value appears in the explicit operands.
-      for (const MachineOperand &MO : MBBI->explicit_operands()) {
-        if (!MO.isReg() || !MO.isDef())
-          continue;
-        if (!FoundDef && TRI->regsOverlap(MO.getReg(), SrcReg)) {
-          // We only permit the source of COPY has the same LMUL as the defined
-          // operand.
-          // There are cases we need to keep the whole register copy if the LMUL
-          // is different.
-          // For example,
-          // $x0 = PseudoVSETIVLI 4, 73   // vsetivli zero, 4, e16,m2,ta,m
-          // $v28m4 = PseudoVWADD_VV_M2 $v26m2, $v8m2
-          // # The COPY may be created by vlmul_trunc intrinsic.
-          // $v26m2 = COPY renamable $v28m2, implicit killed $v28m4
-          //
-          // After widening, the valid value will be 4 x e32 elements. If we
-          // convert the COPY to vmv.v.v, it will only copy 4 x e16 elements.
-          // FIXME: The COPY of subregister of Zvlsseg register will not be able
-          // to convert to vmv.v.[v|i] under the constraint.
-          if (MO.getReg() != SrcReg)
-            return false;
-
-          // In widening reduction instructions with LMUL_1 input vector case,
-          // only checking the LMUL is insufficient due to reduction result is
-          // always LMUL_1.
-          // For example,
-          // $x11 = PseudoVSETIVLI 1, 64 // vsetivli a1, 1, e8, m1, ta, mu
-          // $v8m1 = PseudoVWREDSUM_VS_M1 $v26, $v27
-          // $v26 = COPY killed renamable $v8
-          // After widening, The valid value will be 1 x e16 elements. If we
-          // convert the COPY to vmv.v.v, it will only copy 1 x e8 elements.
-          uint64_t TSFlags = MBBI->getDesc().TSFlags;
-          if (YSXII::isYSXVecWideningReduction(TSFlags))
-            return false;
-
-          // If the producing instruction does not depend on vsetvli, do not
-          // convert COPY to vmv.v.v. For example, VL1R_V or PseudoVRELOAD.
-          if (!YSXII::hasSEWOp(TSFlags) || !YSXII::hasVLOp(TSFlags))
-            return false;
-
-          // Found the definition.
-          FoundDef = true;
-          DefMBBI = MBBI;
-          break;
-        }
-      }
-    }
-  }
-
-  return false;
-#endif
-}
-#endif
-
 void YSXInstrInfo::copyPhysRegVector(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
     const DebugLoc &DL, MCRegister DstReg, MCRegister SrcReg, bool KillSrc,
     const TargetRegisterClass *RegClass) const {
   llvm_unreachable("YSX does not support vector register copies");
-#if 0
-  const YSXRegisterInfo *TRI = STI.getRegisterInfo();
-  YSXVType::VLMUL LMul = YSXRI::getLMul(RegClass->TSFlags);
-  unsigned NF = YSXRI::getNF(RegClass->TSFlags);
-
-  uint16_t SrcEncoding = TRI->getEncodingValue(SrcReg);
-  uint16_t DstEncoding = TRI->getEncodingValue(DstReg);
-  auto [LMulVal, Fractional] = YSXVType::decodeVLMUL(LMul);
-  assert(!Fractional && "It is impossible be fractional lmul here.");
-  unsigned NumRegs = NF * LMulVal;
-  bool ReversedCopy =
-      forwardCopyWillClobberTuple(DstEncoding, SrcEncoding, NumRegs);
-  if (ReversedCopy) {
-    // If the src and dest overlap when copying a tuple, we need to copy the
-    // registers in reverse.
-    SrcEncoding += NumRegs - 1;
-    DstEncoding += NumRegs - 1;
-  }
-
-  unsigned I = 0;
-  auto GetCopyInfo = [&](uint16_t SrcEncoding, uint16_t DstEncoding)
-      -> std::tuple<YSXVType::VLMUL, const TargetRegisterClass &, unsigned,
-                    unsigned, unsigned> {
-    if (ReversedCopy) {
-      // For reversed copying, if there are enough aligned registers(8/4/2), we
-      // can do a larger copy(LMUL8/4/2).
-      // Besides, we have already known that DstEncoding is larger than
-      // SrcEncoding in forwardCopyWillClobberTuple, so the difference between
-      // DstEncoding and SrcEncoding should be >= LMUL value we try to use to
-      // avoid clobbering.
-      uint16_t Diff = DstEncoding - SrcEncoding;
-      if (I + 8 <= NumRegs && Diff >= 8 && SrcEncoding % 8 == 7 &&
-          DstEncoding % 8 == 7)
-        return {YSXVType::LMUL_8, YSX::VRM8RegClass, YSX::VMV8R_V,
-                YSX::PseudoVMV_V_V_M8, YSX::PseudoVMV_V_I_M8};
-      if (I + 4 <= NumRegs && Diff >= 4 && SrcEncoding % 4 == 3 &&
-          DstEncoding % 4 == 3)
-        return {YSXVType::LMUL_4, YSX::VRM4RegClass, YSX::VMV4R_V,
-                YSX::PseudoVMV_V_V_M4, YSX::PseudoVMV_V_I_M4};
-      if (I + 2 <= NumRegs && Diff >= 2 && SrcEncoding % 2 == 1 &&
-          DstEncoding % 2 == 1)
-        return {YSXVType::LMUL_2, YSX::VRM2RegClass, YSX::VMV2R_V,
-                YSX::PseudoVMV_V_V_M2, YSX::PseudoVMV_V_I_M2};
-      // Or we should do LMUL1 copying.
-      return {YSXVType::LMUL_1, YSX::VRRegClass, YSX::VMV1R_V,
-              YSX::PseudoVMV_V_V_M1, YSX::PseudoVMV_V_I_M1};
-    }
-
-    // For forward copying, if source register encoding and destination register
-    // encoding are aligned to 8/4/2, we can do a LMUL8/4/2 copying.
-    if (I + 8 <= NumRegs && SrcEncoding % 8 == 0 && DstEncoding % 8 == 0)
-      return {YSXVType::LMUL_8, YSX::VRM8RegClass, YSX::VMV8R_V,
-              YSX::PseudoVMV_V_V_M8, YSX::PseudoVMV_V_I_M8};
-    if (I + 4 <= NumRegs && SrcEncoding % 4 == 0 && DstEncoding % 4 == 0)
-      return {YSXVType::LMUL_4, YSX::VRM4RegClass, YSX::VMV4R_V,
-              YSX::PseudoVMV_V_V_M4, YSX::PseudoVMV_V_I_M4};
-    if (I + 2 <= NumRegs && SrcEncoding % 2 == 0 && DstEncoding % 2 == 0)
-      return {YSXVType::LMUL_2, YSX::VRM2RegClass, YSX::VMV2R_V,
-              YSX::PseudoVMV_V_V_M2, YSX::PseudoVMV_V_I_M2};
-    // Or we should do LMUL1 copying.
-    return {YSXVType::LMUL_1, YSX::VRRegClass, YSX::VMV1R_V,
-            YSX::PseudoVMV_V_V_M1, YSX::PseudoVMV_V_I_M1};
-  };
-
-  while (I != NumRegs) {
-    // For non-segment copying, we only do this once as the registers are always
-    // aligned.
-    // For segment copying, we may do this several times. If the registers are
-    // aligned to larger LMUL, we can eliminate some copyings.
-    auto [LMulCopied, RegClass, Opc, VVOpc, VIOpc] =
-        GetCopyInfo(SrcEncoding, DstEncoding);
-    auto [NumCopied, _] = YSXVType::decodeVLMUL(LMulCopied);
-
-    MachineBasicBlock::const_iterator DefMBBI;
-    if (LMul == LMulCopied &&
-        isConvertibleToVMV_V_V(STI, MBB, MBBI, DefMBBI, LMul)) {
-      Opc = VVOpc;
-      if (DefMBBI->getOpcode() == VIOpc)
-        Opc = VIOpc;
-    }
-
-    // Emit actual copying.
-    // For reversed copying, the encoding should be decreased.
-    MCRegister ActualSrcReg = TRI->findVRegWithEncoding(
-        RegClass, ReversedCopy ? (SrcEncoding - NumCopied + 1) : SrcEncoding);
-    MCRegister ActualDstReg = TRI->findVRegWithEncoding(
-        RegClass, ReversedCopy ? (DstEncoding - NumCopied + 1) : DstEncoding);
-
-    auto MIB = BuildMI(MBB, MBBI, DL, get(Opc), ActualDstReg);
-    bool UseVMV_V_I = YSX::getYSXVecMCOpcode(Opc) == YSX::VMV_V_I;
-    bool UseVMV = UseVMV_V_I || YSX::getYSXVecMCOpcode(Opc) == YSX::VMV_V_V;
-    if (UseVMV)
-      MIB.addReg(ActualDstReg, RegState::Undef);
-    if (UseVMV_V_I)
-      MIB = MIB.add(DefMBBI->getOperand(2));
-    else
-      MIB = MIB.addReg(ActualSrcReg, getKillRegState(KillSrc));
-    if (UseVMV) {
-      const MCInstrDesc &Desc = DefMBBI->getDesc();
-      MIB.add(DefMBBI->getOperand(YSXII::getVLOpNum(Desc)));  // AVL
-      unsigned Log2SEW =
-          DefMBBI->getOperand(YSXII::getSEWOpNum(Desc)).getImm();
-      MIB.addImm(Log2SEW ? Log2SEW : 3);                        // SEW
-      MIB.addImm(0);                                            // tu, mu
-      MIB.addReg(YSX::VL, RegState::Implicit);
-      MIB.addReg(YSX::VTYPE, RegState::Implicit);
-    }
-    // Add an implicit read of the original source to silence the verifier
-    // in the cases where some of the smaller VRs we're copying from might be
-    // undef, caused by the fact that the original, larger source VR might not
-    // be fully initialized at the time this COPY happens.
-    MIB.addReg(SrcReg, RegState::Implicit);
-
-    // If we are copying reversely, we should decrease the encoding.
-    SrcEncoding += (ReversedCopy ? -NumCopied : NumCopied);
-    DstEncoding += (ReversedCopy ? -NumCopied : NumCopied);
-    I += NumCopied;
-  }
-#endif
 }
 
 void YSXInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
@@ -2757,11 +2502,10 @@ bool YSXInstrInfo::verifyInstruction(const MachineInstr &MI,
           Ok = isValidAtomicOrdering(Imm);
           break;
         case YSXOp::OPERAND_VEC_POLICY:
-          Ok = (Imm & (YSXVType::TAIL_AGNOSTIC | YSXVType::MASK_AGNOSTIC)) ==
-               Imm;
+          Ok = false;
           break;
         case YSXOp::OPERAND_SEW:
-          Ok = (isUInt<5>(Imm) && YSXVType::isValidSEW(1 << Imm));
+          Ok = false;
           break;
         case YSXOp::OPERAND_SEW_MASK:
           Ok = Imm == 0;
@@ -2860,46 +2604,12 @@ bool YSXInstrInfo::verifyInstruction(const MachineInstr &MI,
     }
   }
   if (YSXII::hasSEWOp(TSFlags)) {
-    unsigned OpIdx = YSXII::getSEWOpNum(Desc);
-    if (!MI.getOperand(OpIdx).isImm()) {
-      ErrInfo = "SEW value expected to be an immediate";
-      return false;
-    }
-    uint64_t Log2SEW = MI.getOperand(OpIdx).getImm();
-    if (Log2SEW > 31) {
-      ErrInfo = "Unexpected SEW value";
-      return false;
-    }
-    unsigned SEW = Log2SEW ? 1 << Log2SEW : 8;
-    if (!YSXVType::isValidSEW(SEW)) {
-      ErrInfo = "Unexpected SEW value";
-      return false;
-    }
+    ErrInfo = "YSX does not support vector SEW operands";
+    return false;
   }
   if (YSXII::hasVecPolicyOp(TSFlags)) {
-    unsigned OpIdx = YSXII::getVecPolicyOpNum(Desc);
-    if (!MI.getOperand(OpIdx).isImm()) {
-      ErrInfo = "Policy operand expected to be an immediate";
-      return false;
-    }
-    uint64_t Policy = MI.getOperand(OpIdx).getImm();
-    if (Policy > (YSXVType::TAIL_AGNOSTIC | YSXVType::MASK_AGNOSTIC)) {
-      ErrInfo = "Invalid Policy Value";
-      return false;
-    }
-    if (!YSXII::hasVLOp(TSFlags)) {
-      ErrInfo = "policy operand w/o VL operand?";
-      return false;
-    }
-
-    // VecPolicy operands can only exist on instructions with passthru/merge
-    // arguments. Note that not all arguments with passthru have vec policy
-    // operands- some instructions have implicit policies.
-    unsigned UseOpIdx;
-    if (!MI.isRegTiedToUseOperand(0, &UseOpIdx)) {
-      ErrInfo = "policy operand w/o tied operand?";
-      return false;
-    }
+    ErrInfo = "YSX does not support vector policy operands";
+    return false;
   }
 
   return true;
@@ -3469,8 +3179,7 @@ std::string YSXInstrInfo::createMIROperandComment(
   switch (OpInfo.OperandType) {
   case YSXOp::OPERAND_VTYPEI10:
   case YSXOp::OPERAND_VTYPEI11: {
-    unsigned Imm = Op.getImm();
-    YSXVType::printVType(Imm, OS);
+    OS << Op.getImm();
     break;
   }
   case YSXOp::OPERAND_XSFMM_VTYPE: {
@@ -3484,18 +3193,11 @@ std::string YSXInstrInfo::createMIROperandComment(
   }
   case YSXOp::OPERAND_SEW:
   case YSXOp::OPERAND_SEW_MASK: {
-    unsigned Log2SEW = Op.getImm();
-    unsigned SEW = Log2SEW ? 1 << Log2SEW : 8;
-    assert(YSXVType::isValidSEW(SEW) && "Unexpected SEW");
-    OS << "e" << SEW;
+    OS << Op.getImm();
     break;
   }
   case YSXOp::OPERAND_VEC_POLICY:
-    unsigned Policy = Op.getImm();
-    assert(Policy <= (YSXVType::TAIL_AGNOSTIC | YSXVType::MASK_AGNOSTIC) &&
-           "Invalid Policy Value");
-    OS << (Policy & YSXVType::TAIL_AGNOSTIC ? "ta" : "tu") << ", "
-       << (Policy & YSXVType::MASK_AGNOSTIC ? "ma" : "mu");
+    OS << Op.getImm();
     break;
   }
 
@@ -4628,12 +4330,5 @@ bool YSXInstrInfo::isVRegCopy(const MachineInstr *MI, unsigned LMul) const {
   if (!YSXRegisterInfo::isYSXVecRegClass(RC))
     return false;
 
-  if (!LMul)
-    return true;
-
-  // TODO: Perhaps we could distinguish segment register classes (e.g. VRN3M2)
-  // in the future.
-  auto [RCLMul, RCFractional] =
-      YSXVType::decodeVLMUL(YSXRI::getLMul(RC->TSFlags));
-  return (!RCFractional && LMul == RCLMul) || (RCFractional && LMul == 1);
+  return !LMul;
 }

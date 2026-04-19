@@ -156,12 +156,8 @@ def NoStdExtZba : Predicate<"true">;
 def NoStdExtZacas : Predicate<"true">;
 
 //===----------------------------------------------------------------------===//
-// Tuning controls still consumed by generic passes
+// Scalar tuning controls still consumed by generic passes
 //===----------------------------------------------------------------------===//
-
-def TuneNLogNVRGather
-    : SubtargetFeature<"log-vrgather", "YSXVRGatherCostModel", "NLog2N",
-                       "Use N log N vector gather cost model">;
 
 def TunePostRAScheduler
     : SubtargetFeature<"use-postra-scheduler", "UsePostRAScheduler", "true",
@@ -192,34 +188,10 @@ def TuneDisableLatencySchedHeuristic
                        "DisableLatencySchedHeuristic", "true",
                        "Disable latency scheduling heuristic">;
 
-def TuneEnableVsetvliSchedHeuristic
-    : SubtargetFeature<"enable-vsetvli-sched-heuristic",
-                       "EnableVsetvliSchedHeuristic", "true",
-                       "Enable vsetvli-based scheduling heuristic">;
-
 def TunePredictableSelectIsExpensive
     : SubtargetFeature<"predictable-select-expensive",
                        "PredictableSelectIsExpensive", "true",
                        "Prefer likely predicted branches over selects">;
-
-def TuneOptimizedZeroStrideLoad
-    : SubtargetFeature<"optimized-zero-stride-load",
-                       "HasOptimizedZeroStrideLoad", "true",
-                       "Optimized zero-stride vector load">;
-
-foreach nf = {2-8} in
-  def TuneOptimizedNF#nf#SegmentLoadStore :
-      SubtargetFeature<"optimized-nf"#nf#"-segment-load-store",
-                       "HasOptimizedNF"#nf#"SegmentLoadStore",
-                       "true", "Optimized segment load/store">;
-
-def TuneVLDependentLatency
-    : SubtargetFeature<"vl-dependent-latency", "HasVLDependentLatency", "true",
-                       "Vector instruction latency depends on vl">;
-
-def TuneDLenFactor2
-    : SubtargetFeature<"dlen-factor-2", "DLenFactor2", "true",
-                       "Vector unit DLEN is half of VLEN">;
 
 def TuneNoDefaultUnroll
     : SubtargetFeature<"no-default-unroll", "EnableDefaultUnroll", "false",
@@ -253,41 +225,9 @@ def TuneShortForwardBranchILoad
                        [TuneShortForwardBranchIALU]>;
 def HasShortForwardBranchILoad : Predicate<"Subtarget->hasShortForwardBranchILoad()">;
 
-def TuneNoSinkSplatOperands
-    : SubtargetFeature<"no-sink-splat-operands", "SinkSplatOperands",
-                       "false", "Disable sink splat operands">;
-
 def TunePreferWInst
     : SubtargetFeature<"prefer-w-inst", "PreferWInst", "true",
                        "Prefer W-suffixed instructions">;
 
-def TuneConditionalCompressedMoveFusion
-    : SubtargetFeature<"conditional-cmv-fusion",
-                       "HasConditionalCompressedMoveFusion", "true",
-                       "Enable branch+c.mv fusion">;
 def HasConditionalMoveFusion : Predicate<"Subtarget->hasConditionalMoveFusion()">;
 def NoConditionalMoveFusion  : Predicate<"!Subtarget->hasConditionalMoveFusion()">;
-
-def TuneHasSingleElementVecFP64
-    : SubtargetFeature<"single-element-vec-fp64",
-                       "HasSingleElementVectorFP64", "true",
-                       "Single-element vector FP64 throughput model">;
-
-def TuneVXRMPipelineFlush
-    : SubtargetFeature<"vxrm-pipeline-flush", "HasVXRMPipelineFlush",
-                       "true", "VXRM writes cause pipeline flush">;
-
-def TunePreferVsetvliOverReadVLENB
-    : SubtargetFeature<"prefer-vsetvli-over-read-vlenb",
-                       "PreferVsetvliOverReadVLENB", "true",
-                       "Prefer vsetvli over read vlenb">;
-
-def TuneAndes45 : SubtargetFeature<"andes45", "YSXProcFamily", "Andes45",
-                                   "Andes 45-Series processors">;
-def TuneMIPSP8700 : SubtargetFeature<"mips-p8700", "YSXProcFamily", "MIPSP8700",
-                                     "MIPS p8700 processor">;
-def TuneSiFive7 : SubtargetFeature<"sifive7", "YSXProcFamily", "SiFive7",
-                                   "SiFive 7-Series processors">;
-def TuneVentanaVeyron
-    : SubtargetFeature<"ventana-veyron", "YSXProcFamily", "VentanaVeyron",
-                       "Ventana Veyron-Series processors">;

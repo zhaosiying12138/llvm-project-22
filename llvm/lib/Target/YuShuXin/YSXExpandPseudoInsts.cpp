@@ -577,22 +577,6 @@ bool YSXExpandPseudo::expandRV32ZdinxLoad(MachineBasicBlock &MBB,
 
 bool YSXExpandPseudo::expandPseudoReadVLENBViaVSETVLIX0(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI) {
-#if 0
-  DebugLoc DL = MBBI->getDebugLoc();
-  Register Dst = MBBI->getOperand(0).getReg();
-  unsigned Mul = MBBI->getOperand(1).getImm();
-  YSXVType::VLMUL VLMUL = YSXVType::encodeLMUL(Mul, /*Fractional=*/false);
-  unsigned VTypeImm = YSXVType::encodeVTYPE(
-      VLMUL, /*SEW=*/8, /*TailAgnostic=*/true, /*MaskAgnostic=*/true);
-
-  BuildMI(MBB, MBBI, DL, TII->get(YSX::PseudoVSETVLIX0))
-      .addReg(Dst, RegState::Define)
-      .addReg(YSX::X0, RegState::Kill)
-      .addImm(VTypeImm);
-
-  MBBI->eraseFromParent();
-  return true;
-#endif
   return false;
 }
 

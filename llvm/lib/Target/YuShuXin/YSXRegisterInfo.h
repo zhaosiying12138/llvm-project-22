@@ -50,8 +50,8 @@ static inline bool isVRegClass(uint8_t TSFlags) {
 }
 
 /// \returns the LMUL for the register class.
-static inline YSXVType::VLMUL getLMul(uint8_t TSFlags) {
-  return static_cast<YSXVType::VLMUL>((TSFlags & VLMulShiftMask) >>
+static inline RISCVVType::VLMUL getLMul(uint8_t TSFlags) {
+  return static_cast<RISCVVType::VLMUL>((TSFlags & VLMulShiftMask) >>
                                         VLMulShift);
 }
 

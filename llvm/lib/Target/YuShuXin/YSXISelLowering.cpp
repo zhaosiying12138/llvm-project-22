@@ -1140,7 +1140,7 @@ YSXTargetLowering::YSXTargetLowering(const TargetMachine &TM,
       setOperationAction(FloatingPointLibCallOps, VT, Expand);
 
       // Custom split nxv32[b]f16 since nxv32[b]f32 is not legal.
-      if (getLMUL(VT) == YSXVType::LMUL_8) {
+      if (getLMUL(VT) == RISCVVType::LMUL_8) {
         setOperationAction(ZvfhminZvfbfminPromoteOps, VT, Custom);
         setOperationAction(ZvfhminZvfbfminPromoteVPOps, VT, Custom);
       } else {
@@ -1193,7 +1193,7 @@ YSXTargetLowering::YSXTargetLowering(const TargetMachine &TM,
       setOperationAction(FloatingPointLibCallOps, VT, Expand);
 
       // Custom split nxv32[b]f16 since nxv32[b]f32 is not legal.
-      if (getLMUL(VT) == YSXVType::LMUL_8) {
+      if (getLMUL(VT) == RISCVVType::LMUL_8) {
         setOperationAction(ZvfbfaPromoteOps, VT, Custom);
         setOperationAction(ZvfhminZvfbfminPromoteVPOps, VT, Custom);
       } else {
@@ -2637,25 +2637,25 @@ static void translateSetCCForBranch(const SDLoc &DL, SDValue &LHS, SDValue &RHS,
   }
 }
 
-YSXVType::VLMUL YSXTargetLowering::getLMUL(MVT VT) {
+RISCVVType::VLMUL YSXTargetLowering::getLMUL(MVT VT) {
   if (VT.isRISCVVectorTuple()) {
     if (VT.SimpleTy >= MVT::riscv_nxv1i8x2 &&
         VT.SimpleTy <= MVT::riscv_nxv1i8x8)
-      return YSXVType::LMUL_F8;
+      return RISCVVType::LMUL_F8;
     if (VT.SimpleTy >= MVT::riscv_nxv2i8x2 &&
         VT.SimpleTy <= MVT::riscv_nxv2i8x8)
-      return YSXVType::LMUL_F4;
+      return RISCVVType::LMUL_F4;
     if (VT.SimpleTy >= MVT::riscv_nxv4i8x2 &&
         VT.SimpleTy <= MVT::riscv_nxv4i8x8)
-      return YSXVType::LMUL_F2;
+      return RISCVVType::LMUL_F2;
     if (VT.SimpleTy >= MVT::riscv_nxv8i8x2 &&
         VT.SimpleTy <= MVT::riscv_nxv8i8x8)
-      return YSXVType::LMUL_1;
+      return RISCVVType::LMUL_1;
     if (VT.SimpleTy >= MVT::riscv_nxv16i8x2 &&
         VT.SimpleTy <= MVT::riscv_nxv16i8x4)
-      return YSXVType::LMUL_2;
+      return RISCVVType::LMUL_2;
     if (VT.SimpleTy == MVT::riscv_nxv32i8x2)
-      return YSXVType::LMUL_4;
+      return RISCVVType::LMUL_4;
     llvm_unreachable("Invalid vector tuple type LMUL.");
   }
 
@@ -2668,23 +2668,23 @@ YSXVType::VLMUL YSXTargetLowering::getLMUL(MVT VT) {
   default:
     llvm_unreachable("Invalid LMUL.");
   case 8:
-    return YSXVType::LMUL_F8;
+    return RISCVVType::LMUL_F8;
   case 16:
-    return YSXVType::LMUL_F4;
+    return RISCVVType::LMUL_F4;
   case 32:
-    return YSXVType::LMUL_F2;
+    return RISCVVType::LMUL_F2;
   case 64:
-    return YSXVType::LMUL_1;
+    return RISCVVType::LMUL_1;
   case 128:
-    return YSXVType::LMUL_2;
+    return RISCVVType::LMUL_2;
   case 256:
-    return YSXVType::LMUL_4;
+    return RISCVVType::LMUL_4;
   case 512:
-    return YSXVType::LMUL_8;
+    return RISCVVType::LMUL_8;
   }
 }
 
-unsigned YSXTargetLowering::getRegClassIDForLMUL(YSXVType::VLMUL LMul) {
+unsigned YSXTargetLowering::getRegClassIDForLMUL(RISCVVType::VLMUL LMul) {
   llvm_unreachable("YSX does not support vector register classes");
 }
 
@@ -3000,7 +3000,7 @@ InstructionCost YSXTargetLowering::getLMULCost(MVT VT) const {
     unsigned LMul;
     bool Fractional;
     std::tie(LMul, Fractional) =
-        YSXVType::decodeVLMUL(YSXTargetLowering::getLMUL(VT));
+        RISCVVType::decodeVLMUL(YSXTargetLowering::getLMUL(VT));
     if (Fractional)
       Cost = LMul <= DLenFactor ? (DLenFactor / LMul) : 1;
     else
@@ -3018,13 +3018,6 @@ InstructionCost YSXTargetLowering::getLMULCost(MVT VT) const {
 /// operand (index and possibly mask) are handled separately.
 InstructionCost YSXTargetLowering::getVRGatherVVCost(MVT VT) const {
   auto LMULCost = getLMULCost(VT);
-  bool Log2CostModel =
-      Subtarget.getVRGatherCostModel() == llvm::YSXSubtarget::NLog2N;
-  if (Log2CostModel && LMULCost.isValid()) {
-    unsigned Log = Log2_64(LMULCost.getValue());
-    if (Log > 0)
-      return LMULCost * Log;
-  }
   return LMULCost * LMULCost;
 }
 
@@ -3542,9 +3535,9 @@ static SDValue
 getVSlidedown(SelectionDAG &DAG, const YSXSubtarget &Subtarget,
               const SDLoc &DL, EVT VT, SDValue Passthru, SDValue Op,
               SDValue Offset, SDValue Mask, SDValue VL,
-              unsigned Policy = YSXVType::TAIL_UNDISTURBED_MASK_UNDISTURBED) {
+              unsigned Policy = RISCVVType::TAIL_UNDISTURBED_MASK_UNDISTURBED) {
   if (Passthru.isUndef())
-    Policy = YSXVType::TAIL_AGNOSTIC | YSXVType::MASK_AGNOSTIC;
+    Policy = RISCVVType::TAIL_AGNOSTIC | RISCVVType::MASK_AGNOSTIC;
   SDValue PolicyOp = DAG.getTargetConstant(Policy, DL, Subtarget.getXLenVT());
   SDValue Ops[] = {Passthru, Op, Offset, Mask, VL, PolicyOp};
   return DAG.getNode(YSXISD::VSLIDEDOWN_VL, DL, VT, Ops);
@@ -3554,9 +3547,9 @@ static SDValue
 getVSlideup(SelectionDAG &DAG, const YSXSubtarget &Subtarget, const SDLoc &DL,
             EVT VT, SDValue Passthru, SDValue Op, SDValue Offset, SDValue Mask,
             SDValue VL,
-            unsigned Policy = YSXVType::TAIL_UNDISTURBED_MASK_UNDISTURBED) {
+            unsigned Policy = RISCVVType::TAIL_UNDISTURBED_MASK_UNDISTURBED) {
   if (Passthru.isUndef())
-    Policy = YSXVType::TAIL_AGNOSTIC | YSXVType::MASK_AGNOSTIC;
+    Policy = RISCVVType::TAIL_AGNOSTIC | RISCVVType::MASK_AGNOSTIC;
   SDValue PolicyOp = DAG.getTargetConstant(Policy, DL, Subtarget.getXLenVT());
   SDValue Ops[] = {Passthru, Op, Offset, Mask, VL, PolicyOp};
   return DAG.getNode(YSXISD::VSLIDEUP_VL, DL, VT, Ops);
@@ -4493,13 +4486,13 @@ static SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
   InstructionCost PerSlideCost = 1;
   switch (YSXTargetLowering::getLMUL(ContainerVT)) {
   default: break;
-  case YSXVType::LMUL_2:
+  case RISCVVType::LMUL_2:
     PerSlideCost = 2;
     break;
-  case YSXVType::LMUL_4:
+  case RISCVVType::LMUL_4:
     PerSlideCost = 4;
     break;
-  case YSXVType::LMUL_8:
+  case RISCVVType::LMUL_8:
     PerSlideCost = 8;
     break;
   }
@@ -4529,7 +4522,7 @@ static SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
           VT.getVectorElementType().getSizeInBits() <= Subtarget.getFLen()) &&
          "Illegal type which will result in reserved encoding");
 
-  const unsigned Policy = YSXVType::TAIL_AGNOSTIC | YSXVType::MASK_AGNOSTIC;
+  const unsigned Policy = RISCVVType::TAIL_AGNOSTIC | RISCVVType::MASK_AGNOSTIC;
 
   // General case: splat the first operand and slide other operands down one
   // by one to form a vector. Alternatively, if every operand is an
@@ -5135,11 +5128,11 @@ static SDValue lowerVECTOR_SHUFFLEAsVSlideup(const SDLoc &DL, MVT VT,
   // We slide up by the index that the subvector is being inserted at, and set
   // VL to the index + the number of elements being inserted.
   unsigned Policy =
-      YSXVType::TAIL_UNDISTURBED_MASK_UNDISTURBED | YSXVType::MASK_AGNOSTIC;
+      RISCVVType::TAIL_UNDISTURBED_MASK_UNDISTURBED | RISCVVType::MASK_AGNOSTIC;
   // If the we're adding a suffix to the in place vector, i.e. inserting right
   // up to the very end of it, then we don't actually care about the tail.
   if (NumSubElts + Index >= (int)NumElts)
-    Policy |= YSXVType::TAIL_AGNOSTIC;
+    Policy |= RISCVVType::TAIL_AGNOSTIC;
 
   InPlace = convertToScalableVector(ContainerVT, InPlace, DAG, Subtarget);
   ToInsert = convertToScalableVector(ContainerVT, ToInsert, DAG, Subtarget);
@@ -6123,10 +6116,10 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
       if (SlideAmt < 0)
         return getVSlidedown(DAG, Subtarget, DL, ContainerVT, Passthru, SrcV,
                              DAG.getConstant(-SlideAmt, DL, XLenVT), Mask, VL,
-                             YSXVType::TAIL_AGNOSTIC);
+                             RISCVVType::TAIL_AGNOSTIC);
       return getVSlideup(DAG, Subtarget, DL, ContainerVT, Passthru, SrcV,
                          DAG.getConstant(SlideAmt, DL, XLenVT), Mask, VL,
-                         YSXVType::TAIL_AGNOSTIC);
+                         RISCVVType::TAIL_AGNOSTIC);
     };
 
     if (SrcInfo[1].first == -1) {
@@ -10443,7 +10436,7 @@ SDValue YSXTargetLowering::lowerINSERT_VECTOR_ELT(SDValue Op,
         isValidVisniInsertExtractIndex(Idx)) {
       // Tail policy applies to elements past VLMAX (by assumption Idx < VLMAX)
       SDValue PolicyOp =
-          DAG.getTargetConstant(YSXVType::TAIL_AGNOSTIC, DL, XLenVT);
+          DAG.getTargetConstant(RISCVVType::TAIL_AGNOSTIC, DL, XLenVT);
       Vec = DAG.getNode(YSXISD::RI_VINSERT_VL, DL, ContainerVT, Vec, Val, Idx,
                         VL, PolicyOp);
       if (AlignedIdx)
@@ -10506,10 +10499,10 @@ SDValue YSXTargetLowering::lowerINSERT_VECTOR_ELT(SDValue Op,
       DAG.getNode(ISD::ADD, DL, XLenVT, Idx, DAG.getConstant(1, DL, XLenVT));
 
   // Use tail agnostic policy if Idx is the last index of Vec.
-  unsigned Policy = YSXVType::TAIL_UNDISTURBED_MASK_UNDISTURBED;
+  unsigned Policy = RISCVVType::TAIL_UNDISTURBED_MASK_UNDISTURBED;
   if (VecVT.isFixedLengthVector() && isa<ConstantSDNode>(Idx) &&
       Idx->getAsZExtVal() + 1 == VecVT.getVectorNumElements())
-    Policy = YSXVType::TAIL_AGNOSTIC;
+    Policy = RISCVVType::TAIL_AGNOSTIC;
   SDValue Slideup = getVSlideup(DAG, Subtarget, DL, ContainerVT, Vec, ValInVec,
                                 Idx, Mask, InsertVL, Policy);
 
@@ -10805,9 +10798,9 @@ static SDValue lowerVectorIntrinsicScalars(SDValue Op, SelectionDAG &DAG,
       }
     }
     if (!I32VL) {
-      YSXVType::VLMUL Lmul = YSXTargetLowering::getLMUL(VT);
+      RISCVVType::VLMUL Lmul = YSXTargetLowering::getLMUL(VT);
       SDValue LMUL = DAG.getConstant(Lmul, DL, XLenVT);
-      unsigned Sew = YSXVType::encodeSEW(VT.getScalarSizeInBits());
+      unsigned Sew = RISCVVType::encodeSEW(VT.getScalarSizeInBits());
       SDValue SEW = DAG.getConstant(Sew, DL, XLenVT);
       SDValue SETVL =
           DAG.getTargetConstant(Intrinsic::riscv_vsetvli, DL, MVT::i32);
@@ -10856,7 +10849,7 @@ static SDValue lowerVectorIntrinsicScalars(SDValue Op, SelectionDAG &DAG,
     if (MaskedOff.isUndef())
       return Vec;
     // TAMU
-    if (Policy == YSXVType::TAIL_AGNOSTIC)
+    if (Policy == RISCVVType::TAIL_AGNOSTIC)
       return DAG.getNode(YSXISD::VMERGE_VL, DL, VT, Mask, Vec, MaskedOff,
                          DAG.getUNDEF(VT), AVL);
     // TUMA or TUMU: Currently we always emit tumu policy regardless of tuma.
@@ -10902,8 +10895,8 @@ static SDValue lowerGetVectorLength(SDNode *N, SelectionDAG &DAG,
 
   bool Fractional = VF < LMul1VF;
   unsigned LMulVal = Fractional ? LMul1VF / VF : VF / LMul1VF;
-  unsigned VLMUL = (unsigned)YSXVType::encodeLMUL(LMulVal, Fractional);
-  unsigned VSEW = YSXVType::encodeSEW(ElementWidth);
+  unsigned VLMUL = (unsigned)RISCVVType::encodeLMUL(LMulVal, Fractional);
+  unsigned VSEW = RISCVVType::encodeSEW(ElementWidth);
 
   SDLoc DL(N);
 
@@ -11357,7 +11350,7 @@ lowerFixedVectorSegLoadIntrinsics(unsigned IntNo, SDValue Op,
       Mask,
       VL,
       DAG.getTargetConstant(
-          YSXVType::TAIL_AGNOSTIC | YSXVType::MASK_AGNOSTIC, DL, XLenVT),
+          RISCVVType::TAIL_AGNOSTIC | RISCVVType::MASK_AGNOSTIC, DL, XLenVT),
       DAG.getTargetConstant(Log2_64(VT.getScalarSizeInBits()), DL, XLenVT)};
   // Insert the stride operand.
   if (IsStrided)
@@ -11727,7 +11720,7 @@ static SDValue lowerReductionSeq(unsigned YSXVecOpcode, MVT ResVT,
     InitialValue =
         DAG.getInsertSubvector(DL, DAG.getUNDEF(M1VT), InitialValue, 0);
   SDValue PassThru = NonZeroAVL ? DAG.getUNDEF(M1VT) : InitialValue;
-  SDValue Policy = DAG.getTargetConstant(YSXVType::TAIL_AGNOSTIC, DL, XLenVT);
+  SDValue Policy = DAG.getTargetConstant(RISCVVType::TAIL_AGNOSTIC, DL, XLenVT);
   SDValue Ops[] = {PassThru, Vec, InitialValue, Mask, VL, Policy};
   SDValue Reduction = DAG.getNode(YSXVecOpcode, DL, M1VT, Ops);
   return DAG.getExtractVectorElt(DL, ResVT, Reduction, 0);
@@ -11981,9 +11974,9 @@ SDValue YSXTargetLowering::lowerINSERT_SUBVECTOR(SDValue Op,
     SDValue VL = DAG.getConstant(EndIndex, DL, XLenVT);
 
     // Use tail agnostic policy if we're inserting over Vec's tail.
-    unsigned Policy = YSXVType::TAIL_UNDISTURBED_MASK_UNDISTURBED;
+    unsigned Policy = RISCVVType::TAIL_UNDISTURBED_MASK_UNDISTURBED;
     if (VecVT.isFixedLengthVector() && EndIndex == VecVT.getVectorNumElements())
-      Policy = YSXVType::TAIL_AGNOSTIC;
+      Policy = RISCVVType::TAIL_AGNOSTIC;
 
     // If we're inserting into the lowest elements, use a tail undisturbed
     // vmv.v.v.
@@ -12103,10 +12096,10 @@ SDValue YSXTargetLowering::lowerINSERT_SUBVECTOR(SDValue Op,
   VL = DAG.getElementCount(DL, XLenVT, SubVecVT.getVectorElementCount());
 
   // Use tail agnostic policy if we're inserting over InterSubVT's tail.
-  unsigned Policy = YSXVType::TAIL_UNDISTURBED_MASK_UNDISTURBED;
+  unsigned Policy = RISCVVType::TAIL_UNDISTURBED_MASK_UNDISTURBED;
   if (Subtarget.expandVScale(EndIndex) ==
       Subtarget.expandVScale(InterSubVT.getVectorElementCount()))
-    Policy = YSXVType::TAIL_AGNOSTIC;
+    Policy = RISCVVType::TAIL_AGNOSTIC;
 
   // If we're inserting into the lowest elements, use a tail undisturbed
   // vmv.v.v.
@@ -12274,8 +12267,8 @@ SDValue YSXTargetLowering::lowerEXTRACT_SUBVECTOR(SDValue Op,
   // Else SubVecVT is M1 or smaller and may need to be slid down: if SubVecVT
   // was > M1 then the index would need to be a multiple of VLMAX, and so would
   // divide exactly.
-  assert(YSXVType::decodeVLMUL(getLMUL(ContainerSubVecVT)).second ||
-         getLMUL(ContainerSubVecVT) == YSXVType::LMUL_1);
+  assert(RISCVVType::decodeVLMUL(getLMUL(ContainerSubVecVT)).second ||
+         getLMUL(ContainerSubVecVT) == RISCVVType::LMUL_1);
 
   // If the vector type is an LMUL-group type, extract a subvector equal to the
   // nearest full vector register type.
@@ -12518,7 +12511,7 @@ SDValue YSXTargetLowering::lowerVECTOR_DEINTERLEAVE(SDValue Op,
       Mask,
       VL,
       DAG.getTargetConstant(
-          YSXVType::TAIL_AGNOSTIC | YSXVType::MASK_AGNOSTIC, DL, XLenVT),
+          RISCVVType::TAIL_AGNOSTIC | RISCVVType::MASK_AGNOSTIC, DL, XLenVT),
       DAG.getTargetConstant(Log2_64(VecVT.getScalarSizeInBits()), DL, XLenVT)};
 
   unsigned Sz =
@@ -12917,11 +12910,10 @@ SDValue YSXTargetLowering::lowerVECTOR_SPLICE(SDValue Op,
 
   SDValue SlideDown = getVSlidedown(
       DAG, Subtarget, DL, VecVT, DAG.getUNDEF(VecVT), V1, DownOffset, TrueMask,
-      Subtarget.hasVLDependentLatency() ? UpOffset
-                                        : DAG.getRegister(YSX::X0, XLenVT));
+      DAG.getRegister(YSX::X0, XLenVT));
   return getVSlideup(DAG, Subtarget, DL, VecVT, SlideDown, V2, UpOffset,
                      TrueMask, DAG.getRegister(YSX::X0, XLenVT),
-                     YSXVType::TAIL_AGNOSTIC);
+                     RISCVVType::TAIL_AGNOSTIC);
 }
 
 SDValue
@@ -13084,7 +13076,7 @@ SDValue YSXTargetLowering::lowerMaskedLoad(SDValue Op,
     Ops.push_back(Mask);
   Ops.push_back(VL);
   if (IntID == Intrinsic::riscv_vle_mask)
-    Ops.push_back(DAG.getTargetConstant(YSXVType::TAIL_AGNOSTIC, DL, XLenVT));
+    Ops.push_back(DAG.getTargetConstant(RISCVVType::TAIL_AGNOSTIC, DL, XLenVT));
 
   SDVTList VTs = DAG.getVTList({ContainerVT, MVT::Other});
 
@@ -13103,7 +13095,7 @@ SDValue YSXTargetLowering::lowerMaskedLoad(SDValue Op,
     // overflow.
     if (IndexEltVT == MVT::i8 && VT.getVectorNumElements() > 256) {
       // FIXME: We need to do vector splitting manually for LMUL=8 cases.
-      assert(getLMUL(IndexVT) != YSXVType::LMUL_8);
+      assert(getLMUL(IndexVT) != RISCVVType::LMUL_8);
       IndexVT = IndexVT.changeVectorElementType(MVT::i16);
       UseVRGATHEREI16 = true;
     }
@@ -13154,7 +13146,7 @@ SDValue YSXTargetLowering::lowerLoadFF(SDValue Op, SelectionDAG &DAG) const {
       BasePtr,
       Mask,
       VL,
-      DAG.getTargetConstant(YSXVType::TAIL_AGNOSTIC, DL, XLenVT)};
+      DAG.getTargetConstant(RISCVVType::TAIL_AGNOSTIC, DL, XLenVT)};
 
   SDVTList VTs = DAG.getVTList({ContainerVT, Op->getValueType(1), MVT::Other});
 
@@ -13920,9 +13912,9 @@ YSXTargetLowering::lowerVPSpliceExperimental(SDValue Op,
   if (ImmValue != 0)
     Op1 = getVSlidedown(DAG, Subtarget, DL, ContainerVT,
                         DAG.getUNDEF(ContainerVT), Op1, DownOffset, Mask,
-                        Subtarget.hasVLDependentLatency() ? UpOffset : EVL2);
+                        EVL2);
   SDValue Result = getVSlideup(DAG, Subtarget, DL, ContainerVT, Op1, Op2,
-                               UpOffset, Mask, EVL2, YSXVType::TAIL_AGNOSTIC);
+                               UpOffset, Mask, EVL2, RISCVVType::TAIL_AGNOSTIC);
 
   if (IsMaskVector) {
     // Truncate Result back to a mask vector (Result has same EVL as Op2)
@@ -14116,7 +14108,7 @@ SDValue YSXTargetLowering::lowerVPStridedLoad(SDValue Op,
   Ops.push_back(VPNode->getVectorLength());
   if (!IsUnmasked) {
     SDValue Policy =
-        DAG.getTargetConstant(YSXVType::TAIL_AGNOSTIC, DL, XLenVT);
+        DAG.getTargetConstant(RISCVVType::TAIL_AGNOSTIC, DL, XLenVT);
     Ops.push_back(Policy);
   }
 
@@ -14254,7 +14246,7 @@ SDValue YSXTargetLowering::lowerMaskedGather(SDValue Op,
     Ops.push_back(Mask);
   Ops.push_back(VL);
   if (!IsUnmasked)
-    Ops.push_back(DAG.getTargetConstant(YSXVType::TAIL_AGNOSTIC, DL, XLenVT));
+    Ops.push_back(DAG.getTargetConstant(RISCVVType::TAIL_AGNOSTIC, DL, XLenVT));
 
   SDVTList VTs = DAG.getVTList({ContainerVT, MVT::Other});
   SDValue Result =
@@ -22195,10 +22187,10 @@ void YSXTargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
     case Intrinsic::riscv_vsetvlimax: {
       bool HasAVL = IntNo == Intrinsic::riscv_vsetvli;
       unsigned VSEW = Op.getConstantOperandVal(HasAVL + 1);
-      YSXVType::VLMUL VLMUL =
-          static_cast<YSXVType::VLMUL>(Op.getConstantOperandVal(HasAVL + 2));
-      unsigned SEW = YSXVType::decodeVSEW(VSEW);
-      auto [LMul, Fractional] = YSXVType::decodeVLMUL(VLMUL);
+      RISCVVType::VLMUL VLMUL =
+          static_cast<RISCVVType::VLMUL>(Op.getConstantOperandVal(HasAVL + 2));
+      unsigned SEW = RISCVVType::decodeVSEW(VSEW);
+      auto [LMul, Fractional] = RISCVVType::decodeVLMUL(VLMUL);
       uint64_t MaxVL = Subtarget.getRealMaxVLen() / SEW;
       MaxVL = (Fractional) ? MaxVL / LMul : MaxVL * LMul;
 
@@ -22795,7 +22787,7 @@ static MachineBasicBlock *emitSelectPseudo(MachineInstr &MI,
 #if 0
 // Helper to find Masked Pseudo instruction from MC instruction, LMUL and SEW.
 static const YSX::YSXMaskedPseudoInfo *
-lookupMaskedIntrinsic(uint16_t MCOpcode, YSXVType::VLMUL LMul, unsigned SEW) {
+lookupMaskedIntrinsic(uint16_t MCOpcode, RISCVVType::VLMUL LMul, unsigned SEW) {
   return nullptr;
 }
 
@@ -22834,7 +22826,7 @@ static MachineBasicBlock *emitVFROUND_NOEXCEPT_MASK(MachineInstr &MI,
                                      /*IsImp*/ true));
 
   // Emit a VFCVT_F_X
-  YSXVType::VLMUL LMul = YSXII::getLMul(MI.getDesc().TSFlags);
+  RISCVVType::VLMUL LMul = YSXII::getLMul(MI.getDesc().TSFlags);
   unsigned Log2SEW = MI.getOperand(YSXII::getSEWOpNum(MI.getDesc())).getImm();
   // There is no E8 variant for VFCVT_F_X.
   assert(Log2SEW >= 4);

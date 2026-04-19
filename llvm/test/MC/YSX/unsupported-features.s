@@ -1,6 +1,11 @@
 # RUN: not llvm-mc -triple=ysx64 -mattr=+f %s 2>&1 | FileCheck %s
 # RUN: not llvm-mc -triple=ysx64 -mattr=+c %s 2>&1 | FileCheck %s
 # RUN: not llvm-mc -triple=ysx64 -mattr=+zbb %s 2>&1 | FileCheck %s
+# RUN: not llvm-mc -triple=ysx64 -mattr=+vxrm-pipeline-flush %s 2>&1 | FileCheck %s
+# RUN: not llvm-mc -triple=ysx64 -mattr=+log-vrgather %s 2>&1 | FileCheck %s
+# RUN: not llvm-mc -triple=ysx64 -mattr=+single-element-vec-fp64 %s 2>&1 | FileCheck %s
+# RUN: not llvm-mc -triple=ysx64 -mattr=+prefer-vsetvli-over-read-vlenb %s 2>&1 | FileCheck %s
+# RUN: not llvm-mc -triple=ysx64 -mattr=+andes45 %s 2>&1 | FileCheck %s
 # RUN: printf "add a0, a0, a1\n" | llvm-mc -triple=ysx64 -mattr=-f,-v,-zbb -
 # RUN: llvm-mc -triple=ysx64 -mattr=help 2>&1 | FileCheck %s --check-prefix=HELP
 # RUN: not llvm-mc -triple=ysx64 %s 2>&1 | FileCheck %s --check-prefix=ARCH

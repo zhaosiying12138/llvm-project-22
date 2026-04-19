@@ -214,35 +214,13 @@ void YSXInstPrinter::printZeroOffsetMemOp(const MCInst *MI, unsigned OpNo,
 
 void YSXInstPrinter::printVTypeI(const MCInst *MI, unsigned OpNo,
                                    const MCSubtargetInfo &STI, raw_ostream &O) {
-  unsigned Imm = MI->getOperand(OpNo).getImm();
-  // Print the raw immediate for reserved values: vlmul[2:0]=4, vsew[2:0]=0b1xx,
-  // altfmt=1 without zvfbfa or zvfofp8min extension, or non-zero in bits 9 and
-  // above.
-  if (YSXVType::getVLMUL(Imm) == YSXVType::VLMUL::LMUL_RESERVED ||
-      YSXVType::getSEW(Imm) > 64 ||
-      YSXVType::isAltFmt(Imm) ||
-      (Imm >> 9) != 0) {
-    O << formatImm(Imm);
-    return;
-  }
-  // Print the text form.
-  YSXVType::printVType(Imm, O);
+  O << formatImm(MI->getOperand(OpNo).getImm());
 }
 
 void YSXInstPrinter::printXRemovedSfmmVType(const MCInst *MI, unsigned OpNo,
                                        const MCSubtargetInfo &STI,
                                        raw_ostream &O) {
-  unsigned Imm = MI->getOperand(OpNo).getImm();
-  assert(YSXVType::isValidXRemovedSfmmVType(Imm));
-  unsigned SEW = YSXVType::getSEW(Imm);
-  O << "e" << SEW;
-  bool AltFmt = YSXVType::isAltFmt(Imm);
-  if (AltFmt)
-    O << "alt";
-  unsigned TWiden = (Imm >> 9) & 0x3;
-  assert(TWiden != 0 && "Invalid widen value");
-  unsigned Widen = 1 << (TWiden - 1);
-  O << ", w" << Widen;
+  O << formatImm(MI->getOperand(OpNo).getImm());
 }
 
 // Print a Zcmp RList. If we are printing architectural register names rather

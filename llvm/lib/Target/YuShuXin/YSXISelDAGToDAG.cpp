@@ -272,7 +272,7 @@ void YSXDAGToDAGISel::addVectorLoadStoreOperands(
   // none of the others do.  All have passthru operands.  For our pseudos,
   // all loads have policy operands.
   if (IsLoad) {
-    uint64_t Policy = YSXVType::MASK_AGNOSTIC;
+    uint64_t Policy = RISCVVType::MASK_AGNOSTIC;
     if (IsMasked)
       Policy = Node->getConstantOperandVal(CurOp++);
     SDValue PolicyOp = CurDAG->getTargetConstant(Policy, DL, XLenVT);
@@ -287,7 +287,7 @@ void YSXDAGToDAGISel::selectVLSEG(SDNode *Node, unsigned NF, bool IsMasked,
   SDLoc DL(Node);
   MVT VT = Node->getSimpleValueType(0);
   unsigned Log2SEW = Node->getConstantOperandVal(Node->getNumOperands() - 1);
-  YSXVType::VLMUL LMUL = YSXTargetLowering::getLMUL(VT);
+  RISCVVType::VLMUL LMUL = YSXTargetLowering::getLMUL(VT);
 
   unsigned CurOp = 2;
   SmallVector<SDValue, 8> Operands;
@@ -316,7 +316,7 @@ void YSXDAGToDAGISel::selectVLSEGFF(SDNode *Node, unsigned NF,
   MVT VT = Node->getSimpleValueType(0);
   MVT XLenVT = Subtarget->getXLenVT();
   unsigned Log2SEW = Node->getConstantOperandVal(Node->getNumOperands() - 1);
-  YSXVType::VLMUL LMUL = YSXTargetLowering::getLMUL(VT);
+  RISCVVType::VLMUL LMUL = YSXTargetLowering::getLMUL(VT);
 
   unsigned CurOp = 2;
   SmallVector<SDValue, 7> Operands;
@@ -346,7 +346,7 @@ void YSXDAGToDAGISel::selectVLXSEG(SDNode *Node, unsigned NF, bool IsMasked,
   SDLoc DL(Node);
   MVT VT = Node->getSimpleValueType(0);
   unsigned Log2SEW = Node->getConstantOperandVal(Node->getNumOperands() - 1);
-  YSXVType::VLMUL LMUL = YSXTargetLowering::getLMUL(VT);
+  RISCVVType::VLMUL LMUL = YSXTargetLowering::getLMUL(VT);
 
   unsigned CurOp = 2;
   SmallVector<SDValue, 8> Operands;
@@ -361,7 +361,7 @@ void YSXDAGToDAGISel::selectVLXSEG(SDNode *Node, unsigned NF, bool IsMasked,
 #ifndef NDEBUG
   // Number of element = YSXVecBitsPerBlock * LMUL / SEW
   unsigned ContainedTyNumElts = YSX::YSXVecBitsPerBlock >> Log2SEW;
-  auto DecodedLMUL = YSXVType::decodeVLMUL(LMUL);
+  auto DecodedLMUL = RISCVVType::decodeVLMUL(LMUL);
   if (DecodedLMUL.second)
     ContainedTyNumElts /= DecodedLMUL.first;
   else
@@ -370,7 +370,7 @@ void YSXDAGToDAGISel::selectVLXSEG(SDNode *Node, unsigned NF, bool IsMasked,
          "Element count mismatch");
 #endif
 
-  YSXVType::VLMUL IndexLMUL = YSXTargetLowering::getLMUL(IndexVT);
+  RISCVVType::VLMUL IndexLMUL = YSXTargetLowering::getLMUL(IndexVT);
   unsigned IndexLog2EEW = Log2_32(IndexVT.getScalarSizeInBits());
   if (IndexLog2EEW == 6 && !Subtarget->is64Bit()) {
     reportFatalUsageError("The V extension does not support EEW=64 for index "
@@ -394,7 +394,7 @@ void YSXDAGToDAGISel::selectVSSEG(SDNode *Node, unsigned NF, bool IsMasked,
   SDLoc DL(Node);
   MVT VT = Node->getOperand(2)->getSimpleValueType(0);
   unsigned Log2SEW = Node->getConstantOperandVal(Node->getNumOperands() - 1);
-  YSXVType::VLMUL LMUL = YSXTargetLowering::getLMUL(VT);
+  RISCVVType::VLMUL LMUL = YSXTargetLowering::getLMUL(VT);
 
   unsigned CurOp = 2;
   SmallVector<SDValue, 8> Operands;
@@ -419,7 +419,7 @@ void YSXDAGToDAGISel::selectVSXSEG(SDNode *Node, unsigned NF, bool IsMasked,
   SDLoc DL(Node);
   MVT VT = Node->getOperand(2)->getSimpleValueType(0);
   unsigned Log2SEW = Node->getConstantOperandVal(Node->getNumOperands() - 1);
-  YSXVType::VLMUL LMUL = YSXTargetLowering::getLMUL(VT);
+  RISCVVType::VLMUL LMUL = YSXTargetLowering::getLMUL(VT);
 
   unsigned CurOp = 2;
   SmallVector<SDValue, 8> Operands;
@@ -434,7 +434,7 @@ void YSXDAGToDAGISel::selectVSXSEG(SDNode *Node, unsigned NF, bool IsMasked,
 #ifndef NDEBUG
   // Number of element = YSXVecBitsPerBlock * LMUL / SEW
   unsigned ContainedTyNumElts = YSX::YSXVecBitsPerBlock >> Log2SEW;
-  auto DecodedLMUL = YSXVType::decodeVLMUL(LMUL);
+  auto DecodedLMUL = RISCVVType::decodeVLMUL(LMUL);
   if (DecodedLMUL.second)
     ContainedTyNumElts /= DecodedLMUL.first;
   else
@@ -443,7 +443,7 @@ void YSXDAGToDAGISel::selectVSXSEG(SDNode *Node, unsigned NF, bool IsMasked,
          "Element count mismatch");
 #endif
 
-  YSXVType::VLMUL IndexLMUL = YSXTargetLowering::getLMUL(IndexVT);
+  RISCVVType::VLMUL IndexLMUL = YSXTargetLowering::getLMUL(IndexVT);
   unsigned IndexLog2EEW = Log2_32(IndexVT.getScalarSizeInBits());
   if (IndexLog2EEW == 6 && !Subtarget->is64Bit()) {
     reportFatalUsageError("The V extension does not support EEW=64 for index "
@@ -484,11 +484,11 @@ void YSXDAGToDAGISel::selectVSETVLI(SDNode *Node) {
          "Unexpected number of operands");
 
   unsigned SEW =
-      YSXVType::decodeVSEW(Node->getConstantOperandVal(Offset) & 0x7);
-  YSXVType::VLMUL VLMul = static_cast<YSXVType::VLMUL>(
+      RISCVVType::decodeVSEW(Node->getConstantOperandVal(Offset) & 0x7);
+  RISCVVType::VLMUL VLMul = static_cast<RISCVVType::VLMUL>(
       Node->getConstantOperandVal(Offset + 1) & 0x7);
 
-  unsigned VTypeI = YSXVType::encodeVTYPE(VLMul, SEW, /*TailAgnostic*/ true,
+  unsigned VTypeI = RISCVVType::encodeVTYPE(VLMul, SEW, /*TailAgnostic*/ true,
                                             /*MaskAgnostic*/ true);
   SDValue VTypeIOp = CurDAG->getTargetConstant(VTypeI, DL, XLenVT);
 
@@ -496,7 +496,7 @@ void YSXDAGToDAGISel::selectVSETVLI(SDNode *Node) {
   unsigned Opcode = YSX::PseudoVSETVLI;
   if (auto *C = dyn_cast<ConstantSDNode>(Node->getOperand(1))) {
     if (auto VLEN = Subtarget->getRealVLen())
-      if (*VLEN / YSXVType::getSEWLMULRatio(SEW, VLMul) == C->getZExtValue())
+      if (*VLEN / RISCVVType::getSEWLMULRatio(SEW, VLMul) == C->getZExtValue())
         VLMax = true;
   }
   if (VLMax || isAllOnesConstant(Node->getOperand(1))) {
@@ -539,15 +539,15 @@ void YSXDAGToDAGISel::selectXRemovedSfmmVSET(SDNode *Node) {
           IntNo == Intrinsic::riscv_sf_vsettk) &&
          "Unexpected XRemovedSfmm vset intrinsic");
 
-  unsigned SEW = YSXVType::decodeVSEW(Node->getConstantOperandVal(2));
-  unsigned Widen = YSXVType::decodeTWiden(Node->getConstantOperandVal(3));
+  unsigned SEW = RISCVVType::decodeVSEW(Node->getConstantOperandVal(2));
+  unsigned Widen = RISCVVType::decodeTWiden(Node->getConstantOperandVal(3));
   unsigned PseudoOpCode =
       IntNo == Intrinsic::riscv_sf_vsettnt  ? YSX::PseudoSF_VSETTNT
       : IntNo == Intrinsic::riscv_sf_vsettm ? YSX::PseudoSF_VSETTM
                                             : YSX::PseudoSF_VSETTK;
 
   if (IntNo == Intrinsic::riscv_sf_vsettnt) {
-    unsigned VTypeI = YSXVType::encodeXRemovedSfmmVType(SEW, Widen, 0);
+    unsigned VTypeI = RISCVVType::encodeXRemovedSfmmVType(SEW, Widen, 0);
     SDValue VTypeIOp = CurDAG->getTargetConstant(VTypeI, DL, XLenVT);
 
     ReplaceNode(Node, CurDAG->getMachineNode(PseudoOpCode, DL, XLenVT,
@@ -1883,7 +1883,7 @@ void YSXDAGToDAGISel::Select(SDNode *Node) {
       default:
         llvm_unreachable("Unexpected LMUL!");
 #define CASE_VMSLT_OPCODES(lmulenum, suffix)                                   \
-  case YSXVType::lmulenum:                                                   \
+  case RISCVVType::lmulenum:                                                   \
     VMSLTOpcode = IsUnsigned ? YSX::PseudoVMSLTU_VX_##suffix                 \
                              : YSX::PseudoVMSLT_VX_##suffix;                 \
     VMSGTOpcode = IsUnsigned ? YSX::PseudoVMSGTU_VX_##suffix                 \
@@ -1903,7 +1903,7 @@ void YSXDAGToDAGISel::Select(SDNode *Node) {
       default:
         llvm_unreachable("Unexpected LMUL!");
 #define CASE_VMNAND_VMSET_OPCODES(lmulenum, suffix)                            \
-  case YSXVType::lmulenum:                                                   \
+  case RISCVVType::lmulenum:                                                   \
     VMNANDOpcode = YSX::PseudoVMNAND_MM_##suffix;                            \
     VMSetOpcode = YSX::PseudoVMSET_M_##suffix;                               \
     break;
@@ -1979,7 +1979,7 @@ void YSXDAGToDAGISel::Select(SDNode *Node) {
       default:
         llvm_unreachable("Unexpected LMUL!");
 #define CASE_VMSLT_OPCODES(lmulenum, suffix)                                   \
-  case YSXVType::lmulenum:                                                   \
+  case RISCVVType::lmulenum:                                                   \
     VMSLTOpcode = IsUnsigned ? YSX::PseudoVMSLTU_VX_##suffix                 \
                              : YSX::PseudoVMSLT_VX_##suffix;                 \
     VMSLTMaskOpcode = IsUnsigned ? YSX::PseudoVMSLTU_VX_##suffix##_MASK      \
@@ -2001,7 +2001,7 @@ void YSXDAGToDAGISel::Select(SDNode *Node) {
       default:
         llvm_unreachable("Unexpected LMUL!");
 #define CASE_VMXOR_VMANDN_VMOR_OPCODES(lmulenum, suffix)                       \
-  case YSXVType::lmulenum:                                                   \
+  case RISCVVType::lmulenum:                                                   \
     VMXOROpcode = YSX::PseudoVMXOR_MM_##suffix;                              \
     VMANDNOpcode = YSX::PseudoVMANDN_MM_##suffix;                            \
     VMOROpcode = YSX::PseudoVMOR_MM_##suffix;                                \
@@ -2050,7 +2050,7 @@ void YSXDAGToDAGISel::Select(SDNode *Node) {
       }
 
       SDValue PolicyOp =
-          CurDAG->getTargetConstant(YSXVType::TAIL_AGNOSTIC, DL, XLenVT);
+          CurDAG->getTargetConstant(RISCVVType::TAIL_AGNOSTIC, DL, XLenVT);
 
       if (IsCmpConstant) {
         SDValue Imm =
@@ -2223,8 +2223,8 @@ void YSXDAGToDAGISel::Select(SDNode *Node) {
       assert(VT.getVectorElementCount() == IndexVT.getVectorElementCount() &&
              "Element count mismatch");
 
-      YSXVType::VLMUL LMUL = YSXTargetLowering::getLMUL(VT);
-      YSXVType::VLMUL IndexLMUL = YSXTargetLowering::getLMUL(IndexVT);
+      RISCVVType::VLMUL LMUL = YSXTargetLowering::getLMUL(VT);
+      RISCVVType::VLMUL IndexLMUL = YSXTargetLowering::getLMUL(IndexVT);
       unsigned IndexLog2EEW = Log2_32(IndexVT.getScalarSizeInBits());
       if (IndexLog2EEW == 6 && !Subtarget->is64Bit()) {
         reportFatalUsageError("The V extension does not support EEW=64 for "
@@ -2275,7 +2275,7 @@ void YSXDAGToDAGISel::Select(SDNode *Node) {
       addVectorLoadStoreOperands(Node, Log2SEW, DL, CurOp, IsMasked, IsStrided,
                                  Operands, /*IsLoad=*/true);
 
-      YSXVType::VLMUL LMUL = YSXTargetLowering::getLMUL(VT);
+      RISCVVType::VLMUL LMUL = YSXTargetLowering::getLMUL(VT);
       const YSX::VLEPseudo *P =
           YSX::getVLEPseudo(IsMasked, IsStrided, /*FF*/ false, Log2SEW,
                               static_cast<unsigned>(LMUL));
@@ -2301,7 +2301,7 @@ void YSXDAGToDAGISel::Select(SDNode *Node) {
                                  /*IsStridedOrIndexed*/ false, Operands,
                                  /*IsLoad=*/true);
 
-      YSXVType::VLMUL LMUL = YSXTargetLowering::getLMUL(VT);
+      RISCVVType::VLMUL LMUL = YSXTargetLowering::getLMUL(VT);
       const YSX::VLEPseudo *P =
           YSX::getVLEPseudo(IsMasked, /*Strided*/ false, /*FF*/ true,
                               Log2SEW, static_cast<unsigned>(LMUL));
@@ -2331,7 +2331,7 @@ void YSXDAGToDAGISel::Select(SDNode *Node) {
                                  /*IsStridedOrIndexed=*/false, Operands,
                                  /*IsLoad=*/true);
 
-      YSXVType::VLMUL LMUL = YSXTargetLowering::getLMUL(VT);
+      RISCVVType::VLMUL LMUL = YSXTargetLowering::getLMUL(VT);
       const YSX::NDSVLNPseudo *P = YSX::getNDSVLNPseudo(
           IsMasked, IsUnsigned, Log2SEW, static_cast<unsigned>(LMUL));
       MachineSDNode *Load =
@@ -2460,8 +2460,8 @@ void YSXDAGToDAGISel::Select(SDNode *Node) {
       assert(VT.getVectorElementCount() == IndexVT.getVectorElementCount() &&
              "Element count mismatch");
 
-      YSXVType::VLMUL LMUL = YSXTargetLowering::getLMUL(VT);
-      YSXVType::VLMUL IndexLMUL = YSXTargetLowering::getLMUL(IndexVT);
+      RISCVVType::VLMUL LMUL = YSXTargetLowering::getLMUL(VT);
+      RISCVVType::VLMUL IndexLMUL = YSXTargetLowering::getLMUL(IndexVT);
       unsigned IndexLog2EEW = Log2_32(IndexVT.getScalarSizeInBits());
       if (IndexLog2EEW == 6 && !Subtarget->is64Bit()) {
         reportFatalUsageError("The V extension does not support EEW=64 for "
@@ -2498,7 +2498,7 @@ void YSXDAGToDAGISel::Select(SDNode *Node) {
       addVectorLoadStoreOperands(Node, Log2SEW, DL, CurOp, IsMasked, IsStrided,
                                  Operands);
 
-      YSXVType::VLMUL LMUL = YSXTargetLowering::getLMUL(VT);
+      RISCVVType::VLMUL LMUL = YSXTargetLowering::getLMUL(VT);
       const YSX::VSEPseudo *P = YSX::getVSEPseudo(
           IsMasked, IsStrided, Log2SEW, static_cast<unsigned>(LMUL));
       MachineSDNode *Store =
@@ -2727,12 +2727,12 @@ void YSXDAGToDAGISel::Select(SDNode *Node) {
     if (Idx != 0)
       break;
 
-    YSXVType::VLMUL SubVecLMUL =
+    RISCVVType::VLMUL SubVecLMUL =
         YSXTargetLowering::getLMUL(SubVecContainerVT);
     [[maybe_unused]] bool IsSubVecPartReg =
-        SubVecLMUL == YSXVType::VLMUL::LMUL_F2 ||
-        SubVecLMUL == YSXVType::VLMUL::LMUL_F4 ||
-        SubVecLMUL == YSXVType::VLMUL::LMUL_F8;
+        SubVecLMUL == RISCVVType::VLMUL::LMUL_F2 ||
+        SubVecLMUL == RISCVVType::VLMUL::LMUL_F4 ||
+        SubVecLMUL == RISCVVType::VLMUL::LMUL_F8;
     assert((V.getValueType().isRISCVVectorTuple() || !IsSubVecPartReg ||
             V.isUndef()) &&
            "Expecting lowering to have created legal INSERT_SUBVECTORs when "
@@ -2844,8 +2844,7 @@ void YSXDAGToDAGISel::Select(SDNode *Node) {
     // regular load.
     bool IsStrided = !isOneConstant(VL);
 
-    // Only do a strided load if we have optimized zero-stride vector load.
-    if (IsStrided && !Subtarget->hasOptimizedZeroStrideLoad())
+    if (IsStrided)
       break;
 
     SmallVector<SDValue> Operands = {
@@ -2853,11 +2852,11 @@ void YSXDAGToDAGISel::Select(SDNode *Node) {
         Ld->getBasePtr()};
     if (IsStrided)
       Operands.push_back(CurDAG->getRegister(YSX::X0, XLenVT));
-    uint64_t Policy = YSXVType::MASK_AGNOSTIC | YSXVType::TAIL_AGNOSTIC;
+    uint64_t Policy = RISCVVType::MASK_AGNOSTIC | RISCVVType::TAIL_AGNOSTIC;
     SDValue PolicyOp = CurDAG->getTargetConstant(Policy, DL, XLenVT);
     Operands.append({VL, SEW, PolicyOp, Ld->getChain()});
 
-    YSXVType::VLMUL LMUL = YSXTargetLowering::getLMUL(VT);
+    RISCVVType::VLMUL LMUL = YSXTargetLowering::getLMUL(VT);
     const YSX::VLEPseudo *P = YSX::getVLEPseudo(
         /*IsMasked*/ false, IsStrided, /*FF*/ false,
         Log2SEW, static_cast<unsigned>(LMUL));

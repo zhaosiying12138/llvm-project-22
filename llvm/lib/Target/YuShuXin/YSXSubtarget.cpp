@@ -44,6 +44,11 @@ static bool isRequiredYSXFeature(StringRef Feature) {
          Feature == "zalrsc";
 }
 
+static bool isRetainedYSXFeature(StringRef Feature) {
+  return isRequiredYSXFeature(Feature) || Feature == "relax" ||
+         Feature == "exact-asm";
+}
+
 static std::string filterYSXFeatureString(StringRef FS) {
   SmallVector<StringRef, 8> Features;
   FS.split(Features, ",", /*MaxSplit=*/-1, /*KeepEmpty=*/false);
@@ -64,7 +69,8 @@ static std::string filterYSXFeatureString(StringRef FS) {
       continue;
     }
 
-    if (Feature == "32bit" || !isKnownYSXFeature(Feature)) {
+    if (Feature == "32bit" || !isKnownYSXFeature(Feature) ||
+        !isRetainedYSXFeature(Feature)) {
       if (!Enabled)
         continue;
       reportFatalUsageError("YSX only supports the rv64ima ISA");

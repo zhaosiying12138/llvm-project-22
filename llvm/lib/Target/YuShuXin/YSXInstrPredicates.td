@@ -16,12 +16,9 @@
 // it's the third operand of its MCInst form, so this predicate will not
 // be triggered by llvm-mca, which checks against MCInst.
 def VLDSX0Pred
-    : AllOfSchedPreds<[FeatureSchedPredicate<TuneOptimizedZeroStrideLoad>,
-                       MCSchedPredicate<CheckRegOperand<3, X0>>]>;
+    : MCSchedPredicate<FalsePred>;
 
-// This scheduling predicate is true when subtarget feature TuneHasSingleElementVecFP64
-// is enabled.
-def SingleElementVecFP64SchedPred : FeatureSchedPredicate<TuneHasSingleElementVecFP64>;
+def SingleElementVecFP64SchedPred : MCSchedPredicate<FalsePred>;
 
 // Returns true if this is the sext.w pattern, addiw rd, rs1, 0.
 def isSEXT_W

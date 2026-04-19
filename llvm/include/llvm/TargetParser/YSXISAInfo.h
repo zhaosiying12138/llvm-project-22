@@ -153,42 +153,6 @@ public:
   }
 };
 
-namespace YSXVType {
-using RISCVVType::decodeTWiden;
-using RISCVVType::decodeVLMUL;
-using RISCVVType::decodeVSEW;
-using RISCVVType::encodeLMUL;
-using RISCVVType::encodeSEW;
-using RISCVVType::encodeVTYPE;
-using RISCVVType::encodeXSfmmVType;
-using RISCVVType::getSameRatioLMUL;
-using RISCVVType::getSEW;
-using RISCVVType::getSEWLMULRatio;
-using RISCVVType::getVLMUL;
-using RISCVVType::getXSfmmWiden;
-using RISCVVType::hasXSfmmWiden;
-using RISCVVType::isAltFmt;
-using RISCVVType::isMaskAgnostic;
-using RISCVVType::isTailAgnostic;
-using RISCVVType::isValidLMUL;
-using RISCVVType::isValidSEW;
-using RISCVVType::isValidXSfmmVType;
-using RISCVVType::LMUL_1;
-using RISCVVType::LMUL_2;
-using RISCVVType::LMUL_4;
-using RISCVVType::LMUL_8;
-using RISCVVType::LMUL_F2;
-using RISCVVType::LMUL_F4;
-using RISCVVType::LMUL_F8;
-using RISCVVType::LMUL_RESERVED;
-using RISCVVType::MASK_AGNOSTIC;
-using RISCVVType::printVType;
-using RISCVVType::printXSfmmVType;
-using RISCVVType::TAIL_AGNOSTIC;
-using RISCVVType::TAIL_UNDISTURBED_MASK_UNDISTURBED;
-using RISCVVType::VLMUL;
-} // namespace YSXVType
-
 } // namespace llvm
 
 #endif // LLVM_TARGETPARSER_YSXISAINFO_H

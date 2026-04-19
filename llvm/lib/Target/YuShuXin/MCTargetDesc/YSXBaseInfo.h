@@ -167,8 +167,8 @@ static inline unsigned getFormat(uint64_t TSFlags) {
   return (TSFlags & InstFormatMask) >> InstFormatShift;
 }
 /// \returns the LMUL for the instruction.
-static inline YSXVType::VLMUL getLMul(uint64_t TSFlags) {
-  return static_cast<YSXVType::VLMUL>((TSFlags & VLMulMask) >> VLMulShift);
+static inline RISCVVType::VLMUL getLMul(uint64_t TSFlags) {
+  return static_cast<RISCVVType::VLMUL>((TSFlags & VLMulMask) >> VLMulShift);
 }
 /// \returns true if this a _TIED pseudo.
 static inline bool isTiedPseudo(uint64_t TSFlags) {

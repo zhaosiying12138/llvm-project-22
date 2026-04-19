@@ -1046,9 +1046,7 @@ public:
       OS << "<sysreg: " << getSysReg() << " (" << SysReg.Encoding << ")>";
       break;
     case KindTy::VType:
-      OS << "<vtype: ";
-      YSXVType::printVType(getVType(), OS);
-      OS << '>';
+      OS << "<vtype: " << getVType() << '>';
       break;
     case KindTy::FRM:
       OS << "<frm: ";
@@ -1999,127 +1997,11 @@ bool YSXAsmParser::parseVTypeToken(const AsmToken &Tok, VTypeState &State,
                                      unsigned &Sew, unsigned &Lmul,
                                      bool &Fractional, bool &TailAgnostic,
                                      bool &MaskAgnostic, bool &AltFmt) {
-  if (Tok.isNot(AsmToken::Identifier))
-    return true;
-
-  StringRef Identifier = Tok.getIdentifier();
-  if (State < VTypeState::SeenSew && Identifier.consume_front("e")) {
-    if (Identifier.getAsInteger(10, Sew)) {
-      if (Identifier == "16alt") {
-        AltFmt = true;
-        Sew = 16;
-      } else if (Identifier == "8alt") {
-        AltFmt = true;
-        Sew = 8;
-      } else {
-        return true;
-      }
-    }
-    if (!YSXVType::isValidSEW(Sew))
-      return true;
-
-    State = VTypeState::SeenSew;
-    return false;
-  }
-
-  if (State < VTypeState::SeenLmul && Identifier.consume_front("m")) {
-    // Might arrive here if lmul and tail policy unspecified, if so we're
-    // parsing a MaskPolicy not an LMUL.
-    if (Identifier == "a" || Identifier == "u") {
-      MaskAgnostic = (Identifier == "a");
-      State = VTypeState::SeenMaskPolicy;
-      return false;
-    }
-
-    Fractional = Identifier.consume_front("f");
-    if (Identifier.getAsInteger(10, Lmul))
-      return true;
-    if (!YSXVType::isValidLMUL(Lmul, Fractional))
-      return true;
-
-    if (Fractional) {
-      unsigned ELEN = 32;
-      unsigned MinLMUL = ELEN / 8;
-      if (Lmul > MinLMUL)
-        Warning(Tok.getLoc(),
-                "use of vtype encodings with LMUL < SEWMIN/ELEN == mf" +
-                    Twine(MinLMUL) + " is reserved");
-    }
-
-    State = VTypeState::SeenLmul;
-    return false;
-  }
-
-  if (State < VTypeState::SeenTailPolicy && Identifier.starts_with("t")) {
-    if (Identifier == "ta")
-      TailAgnostic = true;
-    else if (Identifier == "tu")
-      TailAgnostic = false;
-    else
-      return true;
-
-    State = VTypeState::SeenTailPolicy;
-    return false;
-  }
-
-  if (State < VTypeState::SeenMaskPolicy && Identifier.starts_with("m")) {
-    if (Identifier == "ma")
-      MaskAgnostic = true;
-    else if (Identifier == "mu")
-      MaskAgnostic = false;
-    else
-      return true;
-
-    State = VTypeState::SeenMaskPolicy;
-    return false;
-  }
-
   return true;
 }
 
 ParseStatus YSXAsmParser::parseVTypeI(OperandVector &Operands) {
-  SMLoc S = getLoc();
-
-  // Default values
-  unsigned Sew = 8;
-  unsigned Lmul = 1;
-  bool Fractional = false;
-  bool TailAgnostic = false;
-  bool MaskAgnostic = false;
-  bool AltFmt = false;
-
-  VTypeState State = VTypeState::SeenNothingYet;
-  do {
-    if (parseVTypeToken(getTok(), State, Sew, Lmul, Fractional, TailAgnostic,
-                        MaskAgnostic, AltFmt)) {
-      // The first time, errors return NoMatch rather than Failure
-      if (State == VTypeState::SeenNothingYet)
-        return ParseStatus::NoMatch;
-      break;
-    }
-
-    getLexer().Lex();
-  } while (parseOptionalToken(AsmToken::Comma));
-
-  if (!getLexer().is(AsmToken::EndOfStatement) ||
-      State == VTypeState::SeenNothingYet)
-    return generateVTypeError(S);
-
-  YSXVType::VLMUL VLMUL = YSXVType::encodeLMUL(Lmul, Fractional);
-  if (Fractional) {
-    unsigned ELEN = 32;
-    unsigned MaxSEW = ELEN / Lmul;
-    // If MaxSEW < 8, we should have printed warning about reserved LMUL.
-    if (MaxSEW >= 8 && Sew > MaxSEW)
-      Warning(S, "use of vtype encodings with SEW > " + Twine(MaxSEW) +
-                     " and LMUL == mf" + Twine(Lmul) +
-                     " may not be compatible with all YSXVec implementations");
-  }
-
-  unsigned VTypeI =
-      YSXVType::encodeVTYPE(VLMUL, Sew, TailAgnostic, MaskAgnostic, AltFmt);
-  Operands.push_back(YSXOperand::createVType(VTypeI, S));
-  return ParseStatus::Success;
+  return ParseStatus::NoMatch;
 }
 
 bool YSXAsmParser::generateVTypeError(SMLoc ErrorLoc) {

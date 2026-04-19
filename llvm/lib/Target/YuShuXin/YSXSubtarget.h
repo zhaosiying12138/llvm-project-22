@@ -74,24 +74,8 @@ struct YSXTuneInfo {
 
 class YSXSubtarget : public YSXGenSubtargetInfo {
 public:
-  // clang-format off
-  enum YSXProcFamilyEnum : uint8_t {
-    Others,
-    SiFive7,
-    VentanaVeyron,
-    MIPSP8700,
-    Andes45,
-  };
-  enum YSXVRGatherCostModelEnum : uint8_t {
-    Quadratic,
-    NLog2N,
-  };
-  // clang-format on
 private:
   virtual void anchor();
-
-  YSXProcFamilyEnum YSXProcFamily = Others;
-  YSXVRGatherCostModelEnum YSXVRGatherCostModel = Quadratic;
 
   bool IsLittleEndian = true;
 
@@ -147,14 +131,6 @@ public:
   Align getPrefLoopAlignment() const {
     return Align(TuneInfo->PrefLoopAlignment);
   }
-
-  /// Returns RISC-V processor family.
-  /// Avoid this function! CPU specifics should be kept local to this class
-  /// and preferably modeled with SubtargetFeatures or properties in
-  /// initializeProperties().
-  YSXProcFamilyEnum getProcFamily() const { return YSXProcFamily; }
-
-  YSXVRGatherCostModelEnum getVRGatherCostModel() const { return YSXVRGatherCostModel; }
 
 #define GET_SUBTARGETINFO_MACRO(ATTRIBUTE, DEFAULT, GETTER) \
   bool GETTER() const { return ATTRIBUTE; }
@@ -265,9 +241,9 @@ public:
   }
 
   bool hasConditionalMoveFusion() const {
-    // Do we support fusing a branch+mv or branch+c.mv as a conditional move.
-    return (hasConditionalCompressedMoveFusion() && hasStdExtZca()) ||
-           hasShortForwardBranchIALU();
+    // YSX has no compressed move; only the scalar short-forward-branch model
+    // can enable this generic combine.
+    return hasShortForwardBranchIALU();
   }
 
   bool hasShlAdd(int64_t ShAmt) const {
@@ -359,13 +335,7 @@ public:
 
   bool enablePExtSIMDCodeGen() const;
 
-  // Returns VLEN divided by DLEN. Where DLEN is the datapath width of the
-  // vector hardware implementation which may be less than VLEN.
-  unsigned getDLenFactor() const {
-    if (DLenFactor2)
-      return 2;
-    return 1;
-  }
+  unsigned getDLenFactor() const { return 1; }
 
 protected:
   // SelectionDAGISel related APIs.
