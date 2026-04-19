@@ -617,8 +617,6 @@ unsigned YSXMCCodeEmitter::getVMaskReg(const MCInst &MI, unsigned OpNo,
   switch (MO.getReg().id()) {
   default:
     llvm_unreachable("Invalid mask register.");
-  case YSX::V0:
-    return 0;
   case YSX::NoRegister:
     return 1;
   }

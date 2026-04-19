@@ -39,20 +39,6 @@ static cl::opt<bool>
 
 static_assert(YSX::X1 == YSX::X0 + 1, "Register list not consecutive");
 static_assert(YSX::X31 == YSX::X0 + 31, "Register list not consecutive");
-static_assert(YSX::F1_H == YSX::F0_H + 1, "Register list not consecutive");
-static_assert(YSX::F31_H == YSX::F0_H + 31,
-              "Register list not consecutive");
-static_assert(YSX::F1_F == YSX::F0_F + 1, "Register list not consecutive");
-static_assert(YSX::F31_F == YSX::F0_F + 31,
-              "Register list not consecutive");
-static_assert(YSX::F1_D == YSX::F0_D + 1, "Register list not consecutive");
-static_assert(YSX::F31_D == YSX::F0_D + 31,
-              "Register list not consecutive");
-static_assert(YSX::F1_Q == YSX::F0_Q + 1, "Register list not consecutive");
-static_assert(YSX::F31_Q == YSX::F0_Q + 31,
-              "Register list not consecutive");
-static_assert(YSX::V1 == YSX::V0 + 1, "Register list not consecutive");
-static_assert(YSX::V31 == YSX::V0 + 31, "Register list not consecutive");
 
 YSXRegisterInfo::YSXRegisterInfo(unsigned HwMode)
     : YSXGenRegisterInfo(YSX::X1, /*DwarfFlavour*/0, /*EHFlavor*/0,
@@ -69,54 +55,16 @@ YSXRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
   if (MF->getFunction().getCallingConv() == CallingConv::GHC)
     return CSR_NoRegs_SaveList;
   if (MF->getFunction().getCallingConv() == CallingConv::PreserveMost)
-    return Subtarget.hasStdExtE() ? CSR_RT_MostRegs_RVE_SaveList
-                                  : CSR_RT_MostRegs_SaveList;
-  if (MF->getFunction().hasFnAttribute("interrupt")) {
-    if (Subtarget.hasVInstructions()) {
-      if (Subtarget.hasStdExtD())
-        return Subtarget.hasStdExtE() ? CSR_XLEN_F64_V_Interrupt_RVE_SaveList
-                                      : CSR_XLEN_F64_V_Interrupt_SaveList;
-      if (Subtarget.hasStdExtF())
-        return Subtarget.hasStdExtE() ? CSR_XLEN_F32_V_Interrupt_RVE_SaveList
-                                      : CSR_XLEN_F32_V_Interrupt_SaveList;
-      return Subtarget.hasStdExtE() ? CSR_XLEN_V_Interrupt_RVE_SaveList
-                                    : CSR_XLEN_V_Interrupt_SaveList;
-    }
-    if (Subtarget.hasStdExtD())
-      return Subtarget.hasStdExtE() ? CSR_XLEN_F64_Interrupt_RVE_SaveList
-                                    : CSR_XLEN_F64_Interrupt_SaveList;
-    if (Subtarget.hasStdExtF())
-      return Subtarget.hasStdExtE() ? CSR_XLEN_F32_Interrupt_RVE_SaveList
-                                    : CSR_XLEN_F32_Interrupt_SaveList;
-    return Subtarget.hasStdExtE() ? CSR_Interrupt_RVE_SaveList
-                                  : CSR_Interrupt_SaveList;
-  }
-
-  bool HasVectorCSR =
-      MF->getFunction().getCallingConv() == CallingConv::RISCV_VectorCall &&
-      Subtarget.hasVInstructions();
+    return CSR_RT_MostRegs_SaveList;
+  if (MF->getFunction().hasFnAttribute("interrupt"))
+    return CSR_Interrupt_SaveList;
 
   switch (Subtarget.getTargetABI()) {
   default:
     llvm_unreachable("Unrecognized ABI");
-  case YSXABI::ABI_ILP32E:
-  case YSXABI::ABI_LP64E:
-    return CSR_ILP32E_LP64E_SaveList;
   case YSXABI::ABI_ILP32:
   case YSXABI::ABI_LP64:
-    if (HasVectorCSR)
-      return CSR_ILP32_LP64_V_SaveList;
     return CSR_ILP32_LP64_SaveList;
-  case YSXABI::ABI_ILP32F:
-  case YSXABI::ABI_LP64F:
-    if (HasVectorCSR)
-      return CSR_ILP32F_LP64F_V_SaveList;
-    return CSR_ILP32F_LP64F_SaveList;
-  case YSXABI::ABI_ILP32D:
-  case YSXABI::ABI_LP64D:
-    if (HasVectorCSR)
-      return CSR_ILP32D_LP64D_V_SaveList;
-    return CSR_ILP32D_LP64D_SaveList;
   }
 }
 
@@ -154,19 +102,6 @@ BitVector YSXRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   if (Subtarget.hasStdExtE())
     for (MCPhysReg Reg = YSX::X16_H; Reg <= YSX::X31_H; Reg++)
       markSuperRegs(Reserved, Reg);
-
-  // V registers for code generation. We handle them manually.
-  markSuperRegs(Reserved, YSX::VL);
-  markSuperRegs(Reserved, YSX::VTYPE);
-  markSuperRegs(Reserved, YSX::VXSAT);
-  markSuperRegs(Reserved, YSX::VXRM);
-
-  // Floating point environment registers.
-  markSuperRegs(Reserved, YSX::FRM);
-  markSuperRegs(Reserved, YSX::FFLAGS);
-
-  // SiFive VCIX state registers.
-  markSuperRegs(Reserved, YSX::SF_VCIX_STATE);
 
   if (MF.getFunction().getCallingConv() == CallingConv::GRAAL) {
     if (Subtarget.hasStdExtE())
@@ -210,92 +145,10 @@ void YSXRegisterInfo::adjustReg(MachineBasicBlock &MBB,
   const YSXSubtarget &ST = MF.getSubtarget<YSXSubtarget>();
   const YSXInstrInfo *TII = ST.getInstrInfo();
 
-  // Optimize compile time offset case
-  if (Offset.getScalable()) {
-    if (auto VLEN = ST.getRealVLen()) {
-      // 1. Multiply the number of v-slots by the (constant) length of register
-      const int64_t VLENB = *VLEN / 8;
-      assert(Offset.getScalable() % YSX::YSXVecBytesPerBlock == 0 &&
-             "Reserve the stack by the multiple of one vector size.");
-      const int64_t NumOfVReg = Offset.getScalable() / 8;
-      const int64_t FixedOffset = NumOfVReg * VLENB;
-      if (!isInt<32>(FixedOffset)) {
-        reportFatalUsageError(
-            "Frame size outside of the signed 32-bit range not supported");
-      }
-      Offset = StackOffset::getFixed(FixedOffset + Offset.getFixed());
-    }
-  }
-
   bool KillSrcReg = false;
 
-  if (Offset.getScalable()) {
+  if (Offset.getScalable())
     reportFatalUsageError("YSX does not support scalable stack offsets");
-#if 0
-    unsigned ScalableAdjOpc = YSX::ADD;
-    int64_t ScalableValue = Offset.getScalable();
-    if (ScalableValue < 0) {
-      ScalableValue = -ScalableValue;
-      ScalableAdjOpc = YSX::SUB;
-    }
-    // Get vlenb and multiply vlen with the number of vector registers.
-    Register ScratchReg = DestReg;
-    if (DestReg == SrcReg)
-      ScratchReg = MRI.createVirtualRegister(&YSX::GPRRegClass);
-
-    assert(ScalableValue > 0 && "There is no need to get VLEN scaled value.");
-    assert(ScalableValue % YSX::YSXVecBytesPerBlock == 0 &&
-           "Reserve the stack by the multiple of one vector size.");
-    assert(isInt<32>(ScalableValue / YSX::YSXVecBytesPerBlock) &&
-           "Expect the number of vector registers within 32-bits.");
-    uint32_t NumOfVReg = ScalableValue / YSX::YSXVecBytesPerBlock;
-    // Only use vsetvli rather than vlenb if adjusting in the prologue or
-    // epilogue, otherwise it may disturb the VTYPE and VL status.
-    bool IsPrologueOrEpilogue =
-        Flag == MachineInstr::FrameSetup || Flag == MachineInstr::FrameDestroy;
-    bool UseVsetvliRatherThanVlenb =
-        IsPrologueOrEpilogue && ST.preferVsetvliOverReadVLENB();
-    if (UseVsetvliRatherThanVlenb && (NumOfVReg == 1 || NumOfVReg == 2 ||
-                                      NumOfVReg == 4 || NumOfVReg == 8)) {
-      BuildMI(MBB, II, DL, TII->get(YSX::PseudoReadVLENBViaVSETVLIX0),
-              ScratchReg)
-          .addImm(NumOfVReg)
-          .setMIFlag(Flag);
-      BuildMI(MBB, II, DL, TII->get(ScalableAdjOpc), DestReg)
-          .addReg(SrcReg)
-          .addReg(ScratchReg, RegState::Kill)
-          .setMIFlag(Flag);
-    } else {
-      if (UseVsetvliRatherThanVlenb)
-        BuildMI(MBB, II, DL, TII->get(YSX::PseudoReadVLENBViaVSETVLIX0),
-                ScratchReg)
-            .addImm(1)
-            .setMIFlag(Flag);
-      else
-        BuildMI(MBB, II, DL, TII->get(YSX::PseudoReadVLENB), ScratchReg)
-            .setMIFlag(Flag);
-
-      if (ScalableAdjOpc == YSX::ADD && ST.hasStdExtZba() &&
-          (NumOfVReg == 2 || NumOfVReg == 4 || NumOfVReg == 8)) {
-        unsigned Opc = NumOfVReg == 2
-                           ? YSX::SH1ADD
-                           : (NumOfVReg == 4 ? YSX::SH2ADD : YSX::SH3ADD);
-        BuildMI(MBB, II, DL, TII->get(Opc), DestReg)
-            .addReg(ScratchReg, RegState::Kill)
-            .addReg(SrcReg)
-            .setMIFlag(Flag);
-      } else {
-        TII->mulImm(MF, MBB, II, DL, ScratchReg, NumOfVReg, Flag);
-        BuildMI(MBB, II, DL, TII->get(ScalableAdjOpc), DestReg)
-            .addReg(SrcReg)
-            .addReg(ScratchReg, RegState::Kill)
-            .setMIFlag(Flag);
-      }
-    }
-    SrcReg = DestReg;
-    KillSrcReg = true;
-#endif
-  }
 
   int64_t Val = Offset.getFixed();
   if (DestReg == SrcReg && Val == 0)
@@ -310,32 +163,6 @@ void YSXRegisterInfo::adjustReg(MachineBasicBlock &MBB,
         .setMIFlag(Flag);
     return;
   }
-
-  // Use the QC_E_ADDI instruction from the XRemovedQcilia extension that can take a
-  // signed 26-bit immediate.
-#if 0
-  if (ST.hasVendorXRemovedQcilia() && isInt<26>(Val)) {
-    // The one case where using this instruction is sub-optimal is if Val can be
-    // materialized with a single compressible LUI and following add/sub is also
-    // compressible. Avoid doing this if that is the case.
-    int Hi20 = (Val & 0xFFFFF000) >> 12;
-    bool IsCompressLUI =
-        ((Val & 0xFFF) == 0) && (Hi20 != 0) &&
-        (isUInt<5>(Hi20) || (Hi20 >= 0xfffe0 && Hi20 <= 0xfffff));
-    bool IsCompressAddSub =
-        (SrcReg == DestReg) &&
-        ((Val > 0 && YSX::GPRNoX0RegClass.contains(SrcReg)) ||
-         (Val < 0 && YSX::GPRCRegClass.contains(SrcReg)));
-
-    if (!(IsCompressLUI && IsCompressAddSub)) {
-      BuildMI(MBB, II, DL, TII->get(YSX::QC_E_ADDI), DestReg)
-          .addReg(SrcReg, getKillRegState(KillSrcReg))
-          .addImm(Val)
-          .setMIFlag(Flag);
-      return;
-    }
-  }
-#endif
 
   // Try to split the offset across two ADDIs. We need to keep the intermediate
   // result aligned after each ADDI.  We need to determine the maximum value we
@@ -364,28 +191,6 @@ void YSXRegisterInfo::adjustReg(MachineBasicBlock &MBB,
   // path.  We avoid anything which can be done with a single lui as it might
   // be compressible.  Note that the sh1add case is fully covered by the 2x addi
   // case just above and is thus omitted.
-#if 0
-  if (ST.hasStdExtZba() && (Val & 0xFFF) != 0) {
-    unsigned Opc = 0;
-    if (isShiftedInt<12, 3>(Val)) {
-      Opc = YSX::SH3ADD;
-      Val = Val >> 3;
-    } else if (isShiftedInt<12, 2>(Val)) {
-      Opc = YSX::SH2ADD;
-      Val = Val >> 2;
-    }
-    if (Opc) {
-      Register ScratchReg = MRI.createVirtualRegister(&YSX::GPRRegClass);
-      TII->movImm(MBB, II, DL, ScratchReg, Val, Flag);
-      BuildMI(MBB, II, DL, TII->get(Opc), DestReg)
-          .addReg(ScratchReg, RegState::Kill)
-          .addReg(SrcReg, getKillRegState(KillSrcReg))
-          .setMIFlag(Flag);
-      return;
-    }
-  }
-#endif
-
   unsigned Opc = YSX::ADD;
   if (Val < 0) {
     Val = -Val;
@@ -400,119 +205,9 @@ void YSXRegisterInfo::adjustReg(MachineBasicBlock &MBB,
       .setMIFlag(Flag);
 }
 
-#if 0
-static std::tuple<YSXVType::VLMUL, const TargetRegisterClass &, unsigned>
-getSpillReloadInfo(unsigned NumRemaining, uint16_t RegEncoding, bool IsSpill) {
-  if (NumRemaining >= 8 && RegEncoding % 8 == 0)
-    return {YSXVType::LMUL_8, YSX::VRM8RegClass,
-            IsSpill ? YSX::VS8R_V : YSX::VL8RE8_V};
-  if (NumRemaining >= 4 && RegEncoding % 4 == 0)
-    return {YSXVType::LMUL_4, YSX::VRM4RegClass,
-            IsSpill ? YSX::VS4R_V : YSX::VL4RE8_V};
-  if (NumRemaining >= 2 && RegEncoding % 2 == 0)
-    return {YSXVType::LMUL_2, YSX::VRM2RegClass,
-            IsSpill ? YSX::VS2R_V : YSX::VL2RE8_V};
-  return {YSXVType::LMUL_1, YSX::VRRegClass,
-          IsSpill ? YSX::VS1R_V : YSX::VL1RE8_V};
-}
-#endif
-
-// Split a VSPILLx_Mx/VSPILLx_Mx pseudo into multiple whole register stores
-// separated by LMUL*VLENB bytes.
 void YSXRegisterInfo::lowerSegmentSpillReload(MachineBasicBlock::iterator II,
                                                 bool IsSpill) const {
-  llvm_unreachable("YSX does not support YSXVec segment spill/reload");
-#if 0
-  DebugLoc DL = II->getDebugLoc();
-  MachineBasicBlock &MBB = *II->getParent();
-  MachineFunction &MF = *MBB.getParent();
-  MachineRegisterInfo &MRI = MF.getRegInfo();
-  const YSXSubtarget &STI = MF.getSubtarget<YSXSubtarget>();
-  const TargetInstrInfo *TII = STI.getInstrInfo();
-  const TargetRegisterInfo *TRI = STI.getRegisterInfo();
-
-  auto ZvlssegInfo = YSX::isYSXVecSpillForZvlsseg(II->getOpcode());
-  unsigned NF = ZvlssegInfo->first;
-  unsigned LMUL = ZvlssegInfo->second;
-  unsigned NumRegs = NF * LMUL;
-  assert(NumRegs <= 8 && "Invalid NF/LMUL combinations.");
-
-  Register Reg = II->getOperand(0).getReg();
-  uint16_t RegEncoding = TRI->getEncodingValue(Reg);
-  Register Base = II->getOperand(1).getReg();
-  bool IsBaseKill = II->getOperand(1).isKill();
-  Register NewBase = MRI.createVirtualRegister(&YSX::GPRRegClass);
-
-  auto *OldMMO = *(II->memoperands_begin());
-  LocationSize OldLoc = OldMMO->getSize();
-  assert(OldLoc.isPrecise() && OldLoc.getValue().isKnownMultipleOf(NF));
-  TypeSize VRegSize = OldLoc.getValue().divideCoefficientBy(NumRegs);
-
-  Register VLENB = 0;
-  unsigned VLENBShift = 0;
-  unsigned PrevHandledNum = 0;
-  unsigned I = 0;
-  while (I != NumRegs) {
-    auto [LMulHandled, RegClass, Opcode] =
-        getSpillReloadInfo(NumRegs - I, RegEncoding, IsSpill);
-    auto [RegNumHandled, _] = YSXVType::decodeVLMUL(LMulHandled);
-    bool IsLast = I + RegNumHandled == NumRegs;
-    if (PrevHandledNum) {
-      Register Step;
-      // Optimize for constant VLEN.
-      if (auto VLEN = STI.getRealVLen()) {
-        int64_t Offset = *VLEN / 8 * PrevHandledNum;
-        Step = MRI.createVirtualRegister(&YSX::GPRRegClass);
-        STI.getInstrInfo()->movImm(MBB, II, DL, Step, Offset);
-      } else {
-        if (!VLENB) {
-          VLENB = MRI.createVirtualRegister(&YSX::GPRRegClass);
-          BuildMI(MBB, II, DL, TII->get(YSX::PseudoReadVLENB), VLENB);
-        }
-        uint32_t ShiftAmount = Log2_32(PrevHandledNum);
-        // To avoid using an extra register, we shift the VLENB register and
-        // remember how much it has been shifted. We can then use relative
-        // shifts to adjust to the desired shift amount.
-        if (VLENBShift > ShiftAmount) {
-          BuildMI(MBB, II, DL, TII->get(YSX::SRLI), VLENB)
-              .addReg(VLENB, RegState::Kill)
-              .addImm(VLENBShift - ShiftAmount);
-        } else if (VLENBShift < ShiftAmount) {
-          BuildMI(MBB, II, DL, TII->get(YSX::SLLI), VLENB)
-              .addReg(VLENB, RegState::Kill)
-              .addImm(ShiftAmount - VLENBShift);
-        }
-        VLENBShift = ShiftAmount;
-        Step = VLENB;
-      }
-
-      BuildMI(MBB, II, DL, TII->get(YSX::ADD), NewBase)
-          .addReg(Base, getKillRegState(I != 0 || IsBaseKill))
-          .addReg(Step, getKillRegState(Step != VLENB || IsLast));
-      Base = NewBase;
-    }
-
-    MCRegister ActualReg = findVRegWithEncoding(RegClass, RegEncoding);
-    MachineInstrBuilder MIB =
-        BuildMI(MBB, II, DL, TII->get(Opcode))
-            .addReg(ActualReg, getDefRegState(!IsSpill))
-            .addReg(Base, getKillRegState(IsLast))
-            .addMemOperand(MF.getMachineMemOperand(OldMMO, OldMMO->getOffset(),
-                                                   VRegSize * RegNumHandled));
-
-    // Adding implicit-use of super register to describe we are using part of
-    // super register, that prevents machine verifier complaining when part of
-    // subreg is undef, see comment in MachineVerifier::checkLiveness for more
-    // detail.
-    if (IsSpill)
-      MIB.addReg(Reg, RegState::Implicit);
-
-    PrevHandledNum = RegNumHandled;
-    RegEncoding += RegNumHandled;
-    I += RegNumHandled;
-  }
-  II->eraseFromParent();
-#endif
+  llvm_unreachable("YSX does not support segment spill/reload");
 }
 
 bool YSXRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
@@ -529,42 +224,31 @@ bool YSXRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   Register FrameReg;
   StackOffset Offset =
       getFrameLowering(MF)->getFrameIndexReference(MF, FrameIndex, FrameReg);
-  bool IsYSXVecSpill = YSX::isYSXVecSpill(MI);
-  if (!IsYSXVecSpill)
-    Offset += StackOffset::getFixed(MI.getOperand(FIOperandNum + 1).getImm());
+  Offset += StackOffset::getFixed(MI.getOperand(FIOperandNum + 1).getImm());
 
   if (!isInt<32>(Offset.getFixed())) {
     reportFatalUsageError(
         "Frame offsets outside of the signed 32-bit range not supported");
   }
 
-  if (!IsYSXVecSpill) {
-    int64_t Val = Offset.getFixed();
-    int64_t Lo12 = SignExtend64<12>(Val);
-    unsigned Opc = MI.getOpcode();
+  int64_t Val = Offset.getFixed();
+  int64_t Lo12 = SignExtend64<12>(Val);
+  unsigned Opc = MI.getOpcode();
 
-    if (Opc == YSX::ADDI && !isInt<12>(Val)) {
-      // We chose to emit the canonical immediate sequence rather than folding
-      // the offset into the using add under the theory that doing so doesn't
-      // save dynamic instruction count and some target may fuse the canonical
-      // 32 bit immediate sequence.  We still need to clear the portion of the
-      // offset encoded in the immediate.
-      MI.getOperand(FIOperandNum + 1).ChangeToImmediate(0);
-#if 0
-    } else if ((Opc == YSX::PREFETCH_I || Opc == YSX::PREFETCH_R ||
-                Opc == YSX::PREFETCH_W) &&
-               (Lo12 & 0b11111) != 0) {
-      // Prefetch instructions require the offset to be 32 byte aligned.
-      MI.getOperand(FIOperandNum + 1).ChangeToImmediate(0);
-#endif
-    } else {
-      // We can encode an add with 12 bit signed immediate in the immediate
-      // operand of our user instruction.  As a result, the remaining
-      // offset can by construction, at worst, a LUI and a ADD.
-      MI.getOperand(FIOperandNum + 1).ChangeToImmediate(Lo12);
-      Offset = StackOffset::get((uint64_t)Val - (uint64_t)Lo12,
-                                Offset.getScalable());
-    }
+  if (Opc == YSX::ADDI && !isInt<12>(Val)) {
+    // We chose to emit the canonical immediate sequence rather than folding
+    // the offset into the using add under the theory that doing so doesn't
+    // save dynamic instruction count and some target may fuse the canonical
+    // 32 bit immediate sequence.  We still need to clear the portion of the
+    // offset encoded in the immediate.
+    MI.getOperand(FIOperandNum + 1).ChangeToImmediate(0);
+  } else {
+    // We can encode an add with 12 bit signed immediate in the immediate
+    // operand of our user instruction.  As a result, the remaining
+    // offset can by construction, at worst, a LUI and a ADD.
+    MI.getOperand(FIOperandNum + 1).ChangeToImmediate(Lo12);
+    Offset =
+        StackOffset::get((uint64_t)Val - (uint64_t)Lo12, Offset.getScalable());
   }
 
   if (Offset.getScalable() || Offset.getFixed()) {
@@ -638,11 +322,6 @@ bool YSXRegisterInfo::needsFrameBaseReg(MachineInstr *MI,
 
       if (YSX::GPRRegClass.contains(Reg))
         CalleeSavedSize += getSpillSize(YSX::GPRRegClass);
-      else if (YSX::FPR64RegClass.contains(Reg))
-        CalleeSavedSize += getSpillSize(YSX::FPR64RegClass);
-      else if (YSX::FPR32RegClass.contains(Reg))
-        CalleeSavedSize += getSpillSize(YSX::FPR32RegClass);
-      // Ignore vector registers.
     }
 
     int64_t MaxFPOffset = Offset - CalleeSavedSize;
@@ -731,8 +410,6 @@ Register YSXRegisterInfo::getFrameRegister(const MachineFunction &MF) const {
 }
 
 StringRef YSXRegisterInfo::getRegAsmName(MCRegister Reg) const {
-  if (Reg == YSX::SF_VCIX_STATE)
-    return "sf.vcix_state";
   return TargetRegisterInfo::getRegAsmName(Reg);
 }
 
@@ -744,76 +421,30 @@ YSXRegisterInfo::getCallPreservedMask(const MachineFunction & MF,
   if (CC == CallingConv::GHC)
     return CSR_NoRegs_RegMask;
   YSXABI::ABI ABI = Subtarget.getTargetABI();
-  if (CC == CallingConv::PreserveMost) {
-    if (ABI == YSXABI::ABI_ILP32E || ABI == YSXABI::ABI_LP64E)
-      return CSR_RT_MostRegs_RVE_RegMask;
+  if (CC == CallingConv::PreserveMost)
     return CSR_RT_MostRegs_RegMask;
-  }
   switch (ABI) {
   default:
     llvm_unreachable("Unrecognized ABI");
-  case YSXABI::ABI_ILP32E:
-  case YSXABI::ABI_LP64E:
-    return CSR_ILP32E_LP64E_RegMask;
   case YSXABI::ABI_ILP32:
   case YSXABI::ABI_LP64:
-    if (CC == CallingConv::RISCV_VectorCall)
-      return CSR_ILP32_LP64_V_RegMask;
     return CSR_ILP32_LP64_RegMask;
-  case YSXABI::ABI_ILP32F:
-  case YSXABI::ABI_LP64F:
-    if (CC == CallingConv::RISCV_VectorCall)
-      return CSR_ILP32F_LP64F_V_RegMask;
-    return CSR_ILP32F_LP64F_RegMask;
-  case YSXABI::ABI_ILP32D:
-  case YSXABI::ABI_LP64D:
-    if (CC == CallingConv::RISCV_VectorCall)
-      return CSR_ILP32D_LP64D_V_RegMask;
-    return CSR_ILP32D_LP64D_RegMask;
   }
 }
 
 const TargetRegisterClass *
 YSXRegisterInfo::getLargestLegalSuperClass(const TargetRegisterClass *RC,
                                              const MachineFunction &) const {
-  if (RC == &YSX::VMV0RegClass)
-    return &YSX::VRRegClass;
-  if (RC == &YSX::VRNoV0RegClass)
-    return &YSX::VRRegClass;
-  if (RC == &YSX::VRM2NoV0RegClass)
-    return &YSX::VRM2RegClass;
-  if (RC == &YSX::VRM4NoV0RegClass)
-    return &YSX::VRM4RegClass;
-  if (RC == &YSX::VRM8NoV0RegClass)
-    return &YSX::VRM8RegClass;
   return RC;
 }
 
 void YSXRegisterInfo::getOffsetOpcodes(const StackOffset &Offset,
                                          SmallVectorImpl<uint64_t> &Ops) const {
-  // VLENB is the length of a vector register in bytes. We use <vscale x 8 x i8>
-  // to represent one vector register. The dwarf offset is
-  // VLENB * scalable_offset / 8.
-  assert(Offset.getScalable() % 8 == 0 && "Invalid frame offset");
+  assert(Offset.getScalable() == 0 &&
+         "YSX does not support scalable vector frame offsets");
 
   // Add fixed-sized offset using existing DIExpression interface.
   DIExpression::appendOffset(Ops, Offset.getFixed());
-
-  unsigned VLENB = getDwarfRegNum(YSX::VLENB, true);
-  int64_t VLENBSized = Offset.getScalable() / 8;
-  if (VLENBSized > 0) {
-    Ops.push_back(dwarf::DW_OP_constu);
-    Ops.push_back(VLENBSized);
-    Ops.append({dwarf::DW_OP_bregx, VLENB, 0ULL});
-    Ops.push_back(dwarf::DW_OP_mul);
-    Ops.push_back(dwarf::DW_OP_plus);
-  } else if (VLENBSized < 0) {
-    Ops.push_back(dwarf::DW_OP_constu);
-    Ops.push_back(-VLENBSized);
-    Ops.append({dwarf::DW_OP_bregx, VLENB, 0ULL});
-    Ops.push_back(dwarf::DW_OP_mul);
-    Ops.push_back(dwarf::DW_OP_minus);
-  }
 }
 
 unsigned
@@ -1058,8 +689,5 @@ void YSXRegisterInfo::updateRegAllocHint(Register Reg, Register NewReg,
 Register
 YSXRegisterInfo::findVRegWithEncoding(const TargetRegisterClass &RegClass,
                                         uint16_t Encoding) const {
-  MCRegister Reg = YSX::V0 + Encoding;
-  if (YSXRI::getLMul(RegClass.TSFlags) == YSXVType::LMUL_1)
-    return Reg;
-  return getMatchingSuperReg(Reg, YSX::sub_vrm1_0, &RegClass);
+  llvm_unreachable("YSX does not support vector registers");
 }

@@ -460,18 +460,15 @@ public:
   bool isReg() const override { return Kind == KindTy::Register; }
   bool isExpr() const { return Kind == KindTy::Expression; }
   bool isV0Reg() const {
-    return Kind == KindTy::Register && Reg.Reg == YSX::V0;
+    return false;
   }
   bool isAnyReg() const {
     return Kind == KindTy::Register &&
-           (YSXMCRegisterClasses[YSX::GPRRegClassID].contains(Reg.Reg) ||
-            YSXMCRegisterClasses[YSX::FPR64RegClassID].contains(Reg.Reg) ||
-            YSXMCRegisterClasses[YSX::VRRegClassID].contains(Reg.Reg));
+           YSXMCRegisterClasses[YSX::GPRRegClassID].contains(Reg.Reg);
   }
   bool isAnyRegC() const {
     return Kind == KindTy::Register &&
-           (YSXMCRegisterClasses[YSX::GPRCRegClassID].contains(Reg.Reg) ||
-            YSXMCRegisterClasses[YSX::FPR64CRegClassID].contains(Reg.Reg));
+           YSXMCRegisterClasses[YSX::GPRCRegClassID].contains(Reg.Reg);
   }
   bool isImm() const override { return isExpr(); }
   bool isMem() const override { return false; }
@@ -505,19 +502,17 @@ public:
   }
 
   bool isGPRF16() const {
-    return Kind == KindTy::Register &&
-           YSXMCRegisterClasses[YSX::GPRF16RegClassID].contains(Reg.Reg);
+    return false;
   }
 
   bool isGPRF32() const {
-    return Kind == KindTy::Register &&
-           YSXMCRegisterClasses[YSX::GPRF32RegClassID].contains(Reg.Reg);
+    return false;
   }
 
   bool isGPRAsFPR() const { return isGPR() && Reg.IsGPRAsFPR; }
-  bool isGPRAsFPR16() const { return isGPRF16() && Reg.IsGPRAsFPR; }
-  bool isGPRAsFPR32() const { return isGPRF32() && Reg.IsGPRAsFPR; }
-  bool isGPRPairAsFPR64() const { return isGPRPair() && Reg.IsGPRAsFPR; }
+  bool isGPRAsFPR16() const { return false; }
+  bool isGPRAsFPR32() const { return false; }
+  bool isGPRPairAsFPR64() const { return false; }
 
   static bool evaluateConstantExpr(const MCExpr *Expr, int64_t &Imm) {
     if (auto CE = dyn_cast<MCConstantExpr>(Expr)) {
@@ -1286,74 +1281,12 @@ public:
 #define GET_MNEMONIC_SPELL_CHECKER
 #include "YSXGenAsmMatcher.inc"
 
-static MCRegister convertFPR64ToFPR16(MCRegister Reg) {
-  assert(Reg >= YSX::F0_D && Reg <= YSX::F31_D && "Invalid register");
-  return Reg - YSX::F0_D + YSX::F0_H;
-}
-
-static MCRegister convertFPR64ToFPR32(MCRegister Reg) {
-  assert(Reg >= YSX::F0_D && Reg <= YSX::F31_D && "Invalid register");
-  return Reg - YSX::F0_D + YSX::F0_F;
-}
-
-static MCRegister convertFPR64ToFPR128(MCRegister Reg) {
-  assert(Reg >= YSX::F0_D && Reg <= YSX::F31_D && "Invalid register");
-  return Reg - YSX::F0_D + YSX::F0_Q;
-}
-
-static MCRegister convertVRToVRMx(const MCRegisterInfo &RI, MCRegister Reg,
-                                  unsigned Kind) {
-  unsigned RegClassID;
-  if (Kind == MCK_VRM2)
-    RegClassID = YSX::VRM2RegClassID;
-  else if (Kind == MCK_VRM4)
-    RegClassID = YSX::VRM4RegClassID;
-  else if (Kind == MCK_VRM8)
-    RegClassID = YSX::VRM8RegClassID;
-  else
-    return MCRegister();
-  return RI.getMatchingSuperReg(Reg, YSX::sub_vrm1_0,
-                                &YSXMCRegisterClasses[RegClassID]);
-}
-
 unsigned YSXAsmParser::validateTargetOperandClass(MCParsedAsmOperand &AsmOp,
                                                     unsigned Kind) {
   YSXOperand &Op = static_cast<YSXOperand &>(AsmOp);
   if (!Op.isReg())
     return Match_InvalidOperand;
 
-  MCRegister Reg = Op.getReg();
-  bool IsRegFPR64 =
-      YSXMCRegisterClasses[YSX::FPR64RegClassID].contains(Reg);
-  bool IsRegFPR64C =
-      YSXMCRegisterClasses[YSX::FPR64CRegClassID].contains(Reg);
-  bool IsRegVR = YSXMCRegisterClasses[YSX::VRRegClassID].contains(Reg);
-
-  if (IsRegFPR64 && Kind == MCK_FPR128) {
-    Op.Reg.Reg = convertFPR64ToFPR128(Reg);
-    return Match_Success;
-  }
-  // As the parser couldn't differentiate an FPR32 from an FPR64, coerce the
-  // register from FPR64 to FPR32 or FPR64C to FPR32C if necessary.
-  if ((IsRegFPR64 && Kind == MCK_FPR32) ||
-      (IsRegFPR64C && Kind == MCK_FPR32C)) {
-    Op.Reg.Reg = convertFPR64ToFPR32(Reg);
-    return Match_Success;
-  }
-  // As the parser couldn't differentiate an FPR16 from an FPR64, coerce the
-  // register from FPR64 to FPR16 if necessary.
-  if (IsRegFPR64 && Kind == MCK_FPR16) {
-    Op.Reg.Reg = convertFPR64ToFPR16(Reg);
-    return Match_Success;
-  }
-  // As the parser couldn't differentiate an VRM2/VRM4/VRM8 from an VR, coerce
-  // the register from VR to VRM2/VRM4/VRM8 if necessary.
-  if (IsRegVR && (Kind == MCK_VRM2 || Kind == MCK_VRM4 || Kind == MCK_VRM8)) {
-    Op.Reg.Reg = convertVRToVRMx(*getContext().getRegisterInfo(), Reg, Kind);
-    if (!Op.Reg.Reg)
-      return Match_InvalidOperand;
-    return Match_Success;
-  }
   return Match_InvalidOperand;
 }
 
@@ -1523,16 +1456,6 @@ bool YSXAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
 // rejected.
 MCRegister YSXAsmParser::matchRegisterNameHelper(StringRef Name) const {
   MCRegister Reg = MatchRegisterName(Name);
-  // The 16-/32-/128- and 64-bit FPRs have the same asm name. Check
-  // that the initial match always matches the 64-bit variant, and
-  // not the 16/32/128-bit one.
-  assert(!(Reg >= YSX::F0_H && Reg <= YSX::F31_H));
-  assert(!(Reg >= YSX::F0_F && Reg <= YSX::F31_F));
-  assert(!(Reg >= YSX::F0_Q && Reg <= YSX::F31_Q));
-  // The default FPR register class is based on the tablegen enum ordering.
-  static_assert(YSX::F0_D < YSX::F0_H, "FPR matching must be updated");
-  static_assert(YSX::F0_D < YSX::F0_F, "FPR matching must be updated");
-  static_assert(YSX::F0_D < YSX::F0_Q, "FPR matching must be updated");
   if (!Reg)
     Reg = MatchRegisterAltName(Name);
   if (isRVE() && Reg >= YSX::X16 && Reg <= YSX::X31)
@@ -2224,23 +2147,7 @@ bool YSXAsmParser::generateXRemovedSfmmVTypeError(SMLoc ErrorLoc) {
 }
 
 ParseStatus YSXAsmParser::parseMaskReg(OperandVector &Operands) {
-  if (getLexer().isNot(AsmToken::Identifier))
-    return ParseStatus::NoMatch;
-
-  StringRef Name = getLexer().getTok().getIdentifier();
-  if (!Name.consume_back(".t"))
-    return Error(getLoc(), "expected '.t' suffix");
-  MCRegister Reg = matchRegisterNameHelper(Name);
-
-  if (!Reg)
-    return ParseStatus::NoMatch;
-  if (Reg != YSX::V0)
-    return ParseStatus::NoMatch;
-  SMLoc S = getLoc();
-  SMLoc E = getTok().getEndLoc();
-  getLexer().Lex();
-  Operands.push_back(YSXOperand::createReg(Reg, S, E));
-  return ParseStatus::Success;
+  return ParseStatus::NoMatch;
 }
 
 ParseStatus YSXAsmParser::parseGPRAsFPR64(OperandVector &Operands) {
@@ -3203,8 +3110,7 @@ bool YSXAsmParser::parseDirectiveInsn(SMLoc L) {
     if (Length) {
       switch (*Length) {
       case 2:
-        Opcode = YSX::Insn16;
-        break;
+        return Error(ErrorLoc, "compressed instructions are not allowed");
       case 4:
         Opcode = YSX::Insn32;
         break;
@@ -3218,7 +3124,7 @@ bool YSXAsmParser::parseDirectiveInsn(SMLoc L) {
         llvm_unreachable("Error should have already been emitted");
       }
     } else
-      Opcode = (EncodingDerivedLength == 2) ? YSX::Insn16 : YSX::Insn32;
+      Opcode = YSX::Insn32;
 
     emitToStreamer(getStreamer(), MCInstBuilder(Opcode).addImm(Value));
     return false;
@@ -3589,23 +3495,6 @@ bool YSXAsmParser::validateInstruction(MCInst &Inst,
     if (DestReg == CheckReg)
       return Error(Loc, "the destination vector register group cannot overlap"
                         " the source vector register group");
-  }
-  if ((MCID.TSFlags & YSXII::VMConstraint) && (DestReg == YSX::V0)) {
-    // vadc, vsbc are special cases. These instructions have no mask register.
-    // The destination register could not be V0.
-    return Error(Loc, "the destination vector register group cannot be V0");
-
-    // Regardless masked or unmasked version, the number of operands is the
-    // same. For example, "viota.m v0, v2" is "viota.m v0, v2, NoRegister"
-    // actually. We need to check the last operand to ensure whether it is
-    // masked or not.
-    MCRegister CheckReg = Inst.getOperand(Inst.getNumOperands() - 1).getReg();
-    assert((CheckReg == YSX::V0 || !CheckReg) &&
-           "Unexpected register for mask operand");
-
-    if (DestReg == CheckReg)
-      return Error(Loc, "the destination vector register group cannot overlap"
-                        " the mask register");
   }
   return false;
 }

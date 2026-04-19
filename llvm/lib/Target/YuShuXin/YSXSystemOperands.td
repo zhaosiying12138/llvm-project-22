@@ -67,25 +67,6 @@ def lookupSysRegByName : SearchIndex {
 // Volume II: Privileged Architecture.
 
 //===----------------------------------------------------------------------===//
-// Unprivileged Floating-Point CSRs
-//===----------------------------------------------------------------------===//
-
-def SysRegFFLAGS : SysReg<"fflags", 0x001>;
-def SysRegFRM    : SysReg<"frm", 0x002>;
-def SysRegFCSR   : SysReg<"fcsr", 0x003>;
-
-//===----------------------------------------------------------------------===//
-// Unprivileged Vector CSRs
-//===----------------------------------------------------------------------===//
-def : SysReg<"vstart", 0x008>;
-def : SysReg<"vxsat", 0x009>;
-def SysRegVXRM : SysReg<"vxrm", 0x00A>;
-def : SysReg<"vcsr", 0x00F>;
-def SysRegVL : SysReg<"vl", 0xC20>;
-def : SysReg<"vtype", 0xC21>;
-def SysRegVLENB: SysReg<"vlenb", 0xC22>;
-
-//===----------------------------------------------------------------------===//
 // Unprivileged Zicfiss extension CSR
 //===----------------------------------------------------------------------===//
 

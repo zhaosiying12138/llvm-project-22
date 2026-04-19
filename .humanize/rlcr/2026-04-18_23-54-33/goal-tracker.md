@@ -60,7 +60,7 @@ for deterministic verification.
 ## MUTABLE SECTION
 <!-- Update each round with justification for changes -->
 
-### Plan Version: 6 (Updated: Round 2 Implementation)
+### Plan Version: 8 (Updated: Round 3 Implementation)
 
 #### Plan Evolution Log
 <!-- Document any changes to the plan with justification -->
@@ -73,23 +73,30 @@ for deterministic verification.
 | 1 | Moved task3 and task6 to completed after deleting unsupported TD/source files, pruning C++ lowering/MC paths, adding negative tests, and rerunning both configured builds plus the YSX lit subset | Round-1 pruning removed unsupported instruction/scheduler/source surfaces and revalidated standalone/co-build behavior | AC-1, AC-2, AC-3, AC-4 verified for the current rv64ima YSX backend |
 | 1 review | Reopened task3 and task6 after review rejected the Round-1 completion claim | `YSXFeatures.td`, `YSXRegisterInfo.td`, `YSXISelDAGToDAG.cpp`, `MCA/YSXCustomBehaviour.cpp`, and related MC/parser paths still retain unsupported FP/C/V/Z*/vendor/RV32 surfaces; `.option arch, +f/+c/+zbb/+v` and `.option rvc` are accepted by `llvm-mc` instead of rejected | AC-2 and AC-3 remain unmet; AC-4 needs refreshed negative coverage after the fix |
 | 2 | Implemented the Round-2 pruning and validation fix | Incremental `.option arch,+...` and `.option rvc` are now rejected with feature-bit rollback; unsupported opcode compatibility stubs were removed; the YSX compress generator and RVV MCA instrumentation were removed; YSX-only and RISCV+YSX static builds plus the YSX lit subset pass | AC-2 locally verified; AC-3 advanced and pending Codex review because the source is still larger than the desired final size |
+| 2 review | Rejected the Round-2 completion claim and reopened task3/task6 | The exact blocker-string scan was insufficient: YSX still carries renamed FP/C/V/bitmanip/crypto/vendor/supervisor feature definitions, FP/vector register classes, compressed/vector format includes, GISel-only TableGen artifacts, vector/FP/vendor lowering and frame helpers, and MC still accepts FP/vector CSRs such as `fflags`, `fcsr`, `frm`, `vtype`, `vl`, `vlenb`, `vxsat`, and `vxrm` | AC-2 and AC-3 remain unmet; AC-4 needs focused negative tests after the real pruning and CSR fix |
+| 3 | Implemented the first real Round-3 source pruning slice | Removed user-visible FP/vector CSR aliases and added negative tests; deleted C/V instruction-format includes and `.insn 16` support; pruned FP/vector register classes from `YSXRegisterInfo.td`; simplified calling convention, CSR insertion, selected MC/parser/disassembler/register/lowering paths to GPR-only behavior; YSX-only and RISCV+YSX static builds plus the 130-test YSX lit subset pass | AC-2 advanced for CSR leakage and C `.insn`; AC-3 advanced but remains open because `YSXFeatures.td`, frame lowering, instr-info, subtarget, and other copied surfaces still need further deletion |
 
 #### Active Tasks
 <!-- Mainline tasks only: each task must directly advance the current round objective and carry routing metadata -->
 | Task | Target AC | Status | Tag | Owner | Notes |
 |------|-----------|--------|-----|-------|-------|
+| task3: Finish pruning YSX to the actual `rv64ima` source surface | AC-2, AC-3 | reopened by Round-2 review | coding | Claude | Remove retained renamed/disabled FP, compressed, vector, RV32, bitmanip, crypto, vendor, privileged/profile, GlobalISel, and stale lowering/register/calling-convention source surfaces instead of relying on front-door whitelists. |
+| task6: Revalidate after source pruning and MC surface fix | AC-1, AC-2, AC-4 | reopened by Round-2 review | coding | Claude | Rebuild YSX-only and RISCV+YSX, rerun the YSX lit subset, add negative MC tests for FP/vector CSR leakage, and confirm the RISCV backend diff remains zero. |
 
 ### Blocking Side Issues
 <!-- Only issues that directly block current mainline progress belong here -->
 | Issue | Discovered Round | Blocking AC | Resolution Path |
 |-------|-----------------|-------------|-----------------|
+| Removed feature source remains renamed/disabled instead of deleted | 2 review | AC-3 | Replace `YSXFeatures.td`, register/calling-convention tables, instruction-format includes, lowering, frame, subtarget, MC, and selection support with a minimal `rv64ima`-only surface; resolve generated-code breakage by deleting unsupported callers rather than adding compatibility stubs. |
+| Default YSX MC accepts FP/vector CSR names | 2 review | AC-2 | Gate or remove FP/vector CSR system operands and aliases so `fflags`, `frm`, `fcsr`, `vtype`, `vl`, `vxsat`, `vxrm`, and `vlenb` are rejected for YSX; add negative tests for these exact inputs. |
+| Residual copied frame/instr/subtarget vector helpers remain after first Round-3 slice | 3 | AC-3 | Continue replacing YSX vector/scalable frame, instruction-combiner, feature, and subtarget helpers with rv64ima-only implementations; keep rebuilding after each deletion slice. |
 
 ### Queued Side Issues
 <!-- Non-blocking issues stay queued and must NOT replace the round objective -->
 | Issue | Discovered Round | Why Not Blocking | Revisit Trigger |
 |-------|-----------------|------------------|-----------------|
 | Goal Tracker immutable AC list dropped AC-3 and AC-4 from `docs/plan.md` | 0 | The mutable tracker and round summaries now explicitly track and verify AC-3/AC-4 against `docs/plan.md`; the immutable section is intentionally not edited by tracker rules. | Revisit only if a future RLCR tool requires regenerating the immutable tracker section. |
-| YSX source remains above the desired final size after Round-2 exact-surface pruning | 2 | The current round removed the reviewed externally observable ISA enablement bugs and the explicit unsupported opcode/compress/MCA generator surfaces, and all required builds/tests pass. The directory is still about 66k source lines, so deeper TD/lowering deletion remains a review risk rather than a solved quality target. | Revisit immediately if Codex treats the residual renamed disabled feature scaffolding or line count as still blocking AC-3. |
+| YSX CodeGen tests retain large inactive copied check blocks for unsupported RISCV variants | 2 review | Active RUN lines scanned during review did not invoke unsupported YSX variants outside negative tests, so this is secondary to source pruning and MC rejection. | Revisit after task3/task6 are fixed, then trim or regenerate stale RV32/ZBB/XTHEAD/RV64IA-TSO check-prefix blocks that no longer describe supported YSX behavior. |
 
 ### Completed and Verified
 <!-- Only move tasks here after Codex verification -->
@@ -99,8 +106,6 @@ for deterministic verification.
 | AC-1 | task2: Copy RISCV to YSX and bulk-rename backend-visible symbols/files | 0 | 0 | `llvm/lib/Target/YuShuXin/`, `llvm/lib/Target/CMakeLists.txt`, `llvm/CMakeLists.txt`; YSX-only and RISCV+YSX builds both succeed |
 | AC-1, AC-2 | task4: Add LLVM/Clang `ysx64` plumbing and unique YSX option names | 0 | 0 | `llvm/include/llvm/TargetParser/Triple.h`, `llvm/lib/TargetParser/Triple.cpp`, `clang/lib/Basic/Targets.cpp`, `clang/lib/Driver/ToolChains/Clang.cpp`; combined static build + smoke tests for both targets pass |
 | AC-4 | task5: Create YSX-owned LLVM and Clang tests from rv64ima-applicable RISCV subsets | 0 | 0 | `llvm/test/CodeGen/YSX`, `llvm/test/MC/YSX`, `clang/test/CodeGen/YSX`, `clang/test/Driver/YSX`; 129-test YSX suite passes |
-| AC-2, AC-3 | task3: Finish pruning YSX to the actual `rv64ima` source surface | 2 | pending review | `.option arch,+f/+c/+zbb/+v` and `.option rvc` reject; `YSXUnsupportedOpcodes.h` deleted; `YSXGenCompressInstEmitter` and MCA RVV instrumentation removed; exact blocker scan over `llvm/lib/Target/YuShuXin` has no matches |
-| AC-1, AC-2, AC-4 | task6: Revalidate after the real pruning fix | 2 | pending review | YSX-only `ninja LLVMYSXCodeGen llvm-mc llc clang opt lld` passes; RISCV+YSX combined static build passes; 130-test YSX LLVM/Clang lit subset passes; RISCV diff is zero |
 
 ### Explicitly Deferred
 <!-- Items here require strong justification -->

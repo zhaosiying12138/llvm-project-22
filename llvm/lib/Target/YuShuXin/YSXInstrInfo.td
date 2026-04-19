@@ -97,42 +97,6 @@ def ysx_sllw      : RVSDNode<"SLLW", SDT_YSXIntBinOpW>;
 def ysx_sraw      : RVSDNode<"SRAW", SDT_YSXIntBinOpW>;
 def ysx_srlw      : RVSDNode<"SRLW", SDT_YSXIntBinOpW>;
 
-// Reads value of CSR. The first operand is the address of the required CSR.
-// The result is the read value.
-def ysx_read_csr  : RVSDNode<"READ_CSR",
-                               SDTypeProfile<1, 1, [SDTCisInt<0>,
-                                                    SDTCisInt<1>]>,
-                               [SDNPHasChain]>;
-// Write value to CSR. The first operand is the address of the required CSR,
-// the second is the value to write.
-def ysx_write_csr : RVSDNode<"WRITE_CSR",
-                               SDTypeProfile<0, 2, [SDTCisInt<0>,
-                                                    SDTCisInt<1>]>,
-                               [SDNPHasChain]>;
-
-// Read and write value of CSR. The first operand is the address of the
-// required CSR, the second is the value to write, and the result is the
-// read value (before modification).
-def ysx_swap_csr  : RVSDNode<"SWAP_CSR",
-                               SDTypeProfile<1, 2, [SDTCisInt<0>,
-                                                    SDTCisInt<1>,
-                                                    SDTCisInt<2>]>,
-                               [SDNPHasChain]>;
-
-// Clear bits of CSR. The first operand is the address of the required CSR,
-// the second is the bitmask of cleared bits.
-def ysx_clear_csr  : RVSDNode<"CLEAR_CSR",
-                               SDTypeProfile<0, 2, [SDTCisInt<0>,
-                                                    SDTCisInt<1>]>,
-                               [SDNPHasChain]>;
-
-// Set bits of CSR. The first operand is the address of the required CSR,
-// the second is the bitmask of bits to set.
-def ysx_set_csr  : RVSDNode<"SET_CSR",
-                               SDTypeProfile<0, 2, [SDTCisInt<0>,
-                                                    SDTCisInt<1>]>,
-                               [SDNPHasChain]>;
-
 // A read of the 64-bit counter CSR on a 32-bit target (returns (Lo, Hi)).
 // It takes a chain operand and another two target constant operands (the
 // CSR numbers of the low and high parts of the counter).
@@ -528,8 +492,6 @@ def NegImm : SDNodeXForm<imm, [{
   return CurDAG->getSignedTargetConstant(-N->getSExtValue(), SDLoc(N),
                                          N->getValueType(0));
 }]>;
-def GINegImm : GICustomOperandRenderer<"renderNegImm">,
-  GISDNodeXFormEquiv<NegImm>;
 
 // Return an immediate value minus 32.
 def ImmSub32 : SDNodeXForm<imm, [{
@@ -543,16 +505,12 @@ def ImmSubFromXLen : SDNodeXForm<imm, [{
   return CurDAG->getTargetConstant(XLen - N->getZExtValue(), SDLoc(N),
                                    N->getValueType(0));
 }]>;
-def GIImmSubFromXLen : GICustomOperandRenderer<"renderImmSubFromXLen">,
-  GISDNodeXFormEquiv<ImmSubFromXLen>;
 
 // Return an immediate subtracted from 32.
 def ImmSubFrom32 : SDNodeXForm<imm, [{
   return CurDAG->getTargetConstant(32 - N->getZExtValue(), SDLoc(N),
                                    N->getValueType(0));
 }]>;
-def GIImmSubFrom32 : GICustomOperandRenderer<"renderImmSubFrom32">,
-  GISDNodeXFormEquiv<ImmSubFrom32>;
 
 // Check if (add r, imm) can be optimized to (ADDI (ADDI r, imm0), imm1),
 // in which imm = imm0 + imm1 and both imm0 and imm1 are simm12. We make imm0
@@ -570,8 +528,6 @@ def AddiPairImmSmall : SDNodeXForm<imm, [{
   return CurDAG->getSignedTargetConstant(Imm - Adj, SDLoc(N),
                                          N->getValueType(0));
 }]>;
-def GIAddiPairImmSmall : GICustomOperandRenderer<"renderAddiPairImmSmall">,
-                         GISDNodeXFormEquiv<AddiPairImmSmall>;
 
 // Return -2048 if immediate is negative or 2047 if positive. These are the
 // largest simm12 values.
@@ -579,15 +535,11 @@ def AddiPairImmLarge : SDNodeXForm<imm, [{
   int64_t Imm = N->getSExtValue() < 0 ? -2048 : 2047;
   return CurDAG->getSignedTargetConstant(Imm, SDLoc(N), N->getValueType(0));
 }]>;
-def GIAddiPairImmLarge : GICustomOperandRenderer<"renderAddiPairImmLarge">,
-                         GISDNodeXFormEquiv<AddiPairImmLarge>;
 
 def TrailingZeros : SDNodeXForm<imm, [{
   return CurDAG->getTargetConstant(llvm::countr_zero(N->getZExtValue()),
                                    SDLoc(N), N->getValueType(0));
 }]>;
-def GITrailingZeros : GICustomOperandRenderer<"renderTrailingZeros">,
-  GISDNodeXFormEquiv<TrailingZeros>;
 
 def XLenSubTrailingOnes : SDNodeXForm<imm, [{
   uint64_t XLen = Subtarget->getXLen();
@@ -595,8 +547,6 @@ def XLenSubTrailingOnes : SDNodeXForm<imm, [{
   return CurDAG->getTargetConstant(XLen - TrailingOnes, SDLoc(N),
                                    N->getValueType(0));
 }]>;
-def GIXLenSubTrailingOnes : GICustomOperandRenderer<"renderXLenSubTrailingOnes">,
-  GISDNodeXFormEquiv<XLenSubTrailingOnes>;
 
 // Checks if this mask is a non-empty sequence of ones starting at the
 // most/least significant bit with the remainder zero and exceeds simm32/simm12.
@@ -623,8 +573,6 @@ def LeadingOnesWMask : ImmLeaf<XLenVT, [{
 //===----------------------------------------------------------------------===//
 
 include "YSXInstrFormats.td"
-include "YSXInstrFormatsC.td"
-include "YSXInstrFormatsV.td"
 
 //===----------------------------------------------------------------------===//
 // Instruction Class Templates
@@ -1246,12 +1194,6 @@ def AnyReg : Operand<XLenVT> {
 // isCodeGenOnly = 1 to hide them from the tablegened assembly parser.
 let isCodeGenOnly = 1, hasSideEffects = 1, mayLoad = 1, mayStore = 1,
     hasNoSchedulingInfo = 1 in {
-def Insn16 : RVInst16<(outs), (ins uimm16:$value), "", "", [], InstFormatOther> {
-  bits<16> value;
-
-  let Inst{15-0} = value;
-  let AsmString = ".insn 0x2, $value";
-}
 def Insn32 : RVInst<(outs), (ins uimm32:$value), "", "", [], InstFormatOther> {
   bits<32> value;
 
@@ -1385,24 +1327,16 @@ def assertsexti32 : PatFrag<(ops node:$src), (assertsext node:$src), [{
 def sexti16 : ComplexPattern<XLenVT, 1, "selectSExtBits<16>">;
 
 def sexti32 : ComplexPattern<i64, 1, "selectSExtBits<32>">;
-def gi_sexti32 : GIComplexOperandMatcher<s64, "selectSExtBits<32>">,
-                 GIComplexPatternEquiv<sexti32>;
 
 def assertzexti32 : PatFrag<(ops node:$src), (assertzext node:$src), [{
   return cast<VTSDNode>(N->getOperand(1))->getVT().bitsLE(MVT::i32);
 }]>;
 
 def zexti32 : ComplexPattern<i64, 1, "selectZExtBits<32>">;
-def gi_zexti32 : GIComplexOperandMatcher<s64, "selectZExtBits<32>">,
-                 GIComplexPatternEquiv<zexti32>;
 
 def zexti16 : ComplexPattern<XLenVT, 1, "selectZExtBits<16>">;
-def gi_zexti16 : GIComplexOperandMatcher<s32, "selectZExtBits<16>">,
-                 GIComplexPatternEquiv<zexti16>;
 
 def zexti8 : ComplexPattern<XLenVT, 1, "selectZExtBits<8>">;
-def gi_zexti8  : GIComplexOperandMatcher<s32, "selectZExtBits<8>">,
-                 GIComplexPatternEquiv<zexti8>;
 
 def ext : PatFrags<(ops node:$A), [(sext node:$A), (zext node:$A)]>;
 
@@ -1432,7 +1366,6 @@ def sext_oneuse   : unop_oneuse<sext>;
 def zext_oneuse   : unop_oneuse<zext>;
 def anyext_oneuse : unop_oneuse<anyext>;
 def ext_oneuse    : unop_oneuse<ext>;
-def fpext_oneuse  : unop_oneuse<any_fpextend>;
 
 def 33signbits_node : PatLeaf<(i64 GPR:$src), [{
   return CurDAG->ComputeNumSignBits(Op) > 32;
@@ -1440,11 +1373,7 @@ def 33signbits_node : PatLeaf<(i64 GPR:$src), [{
 
 class immop_oneuse<ImmLeaf leaf> : PatLeaf<(leaf), [{
   return N->hasOneUse();
-}]> {
-  let GISelPredicateCode = [{
-    return MRI.hasOneNonDBGUse(MI.getOperand(0).getReg());
-  }];
-}
+}]>;
 
 /// Simple arithmetic operations
 
@@ -1497,18 +1426,6 @@ def : Pat<(XLenVT (and GPR:$rs, immop_oneuse<TrailingOnesMask>:$mask)),
 // ISA only read the least significant 5 bits (RV32I) or 6 bits (RV64I).
 def shiftMaskXLen : ComplexPattern<XLenVT, 1, "selectShiftMaskXLen", [], [], 0>;
 def shiftMask32   : ComplexPattern<i64, 1, "selectShiftMask32", [], [], 0>;
-// FIXME: This is labelled as handling 's32', however the ComplexPattern it
-// refers to handles both i32 and i64 based on the HwMode. Currently this LLT
-// parameter appears to be ignored so this pattern works for both, however we
-// should add a LowLevelTypeByHwMode, and use that to define our XLenLLT instead
-// here.
-def GIShiftMaskXLen :
-    GIComplexOperandMatcher<s32, "selectShiftMaskXLen">,
-    GIComplexPatternEquiv<shiftMaskXLen>;
-def GIShiftMask32 :
-    GIComplexOperandMatcher<s64, "selectShiftMask32">,
-    GIComplexPatternEquiv<shiftMask32>;
-
 class PatGprShiftMaskXLen<SDPatternOperator OpNode, RVInst Inst>
     : Pat<(OpNode GPR:$rs1, shiftMaskXLen:$rs2),
           (Inst GPR:$rs1, shiftMaskXLen:$rs2)>;
@@ -1536,17 +1453,10 @@ def to_tframeindex : SDNodeXForm<frameindex, [{
   return CurDAG->getTargetFrameIndex(N->getIndex(), N->getValueType(0));
 }]>;
 
-def : GICustomOperandRenderer<"renderFrameIndex">,
-      GISDNodeXFormEquiv<to_tframeindex>;
-
 def : Pat<(frameindex:$fi), (ADDI (iPTR (to_tframeindex $fi)), 0)>;
 
 def : Pat<(add_like frameindex:$fi, simm12_lo:$offset),
           (ADDI (iPTR (to_tframeindex $fi)), simm12_lo:$offset)>;
-
-def GIAddrRegImm :
-  GIComplexOperandMatcher<s32, "selectAddrRegImm">,
-  GIComplexPatternEquiv<AddrRegImm>;
 
 /// Stack probing
 
@@ -2008,114 +1918,6 @@ def : Pat<(atomic_fence (XLenVT 7), (timm)), (FENCE 0b11, 0b11)>;
 // present. This is necessary as it isn't valid to mix __atomic_* libcalls
 // with inline atomic operations for the same object.
 
-/// Access to system registers
-
-// Helpers for defining specific operations. They are defined for each system
-// register separately. Side effect is not used because dependencies are
-// expressed via use-def properties.
-
-class ReadSysReg<SysReg SR, list<Register> Regs>
-  : Pseudo<(outs GPR:$rd), (ins),
-           [(set GPR:$rd, (XLenVT (ysx_read_csr (XLenVT SR.Encoding))))]>,
-    PseudoInstExpansion<(CSRRS GPR:$rd, SR.Encoding, X0)> {
-  let hasSideEffects = 0;
-  let Uses = Regs;
-}
-
-class WriteSysReg<SysReg SR, list<Register> Regs>
-  : Pseudo<(outs), (ins GPR:$val),
-           [(ysx_write_csr (XLenVT SR.Encoding), (XLenVT GPR:$val))]>,
-    PseudoInstExpansion<(CSRRW X0, SR.Encoding, GPR:$val)> {
-  let hasSideEffects = 0;
-  let Defs = Regs;
-}
-
-class WriteSysRegImm<SysReg SR, list<Register> Regs>
-  : Pseudo<(outs), (ins uimm5:$val),
-           [(ysx_write_csr (XLenVT SR.Encoding), uimm5:$val)]>,
-    PseudoInstExpansion<(CSRRWI X0, SR.Encoding, uimm5:$val)> {
-  let hasSideEffects = 0;
-  let Defs = Regs;
-}
-
-class SwapSysReg<SysReg SR, list<Register> Regs>
-  : Pseudo<(outs GPR:$rd), (ins GPR:$val),
-           [(set GPR:$rd, (ysx_swap_csr (XLenVT SR.Encoding), (XLenVT GPR:$val)))]>,
-    PseudoInstExpansion<(CSRRW GPR:$rd, SR.Encoding, GPR:$val)> {
-  let hasSideEffects = 0;
-  let Uses = Regs;
-  let Defs = Regs;
-}
-
-class SwapSysRegImm<SysReg SR, list<Register> Regs>
-  : Pseudo<(outs GPR:$rd), (ins uimm5:$val),
-           [(set GPR:$rd, (XLenVT (ysx_swap_csr (XLenVT SR.Encoding), uimm5:$val)))]>,
-    PseudoInstExpansion<(CSRRWI GPR:$rd, SR.Encoding, uimm5:$val)> {
-  let hasSideEffects = 0;
-  let Uses = Regs;
-  let Defs = Regs;
-}
-
-class ClearSysReg<SysReg SR, list<Register> Regs>
-  : Pseudo<(outs), (ins GPR:$val),
-           [(ysx_clear_csr (XLenVT SR.Encoding), (XLenVT GPR:$val))]>,
-    PseudoInstExpansion<(CSRRC X0, SR.Encoding, GPR:$val)> {
-  let hasSideEffects = 0;
-  let Uses = Regs;
-  let Defs = Regs;
-}
-
-class ClearSysRegImm<SysReg SR, list<Register> Regs>
-  : Pseudo<(outs), (ins uimm5:$val),
-           [(ysx_clear_csr (XLenVT SR.Encoding), uimm5:$val)]>,
-    PseudoInstExpansion<(CSRRCI X0, SR.Encoding, uimm5:$val)> {
-  let hasSideEffects = 0;
-  let Uses = Regs;
-  let Defs = Regs;
-}
-
-class SetSysReg<SysReg SR, list<Register> Regs>
-  : Pseudo<(outs), (ins GPR:$val),
-           [(ysx_set_csr (XLenVT SR.Encoding), (XLenVT GPR:$val))]>,
-    PseudoInstExpansion<(CSRRS X0, SR.Encoding, GPR:$val)> {
-  let hasSideEffects = 0;
-  let Uses = Regs;
-  let Defs = Regs;
-}
-
-class SetSysRegImm<SysReg SR, list<Register> Regs>
-  : Pseudo<(outs), (ins uimm5:$val),
-           [(ysx_set_csr (XLenVT SR.Encoding), uimm5:$val)]>,
-    PseudoInstExpansion<(CSRRSI X0, SR.Encoding, uimm5:$val)> {
-  let hasSideEffects = 0;
-  let Uses = Regs;
-  let Defs = Regs;
-}
-
-def ReadFRM : ReadSysReg<SysRegFRM, [FRM]>;
-let hasPostISelHook = 1 in {
-def WriteFRM : WriteSysReg<SysRegFRM, [FRM]>;
-def WriteFRMImm : WriteSysRegImm<SysRegFRM, [FRM]>;
-def SwapFRMImm : SwapSysRegImm<SysRegFRM, [FRM]>;
-}
-
-def WriteVXRMImm : WriteSysRegImm<SysRegVXRM, [VXRM]>;
-
-let hasSideEffects = true in {
-def ReadFFLAGS : ReadSysReg<SysRegFFLAGS, [FFLAGS]>;
-def WriteFFLAGS : WriteSysReg<SysRegFFLAGS, [FFLAGS]>;
-}
-
-let hasPostISelHook = 1 in {
-def ReadFCSR : ReadSysReg<SysRegFCSR, [FRM, FFLAGS]>;
-def WriteFCSR : WriteSysReg<SysRegFCSR, [FRM, FFLAGS]>;
-def WriteFCSRImm : WriteSysRegImm<SysRegFCSR, [FRM, FFLAGS]>;
-def ClearFCSR : ClearSysReg<SysRegFCSR, [FRM, FFLAGS]>;
-def ClearFCSRImm : ClearSysRegImm<SysRegFCSR, [FRM, FFLAGS]>;
-def SetFCSR : SetSysReg<SysRegFCSR, [FRM, FFLAGS]>;
-def SetFCSRImm : SetSysRegImm<SysRegFCSR, [FRM, FFLAGS]>;
-}
-
 /// Other pseudo-instructions
 
 // Pessimistically assume the stack pointer will be clobbered
@@ -2141,9 +1943,7 @@ class binop_allhusers<SDPatternOperator operator>
     : PatFrag<(ops node:$lhs, node:$rhs),
               (XLenVT (operator node:$lhs, node:$rhs)), [{
   return hasAllHUsers(N);
-}]> {
-  let GISelPredicateCode = [{ return hasAllHUsers(MI); }];
-}
+}]>;
 
 // PatFrag to allow ADDW/SUBW/MULW/SLLW to be selected from i64 add/sub/mul/shl
 // if only the lower 32 bits of their result is used.
@@ -2151,9 +1951,7 @@ class binop_allwusers<SDPatternOperator operator>
     : PatFrag<(ops node:$lhs, node:$rhs), (i64 (operator node:$lhs, node:$rhs)),
               [{
   return hasAllWUsers(N);
-}]> {
-  let GISelPredicateCode = [{ return hasAllWUsers(MI); }];
-}
+}]>;
 
 def sexti32_allwusers : PatFrag<(ops node:$src),
                                 (sext_inreg node:$src, i32), [{

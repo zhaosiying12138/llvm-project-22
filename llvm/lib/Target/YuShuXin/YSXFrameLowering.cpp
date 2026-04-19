@@ -682,7 +682,7 @@ static void appendScalableVectorExpression(const TargetRegisterInfo &TRI,
                                            llvm::raw_string_ostream &Comment) {
   int64_t FixedOffset = Offset.getFixed();
   int64_t ScalableOffset = Offset.getScalable();
-  unsigned DwarfVLenB = TRI.getDwarfRegNum(YSX::VLENB, true);
+  unsigned DwarfVLenB = 0;
   if (FixedOffset) {
     Expr.push_back(dwarf::DW_OP_consts);
     appendLEB128<LEB128Sign::Signed>(Expr, FixedOffset);
@@ -1537,51 +1537,13 @@ YSXFrameLowering::getFrameIndexReference(const MachineFunction &MF, int FI,
 
 static MCRegister getYSXVecBaseRegister(const YSXRegisterInfo &TRI,
                                      const Register &Reg) {
-  MCRegister BaseReg = TRI.getSubReg(Reg, YSX::sub_vrm1_0);
-  // If it's not a grouped vector register, it doesn't have subregister, so
-  // the base register is just itself.
-  if (!BaseReg.isValid())
-    BaseReg = Reg;
-  return BaseReg;
+  return Reg;
 }
 
 void YSXFrameLowering::determineCalleeSaves(MachineFunction &MF,
                                               BitVector &SavedRegs,
                                               RegScavenger *RS) const {
   TargetFrameLowering::determineCalleeSaves(MF, SavedRegs, RS);
-
-  // In TargetFrameLowering::determineCalleeSaves, any vector register is marked
-  // as saved if any of its subregister is clobbered, this is not correct in
-  // vector registers. We only want the vector register to be marked as saved
-  // if all of its subregisters are clobbered.
-  // For example:
-  // Original behavior: If v24 is marked, v24m2, v24m4, v24m8 are also marked.
-  // Correct behavior: v24m2 is marked only if v24 and v25 are marked.
-  const MachineRegisterInfo &MRI = MF.getRegInfo();
-  const MCPhysReg *CSRegs = MRI.getCalleeSavedRegs();
-  const YSXRegisterInfo &TRI = *STI.getRegisterInfo();
-  for (unsigned i = 0; CSRegs[i]; ++i) {
-    unsigned CSReg = CSRegs[i];
-    // Only vector registers need special care.
-    if (!YSX::VRRegClass.contains(getYSXVecBaseRegister(TRI, CSReg)))
-      continue;
-
-    SavedRegs.reset(CSReg);
-
-    auto SubRegs = TRI.subregs(CSReg);
-    // Set the register and all its subregisters.
-    if (!MRI.def_empty(CSReg) || MRI.getUsedPhysRegsMask().test(CSReg)) {
-      SavedRegs.set(CSReg);
-      for (unsigned Reg : SubRegs)
-        SavedRegs.set(Reg);
-    }
-
-    // Combine to super register if all of its subregisters are marked.
-    if (!SubRegs.empty() && llvm::all_of(SubRegs, [&](unsigned Reg) {
-          return SavedRegs.test(Reg);
-        }))
-      SavedRegs.set(CSReg);
-  }
 
   // Unconditionally spill RA and FP only if the function uses a frame
   // pointer.
@@ -2162,10 +2124,7 @@ bool YSXFrameLowering::spillCalleeSavedRegisters(
 }
 
 static unsigned getCalleeSavedYSXVecNumRegs(const Register &BaseReg) {
-  return YSX::VRRegClass.contains(BaseReg)     ? 1
-         : YSX::VRM2RegClass.contains(BaseReg) ? 2
-         : YSX::VRM4RegClass.contains(BaseReg) ? 4
-                                                 : 8;
+  return 0;
 }
 
 void YSXFrameLowering::emitCalleeSavedYSXVecPrologCFI(
@@ -2307,17 +2266,6 @@ bool YSXFrameLowering::canUseAsPrologue(const MachineBasicBlock &MBB) const {
   MachineBasicBlock *TmpMBB = const_cast<MachineBasicBlock *>(&MBB);
   const MachineFunction *MF = MBB.getParent();
   const auto *RVFI = MF->getInfo<YSXMachineFunctionInfo>();
-
-  // Make sure VTYPE and VL are not live-in since we will use vsetvli in the
-  // prologue to get the VLEN, and that will clobber these registers.
-  //
-  // We may do also check the stack contains objects with scalable vector type,
-  // but this will require iterating over all the stack objects, but this may
-  // not worth since the situation is rare, we could do further check in future
-  // if we find it is necessary.
-  if (STI.preferVsetvliOverReadVLENB() &&
-      (MBB.isLiveIn(YSX::VTYPE) || MBB.isLiveIn(YSX::VL)))
-    return false;
 
   if (!RVFI->useSaveRestoreLibCalls(*MF))
     return true;

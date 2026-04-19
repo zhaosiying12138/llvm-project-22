@@ -136,170 +136,6 @@ YSXTargetLowering::YSXTargetLowering(const TargetMachine &TM,
   // Set up the register classes.
   addRegisterClass(XLenVT, &YSX::GPRRegClass);
 
-  if (Subtarget.hasStdExtZfhmin())
-    addRegisterClass(MVT::f16, &YSX::FPR16RegClass);
-  if (Subtarget.hasStdExtZfbfmin() || Subtarget.hasVendorXAndesBFHCvt())
-    addRegisterClass(MVT::bf16, &YSX::FPR16RegClass);
-  if (Subtarget.hasStdExtF())
-    addRegisterClass(MVT::f32, &YSX::FPR32RegClass);
-  if (Subtarget.hasStdExtD())
-    addRegisterClass(MVT::f64, &YSX::FPR64RegClass);
-  if (Subtarget.hasStdExtZhinxmin())
-    addRegisterClass(MVT::f16, &YSX::GPRF16RegClass);
-  if (Subtarget.hasStdExtZfinx())
-    addRegisterClass(MVT::f32, &YSX::GPRF32RegClass);
-  if (Subtarget.hasStdExtZdinx()) {
-    if (Subtarget.is64Bit())
-      addRegisterClass(MVT::f64, &YSX::GPRRegClass);
-    else
-      addRegisterClass(MVT::f64, &YSX::GPRPairRegClass);
-  }
-
-  static const MVT::SimpleValueType BoolVecVTs[] = {
-      MVT::nxv1i1,  MVT::nxv2i1,  MVT::nxv4i1, MVT::nxv8i1,
-      MVT::nxv16i1, MVT::nxv32i1, MVT::nxv64i1};
-  static const MVT::SimpleValueType IntVecVTs[] = {
-      MVT::nxv1i8,  MVT::nxv2i8,   MVT::nxv4i8,   MVT::nxv8i8,  MVT::nxv16i8,
-      MVT::nxv32i8, MVT::nxv64i8,  MVT::nxv1i16,  MVT::nxv2i16, MVT::nxv4i16,
-      MVT::nxv8i16, MVT::nxv16i16, MVT::nxv32i16, MVT::nxv1i32, MVT::nxv2i32,
-      MVT::nxv4i32, MVT::nxv8i32,  MVT::nxv16i32, MVT::nxv1i64, MVT::nxv2i64,
-      MVT::nxv4i64, MVT::nxv8i64};
-  static const MVT::SimpleValueType F16VecVTs[] = {
-      MVT::nxv1f16, MVT::nxv2f16,  MVT::nxv4f16,
-      MVT::nxv8f16, MVT::nxv16f16, MVT::nxv32f16};
-  static const MVT::SimpleValueType BF16VecVTs[] = {
-      MVT::nxv1bf16, MVT::nxv2bf16,  MVT::nxv4bf16,
-      MVT::nxv8bf16, MVT::nxv16bf16, MVT::nxv32bf16};
-  static const MVT::SimpleValueType F32VecVTs[] = {
-      MVT::nxv1f32, MVT::nxv2f32, MVT::nxv4f32, MVT::nxv8f32, MVT::nxv16f32};
-  static const MVT::SimpleValueType F64VecVTs[] = {
-      MVT::nxv1f64, MVT::nxv2f64, MVT::nxv4f64, MVT::nxv8f64};
-  static const MVT::SimpleValueType VecTupleVTs[] = {
-      MVT::riscv_nxv1i8x2,  MVT::riscv_nxv1i8x3,  MVT::riscv_nxv1i8x4,
-      MVT::riscv_nxv1i8x5,  MVT::riscv_nxv1i8x6,  MVT::riscv_nxv1i8x7,
-      MVT::riscv_nxv1i8x8,  MVT::riscv_nxv2i8x2,  MVT::riscv_nxv2i8x3,
-      MVT::riscv_nxv2i8x4,  MVT::riscv_nxv2i8x5,  MVT::riscv_nxv2i8x6,
-      MVT::riscv_nxv2i8x7,  MVT::riscv_nxv2i8x8,  MVT::riscv_nxv4i8x2,
-      MVT::riscv_nxv4i8x3,  MVT::riscv_nxv4i8x4,  MVT::riscv_nxv4i8x5,
-      MVT::riscv_nxv4i8x6,  MVT::riscv_nxv4i8x7,  MVT::riscv_nxv4i8x8,
-      MVT::riscv_nxv8i8x2,  MVT::riscv_nxv8i8x3,  MVT::riscv_nxv8i8x4,
-      MVT::riscv_nxv8i8x5,  MVT::riscv_nxv8i8x6,  MVT::riscv_nxv8i8x7,
-      MVT::riscv_nxv8i8x8,  MVT::riscv_nxv16i8x2, MVT::riscv_nxv16i8x3,
-      MVT::riscv_nxv16i8x4, MVT::riscv_nxv32i8x2};
-
-  if (Subtarget.hasVInstructions()) {
-    auto addRegClassForYSXVec = [this](MVT VT) {
-      // Disable the smallest fractional LMUL types if ELEN is less than
-      // YSXVecBitsPerBlock.
-      unsigned MinElts = YSX::YSXVecBitsPerBlock / Subtarget.getELen();
-      if (VT.getVectorMinNumElements() < MinElts)
-        return;
-
-      unsigned Size = VT.getSizeInBits().getKnownMinValue();
-      const TargetRegisterClass *RC;
-      if (Size <= YSX::YSXVecBitsPerBlock)
-        RC = &YSX::VRRegClass;
-      else if (Size == 2 * YSX::YSXVecBitsPerBlock)
-        RC = &YSX::VRM2RegClass;
-      else if (Size == 4 * YSX::YSXVecBitsPerBlock)
-        RC = &YSX::VRM4RegClass;
-      else if (Size == 8 * YSX::YSXVecBitsPerBlock)
-        RC = &YSX::VRM8RegClass;
-      else
-        llvm_unreachable("Unexpected size");
-
-      addRegisterClass(VT, RC);
-    };
-
-    for (MVT VT : BoolVecVTs)
-      addRegClassForYSXVec(VT);
-    for (MVT VT : IntVecVTs) {
-      if (VT.getVectorElementType() == MVT::i64 &&
-          !Subtarget.hasVInstructionsI64())
-        continue;
-      addRegClassForYSXVec(VT);
-    }
-
-    if (Subtarget.hasVInstructionsF16Minimal() ||
-        Subtarget.hasVendorXAndesVPackFPH())
-      for (MVT VT : F16VecVTs)
-        addRegClassForYSXVec(VT);
-
-    if (Subtarget.hasVInstructionsBF16Minimal() ||
-        Subtarget.hasVendorXAndesVBFHCvt())
-      for (MVT VT : BF16VecVTs)
-        addRegClassForYSXVec(VT);
-
-    if (Subtarget.hasVInstructionsF32())
-      for (MVT VT : F32VecVTs)
-        addRegClassForYSXVec(VT);
-
-    if (Subtarget.hasVInstructionsF64())
-      for (MVT VT : F64VecVTs)
-        addRegClassForYSXVec(VT);
-
-    if (Subtarget.useYSXVecForFixedLengthVectors()) {
-      auto addRegClassForFixedVectors = [this](MVT VT) {
-        MVT ContainerVT = getContainerForFixedLengthVector(VT);
-        unsigned RCID = getRegClassIDForVecVT(ContainerVT);
-        const YSXRegisterInfo &TRI = *Subtarget.getRegisterInfo();
-        addRegisterClass(VT, TRI.getRegClass(RCID));
-      };
-      for (MVT VT : MVT::integer_fixedlen_vector_valuetypes())
-        if (useYSXVecForFixedLengthVectorVT(VT))
-          addRegClassForFixedVectors(VT);
-
-      for (MVT VT : MVT::fp_fixedlen_vector_valuetypes())
-        if (useYSXVecForFixedLengthVectorVT(VT))
-          addRegClassForFixedVectors(VT);
-    }
-
-    addRegisterClass(MVT::riscv_nxv1i8x2, &YSX::VRN2M1RegClass);
-    addRegisterClass(MVT::riscv_nxv1i8x3, &YSX::VRN3M1RegClass);
-    addRegisterClass(MVT::riscv_nxv1i8x4, &YSX::VRN4M1RegClass);
-    addRegisterClass(MVT::riscv_nxv1i8x5, &YSX::VRN5M1RegClass);
-    addRegisterClass(MVT::riscv_nxv1i8x6, &YSX::VRN6M1RegClass);
-    addRegisterClass(MVT::riscv_nxv1i8x7, &YSX::VRN7M1RegClass);
-    addRegisterClass(MVT::riscv_nxv1i8x8, &YSX::VRN8M1RegClass);
-    addRegisterClass(MVT::riscv_nxv2i8x2, &YSX::VRN2M1RegClass);
-    addRegisterClass(MVT::riscv_nxv2i8x3, &YSX::VRN3M1RegClass);
-    addRegisterClass(MVT::riscv_nxv2i8x4, &YSX::VRN4M1RegClass);
-    addRegisterClass(MVT::riscv_nxv2i8x5, &YSX::VRN5M1RegClass);
-    addRegisterClass(MVT::riscv_nxv2i8x6, &YSX::VRN6M1RegClass);
-    addRegisterClass(MVT::riscv_nxv2i8x7, &YSX::VRN7M1RegClass);
-    addRegisterClass(MVT::riscv_nxv2i8x8, &YSX::VRN8M1RegClass);
-    addRegisterClass(MVT::riscv_nxv4i8x2, &YSX::VRN2M1RegClass);
-    addRegisterClass(MVT::riscv_nxv4i8x3, &YSX::VRN3M1RegClass);
-    addRegisterClass(MVT::riscv_nxv4i8x4, &YSX::VRN4M1RegClass);
-    addRegisterClass(MVT::riscv_nxv4i8x5, &YSX::VRN5M1RegClass);
-    addRegisterClass(MVT::riscv_nxv4i8x6, &YSX::VRN6M1RegClass);
-    addRegisterClass(MVT::riscv_nxv4i8x7, &YSX::VRN7M1RegClass);
-    addRegisterClass(MVT::riscv_nxv4i8x8, &YSX::VRN8M1RegClass);
-    addRegisterClass(MVT::riscv_nxv8i8x2, &YSX::VRN2M1RegClass);
-    addRegisterClass(MVT::riscv_nxv8i8x3, &YSX::VRN3M1RegClass);
-    addRegisterClass(MVT::riscv_nxv8i8x4, &YSX::VRN4M1RegClass);
-    addRegisterClass(MVT::riscv_nxv8i8x5, &YSX::VRN5M1RegClass);
-    addRegisterClass(MVT::riscv_nxv8i8x6, &YSX::VRN6M1RegClass);
-    addRegisterClass(MVT::riscv_nxv8i8x7, &YSX::VRN7M1RegClass);
-    addRegisterClass(MVT::riscv_nxv8i8x8, &YSX::VRN8M1RegClass);
-    addRegisterClass(MVT::riscv_nxv16i8x2, &YSX::VRN2M2RegClass);
-    addRegisterClass(MVT::riscv_nxv16i8x3, &YSX::VRN3M2RegClass);
-    addRegisterClass(MVT::riscv_nxv16i8x4, &YSX::VRN4M2RegClass);
-    addRegisterClass(MVT::riscv_nxv32i8x2, &YSX::VRN2M4RegClass);
-  }
-
-  // fixed vector is stored in GPRs for P extension packed operations
-  if (Subtarget.enablePExtSIMDCodeGen()) {
-    if (Subtarget.is64Bit()) {
-      addRegisterClass(MVT::v2i32, &YSX::GPRRegClass);
-      addRegisterClass(MVT::v4i16, &YSX::GPRRegClass);
-      addRegisterClass(MVT::v8i8, &YSX::GPRRegClass);
-    } else {
-      addRegisterClass(MVT::v2i16, &YSX::GPRRegClass);
-      addRegisterClass(MVT::v4i8, &YSX::GPRRegClass);
-    }
-  }
-
   // Compute derived properties from the register classes.
   computeRegisterProperties(STI.getRegisterInfo());
 
@@ -805,6 +641,7 @@ YSXTargetLowering::YSXTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::CLEAR_CACHE, MVT::Other, Custom);
   }
 
+#if 0
   if (Subtarget.hasVInstructions()) {
     setBooleanVectorContents(ZeroOrNegativeOneBooleanContent);
 
@@ -1741,6 +1578,8 @@ YSXTargetLowering::YSXTargetLowering(const TargetMachine &TM,
         setOperationAction(ISD::BITCAST, MVT::f64, Custom);
     }
   }
+
+#endif
 
   if (Subtarget.hasStdExtZaamo())
     setOperationAction(ISD::ATOMIC_LOAD_SUB, XLenVT, Expand);
@@ -2850,87 +2689,15 @@ YSXVType::VLMUL YSXTargetLowering::getLMUL(MVT VT) {
 }
 
 unsigned YSXTargetLowering::getRegClassIDForLMUL(YSXVType::VLMUL LMul) {
-  switch (LMul) {
-  default:
-    llvm_unreachable("Invalid LMUL.");
-  case YSXVType::LMUL_F8:
-  case YSXVType::LMUL_F4:
-  case YSXVType::LMUL_F2:
-  case YSXVType::LMUL_1:
-    return YSX::VRRegClassID;
-  case YSXVType::LMUL_2:
-    return YSX::VRM2RegClassID;
-  case YSXVType::LMUL_4:
-    return YSX::VRM4RegClassID;
-  case YSXVType::LMUL_8:
-    return YSX::VRM8RegClassID;
-  }
+  llvm_unreachable("YSX does not support vector register classes");
 }
 
 unsigned YSXTargetLowering::getSubregIndexByMVT(MVT VT, unsigned Index) {
-  YSXVType::VLMUL LMUL = getLMUL(VT);
-  if (LMUL == YSXVType::LMUL_F8 || LMUL == YSXVType::LMUL_F4 ||
-      LMUL == YSXVType::LMUL_F2 || LMUL == YSXVType::LMUL_1) {
-    static_assert(YSX::sub_vrm1_7 == YSX::sub_vrm1_0 + 7,
-                  "Unexpected subreg numbering");
-    return YSX::sub_vrm1_0 + Index;
-  }
-  if (LMUL == YSXVType::LMUL_2) {
-    static_assert(YSX::sub_vrm2_3 == YSX::sub_vrm2_0 + 3,
-                  "Unexpected subreg numbering");
-    return YSX::sub_vrm2_0 + Index;
-  }
-  if (LMUL == YSXVType::LMUL_4) {
-    static_assert(YSX::sub_vrm4_1 == YSX::sub_vrm4_0 + 1,
-                  "Unexpected subreg numbering");
-    return YSX::sub_vrm4_0 + Index;
-  }
-  llvm_unreachable("Invalid vector type.");
+  llvm_unreachable("YSX does not support vector subregisters");
 }
 
 unsigned YSXTargetLowering::getRegClassIDForVecVT(MVT VT) {
-  if (VT.isRISCVVectorTuple()) {
-    unsigned NF = VT.getRISCVVectorTupleNumFields();
-    unsigned RegsPerField =
-        std::max(1U, (unsigned)VT.getSizeInBits().getKnownMinValue() /
-                         (NF * YSX::YSXVecBitsPerBlock));
-    switch (RegsPerField) {
-    case 1:
-      if (NF == 2)
-        return YSX::VRN2M1RegClassID;
-      if (NF == 3)
-        return YSX::VRN3M1RegClassID;
-      if (NF == 4)
-        return YSX::VRN4M1RegClassID;
-      if (NF == 5)
-        return YSX::VRN5M1RegClassID;
-      if (NF == 6)
-        return YSX::VRN6M1RegClassID;
-      if (NF == 7)
-        return YSX::VRN7M1RegClassID;
-      if (NF == 8)
-        return YSX::VRN8M1RegClassID;
-      break;
-    case 2:
-      if (NF == 2)
-        return YSX::VRN2M2RegClassID;
-      if (NF == 3)
-        return YSX::VRN3M2RegClassID;
-      if (NF == 4)
-        return YSX::VRN4M2RegClassID;
-      break;
-    case 4:
-      assert(NF == 2);
-      return YSX::VRN2M4RegClassID;
-    default:
-      break;
-    }
-    llvm_unreachable("Invalid vector tuple type RegClass.");
-  }
-
-  if (VT.getVectorElementType() == MVT::i1)
-    return YSX::VRRegClassID;
-  return getRegClassIDForLMUL(getLMUL(VT));
+  llvm_unreachable("YSX does not support vector register classes");
 }
 
 // Attempt to decompose a subvector insert/extract between VecVT and
@@ -2942,46 +2709,7 @@ std::pair<unsigned, unsigned>
 YSXTargetLowering::decomposeSubvectorInsertExtractToSubRegs(
     MVT VecVT, MVT SubVecVT, unsigned InsertExtractIdx,
     const YSXRegisterInfo *TRI) {
-  static_assert((YSX::VRM8RegClassID > YSX::VRM4RegClassID &&
-                 YSX::VRM4RegClassID > YSX::VRM2RegClassID &&
-                 YSX::VRM2RegClassID > YSX::VRRegClassID),
-                "Register classes not ordered");
-  unsigned VecRegClassID = getRegClassIDForVecVT(VecVT);
-  unsigned SubRegClassID = getRegClassIDForVecVT(SubVecVT);
-
-  // If VecVT is a vector tuple type, either it's the tuple type with same
-  // RegClass with SubVecVT or SubVecVT is a actually a subvector of the VecVT.
-  if (VecVT.isRISCVVectorTuple()) {
-    if (VecRegClassID == SubRegClassID)
-      return {YSX::NoSubRegister, 0};
-
-    assert(SubVecVT.isScalableVector() &&
-           "Only allow scalable vector subvector.");
-    assert(getLMUL(VecVT) == getLMUL(SubVecVT) &&
-           "Invalid vector tuple insert/extract for vector and subvector with "
-           "different LMUL.");
-    return {getSubregIndexByMVT(VecVT, InsertExtractIdx), 0};
-  }
-
-  // Try to compose a subregister index that takes us from the incoming
-  // LMUL>1 register class down to the outgoing one. At each step we half
-  // the LMUL:
-  //   nxv16i32@12 -> nxv2i32: sub_vrm4_1_then_sub_vrm2_1_then_sub_vrm1_0
-  // Note that this is not guaranteed to find a subregister index, such as
-  // when we are extracting from one VR type to another.
-  unsigned SubRegIdx = YSX::NoSubRegister;
-  for (const unsigned RCID :
-       {YSX::VRM4RegClassID, YSX::VRM2RegClassID, YSX::VRRegClassID})
-    if (VecRegClassID > RCID && SubRegClassID <= RCID) {
-      VecVT = VecVT.getHalfNumVectorElementsVT();
-      bool IsHi =
-          InsertExtractIdx >= VecVT.getVectorElementCount().getKnownMinValue();
-      SubRegIdx = TRI->composeSubRegIndices(SubRegIdx,
-                                            getSubregIndexByMVT(VecVT, IsHi));
-      if (IsHi)
-        InsertExtractIdx -= VecVT.getVectorElementCount().getKnownMinValue();
-    }
-  return {SubRegIdx, InsertExtractIdx};
+  llvm_unreachable("YSX does not support vector subregisters");
 }
 
 // Permit combining of mask vectors as BUILD_VECTOR never expands to scalar
@@ -14634,60 +14362,15 @@ SDValue YSXTargetLowering::lowerGET_ROUNDING(SDValue Op,
   const MVT XLenVT = Subtarget.getXLenVT();
   SDLoc DL(Op);
   SDValue Chain = Op->getOperand(0);
-  SDValue SysRegNo = DAG.getTargetConstant(YSXSysReg::frm, DL, XLenVT);
-  SDVTList VTs = DAG.getVTList(XLenVT, MVT::Other);
-  SDValue RM = DAG.getNode(YSXISD::READ_CSR, DL, VTs, Chain, SysRegNo);
-
-  // Encoding used for rounding mode in RISC-V differs from that used in
-  // FLT_ROUNDS. To convert it the RISC-V rounding mode is used as an index in a
-  // table, which consists of a sequence of 4-bit fields, each representing
-  // corresponding FLT_ROUNDS mode.
-  static const int Table =
-      (int(RoundingMode::NearestTiesToEven) << 4 * YSXFPRndMode::RNE) |
-      (int(RoundingMode::TowardZero) << 4 * YSXFPRndMode::RTZ) |
-      (int(RoundingMode::TowardNegative) << 4 * YSXFPRndMode::RDN) |
-      (int(RoundingMode::TowardPositive) << 4 * YSXFPRndMode::RUP) |
-      (int(RoundingMode::NearestTiesToAway) << 4 * YSXFPRndMode::RMM);
-
-  SDValue Shift =
-      DAG.getNode(ISD::SHL, DL, XLenVT, RM, DAG.getConstant(2, DL, XLenVT));
-  SDValue Shifted = DAG.getNode(ISD::SRL, DL, XLenVT,
-                                DAG.getConstant(Table, DL, XLenVT), Shift);
-  SDValue Masked = DAG.getNode(ISD::AND, DL, XLenVT, Shifted,
-                               DAG.getConstant(7, DL, XLenVT));
-
-  return DAG.getMergeValues({Masked, Chain}, DL);
+  SDValue Rounding =
+      DAG.getConstant(int(RoundingMode::NearestTiesToEven), DL, XLenVT);
+  return DAG.getMergeValues({Rounding, Chain}, DL);
 }
 
 SDValue YSXTargetLowering::lowerSET_ROUNDING(SDValue Op,
                                                SelectionDAG &DAG) const {
-  const MVT XLenVT = Subtarget.getXLenVT();
-  SDLoc DL(Op);
   SDValue Chain = Op->getOperand(0);
-  SDValue RMValue = Op->getOperand(1);
-  SDValue SysRegNo = DAG.getTargetConstant(YSXSysReg::frm, DL, XLenVT);
-
-  // Encoding used for rounding mode in RISC-V differs from that used in
-  // FLT_ROUNDS. To convert it the C rounding mode is used as an index in
-  // a table, which consists of a sequence of 4-bit fields, each representing
-  // corresponding RISC-V mode.
-  static const unsigned Table =
-      (YSXFPRndMode::RNE << 4 * int(RoundingMode::NearestTiesToEven)) |
-      (YSXFPRndMode::RTZ << 4 * int(RoundingMode::TowardZero)) |
-      (YSXFPRndMode::RDN << 4 * int(RoundingMode::TowardNegative)) |
-      (YSXFPRndMode::RUP << 4 * int(RoundingMode::TowardPositive)) |
-      (YSXFPRndMode::RMM << 4 * int(RoundingMode::NearestTiesToAway));
-
-  RMValue = DAG.getNode(ISD::ZERO_EXTEND, DL, XLenVT, RMValue);
-
-  SDValue Shift = DAG.getNode(ISD::SHL, DL, XLenVT, RMValue,
-                              DAG.getConstant(2, DL, XLenVT));
-  SDValue Shifted = DAG.getNode(ISD::SRL, DL, XLenVT,
-                                DAG.getConstant(Table, DL, XLenVT), Shift);
-  RMValue = DAG.getNode(ISD::AND, DL, XLenVT, Shifted,
-                        DAG.getConstant(0x7, DL, XLenVT));
-  return DAG.getNode(YSXISD::WRITE_CSR, DL, MVT::Other, Chain, SysRegNo,
-                     RMValue);
+  return Chain;
 }
 
 SDValue YSXTargetLowering::lowerGET_FPENV(SDValue Op,
@@ -14695,80 +14378,39 @@ SDValue YSXTargetLowering::lowerGET_FPENV(SDValue Op,
   const MVT XLenVT = Subtarget.getXLenVT();
   SDLoc DL(Op);
   SDValue Chain = Op->getOperand(0);
-  SDValue SysRegNo = DAG.getTargetConstant(YSXSysReg::fcsr, DL, XLenVT);
-  SDVTList VTs = DAG.getVTList(XLenVT, MVT::Other);
-  return DAG.getNode(YSXISD::READ_CSR, DL, VTs, Chain, SysRegNo);
+  return DAG.getMergeValues({DAG.getConstant(0, DL, XLenVT), Chain}, DL);
 }
 
 SDValue YSXTargetLowering::lowerSET_FPENV(SDValue Op,
                                             SelectionDAG &DAG) const {
-  const MVT XLenVT = Subtarget.getXLenVT();
-  SDLoc DL(Op);
   SDValue Chain = Op->getOperand(0);
-  SDValue EnvValue = Op->getOperand(1);
-  SDValue SysRegNo = DAG.getTargetConstant(YSXSysReg::fcsr, DL, XLenVT);
-
-  EnvValue = DAG.getNode(ISD::ZERO_EXTEND, DL, XLenVT, EnvValue);
-  return DAG.getNode(YSXISD::WRITE_CSR, DL, MVT::Other, Chain, SysRegNo,
-                     EnvValue);
+  return Chain;
 }
 
 SDValue YSXTargetLowering::lowerRESET_FPENV(SDValue Op,
                                               SelectionDAG &DAG) const {
-  const MVT XLenVT = Subtarget.getXLenVT();
-  SDLoc DL(Op);
   SDValue Chain = Op->getOperand(0);
-  SDValue EnvValue = DAG.getRegister(YSX::X0, XLenVT);
-  SDValue SysRegNo = DAG.getTargetConstant(YSXSysReg::fcsr, DL, XLenVT);
-
-  return DAG.getNode(YSXISD::WRITE_CSR, DL, MVT::Other, Chain, SysRegNo,
-                     EnvValue);
+  return Chain;
 }
-
-const uint64_t ModeMask64 = ~YSXExceptFlags::ALL;
-const uint32_t ModeMask32 = ~YSXExceptFlags::ALL;
 
 SDValue YSXTargetLowering::lowerGET_FPMODE(SDValue Op,
                                              SelectionDAG &DAG) const {
   const MVT XLenVT = Subtarget.getXLenVT();
   SDLoc DL(Op);
   SDValue Chain = Op->getOperand(0);
-  SDValue SysRegNo = DAG.getTargetConstant(YSXSysReg::fcsr, DL, XLenVT);
-  SDVTList VTs = DAG.getVTList(XLenVT, MVT::Other);
-  SDValue Result = DAG.getNode(YSXISD::READ_CSR, DL, VTs, Chain, SysRegNo);
-  Chain = Result.getValue(1);
-  return DAG.getMergeValues({Result, Chain}, DL);
+  return DAG.getMergeValues({DAG.getConstant(0, DL, XLenVT), Chain}, DL);
 }
 
 SDValue YSXTargetLowering::lowerSET_FPMODE(SDValue Op,
                                              SelectionDAG &DAG) const {
-  const MVT XLenVT = Subtarget.getXLenVT();
-  const uint64_t ModeMaskValue = Subtarget.is64Bit() ? ModeMask64 : ModeMask32;
-  SDLoc DL(Op);
   SDValue Chain = Op->getOperand(0);
-  SDValue EnvValue = Op->getOperand(1);
-  SDValue SysRegNo = DAG.getTargetConstant(YSXSysReg::fcsr, DL, XLenVT);
-  SDValue ModeMask = DAG.getConstant(ModeMaskValue, DL, XLenVT);
-
-  EnvValue = DAG.getNode(ISD::ZERO_EXTEND, DL, XLenVT, EnvValue);
-  EnvValue = DAG.getNode(ISD::AND, DL, XLenVT, EnvValue, ModeMask);
-  Chain = DAG.getNode(YSXISD::CLEAR_CSR, DL, MVT::Other, Chain, SysRegNo,
-                      ModeMask);
-  return DAG.getNode(YSXISD::SET_CSR, DL, MVT::Other, Chain, SysRegNo,
-                     EnvValue);
+  return Chain;
 }
 
 SDValue YSXTargetLowering::lowerRESET_FPMODE(SDValue Op,
                                                SelectionDAG &DAG) const {
-  const MVT XLenVT = Subtarget.getXLenVT();
-  const uint64_t ModeMaskValue = Subtarget.is64Bit() ? ModeMask64 : ModeMask32;
-  SDLoc DL(Op);
   SDValue Chain = Op->getOperand(0);
-  SDValue SysRegNo = DAG.getTargetConstant(YSXSysReg::fcsr, DL, XLenVT);
-  SDValue ModeMask = DAG.getConstant(ModeMaskValue, DL, XLenVT);
-
-  return DAG.getNode(YSXISD::CLEAR_CSR, DL, MVT::Other, Chain, SysRegNo,
-                     ModeMask);
+  return Chain;
 }
 
 SDValue YSXTargetLowering::lowerEH_DWARF_CFA(SDValue Op,
@@ -23555,13 +23197,6 @@ YSXTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
 
 void YSXTargetLowering::AdjustInstrPostInstrSelection(MachineInstr &MI,
                                                         SDNode *Node) const {
-  // If instruction defines FRM operand, conservatively set it as non-dead to
-  // express data dependency with FRM users and prevent incorrect instruction
-  // reordering.
-  if (auto *FRMDef = MI.findRegisterDefOperand(YSX::FRM, /*TRI=*/nullptr)) {
-    FRMDef->setIsDead(false);
-    return;
-  }
   return;
 #if 0
   // Add FRM dependency to any instructions with dynamic rounding mode.
@@ -24616,138 +24251,21 @@ std::pair<unsigned, const TargetRegisterClass *>
 YSXTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
                                                   StringRef Constraint,
                                                   MVT VT) const {
-  // First, see if this is a constraint that directly corresponds to a RISC-V
-  // register class.
-  if (Constraint.size() == 1) {
-    switch (Constraint[0]) {
-    case 'r':
-      // TODO: Support fixed vectors up to XLen for P extension?
-      if (VT.isVector())
-        break;
-      if (VT == MVT::f16 && Subtarget.hasStdExtZhinxmin())
-        return std::make_pair(0U, &YSX::GPRF16NoX0RegClass);
-      if (VT == MVT::f32 && Subtarget.hasStdExtZfinx())
-        return std::make_pair(0U, &YSX::GPRF32NoX0RegClass);
-      if (VT == MVT::f64 && Subtarget.hasStdExtZdinx() && !Subtarget.is64Bit())
-        return std::make_pair(0U, &YSX::GPRPairNoX0RegClass);
-      return std::make_pair(0U, &YSX::GPRNoX0RegClass);
-    case 'f':
-      if (VT == MVT::f16) {
-        if (Subtarget.hasStdExtZfhmin())
-          return std::make_pair(0U, &YSX::FPR16RegClass);
-        if (Subtarget.hasStdExtZhinxmin())
-          return std::make_pair(0U, &YSX::GPRF16NoX0RegClass);
-      } else if (VT == MVT::f32) {
-        if (Subtarget.hasStdExtF())
-          return std::make_pair(0U, &YSX::FPR32RegClass);
-        if (Subtarget.hasStdExtZfinx())
-          return std::make_pair(0U, &YSX::GPRF32NoX0RegClass);
-      } else if (VT == MVT::f64) {
-        if (Subtarget.hasStdExtD())
-          return std::make_pair(0U, &YSX::FPR64RegClass);
-        if (Subtarget.hasStdExtZdinx() && !Subtarget.is64Bit())
-          return std::make_pair(0U, &YSX::GPRPairNoX0RegClass);
-        if (Subtarget.hasStdExtZdinx() && Subtarget.is64Bit())
-          return std::make_pair(0U, &YSX::GPRNoX0RegClass);
-      }
-      break;
-    case 'R':
-      if (((VT == MVT::i64 || VT == MVT::f64) && !Subtarget.is64Bit()) ||
-          (VT == MVT::i128 && Subtarget.is64Bit()))
-        return std::make_pair(0U, &YSX::GPRPairNoX0RegClass);
-      break;
-    default:
-      break;
-    }
-  } else if (Constraint == "vr") {
-    // Check VM and fractional LMUL first so that those types will use that
-    // class instead of VR.
-    for (const auto *RC :
-         {&YSX::ZZZ_VMRegClass, &YSX::ZZZ_VRMF8RegClass,
-          &YSX::ZZZ_VRMF4RegClass, &YSX::ZZZ_VRMF2RegClass,
-          &YSX::VRRegClass, &YSX::VRM2RegClass, &YSX::VRM4RegClass,
-          &YSX::VRM8RegClass, &YSX::VRN2M1RegClass, &YSX::VRN3M1RegClass,
-          &YSX::VRN4M1RegClass, &YSX::VRN5M1RegClass,
-          &YSX::VRN6M1RegClass, &YSX::VRN7M1RegClass,
-          &YSX::VRN8M1RegClass, &YSX::VRN2M2RegClass,
-          &YSX::VRN3M2RegClass, &YSX::VRN4M2RegClass,
-          &YSX::VRN2M4RegClass}) {
-      if (TRI->isTypeLegalForClass(*RC, VT.SimpleTy))
-        return std::make_pair(0U, RC);
-
-      if (VT.isFixedLengthVector() && useYSXVecForFixedLengthVectorVT(VT)) {
-        MVT ContainerVT = getContainerForFixedLengthVector(VT);
-        if (TRI->isTypeLegalForClass(*RC, ContainerVT))
-          return std::make_pair(0U, RC);
-      }
-    }
-  } else if (Constraint == "vd") {
-    // Check VMNoV0 and fractional LMUL first so that those types will use that
-    // class instead of VRNoV0.
-    for (const auto *RC :
-         {&YSX::ZZZ_VMNoV0RegClass, &YSX::ZZZ_VRMF8NoV0RegClass,
-          &YSX::ZZZ_VRMF4NoV0RegClass, &YSX::ZZZ_VRMF2NoV0RegClass,
-          &YSX::VRNoV0RegClass, &YSX::VRM2NoV0RegClass,
-          &YSX::VRM4NoV0RegClass, &YSX::VRM8NoV0RegClass,
-          &YSX::VRN2M1NoV0RegClass, &YSX::VRN3M1NoV0RegClass,
-          &YSX::VRN4M1NoV0RegClass, &YSX::VRN5M1NoV0RegClass,
-          &YSX::VRN6M1NoV0RegClass, &YSX::VRN7M1NoV0RegClass,
-          &YSX::VRN8M1NoV0RegClass, &YSX::VRN2M2NoV0RegClass,
-          &YSX::VRN3M2NoV0RegClass, &YSX::VRN4M2NoV0RegClass,
-          &YSX::VRN2M4NoV0RegClass}) {
-      if (TRI->isTypeLegalForClass(*RC, VT.SimpleTy))
-        return std::make_pair(0U, RC);
-
-      if (VT.isFixedLengthVector() && useYSXVecForFixedLengthVectorVT(VT)) {
-        MVT ContainerVT = getContainerForFixedLengthVector(VT);
-        if (TRI->isTypeLegalForClass(*RC, ContainerVT))
-          return std::make_pair(0U, RC);
-      }
-    }
-  } else if (Constraint == "vm") {
-    if (TRI->isTypeLegalForClass(YSX::VMV0RegClass, VT.SimpleTy))
-      return std::make_pair(0U, &YSX::VMV0RegClass);
-
-    if (VT.isFixedLengthVector() && useYSXVecForFixedLengthVectorVT(VT)) {
-      MVT ContainerVT = getContainerForFixedLengthVector(VT);
-      // VT here might be coerced to vector with i8 elements, so we need to
-      // check if this is a M1 register here instead of checking VMV0RegClass.
-      if (TRI->isTypeLegalForClass(YSX::VRRegClass, ContainerVT))
-        return std::make_pair(0U, &YSX::VMV0RegClass);
-    }
-  } else if (Constraint == "cr") {
-    if (VT == MVT::f16 && Subtarget.hasStdExtZhinxmin())
-      return std::make_pair(0U, &YSX::GPRF16CRegClass);
-    if (VT == MVT::f32 && Subtarget.hasStdExtZfinx())
-      return std::make_pair(0U, &YSX::GPRF32CRegClass);
-    if (VT == MVT::f64 && Subtarget.hasStdExtZdinx() && !Subtarget.is64Bit())
-      return std::make_pair(0U, &YSX::GPRPairCRegClass);
-    if (!VT.isVector())
-      return std::make_pair(0U, &YSX::GPRCRegClass);
-  } else if (Constraint == "cR") {
-    if (((VT == MVT::i64 || VT == MVT::f64) && !Subtarget.is64Bit()) ||
-        (VT == MVT::i128 && Subtarget.is64Bit()))
-      return std::make_pair(0U, &YSX::GPRPairCRegClass);
-  } else if (Constraint == "cf") {
-    if (VT == MVT::f16) {
-      if (Subtarget.hasStdExtZfhmin())
-        return std::make_pair(0U, &YSX::FPR16CRegClass);
-      if (Subtarget.hasStdExtZhinxmin())
-        return std::make_pair(0U, &YSX::GPRF16CRegClass);
-    } else if (VT == MVT::f32) {
-      if (Subtarget.hasStdExtF())
-        return std::make_pair(0U, &YSX::FPR32CRegClass);
-      if (Subtarget.hasStdExtZfinx())
-        return std::make_pair(0U, &YSX::GPRF32CRegClass);
-    } else if (VT == MVT::f64) {
-      if (Subtarget.hasStdExtD())
-        return std::make_pair(0U, &YSX::FPR64CRegClass);
-      if (Subtarget.hasStdExtZdinx() && !Subtarget.is64Bit())
-        return std::make_pair(0U, &YSX::GPRPairCRegClass);
-      if (Subtarget.hasStdExtZdinx() && Subtarget.is64Bit())
-        return std::make_pair(0U, &YSX::GPRCRegClass);
-    }
-  }
+  if (Constraint == "r" && !VT.isVector())
+    return std::make_pair(0U, &YSX::GPRNoX0RegClass);
+  if (Constraint == "R" &&
+      (((VT == MVT::i64 || VT == MVT::f64) && !Subtarget.is64Bit()) ||
+       (VT == MVT::i128 && Subtarget.is64Bit())))
+    return std::make_pair(0U, &YSX::GPRPairNoX0RegClass);
+  if (Constraint == "cr" && !VT.isVector())
+    return std::make_pair(0U, &YSX::GPRCRegClass);
+  if (Constraint == "cR" &&
+      (((VT == MVT::i64 || VT == MVT::f64) && !Subtarget.is64Bit()) ||
+       (VT == MVT::i128 && Subtarget.is64Bit())))
+    return std::make_pair(0U, &YSX::GPRPairCRegClass);
+  if (Constraint == "vr" || Constraint == "vd" || Constraint == "vm" ||
+      Constraint == "f" || Constraint == "cf")
+    return std::make_pair(0U, nullptr);
 
   // Clang will correctly decode the usage of register name aliases into their
   // official names. However, other frontends like `rustc` do not. This allows
@@ -24789,115 +24307,6 @@ YSXTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
                                .Default(YSX::NoRegister);
   if (XRegFromAlias != YSX::NoRegister)
     return std::make_pair(XRegFromAlias, &YSX::GPRRegClass);
-
-  // Since TargetLowering::getRegForInlineAsmConstraint uses the name of the
-  // TableGen record rather than the AsmName to choose registers for InlineAsm
-  // constraints, plus we want to match those names to the widest floating point
-  // register type available, manually select floating point registers here.
-  //
-  // The second case is the ABI name of the register, so that frontends can also
-  // use the ABI names in register constraint lists.
-  if (Subtarget.hasStdExtF()) {
-    unsigned FReg = StringSwitch<unsigned>(Constraint.lower())
-                        .Cases({"{f0}", "{ft0}"}, YSX::F0_F)
-                        .Cases({"{f1}", "{ft1}"}, YSX::F1_F)
-                        .Cases({"{f2}", "{ft2}"}, YSX::F2_F)
-                        .Cases({"{f3}", "{ft3}"}, YSX::F3_F)
-                        .Cases({"{f4}", "{ft4}"}, YSX::F4_F)
-                        .Cases({"{f5}", "{ft5}"}, YSX::F5_F)
-                        .Cases({"{f6}", "{ft6}"}, YSX::F6_F)
-                        .Cases({"{f7}", "{ft7}"}, YSX::F7_F)
-                        .Cases({"{f8}", "{fs0}"}, YSX::F8_F)
-                        .Cases({"{f9}", "{fs1}"}, YSX::F9_F)
-                        .Cases({"{f10}", "{fa0}"}, YSX::F10_F)
-                        .Cases({"{f11}", "{fa1}"}, YSX::F11_F)
-                        .Cases({"{f12}", "{fa2}"}, YSX::F12_F)
-                        .Cases({"{f13}", "{fa3}"}, YSX::F13_F)
-                        .Cases({"{f14}", "{fa4}"}, YSX::F14_F)
-                        .Cases({"{f15}", "{fa5}"}, YSX::F15_F)
-                        .Cases({"{f16}", "{fa6}"}, YSX::F16_F)
-                        .Cases({"{f17}", "{fa7}"}, YSX::F17_F)
-                        .Cases({"{f18}", "{fs2}"}, YSX::F18_F)
-                        .Cases({"{f19}", "{fs3}"}, YSX::F19_F)
-                        .Cases({"{f20}", "{fs4}"}, YSX::F20_F)
-                        .Cases({"{f21}", "{fs5}"}, YSX::F21_F)
-                        .Cases({"{f22}", "{fs6}"}, YSX::F22_F)
-                        .Cases({"{f23}", "{fs7}"}, YSX::F23_F)
-                        .Cases({"{f24}", "{fs8}"}, YSX::F24_F)
-                        .Cases({"{f25}", "{fs9}"}, YSX::F25_F)
-                        .Cases({"{f26}", "{fs10}"}, YSX::F26_F)
-                        .Cases({"{f27}", "{fs11}"}, YSX::F27_F)
-                        .Cases({"{f28}", "{ft8}"}, YSX::F28_F)
-                        .Cases({"{f29}", "{ft9}"}, YSX::F29_F)
-                        .Cases({"{f30}", "{ft10}"}, YSX::F30_F)
-                        .Cases({"{f31}", "{ft11}"}, YSX::F31_F)
-                        .Default(YSX::NoRegister);
-    if (FReg != YSX::NoRegister) {
-      assert(YSX::F0_F <= FReg && FReg <= YSX::F31_F && "Unknown fp-reg");
-      if (Subtarget.hasStdExtD() && (VT == MVT::f64 || VT == MVT::Other)) {
-        unsigned RegNo = FReg - YSX::F0_F;
-        unsigned DReg = YSX::F0_D + RegNo;
-        return std::make_pair(DReg, &YSX::FPR64RegClass);
-      }
-      if (VT == MVT::f32 || VT == MVT::Other)
-        return std::make_pair(FReg, &YSX::FPR32RegClass);
-      if (Subtarget.hasStdExtZfhmin() && VT == MVT::f16) {
-        unsigned RegNo = FReg - YSX::F0_F;
-        unsigned HReg = YSX::F0_H + RegNo;
-        return std::make_pair(HReg, &YSX::FPR16RegClass);
-      }
-    }
-  }
-
-  if (Subtarget.hasVInstructions()) {
-    Register VReg = StringSwitch<Register>(Constraint.lower())
-                        .Case("{v0}", YSX::V0)
-                        .Case("{v1}", YSX::V1)
-                        .Case("{v2}", YSX::V2)
-                        .Case("{v3}", YSX::V3)
-                        .Case("{v4}", YSX::V4)
-                        .Case("{v5}", YSX::V5)
-                        .Case("{v6}", YSX::V6)
-                        .Case("{v7}", YSX::V7)
-                        .Case("{v8}", YSX::V8)
-                        .Case("{v9}", YSX::V9)
-                        .Case("{v10}", YSX::V10)
-                        .Case("{v11}", YSX::V11)
-                        .Case("{v12}", YSX::V12)
-                        .Case("{v13}", YSX::V13)
-                        .Case("{v14}", YSX::V14)
-                        .Case("{v15}", YSX::V15)
-                        .Case("{v16}", YSX::V16)
-                        .Case("{v17}", YSX::V17)
-                        .Case("{v18}", YSX::V18)
-                        .Case("{v19}", YSX::V19)
-                        .Case("{v20}", YSX::V20)
-                        .Case("{v21}", YSX::V21)
-                        .Case("{v22}", YSX::V22)
-                        .Case("{v23}", YSX::V23)
-                        .Case("{v24}", YSX::V24)
-                        .Case("{v25}", YSX::V25)
-                        .Case("{v26}", YSX::V26)
-                        .Case("{v27}", YSX::V27)
-                        .Case("{v28}", YSX::V28)
-                        .Case("{v29}", YSX::V29)
-                        .Case("{v30}", YSX::V30)
-                        .Case("{v31}", YSX::V31)
-                        .Default(YSX::NoRegister);
-    if (VReg != YSX::NoRegister) {
-      if (TRI->isTypeLegalForClass(YSX::ZZZ_VMRegClass, VT.SimpleTy))
-        return std::make_pair(VReg, &YSX::ZZZ_VMRegClass);
-      if (TRI->isTypeLegalForClass(YSX::VRRegClass, VT.SimpleTy))
-        return std::make_pair(VReg, &YSX::VRRegClass);
-      for (const auto *RC :
-           {&YSX::VRM2RegClass, &YSX::VRM4RegClass, &YSX::VRM8RegClass}) {
-        if (TRI->isTypeLegalForClass(*RC, VT.SimpleTy)) {
-          VReg = TRI->getMatchingSuperReg(VReg, YSX::sub_vrm1_0, RC);
-          return std::make_pair(VReg, RC);
-        }
-      }
-    }
-  }
 
   return TargetLowering::getRegForInlineAsmConstraint(TRI, Constraint, VT);
 }
@@ -26148,10 +25557,6 @@ YSXTargetLowering::emitDynamicProbedAlloc(MachineInstr &MI,
 }
 
 ArrayRef<MCPhysReg> YSXTargetLowering::getRoundingControlRegisters() const {
-  if (Subtarget.hasStdExtFOrZfinx()) {
-    static const MCPhysReg RCRegs[] = {YSX::FRM, YSX::FFLAGS};
-    return RCRegs;
-  }
   return {};
 }
 

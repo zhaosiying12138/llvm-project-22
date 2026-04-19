@@ -498,15 +498,6 @@ void YSXInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     return;
   }
 
-  // Handle copy from csr
-  if (YSX::VCSRRegClass.contains(SrcReg) &&
-      YSX::GPRRegClass.contains(DstReg)) {
-    BuildMI(MBB, MBBI, DL, get(YSX::CSRRS), DstReg)
-        .addImm(YSXSysReg::lookupSysRegByName(TRI->getName(SrcReg))->Encoding)
-        .addReg(YSX::X0);
-    return;
-  }
-
 #if 0
   if (YSX::FPR16RegClass.contains(DstReg, SrcReg)) {
     unsigned Opc;
@@ -1969,6 +1960,8 @@ bool YSXInstrInfo::isVectorAssociativeAndCommutative(const MachineInstr &Inst,
 
 bool YSXInstrInfo::areYSXVecInstsReassociable(const MachineInstr &Root,
                                              const MachineInstr &Prev) const {
+  return false;
+#if 0
   if (!areOpcodesEqualOrInverse(Root.getOpcode(), Prev.getOpcode()))
     return false;
 
@@ -2080,6 +2073,7 @@ bool YSXInstrInfo::areYSXVecInstsReassociable(const MachineInstr &Root,
     return false;
 
   return true;
+#endif
 }
 
 // Most of our YSXVec pseudos have passthru operand, so the real operands
@@ -2906,13 +2900,6 @@ bool YSXInstrInfo::verifyInstruction(const MachineInstr &MI,
       ErrInfo = "policy operand w/o tied operand?";
       return false;
     }
-  }
-
-  if (int Idx = YSXII::getFRMOpNum(Desc);
-      Idx >= 0 && MI.getOperand(Idx).getImm() == YSXFPRndMode::DYN &&
-      !MI.readsRegister(YSX::FRM, /*TRI=*/nullptr)) {
-    ErrInfo = "dynamic rounding mode should read FRM";
-    return false;
   }
 
   return true;
