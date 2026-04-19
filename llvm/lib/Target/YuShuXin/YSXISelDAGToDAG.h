@@ -52,25 +52,6 @@ public:
   bool SelectAddrRegImm9(SDValue Addr, SDValue &Base, SDValue &Offset);
   bool SelectAddrRegImmLsb00000(SDValue Addr, SDValue &Base, SDValue &Offset);
 
-  bool SelectAddrRegRegScale(SDValue Addr, unsigned MaxShiftAmount,
-                             SDValue &Base, SDValue &Index, SDValue &Scale);
-
-  template <unsigned MaxShift>
-  bool SelectAddrRegRegScale(SDValue Addr, SDValue &Base, SDValue &Index,
-                             SDValue &Scale) {
-    return SelectAddrRegRegScale(Addr, MaxShift, Base, Index, Scale);
-  }
-
-  bool SelectAddrRegZextRegScale(SDValue Addr, unsigned MaxShiftAmount,
-                                 unsigned Bits, SDValue &Base, SDValue &Index,
-                                 SDValue &Scale);
-
-  template <unsigned MaxShift, unsigned Bits>
-  bool SelectAddrRegZextRegScale(SDValue Addr, SDValue &Base, SDValue &Index,
-                                 SDValue &Scale) {
-    return SelectAddrRegZextRegScale(Addr, MaxShift, Bits, Base, Index, Scale);
-  }
-
   bool SelectAddrRegReg(SDValue Addr, SDValue &Base, SDValue &Offset);
 
   bool tryShrinkShlLogicImm(SDNode *Node);
@@ -107,16 +88,6 @@ public:
     return selectZExtBits(N, Bits, Val);
   }
 
-  bool selectSHXADDOp(SDValue N, unsigned ShAmt, SDValue &Val);
-  template <unsigned ShAmt> bool selectSHXADDOp(SDValue N, SDValue &Val) {
-    return selectSHXADDOp(N, ShAmt, Val);
-  }
-
-  bool selectSHXADD_UWOp(SDValue N, unsigned ShAmt, SDValue &Val);
-  template <unsigned ShAmt> bool selectSHXADD_UWOp(SDValue N, SDValue &Val) {
-    return selectSHXADD_UWOp(N, ShAmt, Val);
-  }
-
   bool selectZExtImm32(SDValue N, SDValue &Val);
   bool selectNegImm(SDValue N, SDValue &Val);
   bool selectInvLogicImm(SDValue N, SDValue &Val);
@@ -129,8 +100,6 @@ public:
   bool hasAllWUsers(SDNode *Node) const { return hasAllNBitUsers(Node, 32); }
 
   bool selectSimm5Shl2(SDValue N, SDValue &Simm5, SDValue &Shl2);
-
-  void selectSF_VC_X_SE(SDNode *Node);
 
   // Return the RISC-V condition code that matches the given DAG integer
   // condition code. The CondCode must be one of those supported by the RISC-V
@@ -160,7 +129,6 @@ public:
 
 private:
   bool doPeepholeSExtW(SDNode *Node);
-  bool performCombineVMergeAndVOps(SDNode *N);
   bool selectImm64IfCheaper(int64_t Imm, int64_t OrigImm, SDValue N,
                             SDValue &Val);
 };
