@@ -1,4 +1,6 @@
 ; RUN: not llc -mtriple=ysx64 < %s 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK64
+; CHECK-DAG: in function constraint_r_scalable_vec void (): YuShuXin only supports rv64ima and does not support scalable vector IR
+; CHECK-DAG: in function constraint_cr_scalable_vec void (): YuShuXin only supports rv64ima and does not support scalable vector IR
 
 define void @constraint_I() {
 ; CHECK: error: value out of range for constraint 'I'
@@ -45,7 +47,6 @@ define void @constraint_r_fixed_vec() nounwind {
 }
 
 define void @constraint_r_scalable_vec() nounwind {
-; CHECK: error: couldn't allocate input reg for constraint 'r'
   tail call void asm "add a0, a0, $0", "r"(<vscale x 4 x i32> zeroinitializer)
   ret void
 }
@@ -57,7 +58,6 @@ define void @constraint_cr_fixed_vec() nounwind {
 }
 
 define void @constraint_cr_scalable_vec() nounwind {
-; CHECK: error: couldn't allocate input reg for constraint 'cr'
   tail call void asm "add a0, a0, $0", "^cr"(<vscale x 4 x i32> zeroinitializer)
   ret void
 }

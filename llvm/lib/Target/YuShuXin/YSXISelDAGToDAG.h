@@ -130,42 +130,7 @@ public:
 
   bool selectSimm5Shl2(SDValue N, SDValue &Simm5, SDValue &Shl2);
 
-  bool selectVLOp(SDValue N, SDValue &VL);
-
-  bool selectVSplat(SDValue N, SDValue &SplatVal);
-  bool selectVSplatSimm5(SDValue N, SDValue &SplatVal);
-  bool selectVSplatUimm(SDValue N, unsigned Bits, SDValue &SplatVal);
-  template <unsigned Bits> bool selectVSplatUimmBits(SDValue N, SDValue &Val) {
-    return selectVSplatUimm(N, Bits, Val);
-  }
-  bool selectVSplatSimm5Plus1(SDValue N, SDValue &SplatVal);
-  bool selectVSplatSimm5Plus1NoDec(SDValue N, SDValue &SplatVal);
-  bool selectVSplatSimm5Plus1NonZero(SDValue N, SDValue &SplatVal);
-  bool selectVSplatImm64Neg(SDValue N, SDValue &SplatVal);
-  // Matches the splat of a value which can be extended or truncated, such that
-  // only the bottom 8 bits are preserved.
-  bool selectLow8BitsVSplat(SDValue N, SDValue &SplatVal);
   bool selectScalarFPAsInt(SDValue N, SDValue &Imm);
-
-  bool selectYSXVecSimm5(SDValue N, unsigned Width, SDValue &Imm);
-  template <unsigned Width> bool selectYSXVecSimm5(SDValue N, SDValue &Imm) {
-    return selectYSXVecSimm5(N, Width, Imm);
-  }
-
-  void addVectorLoadStoreOperands(SDNode *Node, unsigned SEWImm,
-                                  const SDLoc &DL, unsigned CurOp,
-                                  bool IsMasked, bool IsStridedOrIndexed,
-                                  SmallVectorImpl<SDValue> &Operands,
-                                  bool IsLoad = false, MVT *IndexVT = nullptr);
-
-  void selectVLSEG(SDNode *Node, unsigned NF, bool IsMasked, bool IsStrided);
-  void selectVLSEGFF(SDNode *Node, unsigned NF, bool IsMasked);
-  void selectVLXSEG(SDNode *Node, unsigned NF, bool IsMasked, bool IsOrdered);
-  void selectVSSEG(SDNode *Node, unsigned NF, bool IsMasked, bool IsStrided);
-  void selectVSXSEG(SDNode *Node, unsigned NF, bool IsMasked, bool IsOrdered);
-
-  void selectVSETVLI(SDNode *Node);
-  void selectXRemovedSfmmVSET(SDNode *Node);
 
   void selectSF_VC_X_SE(SDNode *Node);
 
@@ -197,8 +162,6 @@ public:
 
 private:
   bool doPeepholeSExtW(SDNode *Node);
-  bool doPeepholeMaskedYSXVec(MachineSDNode *Node);
-  bool doPeepholeNoRegPassThru();
   bool performCombineVMergeAndVOps(SDNode *N);
   bool selectImm64IfCheaper(int64_t Imm, int64_t OrigImm, SDValue N,
                             SDValue &Val);

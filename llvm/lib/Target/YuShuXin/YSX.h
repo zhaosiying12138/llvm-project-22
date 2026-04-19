@@ -32,6 +32,8 @@ public:
   YSXCodeGenPreparePass(const YSXTargetMachine *TM) : TM(TM) {}
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
 };
+ModulePass *createYSXUnsupportedIRGuardPass();
+void initializeYSXUnsupportedIRGuardLegacyPassPass(PassRegistry &);
 FunctionPass *createYSXCodeGenPrepareLegacyPass();
 void initializeYSXCodeGenPrepareLegacyPassPass(PassRegistry &);
 

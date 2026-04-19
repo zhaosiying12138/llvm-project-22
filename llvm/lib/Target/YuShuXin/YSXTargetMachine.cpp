@@ -89,6 +89,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeYSXTarget() {
   initializeKCFIPass(*PR);
   initializeYSXDeadRegisterDefinitionsPass(*PR);
   initializeYSXLateBranchOptPass(*PR);
+  initializeYSXUnsupportedIRGuardLegacyPassPass(*PR);
   initializeYSXCodeGenPrepareLegacyPassPass(*PR);
   initializeYSXPostRAExpandPseudoPass(*PR);
   initializeYSXPreRAExpandPseudoPass(*PR);
@@ -290,6 +291,7 @@ bool YSXPassConfig::addRegAssignAndRewriteOptimized() {
 }
 
 void YSXPassConfig::addIRPasses() {
+  addPass(createYSXUnsupportedIRGuardPass());
   addPass(createAtomicExpandLegacyPass());
 
   if (getOptLevel() != CodeGenOptLevel::None) {

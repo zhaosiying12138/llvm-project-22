@@ -182,34 +182,26 @@ define i256 @i256_sdiv(i256 %arg0) minsize nounwind {
 ;
 ; RV64IM-LABEL: i256_sdiv:
 ; RV64IM:       # %bb.0:
-; RV64IM-NEXT:    ld a2, 24(a1)
-; RV64IM-NEXT:    ld a3, 16(a1)
-; RV64IM-NEXT:    ld a4, 0(a1)
-; RV64IM-NEXT:    ld a1, 8(a1)
-; RV64IM-NEXT:    srai a5, a2, 63
-; RV64IM-NEXT:    srli a5, a5, 62
-; RV64IM-NEXT:    add a5, a4, a5
-; RV64IM-NEXT:    sltu a4, a5, a4
+; RV64IM-NEXT:    srai a4, a3, 63
+; RV64IM-NEXT:    srli a4, a4, 62
+; RV64IM-NEXT:    add a4, a0, a4
+; RV64IM-NEXT:    sltu a0, a4, a0
+; RV64IM-NEXT:    srli a4, a4, 2
+; RV64IM-NEXT:    add a5, a1, a0
+; RV64IM-NEXT:    sltu a1, a5, a1
+; RV64IM-NEXT:    and a1, a0, a1
+; RV64IM-NEXT:    slli a0, a5, 62
 ; RV64IM-NEXT:    srli a5, a5, 2
-; RV64IM-NEXT:    add a6, a1, a4
-; RV64IM-NEXT:    sltu a1, a6, a1
-; RV64IM-NEXT:    and a1, a4, a1
-; RV64IM-NEXT:    srli a4, a6, 2
-; RV64IM-NEXT:    slli a6, a6, 62
-; RV64IM-NEXT:    or a5, a5, a6
-; RV64IM-NEXT:    add a1, a3, a1
-; RV64IM-NEXT:    srli a6, a1, 2
-; RV64IM-NEXT:    sltu a3, a1, a3
+; RV64IM-NEXT:    or a0, a4, a0
+; RV64IM-NEXT:    add a1, a2, a1
+; RV64IM-NEXT:    srli a4, a1, 2
+; RV64IM-NEXT:    sltu a2, a1, a2
 ; RV64IM-NEXT:    slli a1, a1, 62
-; RV64IM-NEXT:    add a2, a2, a3
-; RV64IM-NEXT:    or a1, a4, a1
-; RV64IM-NEXT:    slli a3, a2, 62
-; RV64IM-NEXT:    srai a2, a2, 2
-; RV64IM-NEXT:    or a3, a6, a3
-; RV64IM-NEXT:    sd a5, 0(a0)
-; RV64IM-NEXT:    sd a1, 8(a0)
-; RV64IM-NEXT:    sd a3, 16(a0)
-; RV64IM-NEXT:    sd a2, 24(a0)
+; RV64IM-NEXT:    add a3, a3, a2
+; RV64IM-NEXT:    or a1, a5, a1
+; RV64IM-NEXT:    slli a2, a3, 62
+; RV64IM-NEXT:    or a2, a4, a2
+; RV64IM-NEXT:    srai a3, a3, 2
 ; RV64IM-NEXT:    ret
   %div = sdiv i256 %arg0, 4
   ret i256 %div

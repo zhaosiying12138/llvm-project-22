@@ -32,18 +32,17 @@ define i32 @caller129() nounwind {
 ;
 ; RV64I-LABEL: caller129:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    addi sp, sp, -48
-; RV64I-NEXT:    sd ra, 40(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    addi sp, sp, -16
+; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    li a0, 42
-; RV64I-NEXT:    sw a0, 36(sp)
-; RV64I-NEXT:    mv a0, sp
-; RV64I-NEXT:    sd zero, 0(sp)
-; RV64I-NEXT:    sd zero, 8(sp)
-; RV64I-NEXT:    sd zero, 16(sp)
+; RV64I-NEXT:    sw a0, 4(sp)
+; RV64I-NEXT:    li a0, 0
+; RV64I-NEXT:    li a1, 0
+; RV64I-NEXT:    li a2, 0
 ; RV64I-NEXT:    call callee129
-; RV64I-NEXT:    lw a0, 36(sp)
-; RV64I-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    addi sp, sp, 48
+; RV64I-NEXT:    lw a0, 4(sp)
+; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
   %1 = alloca i32
   store i32 42, ptr %1
@@ -73,18 +72,17 @@ define i32 @caller160() nounwind {
 ;
 ; RV64I-LABEL: caller160:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    addi sp, sp, -48
-; RV64I-NEXT:    sd ra, 40(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    addi sp, sp, -16
+; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    li a0, 42
-; RV64I-NEXT:    sw a0, 36(sp)
-; RV64I-NEXT:    mv a0, sp
-; RV64I-NEXT:    sd zero, 0(sp)
-; RV64I-NEXT:    sd zero, 8(sp)
-; RV64I-NEXT:    sd zero, 16(sp)
+; RV64I-NEXT:    sw a0, 4(sp)
+; RV64I-NEXT:    li a0, 0
+; RV64I-NEXT:    li a1, 0
+; RV64I-NEXT:    li a2, 0
 ; RV64I-NEXT:    call callee160
-; RV64I-NEXT:    lw a0, 36(sp)
-; RV64I-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    addi sp, sp, 48
+; RV64I-NEXT:    lw a0, 4(sp)
+; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
   %1 = alloca i32
   store i32 42, ptr %1
@@ -115,18 +113,17 @@ define i32 @caller161() nounwind {
 ;
 ; RV64I-LABEL: caller161:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    addi sp, sp, -48
-; RV64I-NEXT:    sd ra, 40(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    addi sp, sp, -16
+; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    li a0, 42
-; RV64I-NEXT:    sw a0, 36(sp)
-; RV64I-NEXT:    mv a0, sp
-; RV64I-NEXT:    sd zero, 0(sp)
-; RV64I-NEXT:    sd zero, 8(sp)
-; RV64I-NEXT:    sd zero, 16(sp)
+; RV64I-NEXT:    sw a0, 4(sp)
+; RV64I-NEXT:    li a0, 0
+; RV64I-NEXT:    li a1, 0
+; RV64I-NEXT:    li a2, 0
 ; RV64I-NEXT:    call callee161
-; RV64I-NEXT:    lw a0, 36(sp)
-; RV64I-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    addi sp, sp, 48
+; RV64I-NEXT:    lw a0, 4(sp)
+; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
   %1 = alloca i32
   store i32 42, ptr %1

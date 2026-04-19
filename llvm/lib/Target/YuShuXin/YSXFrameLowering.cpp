@@ -128,17 +128,6 @@ static void emitSCSPrologue(MachineFunction &MF, MachineBasicBlock &MBB,
     return;
 
   const YSXInstrInfo *TII = STI.getInstrInfo();
-#if 0
-  if (HasHWShadowStack) {
-    if (STI.hasStdExtZcmop()) {
-      static_assert(RAReg == YSX::X1, "C.SSPUSH only accepts X1");
-      BuildMI(MBB, MI, DL, TII->get(YSX::PseudoMOP_C_SSPUSH));
-    } else {
-      BuildMI(MBB, MI, DL, TII->get(YSX::PseudoMOP_SSPUSH)).addReg(RAReg);
-    }
-    return;
-  }
-#endif
 
   Register SCSPReg = YSXABI::getSCSPReg();
 
@@ -196,12 +185,6 @@ static void emitSCSEpilogue(MachineFunction &MF, MachineBasicBlock &MBB,
     return;
 
   const YSXInstrInfo *TII = STI.getInstrInfo();
-#if 0
-  if (HasHWShadowStack) {
-    BuildMI(MBB, MI, DL, TII->get(YSX::PseudoMOP_SSPOPCHK)).addReg(RAReg);
-    return;
-  }
-#endif
 
   Register SCSPReg = YSXABI::getSCSPReg();
 
@@ -525,49 +508,6 @@ void YSXFrameLowering::allocateAndProbeStackForYSXVec(
     MachineBasicBlock::iterator MBBI, const DebugLoc &DL, int64_t Amount,
     MachineInstr::MIFlag Flag, bool EmitCFI, bool DynAllocation) const {
   llvm_unreachable("YSX rv64ima does not support YSXVec stack probing");
-#if 0
-  assert(Amount != 0 && "Did not need to adjust stack pointer for YSXVec.");
-
-  // Emit a variable-length allocation probing loop.
-
-  // Get VLEN in TargetReg
-  const YSXInstrInfo *TII = STI.getInstrInfo();
-  Register TargetReg = YSX::X6;
-  uint32_t NumOfVReg = Amount / YSX::YSXVecBytesPerBlock;
-  BuildMI(MBB, MBBI, DL, TII->get(YSX::PseudoReadVLENB), TargetReg)
-      .setMIFlag(Flag);
-  TII->mulImm(MF, MBB, MBBI, DL, TargetReg, NumOfVReg, Flag);
-
-  CFIInstBuilder CFIBuilder(MBB, MBBI, MachineInstr::FrameSetup);
-  if (EmitCFI) {
-    // Set the CFA register to TargetReg.
-    CFIBuilder.buildDefCFA(TargetReg, -Amount);
-  }
-
-  // It will be expanded to a probe loop in `inlineStackProbe`.
-  BuildMI(MBB, MBBI, DL, TII->get(YSX::PROBED_STACKALLOC_YSXVec))
-      .addReg(TargetReg);
-
-  if (EmitCFI) {
-    // Set the CFA register back to SP.
-    CFIBuilder.buildDefCFARegister(SPReg);
-  }
-
-  // SUB SP, SP, T1
-  BuildMI(MBB, MBBI, DL, TII->get(YSX::SUB), SPReg)
-      .addReg(SPReg)
-      .addReg(TargetReg)
-      .setMIFlag(Flag);
-
-  // If we have a dynamic allocation later we need to probe any residuals.
-  if (DynAllocation) {
-    BuildMI(MBB, MBBI, DL, TII->get(STI.is64Bit() ? YSX::SD : YSX::SW))
-        .addReg(YSX::X0)
-        .addReg(SPReg)
-        .addImm(0)
-        .setMIFlags(MachineInstr::FrameSetup);
-  }
-#endif
 }
 
 static void appendScalableVectorExpression(const TargetRegisterInfo &TRI,
@@ -1953,21 +1893,6 @@ bool YSXFrameLowering::spillCalleeSavedRegisters(
     DL = MI->getDebugLoc();
 
   YSXMachineFunctionInfo *RVFI = MF->getInfo<YSXMachineFunctionInfo>();
-#if 0
-  if (RVFI->useQCIInterrupt(*MF)) {
-    // Emit QC.C.MIENTER(.NEST)
-    BuildMI(
-        MBB, MI, DL,
-        TII.get(RVFI->getInterruptStackKind(*MF) ==
-                        YSXMachineFunctionInfo::InterruptStackKind::QCINest
-                    ? YSX::QC_C_MIENTER_NEST
-                    : YSX::QC_C_MIENTER))
-        .setMIFlag(MachineInstr::FrameSetup);
-
-    for (auto [Reg, _Offset] : FixedCSRFIQCIInterruptMap)
-      MBB.addLiveIn(Reg);
-  }
-#endif
 
   if (RVFI->isPushable(*MF)) {
     // Emit CM.PUSH with base StackAdj & evaluate Push stack
