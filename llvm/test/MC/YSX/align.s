@@ -14,14 +14,6 @@
 # RUN: llvm-mc -filetype=obj -triple ysx64 -mattr=-relax < %s \
 # RUN:     | llvm-readobj -r - | FileCheck -check-prefix=NORELAX-RELOC %s
 
-# Relaxation enabled with C extension:
-
-# Relaxation enabled with Zca extension:
-
-# Relaxation disabled with C extension:
-
-# Relaxation disabled with ZCA extension:
-
 # We need to insert N-MinNopSize bytes NOPs and R_RISCV_ALIGN relocation
 # type for .align N directive when linker relaxation enabled.
 # Linker could satisfy alignment by removing NOPs after linker relaxation.
@@ -30,22 +22,13 @@ test:
 ## Start with a linker-relaxable instruction so that the following alignment can be relaxable.
 	call foo
 # NORELAX-RELOC:              R_RISCV_CALL_PLT
-# C-OR-ZCA-EXT-NORELAX-RELOC: R_RISCV_CALL_PLT
 
 	.p2align 2
-# If the +c extension is enabled, the text section will be 2-byte aligned, so
-# one c.nop instruction is sufficient.
-# C-OR-ZCA-EXT-RELAX-RELOC: R_RISCV_ALIGN - 0x2
-# C-OR-ZCA-EXT-RELAX-INST:  c.nop
 	bne     zero, a0, .LBB0_2
 	mv	a0, zero
 	.p2align 3
 # RELAX-RELOC: R_RISCV_ALIGN - 0x4
 # RELAX-INST:  addi    zero, zero, 0
-# C-OR-ZCA-EXT-RELAX-RELOC: R_RISCV_ALIGN - 0x6
-# C-OR-ZCA-EXT-RELAX-INST:  c.nop
-# C-OR-ZCA-EXT-RELAX-INST:  addi    zero, zero, 0
-# C-OR-ZCA-EXT-NORELAX-INST: addi    zero, zero, 0
 	add	a0, a0, a1
 	.align 4
 .LBB0_2:
@@ -54,13 +37,6 @@ test:
 # RELAX-INST:  addi    zero, zero, 0
 # RELAX-INST:  addi    zero, zero, 0
 # NORELAX-INST: addi    zero, zero, 0
-# C-OR-ZCA-EXT-RELAX-RELOC: R_RISCV_ALIGN - 0xE
-# C-OR-ZCA-EXT-RELAX-INST:  addi    zero, zero, 0
-# C-OR-ZCA-EXT-RELAX-INST:  addi    zero, zero, 0
-# C-OR-ZCA-EXT-RELAX-INST:  addi    zero, zero, 0
-# C-OR-ZCA-EXT-RELAX-INST:  c.nop
-# C-EXT-INST: addi    zero, zero, 0
-# C-EXT-INST: c.nop
 	add	a0, a0, a1
 	.p2align 3
 .constant_pool:
@@ -68,23 +44,14 @@ test:
 # RELAX-RELOC: R_RISCV_ALIGN - 0x4
 # RELAX-INST:  addi    zero, zero, 0
 # NORELAX-INST: addi    zero, zero, 0
-# C-OR-ZCA-EXT-RELAX-RELOC: R_RISCV_ALIGN - 0x6
-# C-OR-ZCA-EXT-RELAX-INST:  addi    zero, zero, 0
-# C-OR-ZCA-EXT-RELAX-INST-NOT:  c.nop
-# C-EXT-INST: addi    zero, zero, 0
-# C-EXT-INST: c.nop
 	add	a0, a0, a1
 # Alignment directive with specific padding value 0x01.
 # We will not emit R_RISCV_ALIGN in this case.
 # The behavior is the same as GNU assembler.
 	.p2align 4, 1
 # RELAX-RELOC-NOT: R_RISCV_ALIGN - 0xC
-# C-OR-ZCA-EXT-RELAX-RELOC-NOT: R_RISCV_ALIGN - 0xE
-# C-OR-ZCA-EXT-RELAX-INST:  0101
-# C-EXT-INST:  0101
 	ret
 # NORELAX-RELOC-NOT: R_RISCV
-# C-OR-ZCA-EXT-NORELAX-RELOC-NOT: R_RISCV
 # Code alignment of a byte size less than the size of a nop must be treated
 # as no alignment. This used to trigger a fatal error with relaxation enabled
 # as the calculation to emit the worst-case sequence of nops would overflow.
@@ -97,18 +64,14 @@ test:
         .data
 	.p2align        3
 # RELAX-RELOC-NOT: R_RISCV_ALIGN
-# C-OR-ZCA-EXT-RELAX-RELOC-NOT: R_RISCV_ALIGN
 data1:
 	.word 7
 	.p2align        4
 # RELAX-RELOC-NOT: R_RISCV_ALIGN
-# C-OR-ZCA-EXT-RELAX-RELOC-NOT: R_RISCV_ALIGN
 data2:
 	.word 9
-# Check that the initial alignment is properly handled when using .option to
-# disable the C extension. This used to crash.
-# C-OR-ZCA-EXT-RELAX-INST:      <.text2>:
-# C-OR-ZCA-EXT-RELAX-INST-NEXT: add a0, a0, a1
+# Check that the initial alignment is properly handled when using .option.
+# This used to crash.
 	.section .text2, "x"
 	.option norvc
 	.balign 4
@@ -122,7 +85,6 @@ data2:
 # RELAX-RELOC-NEXT:   0xC R_RISCV_BRANCH .Ltmp[[#]] 0x0
 # RELAX-RELOC-NEXT:   0x10 R_RISCV_BRANCH .Ltmp[[#]] 0x0
 # RELAX-RELOC-NEXT: }
-# C-OR-ZCA-EXT-RELAX-RELOC:  .rela.text3 {
 	.section .text3, "ax"
 	bnez t1, 1f
 	bnez t2, 2f
@@ -143,8 +105,6 @@ data2:
 # RELAX-RELOC-NEXT:    0x14 R_RISCV_BRANCH .Ltmp[[#]] 0x0
 # RELAX-RELOC-NEXT:    0x18 R_RISCV_BRANCH .Ltmp[[#]] 0x0
 # RELAX-RELOC-NEXT: }
-# C-OR-ZCA-EXT-NORELAX-RELOC: .rela.text3a
-# C-OR-ZCA-EXT-RELAX-RELOC: .rela.text3a
 .section .text3a, "ax"
 call foo
 bnez t1, 1f
