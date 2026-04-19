@@ -59,20 +59,9 @@ public:
       SDValue X, ConstantSDNode *XC, ConstantSDNode *CC, SDValue Y,
       unsigned OldShiftOpcode, unsigned NewShiftOpcode,
       SelectionDAG &DAG) const override;
-  bool shouldScalarizeBinop(SDValue VecOp) const override;
   bool isOffsetFoldingLegal(const GlobalAddressSDNode *GA) const override;
-  int getLegalZfaFPImm(const APFloat &Imm, EVT VT) const;
-  bool isFPImmLegal(const APFloat &Imm, EVT VT,
-                    bool ForCodeSize) const override;
-  bool isExtractSubvectorCheap(EVT ResVT, EVT SrcVT,
-                               unsigned Index) const override;
 
   bool isIntDivCheap(EVT VT, AttributeList Attr) const override;
-
-  bool preferScalarizeSplat(SDNode *N) const override;
-
-  /// Customize the preferred legalization strategy for certain types.
-  LegalizeTypeAction getPreferredVectorAction(MVT VT) const override;
 
   /// Return the register type for a given MVT, ensuring vectors are treated
   /// as a series of gpr sized integers.
@@ -89,36 +78,6 @@ public:
   unsigned getNumRegistersForCallingConv(LLVMContext &Context,
                                          CallingConv::ID CC,
                                          EVT VT) const override;
-
-  bool shouldFoldSelectWithIdentityConstant(unsigned BinOpcode, EVT VT,
-                                            unsigned SelectOpcode, SDValue X,
-                                            SDValue Y) const override;
-
-  /// Return true if the given shuffle mask can be codegen'd directly, or if it
-  /// should be stack expanded.
-  bool isShuffleMaskLegal(ArrayRef<int> M, EVT VT) const override;
-
-  bool isMultiStoresCheaperThanBitsMerge(EVT LTy, EVT HTy) const override {
-    // If the pair to store is a mixture of float and int values, we will
-    // save two bitwise instructions and one float-to-int instruction and
-    // increase one store instruction. There is potentially a more
-    // significant benefit because it avoids the float->int domain switch
-    // for input value. So It is more likely a win.
-    if ((LTy.isFloatingPoint() && HTy.isInteger()) ||
-        (LTy.isInteger() && HTy.isFloatingPoint()))
-      return true;
-    // If the pair only contains int values, we will save two bitwise
-    // instructions and increase one store instruction (costing one more
-    // store buffer). Since the benefit is more blurred we leave such a pair
-    // out until we get testcase to prove it is a win.
-    return false;
-  }
-
-  bool
-  shouldExpandBuildVectorWithShuffles(EVT VT,
-                                      unsigned DefinedValues) const override;
-
-  bool shouldExpandCttzElements(EVT VT) const override;
 
   // Provide custom lowering hooks for some operations.
   SDValue LowerOperation(SDValue Op, SelectionDAG &DAG) const override;
@@ -196,13 +155,6 @@ public:
     return TargetLowering::shouldFormOverflowOp(Opcode, VT, MathUsed);
   }
 
-  bool storeOfVectorConstantIsCheap(bool IsZero, EVT MemVT, unsigned NumElem,
-                                    unsigned AddrSpace) const override {
-    // If we can replace 4 or more scalar stores, there will be a reduction
-    // in instructions even after we add a vector constant load.
-    return NumElem >= 4;
-  }
-
   bool convertSetCCLogicToBitwiseLogic(EVT VT) const override {
     return VT.isScalarInteger();
   }
@@ -223,9 +175,6 @@ public:
                                 AtomicOrdering Ord) const override;
   Instruction *emitTrailingFence(IRBuilderBase &Builder, Instruction *Inst,
                                  AtomicOrdering Ord) const override;
-
-  bool isFMAFasterThanFMulAndFAdd(const MachineFunction &MF,
-                                  EVT VT) const override;
 
   ISD::NodeType getExtendForAtomicOps() const override {
     return ISD::SIGN_EXTEND;
@@ -319,9 +268,6 @@ public:
       MachineMemOperand::Flags Flags = MachineMemOperand::MONone,
       unsigned *Fast = nullptr) const override;
 
-  EVT getOptimalMemOpType(LLVMContext &Context, const MemOp &Op,
-                          const AttributeList &FuncAttributes) const override;
-
   bool splitValueIntoRegisterParts(
       SelectionDAG & DAG, const SDLoc &DL, SDValue Val, SDValue *Parts,
       unsigned NumParts, MVT PartVT, std::optional<CallingConv::ID> CC)
@@ -332,18 +278,12 @@ public:
       unsigned NumParts, MVT PartVT, EVT ValueVT,
       std::optional<CallingConv::ID> CC) const override;
 
-  bool shouldRemoveExtendFromGSIndex(SDValue Extend, EVT DataVT) const override;
-
-  bool shouldConvertFpToSat(unsigned Op, EVT FPVT, EVT VT) const override;
-
   unsigned getJumpTableEncoding() const override;
 
   const MCExpr *LowerCustomJumpTableEntry(const MachineJumpTableInfo *MJTI,
                                           const MachineBasicBlock *MBB,
                                           unsigned uid,
                                           MCContext &Ctx) const override;
-
-  bool isVScaleKnownToBeAPowerOfTwo() const override;
 
   bool getIndexedAddressParts(SDNode *Op, SDValue &Base, SDValue &Offset,
                               ISD::MemIndexedMode &AM, SelectionDAG &DAG) const;
@@ -354,43 +294,9 @@ public:
                                   SDValue &Offset, ISD::MemIndexedMode &AM,
                                   SelectionDAG &DAG) const override;
 
-  bool isLegalScaleForGatherScatter(uint64_t Scale,
-                                    uint64_t ElemSize) const override {
-    // Scaled addressing not supported on indexed load/stores
-    return Scale == 1;
-  }
-
   /// If the target has a standard location for the stack protector cookie,
   /// returns the address of that location. Otherwise, returns nullptr.
   Value *getIRStackGuard(IRBuilderBase &IRB) const override;
-
-  unsigned getMaxSupportedInterleaveFactor() const override { return 1; }
-
-  bool fallBackToDAGISel(const Instruction &Inst) const override;
-
-  bool lowerInterleavedLoad(Instruction *Load, Value *Mask,
-                            ArrayRef<ShuffleVectorInst *> Shuffles,
-                            ArrayRef<unsigned> Indices, unsigned Factor,
-                            const APInt &GapMask) const override {
-    return false;
-  }
-
-  bool lowerInterleavedStore(Instruction *Store, Value *Mask,
-                             ShuffleVectorInst *SVI, unsigned Factor,
-                             const APInt &GapMask) const override {
-    return false;
-  }
-
-  bool lowerDeinterleaveIntrinsicToLoad(Instruction *Load, Value *Mask,
-                                        IntrinsicInst *DI) const override {
-    return false;
-  }
-
-  bool lowerInterleaveIntrinsicToStore(
-      Instruction *Store, Value *Mask,
-      ArrayRef<Value *> InterleaveValues) const override {
-    return false;
-  }
 
   bool supportKCFIBundles() const override { return true; }
 
@@ -435,7 +341,6 @@ private:
   SDValue getDynamicTLSAddr(GlobalAddressSDNode *N, SelectionDAG &DAG) const;
   SDValue getTLSDescAddr(GlobalAddressSDNode *N, SelectionDAG &DAG) const;
 
-  SDValue lowerConstantFP(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerGlobalAddress(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerBlockAddress(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerConstantPool(SDValue Op, SelectionDAG &DAG) const;
@@ -470,19 +375,6 @@ private:
       const SmallVectorImpl<std::pair<llvm::Register, llvm::SDValue>> &Regs,
       MachineFunction &MF) const;
 
-  MVT getVPExplicitVectorLengthTy() const override;
-
-  bool shouldExpandGetVectorLength(EVT TripCountVT, unsigned VF,
-                                   bool IsScalable) const override;
-
-  /// YSXVec code generation for fixed length vectors does not lower all
-  /// BUILD_VECTORs. This makes BUILD_VECTOR legalisation a source of stores to
-  /// merge. However, merging them creates a BUILD_VECTOR that is just as
-  /// illegal as the original, thus leading to an infinite legalisation loop.
-  /// NOTE: Once BUILD_VECTOR can be custom lowered for all legal vector types,
-  /// this override can be removed.
-  bool mergeStoresAfterLegalization(EVT VT) const override;
-
   /// Disable normalizing
   /// select(N0&N1, X, Y) => select(N0, select(N1, X, Y), Y) and
   /// select(N0|N1, X, Y) => select(N0, select(N1, X, Y, Y))
@@ -490,17 +382,6 @@ private:
   bool shouldNormalizeToSelectSequence(LLVMContext &, EVT) const override {
     return false;
   }
-
-  /// Disables storing and loading vectors by default when there are function
-  /// calls between the load and store, since these are more expensive than just
-  /// using scalars
-  bool shouldMergeStoreOfLoadsOverCall(EVT SrcVT, EVT MergedVT) const override {
-    return !MergedVT.isVector() || SrcVT.isVector();
-  }
-
-  /// For available scheduling models FDIV + two independent FMULs are much
-  /// faster than two FDIVs.
-  unsigned combineRepeatedFPDivisors() const override;
 
   SDValue BuildSDIVPow2(SDNode *N, const APInt &Divisor, SelectionDAG &DAG,
                         SmallVectorImpl<SDNode *> &Created) const override;
@@ -513,38 +394,7 @@ private:
   SDValue emitFlushICache(SelectionDAG &DAG, SDValue InChain, SDValue Start,
                           SDValue End, SDValue Flags, SDLoc DL) const;
 
-  std::pair<const TargetRegisterClass *, uint8_t>
-  findRepresentativeClass(const TargetRegisterInfo *TRI, MVT VT) const override;
 };
-
-namespace YSXVIntrinsicsTable {
-
-struct YSXVIntrinsicInfo {
-  unsigned IntrinsicID;
-  uint8_t ScalarOperand;
-  uint8_t VLOperand;
-  bool IsFPIntrinsic;
-  bool hasScalarOperand() const {
-    // 0xF is not valid. See NoScalarOperand in IntrinsicsYSX.td.
-    return ScalarOperand != 0xF;
-  }
-  bool hasVLOperand() const {
-    // 0x1F is not valid. See NoVLOperand in IntrinsicsYSX.td.
-    return VLOperand != 0x1F;
-  }
-};
-
-using namespace YSX;
-
-#define GET_YSXVIntrinsicsTable_DECL
-#include "YSXGenSearchableTables.inc"
-#undef GET_YSXVIntrinsicsTable_DECL
-
-inline const YSXVIntrinsicInfo *getYSXVIntrinsicInfo(unsigned) {
-  return nullptr;
-}
-
-} // end namespace YSXVIntrinsicsTable
 
 } // end namespace llvm
 

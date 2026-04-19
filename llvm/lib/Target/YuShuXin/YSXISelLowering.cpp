@@ -69,18 +69,6 @@ static cl::opt<bool>
                               "VWADD_W) with splat constants"),
                      cl::init(false));
 
-static cl::opt<unsigned> NumRepeatedDivisors(
-    DEBUG_TYPE "-fp-repeated-divisors", cl::Hidden,
-    cl::desc("Set the minimum number of repetitions of a divisor to allow "
-             "transformation to multiplications by the reciprocal"),
-    cl::init(2));
-
-static cl::opt<int>
-    FPImmCost(DEBUG_TYPE "-fpimm-cost", cl::Hidden,
-              cl::desc("Give the maximum number of instructions that we will "
-                       "use for creating a floating-point immediate value"),
-              cl::init(3));
-
 static cl::opt<bool>
     ReassocShlAddiAdd("ysx-reassoc-shl-addi-add", cl::Hidden,
                       cl::desc("Swap add and addi in cases where the add may "
@@ -262,29 +250,10 @@ YSXTargetLowering::YSXTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::CTPOP, MVT::i64, Expand);
   }
 
-  if (Subtarget.hasCLZLike()) {
-    // We need the custom lowering to make sure that the resulting sequence
-    // for the 32bit case is efficient on 64bit targets.
-    // Use default promotion for i32 without Zbb.
-    if (Subtarget.is64Bit() &&
-        (Subtarget.hasStdExtZbb() || Subtarget.hasStdExtP()))
-      setOperationAction({ISD::CTLZ, ISD::CTLZ_ZERO_UNDEF}, MVT::i32, Custom);
-  } else {
+  if (!Subtarget.hasCLZLike())
     setOperationAction(ISD::CTLZ, XLenVT, Expand);
-  }
 
-  if (Subtarget.hasStdExtP()) {
-    setOperationAction(ISD::CTLS, XLenVT, Legal);
-    if (Subtarget.is64Bit())
-      setOperationAction(ISD::CTLS, MVT::i32, Custom);
-  }
-
-  if (Subtarget.hasStdExtP() ||
-      (Subtarget.hasVendorXCValu() && !Subtarget.is64Bit())) {
-    setOperationAction(ISD::ABS, XLenVT, Legal);
-    if (Subtarget.is64Bit())
-      setOperationAction(ISD::ABS, MVT::i32, Custom);
-  } else if (Subtarget.hasShortForwardBranchIALU()) {
+  if (Subtarget.hasShortForwardBranchIALU()) {
     // We can use PseudoCCSUB to implement ABS.
     setOperationAction(ISD::ABS, XLenVT, Legal);
   } else if (Subtarget.is64Bit()) {
@@ -294,290 +263,9 @@ YSXTargetLowering::YSXTargetLowering(const TargetMachine &TM,
   if (!Subtarget.useMIPSCCMovInsn() && !Subtarget.hasVendorXRemovedTHeadCondMov())
     setOperationAction(ISD::SELECT, XLenVT, Custom);
 
-  if ((Subtarget.hasStdExtP() || Subtarget.hasVendorXRemovedQcia()) &&
-      !Subtarget.is64Bit()) {
-    // FIXME: Support i32 on RV64+P by inserting into a v2i32 vector, doing
-    // the vector operation and extracting.
-    setOperationAction({ISD::SADDSAT, ISD::SSUBSAT, ISD::UADDSAT, ISD::USUBSAT},
-                       MVT::i32, Legal);
-  } else if (!Subtarget.hasStdExtZbb() && Subtarget.is64Bit()) {
+  if (!Subtarget.hasStdExtZbb() && Subtarget.is64Bit()) {
     setOperationAction({ISD::SADDSAT, ISD::SSUBSAT, ISD::UADDSAT, ISD::USUBSAT},
                        MVT::i32, Custom);
-  }
-
-  if (Subtarget.hasVendorXRemovedQcia() && !Subtarget.is64Bit()) {
-    setOperationAction(ISD::USHLSAT, MVT::i32, Legal);
-  }
-
-  if ((Subtarget.hasStdExtP() || Subtarget.hasVendorXRemovedQcia()) &&
-      !Subtarget.is64Bit()) {
-    // FIXME: Support i32 on RV64+P by inserting into a v2i32 vector, doing
-    // pssha.w and extracting.
-    setOperationAction(ISD::SSHLSAT, MVT::i32, Legal);
-  }
-
-  static const unsigned FPLegalNodeTypes[] = {
-      ISD::FMINNUM,       ISD::FMAXNUM,        ISD::FMINIMUMNUM,
-      ISD::FMAXIMUMNUM,   ISD::LRINT,          ISD::LLRINT,
-      ISD::LROUND,        ISD::LLROUND,        ISD::STRICT_LRINT,
-      ISD::STRICT_LLRINT, ISD::STRICT_LROUND,  ISD::STRICT_LLROUND,
-      ISD::STRICT_FMA,    ISD::STRICT_FADD,    ISD::STRICT_FSUB,
-      ISD::STRICT_FMUL,   ISD::STRICT_FDIV,    ISD::STRICT_FSQRT,
-      ISD::STRICT_FSETCC, ISD::STRICT_FSETCCS, ISD::FCANONICALIZE};
-
-  static const ISD::CondCode FPCCToExpand[] = {
-      ISD::SETOGT, ISD::SETOGE, ISD::SETONE, ISD::SETUEQ, ISD::SETUGT,
-      ISD::SETUGE, ISD::SETULT, ISD::SETULE, ISD::SETUNE, ISD::SETGT,
-      ISD::SETGE,  ISD::SETNE,  ISD::SETO,   ISD::SETUO};
-
-  static const unsigned FPOpToExpand[] = {ISD::FSIN, ISD::FCOS, ISD::FSINCOS,
-                                          ISD::FPOW};
-  static const unsigned FPOpToLibCall[] = {ISD::FREM};
-
-  static const unsigned FPRndMode[] = {
-      ISD::FCEIL, ISD::FFLOOR, ISD::FTRUNC, ISD::FRINT, ISD::FROUND,
-      ISD::FROUNDEVEN};
-
-  static const unsigned ZfhminZfbfminPromoteOps[] = {
-      ISD::FMINNUM,      ISD::FMAXNUM,       ISD::FMAXIMUMNUM,
-      ISD::FMINIMUMNUM,  ISD::FADD,          ISD::FSUB,
-      ISD::FMUL,         ISD::FMA,           ISD::FDIV,
-      ISD::FSQRT,        ISD::STRICT_FMA,    ISD::STRICT_FADD,
-      ISD::STRICT_FSUB,  ISD::STRICT_FMUL,   ISD::STRICT_FDIV,
-      ISD::STRICT_FSQRT, ISD::STRICT_FSETCC, ISD::STRICT_FSETCCS,
-      ISD::SETCC,        ISD::FCEIL,         ISD::FFLOOR,
-      ISD::FTRUNC,       ISD::FRINT,         ISD::FROUND,
-      ISD::FROUNDEVEN,   ISD::FCANONICALIZE};
-
-  if (Subtarget.enablePExtSIMDCodeGen()) {
-    setTargetDAGCombine(ISD::TRUNCATE);
-    setTruncStoreAction(MVT::v2i32, MVT::v2i16, Expand);
-    setTruncStoreAction(MVT::v4i16, MVT::v4i8, Expand);
-    static const MVT RV32VTs[] = {MVT::v2i16, MVT::v4i8};
-    static const MVT RV64VTs[] = {MVT::v2i32, MVT::v4i16, MVT::v8i8};
-    ArrayRef<MVT> VTs;
-    if (Subtarget.is64Bit()) {
-      VTs = RV64VTs;
-      setTruncStoreAction(MVT::v2i64, MVT::v2i32, Expand);
-      setTruncStoreAction(MVT::v4i32, MVT::v4i16, Expand);
-      setTruncStoreAction(MVT::v8i16, MVT::v8i8, Expand);
-      setTruncStoreAction(MVT::v2i32, MVT::v2i16, Expand);
-      setTruncStoreAction(MVT::v4i16, MVT::v4i8, Expand);
-    } else {
-      VTs = RV32VTs;
-      setOperationAction(ISD::BUILD_VECTOR, MVT::v4i8, Custom);
-    }
-    setOperationAction(ISD::UADDSAT, VTs, Legal);
-    setOperationAction(ISD::SADDSAT, VTs, Legal);
-    setOperationAction(ISD::USUBSAT, VTs, Legal);
-    setOperationAction(ISD::SSUBSAT, VTs, Legal);
-    setOperationAction(ISD::SSHLSAT, VTs, Legal);
-    setOperationAction({ISD::AVGFLOORS, ISD::AVGFLOORU}, VTs, Legal);
-    setOperationAction({ISD::ABDS, ISD::ABDU}, VTs, Legal);
-    setOperationAction(ISD::SPLAT_VECTOR, VTs, Legal);
-    setOperationAction({ISD::SHL, ISD::SRL, ISD::SRA}, VTs, Custom);
-    setOperationAction(ISD::BITCAST, VTs, Custom);
-    setOperationAction(ISD::EXTRACT_VECTOR_ELT, VTs, Custom);
-    setOperationAction({ISD::SDIV, ISD::UDIV, ISD::SREM, ISD::UREM,
-                        ISD::SDIVREM, ISD::UDIVREM},
-                       VTs, Expand);
-    setOperationAction({ISD::SMIN, ISD::UMIN, ISD::SMAX, ISD::UMAX}, VTs,
-                       Legal);
-    setOperationAction(ISD::SETCC, VTs, Legal);
-    setCondCodeAction({ISD::SETNE, ISD::SETGT, ISD::SETGE, ISD::SETUGT,
-                       ISD::SETUGE, ISD::SETULE, ISD::SETLE},
-                      VTs, Expand);
-    // P extension vector comparisons produce all 1s for true, all 0s for false
-    setBooleanVectorContents(ZeroOrNegativeOneBooleanContent);
-  }
-
-  if (Subtarget.hasStdExtZfbfmin()) {
-    setOperationAction(ISD::BITCAST, MVT::i16, Custom);
-    setOperationAction(ISD::ConstantFP, MVT::bf16, Expand);
-    setOperationAction(ISD::SELECT_CC, MVT::bf16, Expand);
-    setOperationAction(ISD::SELECT, MVT::bf16, Custom);
-    setOperationAction(ISD::BR_CC, MVT::bf16, Expand);
-    setOperationAction(ZfhminZfbfminPromoteOps, MVT::bf16, Promote);
-    setOperationAction(ISD::FREM, MVT::bf16, Promote);
-    setOperationAction(ISD::FABS, MVT::bf16, Custom);
-    setOperationAction(ISD::FNEG, MVT::bf16, Custom);
-    setOperationAction(ISD::FCOPYSIGN, MVT::bf16, Custom);
-    setOperationAction({ISD::FP_TO_SINT, ISD::FP_TO_UINT}, XLenVT, Custom);
-    setOperationAction({ISD::SINT_TO_FP, ISD::UINT_TO_FP}, XLenVT, Custom);
-  }
-
-  if (Subtarget.hasStdExtZfhminOrZhinxmin()) {
-    if (Subtarget.hasStdExtZfhOrZhinx()) {
-      setOperationAction(FPLegalNodeTypes, MVT::f16, Legal);
-      setOperationAction(FPRndMode, MVT::f16,
-                         Subtarget.hasStdExtZfa() ? Legal : Custom);
-      setOperationAction(ISD::IS_FPCLASS, MVT::f16, Custom);
-      setOperationAction({ISD::FMAXIMUM, ISD::FMINIMUM}, MVT::f16,
-                         Subtarget.hasStdExtZfa() ? Legal : Custom);
-      if (Subtarget.hasStdExtZfa())
-        setOperationAction(ISD::ConstantFP, MVT::f16, Custom);
-    } else {
-      setOperationAction(ZfhminZfbfminPromoteOps, MVT::f16, Promote);
-      setOperationAction({ISD::FMAXIMUM, ISD::FMINIMUM}, MVT::f16, Promote);
-      for (auto Op : {ISD::LROUND, ISD::LLROUND, ISD::LRINT, ISD::LLRINT,
-                      ISD::STRICT_LROUND, ISD::STRICT_LLROUND,
-                      ISD::STRICT_LRINT, ISD::STRICT_LLRINT})
-        setOperationAction(Op, MVT::f16, Custom);
-      setOperationAction(ISD::FABS, MVT::f16, Custom);
-      setOperationAction(ISD::FNEG, MVT::f16, Custom);
-      setOperationAction(ISD::FCOPYSIGN, MVT::f16, Custom);
-      setOperationAction({ISD::FP_TO_SINT, ISD::FP_TO_UINT}, XLenVT, Custom);
-      setOperationAction({ISD::SINT_TO_FP, ISD::UINT_TO_FP}, XLenVT, Custom);
-    }
-
-    if (!Subtarget.hasStdExtD()) {
-      // FIXME: handle f16 fma when f64 is not legal. Using an f32 fma
-      // instruction runs into double rounding issues, so this is wrong.
-      // Normally we'd use an f64 fma, but without the D extension the f64 type
-      // is not legal. This should probably be a libcall.
-      AddPromotedToType(ISD::FMA, MVT::f16, MVT::f32);
-      AddPromotedToType(ISD::STRICT_FMA, MVT::f16, MVT::f32);
-    }
-
-    setOperationAction(ISD::BITCAST, MVT::i16, Custom);
-
-    setOperationAction(ISD::STRICT_FP_ROUND, MVT::f16, Legal);
-    setOperationAction(ISD::STRICT_FP_EXTEND, MVT::f32, Legal);
-    setCondCodeAction(FPCCToExpand, MVT::f16, Expand);
-    setOperationAction(ISD::SELECT_CC, MVT::f16, Expand);
-    setOperationAction(ISD::SELECT, MVT::f16, Custom);
-    setOperationAction(ISD::BR_CC, MVT::f16, Expand);
-
-    setOperationAction(
-        ISD::FNEARBYINT, MVT::f16,
-        Subtarget.hasStdExtZfh() && Subtarget.hasStdExtZfa() ? Legal : Promote);
-    setOperationAction({ISD::FREM, ISD::FPOW, ISD::FPOWI,
-                        ISD::FCOS, ISD::FSIN, ISD::FSINCOS, ISD::FEXP,
-                        ISD::FEXP2, ISD::FEXP10, ISD::FLOG, ISD::FLOG2,
-                        ISD::FLOG10, ISD::FLDEXP, ISD::FFREXP, ISD::FMODF},
-                       MVT::f16, Promote);
-
-    // FIXME: Need to promote f16 STRICT_* to f32 libcalls, but we don't have
-    // complete support for all operations in LegalizeDAG.
-    setOperationAction({ISD::STRICT_FCEIL, ISD::STRICT_FFLOOR,
-                        ISD::STRICT_FNEARBYINT, ISD::STRICT_FRINT,
-                        ISD::STRICT_FROUND, ISD::STRICT_FROUNDEVEN,
-                        ISD::STRICT_FTRUNC, ISD::STRICT_FLDEXP},
-                       MVT::f16, Promote);
-
-    // We need to custom promote this.
-    if (Subtarget.is64Bit())
-      setOperationAction(ISD::FPOWI, MVT::i32, Custom);
-  }
-
-  if (Subtarget.hasStdExtFOrZfinx()) {
-    setOperationAction(FPLegalNodeTypes, MVT::f32, Legal);
-    setOperationAction(FPRndMode, MVT::f32,
-                       Subtarget.hasStdExtZfa() ? Legal : Custom);
-    setCondCodeAction(FPCCToExpand, MVT::f32, Expand);
-    setOperationAction(ISD::SELECT_CC, MVT::f32, Expand);
-    setOperationAction(ISD::SELECT, MVT::f32, Custom);
-    setOperationAction(ISD::BR_CC, MVT::f32, Expand);
-    setOperationAction(FPOpToExpand, MVT::f32, Expand);
-    setOperationAction(FPOpToLibCall, MVT::f32, LibCall);
-    setLoadExtAction(ISD::EXTLOAD, MVT::f32, MVT::f16, Expand);
-    setTruncStoreAction(MVT::f32, MVT::f16, Expand);
-    setLoadExtAction(ISD::EXTLOAD, MVT::f32, MVT::bf16, Expand);
-    setTruncStoreAction(MVT::f32, MVT::bf16, Expand);
-    setOperationAction(ISD::IS_FPCLASS, MVT::f32, Custom);
-    setOperationAction(ISD::BF16_TO_FP, MVT::f32, Custom);
-    setOperationAction(ISD::FP_TO_BF16, MVT::f32,
-                       Subtarget.isSoftFPABI() ? LibCall : Custom);
-    setOperationAction(ISD::FP_TO_FP16, MVT::f32, Custom);
-    setOperationAction(ISD::FP16_TO_FP, MVT::f32, Custom);
-    setOperationAction(ISD::STRICT_FP_TO_FP16, MVT::f32, Custom);
-    setOperationAction(ISD::STRICT_FP16_TO_FP, MVT::f32, Custom);
-
-    if (Subtarget.hasStdExtZfa()) {
-      setOperationAction(ISD::ConstantFP, MVT::f32, Custom);
-      setOperationAction(ISD::FNEARBYINT, MVT::f32, Legal);
-      setOperationAction({ISD::FMAXIMUM, ISD::FMINIMUM}, MVT::f32, Legal);
-    } else {
-      setOperationAction({ISD::FMAXIMUM, ISD::FMINIMUM}, MVT::f32, Custom);
-    }
-  }
-
-  if (Subtarget.hasStdExtFOrZfinx() && Subtarget.is64Bit())
-    setOperationAction(ISD::BITCAST, MVT::i32, Custom);
-
-  if (Subtarget.hasStdExtDOrZdinx()) {
-    setOperationAction(FPLegalNodeTypes, MVT::f64, Legal);
-
-    if (!Subtarget.is64Bit())
-      setOperationAction(ISD::BITCAST, MVT::i64, Custom);
-
-    if (Subtarget.hasStdExtZdinx() && !Subtarget.hasStdExtZilsd() &&
-        !Subtarget.is64Bit()) {
-      setOperationAction(ISD::LOAD, MVT::f64, Custom);
-      setOperationAction(ISD::STORE, MVT::f64, Custom);
-    }
-
-    if (Subtarget.hasStdExtZfa()) {
-      setOperationAction(ISD::ConstantFP, MVT::f64, Custom);
-      setOperationAction(FPRndMode, MVT::f64, Legal);
-      setOperationAction(ISD::FNEARBYINT, MVT::f64, Legal);
-      setOperationAction({ISD::FMAXIMUM, ISD::FMINIMUM}, MVT::f64, Legal);
-    } else {
-      if (Subtarget.is64Bit())
-        setOperationAction(FPRndMode, MVT::f64, Custom);
-
-      setOperationAction({ISD::FMAXIMUM, ISD::FMINIMUM}, MVT::f64, Custom);
-    }
-
-    setOperationAction(ISD::STRICT_FP_ROUND, MVT::f32, Legal);
-    setOperationAction(ISD::STRICT_FP_EXTEND, MVT::f64, Legal);
-    setCondCodeAction(FPCCToExpand, MVT::f64, Expand);
-    setOperationAction(ISD::SELECT_CC, MVT::f64, Expand);
-    setOperationAction(ISD::SELECT, MVT::f64, Custom);
-    setOperationAction(ISD::BR_CC, MVT::f64, Expand);
-    setLoadExtAction(ISD::EXTLOAD, MVT::f64, MVT::f32, Expand);
-    setTruncStoreAction(MVT::f64, MVT::f32, Expand);
-    setOperationAction(FPOpToExpand, MVT::f64, Expand);
-    setOperationAction(FPOpToLibCall, MVT::f64, LibCall);
-    setLoadExtAction(ISD::EXTLOAD, MVT::f64, MVT::f16, Expand);
-    setTruncStoreAction(MVT::f64, MVT::f16, Expand);
-    setLoadExtAction(ISD::EXTLOAD, MVT::f64, MVT::bf16, Expand);
-    setTruncStoreAction(MVT::f64, MVT::bf16, Expand);
-    setOperationAction(ISD::IS_FPCLASS, MVT::f64, Custom);
-    setOperationAction(ISD::BF16_TO_FP, MVT::f64, Custom);
-    setOperationAction(ISD::FP_TO_BF16, MVT::f64,
-                       Subtarget.isSoftFPABI() ? LibCall : Custom);
-    setOperationAction(ISD::FP_TO_FP16, MVT::f64, Custom);
-    setOperationAction(ISD::FP16_TO_FP, MVT::f64, Expand);
-    setOperationAction(ISD::STRICT_FP_TO_FP16, MVT::f64, Custom);
-    setOperationAction(ISD::STRICT_FP16_TO_FP, MVT::f64, Expand);
-  }
-
-  if (Subtarget.is64Bit()) {
-    setOperationAction({ISD::FP_TO_UINT, ISD::FP_TO_SINT,
-                        ISD::STRICT_FP_TO_UINT, ISD::STRICT_FP_TO_SINT},
-                       MVT::i32, Custom);
-    setOperationAction(ISD::LROUND, MVT::i32, Custom);
-  }
-
-  if (Subtarget.hasStdExtFOrZfinx()) {
-    setOperationAction({ISD::FP_TO_UINT_SAT, ISD::FP_TO_SINT_SAT}, XLenVT,
-                       Custom);
-
-    // f16/bf16 require custom handling.
-    setOperationAction({ISD::STRICT_FP_TO_UINT, ISD::STRICT_FP_TO_SINT}, XLenVT,
-                       Custom);
-    setOperationAction({ISD::STRICT_UINT_TO_FP, ISD::STRICT_SINT_TO_FP}, XLenVT,
-                       Custom);
-
-    setOperationAction(ISD::GET_ROUNDING, XLenVT, Custom);
-    setOperationAction(ISD::SET_ROUNDING, MVT::Other, Custom);
-    setOperationAction(ISD::GET_FPENV, XLenVT, Custom);
-    setOperationAction(ISD::SET_FPENV, XLenVT, Custom);
-    setOperationAction(ISD::RESET_FPENV, MVT::Other, Custom);
-    setOperationAction(ISD::GET_FPMODE, XLenVT, Custom);
-    setOperationAction(ISD::SET_FPMODE, XLenVT, Custom);
-    setOperationAction(ISD::RESET_FPMODE, MVT::Other, Custom);
   }
 
   setOperationAction({ISD::GlobalAddress, ISD::BlockAddress, ISD::ConstantPool,
@@ -681,39 +369,6 @@ YSXTargetLowering::YSXTargetLowering(const TargetMachine &TM,
   setTargetDAGCombine(ISD::SRA);
   setTargetDAGCombine(ISD::SIGN_EXTEND_INREG);
 
-  if (Subtarget.hasStdExtFOrZfinx())
-    setTargetDAGCombine({ISD::FADD, ISD::FMAXNUM, ISD::FMINNUM, ISD::FMUL});
-
-  if (Subtarget.hasStdExtZbb())
-    setTargetDAGCombine({ISD::UMAX, ISD::UMIN, ISD::SMAX, ISD::SMIN});
-
-  if ((Subtarget.hasStdExtZbs() && Subtarget.is64Bit()) ||
-      Subtarget.hasVInstructions())
-    setTargetDAGCombine(ISD::TRUNCATE);
-
-  if (Subtarget.hasStdExtZbkb())
-    setTargetDAGCombine(ISD::BITREVERSE);
-
-  if (Subtarget.hasStdExtFOrZfinx())
-    setTargetDAGCombine({ISD::ZERO_EXTEND, ISD::FP_TO_SINT, ISD::FP_TO_UINT,
-                         ISD::FP_TO_SINT_SAT, ISD::FP_TO_UINT_SAT});
-  if (Subtarget.hasVInstructions())
-    setTargetDAGCombine(
-        {ISD::FCOPYSIGN,    ISD::MGATHER,      ISD::MSCATTER,
-         ISD::VP_GATHER,    ISD::VP_SCATTER,   ISD::SRA,
-         ISD::SRL,          ISD::SHL,          ISD::STORE,
-         ISD::SPLAT_VECTOR, ISD::BUILD_VECTOR, ISD::CONCAT_VECTORS,
-         ISD::VP_STORE,     ISD::VP_TRUNCATE,  ISD::EXPERIMENTAL_VP_REVERSE,
-         ISD::MUL,          ISD::SDIV,         ISD::UDIV,
-         ISD::SREM,         ISD::UREM,         ISD::INSERT_VECTOR_ELT,
-         ISD::ABS,          ISD::CTPOP,        ISD::VECTOR_SHUFFLE,
-         ISD::FMA,          ISD::VSELECT,      ISD::VECREDUCE_ADD});
-
-  if (Subtarget.hasVendorXRemovedTHeadMemPair())
-    setTargetDAGCombine({ISD::LOAD, ISD::STORE});
-  if (Subtarget.useYSXVecForFixedLengthVectors())
-    setTargetDAGCombine(ISD::BITCAST);
-
   setMaxDivRemBitWidthSupported(Subtarget.is64Bit() ? 128 : 64);
 
   // Disable strict node mutation.
@@ -740,38 +395,10 @@ YSXTargetLowering::YSXTargetLowering(const TargetMachine &TM,
   MaxLoadsPerMemcmp = Subtarget.getMaxLoadsPerMemcmp(/*OptSize=*/false);
 }
 
-TargetLoweringBase::LegalizeTypeAction
-YSXTargetLowering::getPreferredVectorAction(MVT VT) const {
-  if (Subtarget.is64Bit() && Subtarget.enablePExtSIMDCodeGen())
-    if (VT == MVT::v2i16 || VT == MVT::v4i8)
-      return TypeWidenVector;
-
-  return TargetLoweringBase::getPreferredVectorAction(VT);
-}
-
 EVT YSXTargetLowering::getSetCCResultType(const DataLayout &DL,
                                             LLVMContext &Context,
                                             EVT VT) const {
-  if (!VT.isVector())
-    return getPointerTy(DL);
-  if (Subtarget.hasVInstructions() &&
-      (VT.isScalableVector() || Subtarget.useYSXVecForFixedLengthVectors()))
-    return EVT::getVectorVT(Context, MVT::i1, VT.getVectorElementCount());
-  return VT.changeVectorElementTypeToInteger();
-}
-
-MVT YSXTargetLowering::getVPExplicitVectorLengthTy() const {
-  return Subtarget.getXLenVT();
-}
-
-bool YSXTargetLowering::shouldExpandGetVectorLength(EVT TripCountVT,
-                                                      unsigned VF,
-                                                      bool IsScalable) const {
-  return true;
-}
-
-bool YSXTargetLowering::shouldExpandCttzElements(EVT VT) const {
-  return true;
+  return getPointerTy(DL);
 }
 
 bool YSXTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
@@ -817,14 +444,6 @@ bool YSXTargetLowering::isLegalAddressingMode(const DataLayout &DL,
   // No global is ever allowed as a base.
   if (AM.BaseGV)
     return false;
-
-  // None of our addressing modes allows a scalable offset
-  if (AM.ScalableOffset)
-    return false;
-
-  // YSXVec instructions only support register addressing.
-  if (Subtarget.hasVInstructions() && isa<VectorType>(Ty))
-    return AM.HasBaseReg && AM.Scale == 0 && !AM.BaseOffs;
 
   // Require a 12-bit signed offset.
   if (!isInt<12>(AM.BaseOffs))
@@ -969,22 +588,6 @@ bool YSXTargetLowering::hasBitTest(SDValue X, SDValue Y) const {
   return C && C->getAPIntValue().ule(10);
 }
 
-bool YSXTargetLowering::shouldFoldSelectWithIdentityConstant(
-    unsigned BinOpcode, EVT VT, unsigned SelectOpcode, SDValue X,
-    SDValue Y) const {
-  if (SelectOpcode != ISD::VSELECT)
-    return false;
-
-  // Only enable for rvv.
-  if (!VT.isVector() || !Subtarget.hasVInstructions())
-    return false;
-
-  if (VT.isFixedLengthVector() && !isTypeLegal(VT))
-    return false;
-
-  return true;
-}
-
 bool YSXTargetLowering::shouldConvertConstantLoadToIntImm(const APInt &Imm,
                                                             Type *Ty) const {
   assert(Ty->isIntegerTy());
@@ -1039,28 +642,6 @@ bool YSXTargetLowering::
   return !XC;
 }
 
-bool YSXTargetLowering::shouldScalarizeBinop(SDValue VecOp) const {
-  unsigned Opc = VecOp.getOpcode();
-
-  // Assume target opcodes can't be scalarized.
-  // TODO - do we have any exceptions?
-  if (Opc >= ISD::BUILTIN_OP_END || !isBinOp(Opc))
-    return false;
-
-  // If the vector op is not supported, try to convert to scalar.
-  EVT VecVT = VecOp.getValueType();
-  if (!isOperationLegalOrCustomOrPromote(Opc, VecVT))
-    return true;
-
-  // If the vector op is supported, but the scalar op is not, the transform may
-  // not be worthwhile.
-  // Permit a vector binary operation can be converted to scalar binary
-  // operation which is custom lowered with illegal type.
-  EVT ScalarVT = VecVT.getScalarType();
-  return isOperationLegalOrCustomOrPromote(Opc, ScalarVT) ||
-         isOperationCustom(Opc, ScalarVT);
-}
-
 bool YSXTargetLowering::isOffsetFoldingLegal(
     const GlobalAddressSDNode *GA) const {
   // In order to maximise the opportunity for common subexpression elimination,
@@ -1070,123 +651,9 @@ bool YSXTargetLowering::isOffsetFoldingLegal(
   return false;
 }
 
-// Returns 0-31 if the fli instruction is available for the type and this is
-// legal FP immediate for the type. Returns -1 otherwise.
-int YSXTargetLowering::getLegalZfaFPImm(const APFloat &Imm, EVT VT) const {
-  if (!Subtarget.hasStdExtZfa())
-    return -1;
-
-  bool IsSupportedVT = false;
-  if (VT == MVT::f16) {
-    IsSupportedVT = Subtarget.hasStdExtZfh() || Subtarget.hasStdExtZvfh();
-  } else if (VT == MVT::f32) {
-    IsSupportedVT = true;
-  } else if (VT == MVT::f64) {
-    assert(Subtarget.hasStdExtD() && "Expect D extension");
-    IsSupportedVT = true;
-  }
-
-  if (!IsSupportedVT)
-    return -1;
-
-  return YSXLoadFPImm::getLoadFPImm(Imm);
-}
-
-bool YSXTargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
-                                       bool ForCodeSize) const {
-  bool IsLegalVT = false;
-  if (VT == MVT::f16)
-    IsLegalVT = Subtarget.hasStdExtZfhminOrZhinxmin();
-  else if (VT == MVT::f32)
-    IsLegalVT = Subtarget.hasStdExtFOrZfinx();
-  else if (VT == MVT::f64)
-    IsLegalVT = Subtarget.hasStdExtDOrZdinx();
-  else if (VT == MVT::bf16)
-    IsLegalVT = Subtarget.hasStdExtZfbfmin();
-
-  if (!IsLegalVT)
-    return false;
-
-  if (getLegalZfaFPImm(Imm, VT) >= 0)
-    return true;
-
-  // Some constants can be produced by fli+fneg.
-  if (Imm.isNegative() && getLegalZfaFPImm(-Imm, VT) >= 0)
-    return true;
-
-  // Cannot create a 64 bit floating-point immediate value for rv32.
-  if (Subtarget.getXLen() < VT.getScalarSizeInBits()) {
-    // td can handle +0.0 or -0.0 already.
-    // -0.0 can be created by fmv + fneg.
-    return Imm.isZero();
-  }
-
-  // Special case: fmv + fneg
-  if (Imm.isNegZero())
-    return true;
-
-  // Building an integer and then converting requires a fmv at the end of
-  // the integer sequence. The fmv is not required for Zfinx.
-  const int FmvCost = Subtarget.hasStdExtZfinx() ? 0 : 1;
-  const int Cost =
-      FmvCost + YSXMatInt::getIntMatCost(Imm.bitcastToAPInt(),
-                                           Subtarget.getXLen(), Subtarget);
-  return Cost <= FPImmCost;
-}
-
-// TODO: This is very conservative.
-bool YSXTargetLowering::isExtractSubvectorCheap(EVT ResVT, EVT SrcVT,
-                                                  unsigned Index) const {
-  if (!isOperationLegalOrCustom(ISD::EXTRACT_SUBVECTOR, ResVT))
-    return false;
-
-  // Extracts from index 0 are just subreg extracts.
-  if (Index == 0)
-    return true;
-
-  // Only support extracting a fixed from a fixed vector for now.
-  if (ResVT.isScalableVector() || SrcVT.isScalableVector())
-    return false;
-
-  EVT EltVT = ResVT.getVectorElementType();
-  assert(EltVT == SrcVT.getVectorElementType() && "Should hold for node");
-
-  // The smallest type we can slide is i8.
-  // TODO: We can extract index 0 from a mask vector without a slide.
-  if (EltVT == MVT::i1)
-    return false;
-
-  unsigned ResElts = ResVT.getVectorNumElements();
-  unsigned SrcElts = SrcVT.getVectorNumElements();
-
-  unsigned MinVLen = Subtarget.getRealMinVLen();
-  unsigned MinVLMAX = MinVLen / EltVT.getSizeInBits();
-
-  // If we're extracting only data from the first VLEN bits of the source
-  // then we can always do this with an m1 vslidedown.vx.  Restricting the
-  // Index ensures we can use a vslidedown.vi.
-  // TODO: We can generalize this when the exact VLEN is known.
-  if (Index + ResElts <= MinVLMAX && Index < 31)
-    return true;
-
-  // Convervatively only handle extracting half of a vector.
-  // TODO: We can do arbitrary slidedowns, but for now only support extracting
-  // the upper half of a vector until we have more test coverage.
-  // TODO: For sizes which aren't multiples of VLEN sizes, this may not be
-  // a cheap extract.  However, this case is important in practice for
-  // shuffled extracts of longer vectors.  How resolve?
-  return (ResElts * 2) == SrcElts && Index == ResElts;
-}
-
 MVT YSXTargetLowering::getRegisterTypeForCallingConv(LLVMContext &Context,
                                                       CallingConv::ID CC,
                                                       EVT VT) const {
-  // Use f32 to pass f16 if it is legal and Zfh/Zfhmin is not enabled.
-  // We might still end up using a GPR but that will be decided based on ABI.
-  if (VT == MVT::f16 && Subtarget.hasStdExtFOrZfinx() &&
-      !Subtarget.hasStdExtZfhminOrZhinxmin())
-    return MVT::f32;
-
   return TargetLowering::getRegisterTypeForCallingConv(Context, CC, VT);
 }
 
@@ -1204,12 +671,6 @@ YSXTargetLowering::getNumRegisters(LLVMContext &Context, EVT VT,
 unsigned YSXTargetLowering::getNumRegistersForCallingConv(LLVMContext &Context,
                                                            CallingConv::ID CC,
                                                            EVT VT) const {
-  // Use f32 to pass f16 if it is legal and Zfh/Zfhmin is not enabled.
-  // We might still end up using a GPR but that will be decided based on ABI.
-  if (VT == MVT::f16 && Subtarget.hasStdExtFOrZfinx() &&
-      !Subtarget.hasStdExtZfhminOrZhinxmin())
-    return 1;
-
   return TargetLowering::getNumRegistersForCallingConv(Context, CC, VT);
 }
 
@@ -1315,24 +776,6 @@ static void translateSetCCForBranch(const SDLoc &DL, SDValue &LHS, SDValue &RHS,
   }
 }
 
-bool YSXTargetLowering::mergeStoresAfterLegalization(EVT VT) const {
-  return true;
-}
-
-
-unsigned YSXTargetLowering::combineRepeatedFPDivisors() const {
-  return NumRepeatedDivisors;
-}
-
-bool YSXTargetLowering::shouldExpandBuildVectorWithShuffles(
-    EVT VT, unsigned DefinedValues) const {
-  return false;
-}
-
-bool YSXTargetLowering::isShuffleMaskLegal(ArrayRef<int> M, EVT VT) const {
-  return false;
-}
-
 static SDValue lowerConstant(SDValue Op, SelectionDAG &DAG,
                              const YSXSubtarget &Subtarget) {
   assert(Op.getValueType() == MVT::i64 && "Unexpected VT");
@@ -1370,11 +813,6 @@ static SDValue lowerConstant(SDValue Op, SelectionDAG &DAG,
   if (!SeqLo.empty() && (SeqLo.size() + 2) <= Subtarget.getMaxBuildIntsCost())
     return Op;
 
-  return SDValue();
-}
-
-SDValue YSXTargetLowering::lowerConstantFP(SDValue Op,
-                                                 SelectionDAG &DAG) const {
   return SDValue();
 }
 
@@ -3259,21 +2697,6 @@ SDValue YSXTargetLowering::LowerFormalArguments(
   case CallingConv::SPIR_KERNEL:
   case CallingConv::PreserveMost:
   case CallingConv::GRAAL:
-  case CallingConv::RISCV_VectorCall:
-#define CC_VLS_CASE(ABI_VLEN) case CallingConv::RISCV_VLSCall_##ABI_VLEN:
-    CC_VLS_CASE(32)
-    CC_VLS_CASE(64)
-    CC_VLS_CASE(128)
-    CC_VLS_CASE(256)
-    CC_VLS_CASE(512)
-    CC_VLS_CASE(1024)
-    CC_VLS_CASE(2048)
-    CC_VLS_CASE(4096)
-    CC_VLS_CASE(8192)
-    CC_VLS_CASE(16384)
-    CC_VLS_CASE(32768)
-    CC_VLS_CASE(65536)
-#undef CC_VLS_CASE
     break;
   case CallingConv::GHC:
     if (Subtarget.hasStdExtE())
@@ -3315,22 +2738,17 @@ SDValue YSXTargetLowering::LowerFormalArguments(
       ArgValue = unpackFromMemLoc(DAG, Chain, VA, DL);
 
     if (VA.getLocInfo() == CCValAssign::Indirect) {
-      // If the original argument was split and passed by reference (e.g. i128
-      // on RV32), we need to load all parts of it here (using the same
-      // address). Vectors may be partly split to registers and partly to the
-      // stack, in which case the base address is partly offset and subsequent
-      // stores are relative to that.
+      // If the original argument was split and passed by reference, load all
+      // parts from the same base address.
       InVals.push_back(DAG.getLoad(VA.getValVT(), DL, Chain, ArgValue,
                                    MachinePointerInfo()));
       unsigned ArgIndex = Ins[InsIdx].OrigArgIndex;
       unsigned ArgPartOffset = Ins[InsIdx].PartOffset;
-      assert(VA.getValVT().isVector() || ArgPartOffset == 0);
+      assert(ArgPartOffset == 0);
       while (i + 1 != e && Ins[InsIdx + 1].OrigArgIndex == ArgIndex) {
         CCValAssign &PartVA = ArgLocs[i + 1];
         unsigned PartOffset = Ins[InsIdx + 1].PartOffset - ArgPartOffset;
         SDValue Offset = DAG.getIntPtrConstant(PartOffset, DL);
-        if (PartVA.getValVT().isScalableVector())
-          Offset = DAG.getNode(ISD::VSCALE, DL, XLenVT, Offset);
         SDValue Address = DAG.getNode(ISD::ADD, DL, PtrVT, ArgValue, Offset);
         InVals.push_back(DAG.getLoad(PartVA.getValVT(), DL, Chain, Address,
                                      MachinePointerInfo()));
@@ -3341,10 +2759,6 @@ SDValue YSXTargetLowering::LowerFormalArguments(
     }
     InVals.push_back(ArgValue);
   }
-
-  if (any_of(ArgLocs,
-             [](CCValAssign &VA) { return VA.getLocVT().isScalableVector(); }))
-    MF.getInfo<YSXMachineFunctionInfo>()->setIsVectorCall();
 
   if (IsVarArg) {
     ArrayRef<MCPhysReg> ArgRegs = YSX::getArgGPRs(Subtarget.getTargetABI());
@@ -3572,14 +2986,11 @@ SDValue YSXTargetLowering::LowerCall(CallLoweringInfo &CLI,
           std::max(getPrefTypeAlign(Outs[OutIdx].ArgVT, DAG),
                    getPrefTypeAlign(ArgValue.getValueType(), DAG));
       TypeSize StoredSize = ArgValue.getValueType().getStoreSize();
-      // If the original argument was split (e.g. i128), we need
-      // to store the required parts of it here (and pass just one address).
-      // Vectors may be partly split to registers and partly to the stack, in
-      // which case the base address is partly offset and subsequent stores are
-      // relative to that.
+      // If the original argument was split, store the required parts here and
+      // pass just one address.
       unsigned ArgIndex = Outs[OutIdx].OrigArgIndex;
       unsigned ArgPartOffset = Outs[OutIdx].PartOffset;
-      assert(VA.getValVT().isVector() || ArgPartOffset == 0);
+      assert(ArgPartOffset == 0);
       // Calculate the total size to store. We don't have access to what we're
       // actually storing other than performing the loop and collecting the
       // info.
@@ -3589,8 +3000,6 @@ SDValue YSXTargetLowering::LowerCall(CallLoweringInfo &CLI,
         unsigned PartOffset = Outs[OutIdx + 1].PartOffset - ArgPartOffset;
         SDValue Offset = DAG.getIntPtrConstant(PartOffset, DL);
         EVT PartVT = PartValue.getValueType();
-        if (PartVT.isScalableVector())
-          Offset = DAG.getNode(ISD::VSCALE, DL, XLenVT, Offset);
         StoredSize += PartVT.getStoreSize();
         StackAlign = std::max(StackAlign, getPrefTypeAlign(PartVT, DAG));
         Parts.push_back(std::make_pair(PartValue, Offset));
@@ -3837,10 +3246,6 @@ YSXTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
   if (Glue.getNode()) {
     RetOps.push_back(Glue);
   }
-
-  if (any_of(RVLocs,
-             [](CCValAssign &VA) { return VA.getLocVT().isScalableVector(); }))
-    MF.getInfo<YSXMachineFunctionInfo>()->setIsVectorCall();
 
   unsigned RetOpc = YSXISD::RET_GLUE;
   const Function &Func = DAG.getMachineFunction().getFunction();
@@ -4235,33 +3640,6 @@ Value *YSXTargetLowering::emitMaskedAtomicCmpXchgIntrinsic(
   return Result;
 }
 
-bool YSXTargetLowering::shouldRemoveExtendFromGSIndex(SDValue Extend,
-                                                        EVT DataVT) const {
-  // We have indexed loads for all supported EEW types. Indices are always
-  // zero extended.
-  return Extend.getOpcode() == ISD::ZERO_EXTEND &&
-         isTypeLegal(Extend.getValueType()) &&
-         isTypeLegal(Extend.getOperand(0).getValueType()) &&
-         Extend.getOperand(0).getValueType().getVectorElementType() != MVT::i1;
-}
-
-bool YSXTargetLowering::shouldConvertFpToSat(unsigned Op, EVT FPVT,
-                                               EVT VT) const {
-  if (!isOperationLegalOrCustom(Op, VT) || !FPVT.isSimple())
-    return false;
-
-  switch (FPVT.getSimpleVT().SimpleTy) {
-  case MVT::f16:
-    return Subtarget.hasStdExtZfhmin();
-  case MVT::f32:
-    return Subtarget.hasStdExtF();
-  case MVT::f64:
-    return Subtarget.hasStdExtD();
-  default:
-    return false;
-  }
-}
-
 unsigned YSXTargetLowering::getJumpTableEncoding() const {
   // If we are using the small code model, we can reduce size of jump table
   // entry to 4 bytes.
@@ -4278,18 +3656,6 @@ const MCExpr *YSXTargetLowering::LowerCustomJumpTableEntry(
   assert(Subtarget.is64Bit() && !isPositionIndependent() &&
          getTargetMachine().getCodeModel() == CodeModel::Small);
   return MCSymbolRefExpr::create(MBB->getSymbol(), Ctx);
-}
-
-bool YSXTargetLowering::isVScaleKnownToBeAPowerOfTwo() const {
-  // We define vscale to be VLEN/YSXVecBitsPerBlock.  VLEN is always a power
-  // of two >= 64, and YSXVecBitsPerBlock is 64.  Thus, vscale must be
-  // a power of two as well.
-  // FIXME: This doesn't work for zve32, but that's already broken
-  // elsewhere for the same reason.
-  assert(Subtarget.getRealMinVLen() >= 64 && "zve32* unsupported");
-  static_assert(YSX::YSXVecBitsPerBlock == 64,
-                "YSXVecBitsPerBlock changed, audit needed");
-  return true;
 }
 
 bool YSXTargetLowering::getIndexedAddressParts(SDNode *Op, SDValue &Base,
@@ -4395,28 +3761,6 @@ bool YSXTargetLowering::getPostIndexedAddressParts(SDNode *N, SDNode *Op,
 
   AM = ISD::POST_INC;
   return true;
-}
-
-bool YSXTargetLowering::isFMAFasterThanFMulAndFAdd(const MachineFunction &MF,
-                                                     EVT VT) const {
-  EVT SVT = VT.getScalarType();
-
-  if (!SVT.isSimple())
-    return false;
-
-  switch (SVT.getSimpleVT().SimpleTy) {
-  case MVT::f16:
-    return VT.isVector() ? Subtarget.hasVInstructionsF16()
-                         : Subtarget.hasStdExtZfhOrZhinx();
-  case MVT::f32:
-    return Subtarget.hasStdExtFOrZfinx();
-  case MVT::f64:
-    return Subtarget.hasStdExtDOrZdinx();
-  default:
-    break;
-  }
-
-  return false;
 }
 
 ISD::NodeType YSXTargetLowering::getExtendForAtomicCmpSwapArg() const {
@@ -4540,78 +3884,9 @@ bool YSXTargetLowering::isMulAddWithConstProfitable(SDValue AddNode,
 bool YSXTargetLowering::allowsMisalignedMemoryAccesses(
     EVT VT, unsigned AddrSpace, Align Alignment, MachineMemOperand::Flags Flags,
     unsigned *Fast) const {
-  if (!VT.isVector() || Subtarget.enablePExtSIMDCodeGen()) {
-    if (Fast)
-      *Fast = Subtarget.enableUnalignedScalarMem();
-    return Subtarget.enableUnalignedScalarMem();
-  }
-
-  // All vector implementations must support element alignment
-  EVT ElemVT = VT.getVectorElementType();
-  if (Alignment >= ElemVT.getStoreSize()) {
-    if (Fast)
-      *Fast = 1;
-    return true;
-  }
-
-  // Note: We lower an unmasked unaligned vector access to an equally sized
-  // e8 element type access.  Given this, we effectively support all unmasked
-  // misaligned accesses.  TODO: Work through the codegen implications of
-  // allowing such accesses to be formed, and considered fast.
   if (Fast)
-    *Fast = Subtarget.enableUnalignedVectorMem();
-  return Subtarget.enableUnalignedVectorMem();
-}
-
-EVT YSXTargetLowering::getOptimalMemOpType(
-    LLVMContext &Context, const MemOp &Op,
-    const AttributeList &FuncAttributes) const {
-  if (!Subtarget.hasVInstructions())
-    return MVT::Other;
-
-  if (FuncAttributes.hasFnAttr(Attribute::NoImplicitFloat))
-    return MVT::Other;
-
-  // We use LMUL1 memory operations here for a non-obvious reason.  Our caller
-  // has an expansion threshold, and we want the number of hardware memory
-  // operations to correspond roughly to that threshold.  LMUL>1 operations
-  // are typically expanded linearly internally, and thus correspond to more
-  // than one actual memory operation.  Note that store merging and load
-  // combining will typically form larger LMUL operations from the LMUL1
-  // operations emitted here, and that's okay because combining isn't
-  // introducing new memory operations; it's just merging existing ones.
-  // NOTE: We limit to 1024 bytes to avoid creating an invalid MVT.
-  const unsigned MinVLenInBytes =
-      std::min(Subtarget.getRealMinVLen() / 8, 1024U);
-
-  if (Op.size() < MinVLenInBytes)
-    // TODO: Figure out short memops.  For the moment, do the default thing
-    // which ends up using scalar sequences.
-    return MVT::Other;
-
-  // If the minimum VLEN is less than YSX::YSXVecBitsPerBlock we don't support
-  // fixed vectors.
-  if (MinVLenInBytes <= YSX::YSXVecBytesPerBlock)
-    return MVT::Other;
-
-  // Prefer i8 for non-zero memset as it allows us to avoid materializing
-  // a large scalar constant and instead use vmv.v.x/i to do the
-  // broadcast.  For everything else, prefer ELenVT to minimize VL and thus
-  // maximize the chance we can encode the size in the vsetvli.
-  MVT ELenVT = MVT::getIntegerVT(Subtarget.getELen());
-  MVT PreferredVT = (Op.isMemset() && !Op.isZeroMemset()) ? MVT::i8 : ELenVT;
-
-  // Do we have sufficient alignment for our preferred VT?  If not, revert
-  // to largest size allowed by our alignment criteria.
-  if (PreferredVT != MVT::i8 && !Subtarget.enableUnalignedVectorMem()) {
-    Align RequiredAlign(PreferredVT.getStoreSize());
-    if (Op.isFixedDstAlign())
-      RequiredAlign = std::min(RequiredAlign, Op.getDstAlign());
-    if (Op.isMemcpy())
-      RequiredAlign = std::min(RequiredAlign, Op.getSrcAlign());
-    PreferredVT = MVT::getIntegerVT(RequiredAlign.value() * 8);
-  }
-  return MVT::getVectorVT(PreferredVT, MinVLenInBytes/PreferredVT.getStoreSize());
+    *Fast = !VT.isVector() && Subtarget.enableUnalignedScalarMem();
+  return !VT.isVector() && Subtarget.enableUnalignedScalarMem();
 }
 
 bool YSXTargetLowering::splitValueIntoRegisterParts(
@@ -4645,15 +3920,6 @@ bool YSXTargetLowering::isIntDivCheap(EVT VT, AttributeList Attr) const {
   bool OptSize = Attr.hasFnAttr(Attribute::MinSize);
   return OptSize && !VT.isVector() &&
          VT.getSizeInBits() <= getMaxDivRemBitWidthSupported();
-}
-
-bool YSXTargetLowering::preferScalarizeSplat(SDNode *N) const {
-  // Scalarize zero_ext and sign_ext might stop match to widening instruction in
-  // some situation.
-  unsigned Opc = N->getOpcode();
-  if (Opc == ISD::ZERO_EXTEND || Opc == ISD::SIGN_EXTEND)
-    return false;
-  return true;
 }
 
 static Value *useTpOffset(IRBuilderBase &IRB, unsigned Offset) {
@@ -4815,52 +4081,6 @@ bool YSXTargetLowering::shouldInsertFencesForAtomic(
   return isa<LoadInst>(I) || isa<StoreInst>(I);
 }
 
-bool YSXTargetLowering::fallBackToDAGISel(const Instruction &Inst) const {
-
-  // GISel support is in progress or complete for these opcodes.
-  unsigned Op = Inst.getOpcode();
-  if (Op == Instruction::Add || Op == Instruction::Sub ||
-      Op == Instruction::And || Op == Instruction::Or ||
-      Op == Instruction::Xor || Op == Instruction::InsertElement ||
-      Op == Instruction::ShuffleVector || Op == Instruction::Load ||
-      Op == Instruction::Freeze || Op == Instruction::Store)
-    return false;
-
-  if (auto *II = dyn_cast<IntrinsicInst>(&Inst)) {
-    // Mark YSXVec intrinsic as supported.
-    if (YSXVIntrinsicsTable::getYSXVIntrinsicInfo(II->getIntrinsicID())) {
-      // GISel doesn't support tuple types yet. It also doesn't suport returning
-      // a struct containing a scalable vector like vleff.
-      if (Inst.getType()->isRISCVVectorTupleTy() ||
-          Inst.getType()->isStructTy())
-        return true;
-
-      for (unsigned i = 0; i < II->arg_size(); ++i)
-        if (II->getArgOperand(i)->getType()->isRISCVVectorTupleTy())
-          return true;
-
-      return false;
-    }
-    if (II->getIntrinsicID() == Intrinsic::vector_extract)
-      return false;
-  }
-
-  if (Inst.getType()->isScalableTy())
-    return true;
-
-  for (unsigned i = 0; i < Inst.getNumOperands(); ++i)
-    if (Inst.getOperand(i)->getType()->isScalableTy() &&
-        !isa<ReturnInst>(&Inst))
-      return true;
-
-  if (const AllocaInst *AI = dyn_cast<AllocaInst>(&Inst)) {
-    if (AI->getAllocatedType()->isScalableTy())
-      return true;
-  }
-
-  return false;
-}
-
 SDValue
 YSXTargetLowering::BuildSDIVPow2(SDNode *N, const APInt &Divisor,
                                    SelectionDAG &DAG,
@@ -4908,43 +4128,6 @@ SDValue YSXTargetLowering::expandIndirectJTBranch(const SDLoc &dl,
   }
   return TargetLowering::expandIndirectJTBranch(dl, Value, Addr, JTI, DAG);
 }
-
-// If an output pattern produces multiple instructions tablegen may pick an
-// arbitrary type from an instructions destination register class to use for the
-// VT of that MachineSDNode. This VT may be used to look up the representative
-// register class. If the type isn't legal, the default implementation will
-// not find a register class.
-//
-// Some integer types smaller than XLen are listed in the GPR register class to
-// support isel patterns for GISel, but are not legal in SelectionDAG. The
-// arbitrary type tablegen picks may be one of these smaller types.
-//
-// f16 and bf16 are both valid for the FPR16 or GPRF16 register class. It's
-// possible for tablegen to pick bf16 as the arbitrary type for an f16 pattern.
-std::pair<const TargetRegisterClass *, uint8_t>
-YSXTargetLowering::findRepresentativeClass(const TargetRegisterInfo *TRI,
-                                             MVT VT) const {
-  switch (VT.SimpleTy) {
-  default:
-    break;
-  case MVT::i8:
-  case MVT::i16:
-  case MVT::i32:
-    return TargetLowering::findRepresentativeClass(TRI, Subtarget.getXLenVT());
-  case MVT::bf16:
-  case MVT::f16:
-    return TargetLowering::findRepresentativeClass(TRI, MVT::f32);
-  }
-
-  return TargetLowering::findRepresentativeClass(TRI, VT);
-}
-
-namespace llvm::YSXVIntrinsicsTable {
-
-#define GET_YSXVIntrinsicsTable_IMPL
-#include "YSXGenSearchableTables.inc"
-
-} // namespace llvm::YSXVIntrinsicsTable
 
 bool YSXTargetLowering::hasInlineStackProbe(const MachineFunction &MF) const {
 
