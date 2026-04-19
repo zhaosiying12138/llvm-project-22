@@ -1,6 +1,8 @@
 # RUN: not llvm-mc -triple=ysx64 -mattr=+f %s 2>&1 | FileCheck %s
 # RUN: not llvm-mc -triple=ysx64 -mattr=+c %s 2>&1 | FileCheck %s
 # RUN: not llvm-mc -triple=ysx64 -mattr=+zbb %s 2>&1 | FileCheck %s
+# RUN: printf "add a0, a0, a1\n" | llvm-mc -triple=ysx64 -mattr=-f,-v,-zbb -
+# RUN: llvm-mc -triple=ysx64 -mattr=help 2>&1 | FileCheck %s --check-prefix=HELP
 # RUN: not llvm-mc -triple=ysx64 %s 2>&1 | FileCheck %s --check-prefix=ARCH
 # RUN: printf ".option arch, +f\n" | not llvm-mc -triple=ysx64 - 2>&1 | FileCheck %s --check-prefix=OPTION
 # RUN: printf ".option arch, +c\n" | not llvm-mc -triple=ysx64 - 2>&1 | FileCheck %s --check-prefix=OPTION
@@ -41,3 +43,9 @@
 # OPTION: error: YSX only supports arch string rv64ima
 # UNSUP-INST: error: unrecognized instruction mnemonic
 # INSN16: error: compressed instructions are not allowed
+# HELP: Available features for this target:
+# HELP-NOT: 32bit
+# HELP-NOT: log-vrgather
+# HELP: 64bit
+# HELP: zmmul
+# HELP: Use +feature to enable a feature

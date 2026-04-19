@@ -48,18 +48,67 @@
 
 using namespace llvm;
 
-static void validateYSXFeatureString(StringRef FS) {
+static bool isKnownYSXFeature(StringRef Feature) {
+  for (const SubtargetFeatureKV &KV :
+       ArrayRef(YSXFeatureKV, YSX::NumSubtargetFeatures))
+    if (Feature == StringRef(KV.Key))
+      return true;
+  return false;
+}
+
+static bool isRequiredYSXFeature(StringRef Feature) {
+  return Feature == "64bit" || Feature == "i" || Feature == "m" ||
+         Feature == "a" || Feature == "zmmul" || Feature == "zaamo" ||
+         Feature == "zalrsc";
+}
+
+static std::string filterYSXFeatureString(StringRef FS) {
+  SmallVector<StringRef, 8> Features;
+  FS.split(Features, ",", /*MaxSplit=*/-1, /*KeepEmpty=*/false);
+  std::string FilteredFS;
+  for (StringRef Feature : Features) {
+    Feature = Feature.trim();
+    bool Enabled = true;
+    if (Feature.consume_front("+"))
+      Enabled = true;
+    else if (Feature.consume_front("-"))
+      Enabled = false;
+
+    if (Feature == "help" || Feature == "cpuhelp") {
+      if (!FilteredFS.empty())
+        FilteredFS += ",";
+      FilteredFS += Enabled ? "+" : "-";
+      FilteredFS += Feature;
+      continue;
+    }
+
+    if (Feature == "32bit" || !isKnownYSXFeature(Feature)) {
+      if (!Enabled)
+        continue;
+      reportFatalUsageError("YSX only supports the rv64ima ISA");
+    }
+
+    if (!Enabled && isRequiredYSXFeature(Feature))
+      reportFatalUsageError("YSX only supports the rv64ima ISA");
+
+    if (!FilteredFS.empty())
+      FilteredFS += ",";
+    FilteredFS += Enabled ? "+" : "-";
+    FilteredFS += Feature;
+  }
+  return FilteredFS;
+}
+
+static bool hasYSXHelpFeature(StringRef FS) {
   SmallVector<StringRef, 8> Features;
   FS.split(Features, ",", /*MaxSplit=*/-1, /*KeepEmpty=*/false);
   for (StringRef Feature : Features) {
     Feature = Feature.trim();
     Feature.consume_front("+") || Feature.consume_front("-");
-    if (Feature == "64bit" || Feature == "i" || Feature == "m" ||
-        Feature == "a" || Feature == "zmmul" || Feature == "zaamo" ||
-        Feature == "zalrsc" || Feature == "relax")
-      continue;
-    reportFatalUsageError("YSX only supports the rv64ima ISA");
+    if (Feature == "help" || Feature == "cpuhelp")
+      return true;
   }
+  return false;
 }
 
 static const SubtargetFeatureKV &findYSXFeature(StringRef Name) {
@@ -153,8 +202,14 @@ static MCSubtargetInfo *createYSXMCSubtargetInfo(const Triple &TT,
   if (!TT.isYSX64())
     reportFatalUsageError("YSX only supports the ysx64 target");
 
-  if (CPU == "help") {
-    MCSubtargetInfo *X = new YSXHelpMCSubtargetInfo(TT, CPU, FS);
+  if (CPU == "help" || hasYSXHelpFeature(FS)) {
+    StringRef HelpCPU = CPU;
+    if (HelpCPU.empty() || HelpCPU == "generic")
+      HelpCPU = "generic-rv64";
+    else if (HelpCPU != "help" && HelpCPU != "generic-rv64")
+      reportFatalUsageError("YSX only supports -mcpu=generic-rv64");
+
+    MCSubtargetInfo *X = new YSXHelpMCSubtargetInfo(TT, HelpCPU, FS);
     llvm::FeatureBitset Features = X->getFeatureBits();
     Features.set(YSX::Feature64Bit);
     Features.set(YSX::FeatureStdExtI);
@@ -171,10 +226,10 @@ static MCSubtargetInfo *createYSXMCSubtargetInfo(const Triple &TT,
 
   if (FS.empty())
     FS = "+m,+a";
-  validateYSXFeatureString(FS);
+  std::string FilteredFS = filterYSXFeatureString(FS);
 
   MCSubtargetInfo *X =
-      createYSXMCSubtargetInfoImpl(TT, CPU, /*TuneCPU*/ CPU, FS);
+      createYSXMCSubtargetInfoImpl(TT, CPU, /*TuneCPU*/ CPU, FilteredFS);
 
   return X;
 }

@@ -30,18 +30,55 @@ using namespace llvm;
 #define GET_YSX_MACRO_FUSION_PRED_IMPL
 #include "YSXGenMacroFusion.inc"
 
-static void validateYSXFeatureString(StringRef FS) {
+static bool isKnownYSXFeature(StringRef Feature) {
+  for (const SubtargetFeatureKV &KV :
+       ArrayRef(YSXFeatureKV, YSX::NumSubtargetFeatures))
+    if (Feature == StringRef(KV.Key))
+      return true;
+  return false;
+}
+
+static bool isRequiredYSXFeature(StringRef Feature) {
+  return Feature == "64bit" || Feature == "i" || Feature == "m" ||
+         Feature == "a" || Feature == "zmmul" || Feature == "zaamo" ||
+         Feature == "zalrsc";
+}
+
+static std::string filterYSXFeatureString(StringRef FS) {
   SmallVector<StringRef, 8> Features;
   FS.split(Features, ",", /*MaxSplit=*/-1, /*KeepEmpty=*/false);
+  std::string FilteredFS;
   for (StringRef Feature : Features) {
     Feature = Feature.trim();
-    Feature.consume_front("+") || Feature.consume_front("-");
-    if (Feature == "64bit" || Feature == "i" || Feature == "m" ||
-        Feature == "a" || Feature == "zmmul" || Feature == "zaamo" ||
-        Feature == "zalrsc" || Feature == "relax")
+    bool Enabled = true;
+    if (Feature.consume_front("+"))
+      Enabled = true;
+    else if (Feature.consume_front("-"))
+      Enabled = false;
+
+    if (Feature == "help" || Feature == "cpuhelp") {
+      if (!FilteredFS.empty())
+        FilteredFS += ",";
+      FilteredFS += Enabled ? "+" : "-";
+      FilteredFS += Feature;
       continue;
-    reportFatalUsageError("YSX only supports the rv64ima ISA");
+    }
+
+    if (Feature == "32bit" || !isKnownYSXFeature(Feature)) {
+      if (!Enabled)
+        continue;
+      reportFatalUsageError("YSX only supports the rv64ima ISA");
+    }
+
+    if (!Enabled && isRequiredYSXFeature(Feature))
+      reportFatalUsageError("YSX only supports the rv64ima ISA");
+
+    if (!FilteredFS.empty())
+      FilteredFS += ",";
+    FilteredFS += Enabled ? "+" : "-";
+    FilteredFS += Feature;
   }
+  return FilteredFS;
 }
 
 namespace llvm::YSXTuneInfoTable {
@@ -88,7 +125,7 @@ YSXSubtarget::initializeSubtargetDependencies(const Triple &TT, StringRef CPU,
 
   if (FS.empty())
     FS = "+m,+a";
-  validateYSXFeatureString(FS);
+  std::string FilteredFS = filterYSXFeatureString(FS);
 
   if (!ABIName.empty() && ABIName != "lp64")
     reportFatalUsageError("YSX only supports the lp64 ABI");
@@ -99,7 +136,7 @@ YSXSubtarget::initializeSubtargetDependencies(const Triple &TT, StringRef CPU,
     TuneInfo = YSXTuneInfoTable::getYSXTuneInfo("generic");
   assert(TuneInfo && "TuneInfo shouldn't be nullptr!");
 
-  ParseSubtargetFeatures(CPU, TuneCPU, FS);
+  ParseSubtargetFeatures(CPU, TuneCPU, FilteredFS);
   TargetABI = YSXABI::computeTargetABI(TT, getFeatureBits(), ABIName);
   YSXFeatures::validate(TT, getFeatureBits());
   return *this;
