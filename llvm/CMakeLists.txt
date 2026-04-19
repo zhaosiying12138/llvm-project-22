@@ -536,6 +536,7 @@ set(LLVM_ALL_TARGETS
   WebAssembly
   X86
   XCore
+  YSX
   )
 
 set(LLVM_ALL_EXPERIMENTAL_TARGETS
@@ -544,7 +545,6 @@ set(LLVM_ALL_EXPERIMENTAL_TARGETS
   DirectX
   M68k
   Xtensa
-  YSX
 )
 
 # List of targets with JIT support:

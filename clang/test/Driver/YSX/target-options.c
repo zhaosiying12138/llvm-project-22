@@ -8,6 +8,7 @@
 // RUN: %clang --target=ysx64-unknown-elf -ffixed-x5 -c %s -o %t-fixed-x5.o
 // RUN: %clang --target=ysx64-linux-gnu -### %s 2>&1 | FileCheck %s --check-prefix=LINUX
 // RUN: %clang -### %s --target=ysx64-unknown-linux-gnu --rtlib=platform --unwindlib=platform -fuse-ld= -no-pie --gcc-toolchain=%S/../Inputs/multilib_riscv_linux_sdk --sysroot=%S/../Inputs/multilib_riscv_linux_sdk/sysroot 2>&1 | FileCheck %s --check-prefix=LINUX-MULTI
+// RUN: %clang -### %s --target=ysx64-unknown-elf 2>&1 | FileCheck %s --check-prefix=BAREMETAL --implicit-check-not="rv64imac" --implicit-check-not="rv64imafdc"
 // RUN: %clang --target=ysx64 --print-supported-extensions 2>&1 | FileCheck %s --check-prefix=EXTS --implicit-check-not="RISC-V" --implicit-check-not="{{^}}    f " --implicit-check-not="{{^}}    d " --implicit-check-not="{{^}}    c " --implicit-check-not="{{^}}    v "
 // RUN: %clang --target=ysx64 --print-enabled-extensions 2>&1 | FileCheck %s --check-prefix=ENABLED --implicit-check-not="RISC-V" --implicit-check-not="{{^}}    f " --implicit-check-not="{{^}}    d " --implicit-check-not="{{^}}    c " --implicit-check-not="{{^}}    v "
 // RUN: not %clang --target=ysx64 -march=rv64gc -c %s 2>&1 | FileCheck %s --check-prefix=ERR
@@ -69,6 +70,8 @@
 // LINUX: "-dynamic-linker" "/lib/ld-linux-riscv64-lp64.so.1"
 // LINUX-MULTI: "{{.*}}Inputs/multilib_riscv_linux_sdk/lib/gcc/riscv64-unknown-linux-gnu/7.2.0/lib64/lp64/crtbegin.o"
 // LINUX-MULTI: "-L{{.*}}Inputs/multilib_riscv_linux_sdk/lib/gcc/riscv64-unknown-linux-gnu/7.2.0/lib64/lp64"
+// BAREMETAL: "-triple" "ysx64-unknown-unknown-elf"
+// BAREMETAL: "{{.*}}clang-runtimes{{[/\\]+}}ysx64-unknown-elf{{[/\\]+}}include"
 // EXTS: All available -march extensions for YuShuXin
 // EXTS-DAG: {{^}}    i
 // EXTS-DAG: {{^}}    m

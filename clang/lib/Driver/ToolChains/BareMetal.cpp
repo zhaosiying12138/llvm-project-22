@@ -33,7 +33,20 @@ using namespace clang::driver::tools;
 using namespace clang::driver::toolchains;
 
 static bool isRISCVBareMetal(const llvm::Triple &Triple) {
-  if (!Triple.isRISCV())
+  if (!Triple.isRISCV() || Triple.isYSX())
+    return false;
+
+  if (Triple.getVendor() != llvm::Triple::UnknownVendor)
+    return false;
+
+  if (Triple.getOS() != llvm::Triple::UnknownOS)
+    return false;
+
+  return Triple.getEnvironmentName() == "elf";
+}
+
+static bool isYSXBareMetal(const llvm::Triple &Triple) {
+  if (!Triple.isYSX())
     return false;
 
   if (Triple.getVendor() != llvm::Triple::UnknownVendor)
@@ -221,7 +234,7 @@ BareMetal::BareMetal(const Driver &D, const llvm::Triple &Triple,
   IsGCCInstallationValid = initGCCInstallation(Triple, Args);
   std::string ComputedSysRoot = computeSysRoot();
   if (IsGCCInstallationValid) {
-    if (!isRISCVBareMetal(Triple))
+    if (!isRISCVBareMetal(Triple) && !isYSXBareMetal(Triple))
       D.Diag(clang::diag::warn_drv_multilib_not_available_for_target);
 
     Multilibs = GCCInstallation.getMultilibs();
@@ -351,7 +364,7 @@ void BareMetal::findMultilibs(const Driver &D, const llvm::Triple &Triple,
 bool BareMetal::handlesTarget(const llvm::Triple &Triple) {
   return arm::isARMEABIBareMetal(Triple) ||
          aarch64::isAArch64BareMetal(Triple) || isRISCVBareMetal(Triple) ||
-         isPPCBareMetal(Triple);
+         isYSXBareMetal(Triple) || isPPCBareMetal(Triple);
 }
 
 Tool *BareMetal::buildLinker() const {
