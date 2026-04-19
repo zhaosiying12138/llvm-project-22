@@ -4,11 +4,13 @@
 // RUN: %clang --target=ysx64-unknown-elf -march=rv64ima -c %s -o %t-rv64ima.o
 // RUN: %clang --target=ysx64 -ffixed-x5 -### -c %s 2>&1 | FileCheck %s --check-prefix=FIXED
 // RUN: %clang --target=ysx64-unknown-elf -ffixed-x5 -c %s -o %t-fixed-x5.o
+// RUN: %clang --target=ysx64-linux-gnu -### %s 2>&1 | FileCheck %s --check-prefix=LINUX
 // RUN: not %clang --target=ysx64 -march=rv64gc -c %s 2>&1 | FileCheck %s --check-prefix=ERR
 // RUN: not %clang --target=ysx64 -march=rv64imaf -c %s 2>&1 | FileCheck %s --check-prefix=ERR
 // RUN: not %clang --target=ysx64 -march=rv64imac -c %s 2>&1 | FileCheck %s --check-prefix=ERR
 // RUN: not %clang --target=ysx64 -march=rv64imav -c %s 2>&1 | FileCheck %s --check-prefix=ERR
 // RUN: not %clang --target=ysx64 -mabi=lp64d -c %s 2>&1 | FileCheck %s --check-prefix=ABIERR
+// RUN: not %clang --target=ysx64 -mrvv-vector-bits=128 -### -c %s 2>&1 | FileCheck %s --check-prefix=RVVBITS --implicit-check-not="-mvscale" --implicit-check-not=__riscv_v_fixed_vlen
 // RUN: printf 'typedef __rvv_int8m1_t t;\n' | not %clang --target=ysx64-unknown-elf -x c -fsyntax-only - 2>&1 | FileCheck %s --check-prefix=VTYPE
 // RUN: printf 'void f(void){ (void)__builtin_rvv_vsetvli(0, 0, 0); }\n' | not %clang --target=ysx64-unknown-elf -x c -fsyntax-only - 2>&1 | FileCheck %s --check-prefix=VBUILTIN
 // RUN: printf 'void f(void) __attribute__((target("arch=rv64ima"))); void f(void){}\n' | %clang --target=ysx64-unknown-elf -S -emit-llvm -x c - -o - | FileCheck %s --check-prefix=ATTRIR --implicit-check-not="+v" --implicit-check-not="+f" --implicit-check-not="+d" --implicit-check-not="+zve" --implicit-check-not="+zvl"
@@ -55,6 +57,8 @@
 
 // ERR: YuShuXin only supports -march=rv64ima
 // ABIERR: unsupported argument 'lp64d' to option '-mabi='
+// RVVBITS: error: unsupported option '-mrvv-vector-bits=' for target 'ysx64'
+// LINUX: "-dynamic-linker" "/lib/ld-linux-riscv64-lp64.so.1"
 // VTYPE: error: unknown type name '__rvv_int8m1_t'
 // VBUILTIN: error: use of unknown builtin '__builtin_rvv_vsetvli'
 // ATTRIR: "target-features"="+64bit,+a,+i,+m,+relax,+zaamo,+zalrsc,+zmmul"

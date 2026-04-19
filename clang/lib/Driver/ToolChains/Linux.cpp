@@ -167,6 +167,10 @@ std::string Linux::getMultiarchTriple(const Driver &D,
     if (IsAndroid)
       return "riscv64-linux-android";
     return "riscv64-linux-gnu";
+  case llvm::Triple::ysx64:
+    if (IsAndroid)
+      return "riscv64-linux-android";
+    return "riscv64-linux-gnu";
   case llvm::Triple::sparc:
     return "sparc-linux-gnu";
   case llvm::Triple::sparcv9:
@@ -692,9 +696,14 @@ std::string Linux::getDynamicLinker(const ArgList &Args) const {
         (tools::ppc::hasPPCAbiArg(Args, "elfv1")) ? "ld64.so.1" : "ld64.so.2";
     break;
   case llvm::Triple::riscv32:
-  case llvm::Triple::riscv64: {
-    StringRef ArchName = llvm::Triple::getArchTypeName(Arch);
-    StringRef ABIName = tools::riscv::getRISCVABI(Args, Triple);
+  case llvm::Triple::riscv64:
+  case llvm::Triple::ysx64: {
+    StringRef ArchName = Arch == llvm::Triple::ysx64
+                             ? StringRef("riscv64")
+                             : llvm::Triple::getArchTypeName(Arch);
+    StringRef ABIName = Arch == llvm::Triple::ysx64
+                            ? StringRef("lp64")
+                            : tools::riscv::getRISCVABI(Args, Triple);
     LibDir = "lib";
     Loader = ("ld-linux-" + ArchName + "-" + ABIName + ".so.1").str();
     break;

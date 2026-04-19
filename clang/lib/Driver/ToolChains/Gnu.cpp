@@ -672,7 +672,8 @@ void tools::gnutools::Assembler::ConstructJob(Compilation &C,
     break;
   }
   case llvm::Triple::riscv32:
-  case llvm::Triple::riscv64: {
+  case llvm::Triple::riscv64:
+  case llvm::Triple::ysx64: {
     StringRef ABIName = riscv::getRISCVABI(Args, getToolChain().getTriple());
     CmdArgs.push_back("-mabi");
     CmdArgs.push_back(ABIName.data());
@@ -2440,6 +2441,10 @@ void Generic_GCC::GCCInstallationDetector::AddDefaultGCCPrefixes(
   static const char *const RISCV64LibDirs[] = {"/lib64", "/lib"};
   static const char *const RISCV64Triples[] = {"riscv64-unknown-linux-gnu",
                                                "riscv64-unknown-elf"};
+  static const char *const YSX64Triples[] = {"ysx64-unknown-linux-gnu",
+                                             "ysx64-unknown-elf",
+                                             "riscv64-unknown-linux-gnu",
+                                             "riscv64-unknown-elf"};
 
   static const char *const SPARCv8LibDirs[] = {"/lib32", "/lib"};
   static const char *const SPARCv8Triples[] = {"sparc-linux-gnu",
@@ -2735,6 +2740,10 @@ void Generic_GCC::GCCInstallationDetector::AddDefaultGCCPrefixes(
     TripleAliases.append(begin(RISCV64Triples), end(RISCV64Triples));
     BiarchLibDirs.append(begin(RISCV32LibDirs), end(RISCV32LibDirs));
     BiarchTripleAliases.append(begin(RISCV32Triples), end(RISCV32Triples));
+    break;
+  case llvm::Triple::ysx64:
+    LibDirs.append(begin(RISCV64LibDirs), end(RISCV64LibDirs));
+    TripleAliases.append(begin(YSX64Triples), end(YSX64Triples));
     break;
   case llvm::Triple::sparc:
   case llvm::Triple::sparcel:
@@ -3051,6 +3060,7 @@ Generic_GCC::getDefaultUnwindTableLevel(const ArgList &Args) const {
   case llvm::Triple::ppc64le:
   case llvm::Triple::riscv32:
   case llvm::Triple::riscv64:
+  case llvm::Triple::ysx64:
   case llvm::Triple::x86:
   case llvm::Triple::x86_64:
     return UnwindTableLevel::Asynchronous;
