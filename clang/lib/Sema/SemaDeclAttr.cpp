@@ -3421,6 +3421,13 @@ bool Sema::checkTargetAttr(SourceLocation LiteralLoc, StringRef AttrStr) {
 
   for (const auto &Feature : ParsedAttrs.Features) {
     auto CurFeature = StringRef(Feature).drop_front(); // remove + or -.
+    if (Context.getTargetInfo().getTriple().isYSX64() &&
+        StringRef(Feature).starts_with("-") &&
+        (CurFeature == "i" || CurFeature == "m" || CurFeature == "a" ||
+         CurFeature == "zmmul" || CurFeature == "zaamo" ||
+         CurFeature == "zalrsc"))
+      return Diag(LiteralLoc, diag::err_invalid_feature_combination)
+             << "YSX requires the rv64ima ISA";
     if (!Context.getTargetInfo().isValidFeatureName(CurFeature)) {
       if (Context.getTargetInfo().getTriple().isYSX64())
         return Diag(LiteralLoc, diag::err_invalid_feature_combination)

@@ -31,6 +31,8 @@
 // RUN: printf 'void f(void) __attribute__((target("arch=rv64imaf"))); void f(void){}\n' | not %clang --target=ysx64-unknown-elf -S -emit-llvm -x c - -o - 2>&1 | FileCheck %s --check-prefix=ATTRERR --implicit-check-not="target-features"
 // RUN: printf 'void f(void) __attribute__((target("arch=+64bit"))); void f(void){}\n' | not %clang --target=ysx64-unknown-elf -S -emit-llvm -x c - -o - 2>&1 | FileCheck %s --check-prefix=ATTRERR --implicit-check-not="target-features"
 // RUN: printf 'void f(void) __attribute__((target("+reserve-x0"))); void f(void){}\n' | not %clang --target=ysx64-unknown-elf -S -emit-llvm -x c - -o - 2>&1 | FileCheck %s --check-prefix=ATTRERR --implicit-check-not="target-features"
+// RUN: printf 'void f(void) __attribute__((target("arch=-m"))); void f(void){}\n' | not %clang --target=ysx64-unknown-elf -S -emit-llvm -x c - -o - 2>&1 | FileCheck %s --check-prefix=REQFEATUREERR --implicit-check-not="PLEASE submit a bug report" --implicit-check-not="fatal error"
+// RUN: printf 'void f(void) __attribute__((target("-a"))); void f(void){}\n' | not %clang --target=ysx64-unknown-elf -S -emit-llvm -x c - -o - 2>&1 | FileCheck %s --check-prefix=REQFEATUREERR --implicit-check-not="PLEASE submit a bug report" --implicit-check-not="fatal error"
 // RUN: not %clang --target=ysx64-unknown-elf -Xclang -target-feature -Xclang +v -dM -E -x c /dev/null 2>&1 | FileCheck %s --check-prefix=FEATUREERR --implicit-check-not=__riscv_vector --implicit-check-not=__riscv_v
 // RUN: not %clang --target=ysx64-unknown-elf -Xclang -target-feature -Xclang +reserve-x0 -c %s 2>&1 | FileCheck %s --check-prefix=FEATUREERR
 // RUN: not %clang --target=ysx64-unknown-elf -Xclang -target-feature -Xclang -i -c %s 2>&1 | FileCheck %s --check-prefix=REQFEATUREERR
