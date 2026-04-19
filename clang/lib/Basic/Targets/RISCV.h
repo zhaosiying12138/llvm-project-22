@@ -290,6 +290,14 @@ public:
   bool supportsCpuSupports() const override { return false; }
   bool supportsCpuIs() const override { return false; }
   bool supportsCpuInit() const override { return false; }
+  bool
+  checkCFProtectionBranchSupported(DiagnosticsEngine &Diags) const override {
+    return TargetInfo::checkCFProtectionBranchSupported(Diags);
+  }
+  bool
+  checkCFProtectionReturnSupported(DiagnosticsEngine &Diags) const override {
+    return TargetInfo::checkCFProtectionReturnSupported(Diags);
+  }
 };
 } // namespace targets
 } // namespace clang

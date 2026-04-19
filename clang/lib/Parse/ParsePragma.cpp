@@ -558,7 +558,8 @@ void Parser::initializePragmaHandlers() {
   MaxTokensTotalPragmaHandler = std::make_unique<PragmaMaxTokensTotalHandler>();
   PP.AddPragmaHandler("clang", MaxTokensTotalPragmaHandler.get());
 
-  if (getTargetInfo().getTriple().isRISCV()) {
+  if (getTargetInfo().getTriple().isRISCV() &&
+      !getTargetInfo().getTriple().isYSX()) {
     RISCVPragmaHandler = std::make_unique<PragmaRISCVHandler>(Actions);
     PP.AddPragmaHandler("clang", RISCVPragmaHandler.get());
   }
@@ -692,7 +693,8 @@ void Parser::resetPragmaHandlers() {
   PP.RemovePragmaHandler("clang", MaxTokensTotalPragmaHandler.get());
   MaxTokensTotalPragmaHandler.reset();
 
-  if (getTargetInfo().getTriple().isRISCV()) {
+  if (getTargetInfo().getTriple().isRISCV() &&
+      !getTargetInfo().getTriple().isYSX()) {
     PP.RemovePragmaHandler("clang", RISCVPragmaHandler.get());
     RISCVPragmaHandler.reset();
   }
