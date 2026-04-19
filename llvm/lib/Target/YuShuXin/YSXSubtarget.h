@@ -99,8 +99,6 @@ private:
   bool ATTRIBUTE = DEFAULT;
 #include "YSXGenSubtargetInfo.inc"
 
-  unsigned XRemovedSfmmTE = 0;
-  unsigned ZvlLen = 0;
   YSXABI::ABI TargetABI = YSXABI::ABI_Unknown;
   std::bitset<YSX::NUM_TARGET_REGS> UserReservedRegister;
   const YSXTuneInfoTable::YSXTuneInfo *TuneInfo;
@@ -163,12 +161,46 @@ public:
 #include "YSXGenSubtargetInfo.inc"
 
   LLVM_DEPRECATED("Now Equivalent to hasStdExtZca", "hasStdExtZca")
-  bool hasStdExtCOrZca() const { return HasStdExtZca; }
+  bool hasStdExtCOrZca() const { return false; }
   bool hasStdExtCOrZcd() const { return false; }
   bool hasStdExtCOrZcfOrZce() const {
     return false;
   }
   bool hasStdExtZvl() const { return false; }
+  bool hasStdExtD() const { return false; }
+  bool hasStdExtE() const { return false; }
+  bool hasStdExtP() const { return false; }
+  bool hasStdExtZabha() const { return false; }
+  bool hasStdExtZacas() const { return false; }
+  bool hasStdExtZalasr() const { return false; }
+  bool hasStdExtZba() const { return false; }
+  bool hasStdExtZbb() const { return false; }
+  bool hasStdExtZbkb() const { return false; }
+  bool hasStdExtZbs() const { return false; }
+  bool hasStdExtZca() const { return false; }
+  bool hasStdExtZcb() const { return false; }
+  bool hasStdExtZcmop() const { return false; }
+  bool hasStdExtZcmp() const { return false; }
+  bool hasStdExtZdinx() const { return false; }
+  bool hasStdExtZfa() const { return false; }
+  bool hasStdExtZfbfmin() const { return false; }
+  bool hasStdExtZfh() const { return false; }
+  bool hasStdExtZfhmin() const { return false; }
+  bool hasStdExtZfinx() const { return false; }
+  bool hasStdExtZhinxmin() const { return false; }
+  bool hasStdExtZicbop() const { return false; }
+  bool hasStdExtZicfilp() const { return false; }
+  bool hasStdExtZicond() const { return false; }
+  bool hasStdExtZihintntl() const { return false; }
+  bool hasStdExtZilsd() const { return false; }
+  bool hasStdExtZtso() const { return false; }
+  bool hasStdExtZvbb() const { return false; }
+  bool hasStdExtZvfbfa() const { return false; }
+  bool hasStdExtZvfbfwma() const { return false; }
+  bool hasStdExtZvfh() const { return false; }
+  bool hasStdExtZvkb() const { return false; }
+  bool hasStdExtZvknhb() const { return false; }
+  bool hasStdExtZvqdotq() const { return false; }
   bool hasStdExtFOrZfinx() const { return false; }
   bool hasStdExtDOrZdinx() const { return false; }
   bool hasStdExtZfhOrZhinx() const { return false; }
@@ -180,6 +212,8 @@ public:
   bool hasHalfFPLoadStoreMove() const {
     return false;
   }
+  bool allowZilsd4ByteAlign() const { return false; }
+  bool enableUnalignedVectorMem() const { return false; }
 
   bool hasCLZLike() const {
     return false;

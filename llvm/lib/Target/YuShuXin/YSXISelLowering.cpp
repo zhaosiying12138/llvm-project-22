@@ -598,12 +598,8 @@ YSXTargetLowering::YSXTargetLowering(const TargetMachine &TM,
   if (Subtarget.is64Bit())
     setOperationAction(ISD::Constant, MVT::i64, Custom);
 
-  // TODO: On M-mode only targets, the cycle[h]/time[h] CSR may not be present.
-  // Unfortunately this can't be determined just from the ISA naming string.
-  setOperationAction(ISD::READCYCLECOUNTER, MVT::i64,
-                     Subtarget.is64Bit() ? Legal : Custom);
-  setOperationAction(ISD::READSTEADYCOUNTER, MVT::i64,
-                     Subtarget.is64Bit() ? Legal : Custom);
+  setOperationAction(ISD::READCYCLECOUNTER, MVT::i64, Expand);
+  setOperationAction(ISD::READSTEADYCOUNTER, MVT::i64, Expand);
 
   if (Subtarget.is64Bit()) {
     setOperationAction(ISD::INIT_TRAMPOLINE, MVT::Other, Custom);
@@ -14585,26 +14581,9 @@ void YSXTargetLowering::ReplaceNodeResults(SDNode *N,
   }
   case ISD::READCYCLECOUNTER:
   case ISD::READSTEADYCOUNTER: {
-    assert(!Subtarget.is64Bit() && "READCYCLECOUNTER/READSTEADYCOUNTER only "
-                                   "has custom type legalization on ysx32");
-
-    SDValue LoCounter, HiCounter;
-    MVT XLenVT = Subtarget.getXLenVT();
-    if (N->getOpcode() == ISD::READCYCLECOUNTER) {
-      LoCounter = DAG.getTargetConstant(YSXSysReg::cycle, DL, XLenVT);
-      HiCounter = DAG.getTargetConstant(YSXSysReg::cycleh, DL, XLenVT);
-    } else {
-      LoCounter = DAG.getTargetConstant(YSXSysReg::time, DL, XLenVT);
-      HiCounter = DAG.getTargetConstant(YSXSysReg::timeh, DL, XLenVT);
-    }
-    SDVTList VTs = DAG.getVTList(MVT::i32, MVT::i32, MVT::Other);
-    SDValue RCW = DAG.getNode(YSXISD::READ_COUNTER_WIDE, DL, VTs,
-                              N->getOperand(0), LoCounter, HiCounter);
-
-    Results.push_back(
-        DAG.getNode(ISD::BUILD_PAIR, DL, MVT::i64, RCW, RCW.getValue(1)));
-    Results.push_back(RCW.getValue(2));
-    break;
+    reportFatalUsageError(
+        "YSX rv64ima does not support counter CSR reads");
+    return;
   }
   case ISD::LOAD: {
     if (!ISD::isNON_EXTLoad(N))
@@ -22432,71 +22411,6 @@ YSXTargetLowering::getTargetConstantFromLoad(LoadSDNode *Ld) const {
   return CNodeLo->getConstVal();
 }
 
-static MachineBasicBlock *emitReadCounterWidePseudo(MachineInstr &MI,
-                                                    MachineBasicBlock *BB) {
-  assert(MI.getOpcode() == YSX::ReadCounterWide && "Unexpected instruction");
-
-  // To read a 64-bit counter CSR on a 32-bit target, we read the two halves.
-  // Should the count have wrapped while it was being read, we need to try
-  // again.
-  // For example:
-  // ```
-  // read:
-  //   csrrs x3, counterh # load high word of counter
-  //   csrrs x2, counter # load low word of counter
-  //   csrrs x4, counterh # load high word of counter
-  //   bne x3, x4, read # check if high word reads match, otherwise try again
-  // ```
-
-  MachineFunction &MF = *BB->getParent();
-  const BasicBlock *LLVMBB = BB->getBasicBlock();
-  MachineFunction::iterator It = ++BB->getIterator();
-
-  MachineBasicBlock *LoopMBB = MF.CreateMachineBasicBlock(LLVMBB);
-  MF.insert(It, LoopMBB);
-
-  MachineBasicBlock *DoneMBB = MF.CreateMachineBasicBlock(LLVMBB);
-  MF.insert(It, DoneMBB);
-
-  // Transfer the remainder of BB and its successor edges to DoneMBB.
-  DoneMBB->splice(DoneMBB->begin(), BB,
-                  std::next(MachineBasicBlock::iterator(MI)), BB->end());
-  DoneMBB->transferSuccessorsAndUpdatePHIs(BB);
-
-  BB->addSuccessor(LoopMBB);
-
-  MachineRegisterInfo &RegInfo = MF.getRegInfo();
-  Register ReadAgainReg = RegInfo.createVirtualRegister(&YSX::GPRRegClass);
-  Register LoReg = MI.getOperand(0).getReg();
-  Register HiReg = MI.getOperand(1).getReg();
-  int64_t LoCounter = MI.getOperand(2).getImm();
-  int64_t HiCounter = MI.getOperand(3).getImm();
-  DebugLoc DL = MI.getDebugLoc();
-
-  const TargetInstrInfo *TII = MF.getSubtarget().getInstrInfo();
-  BuildMI(LoopMBB, DL, TII->get(YSX::CSRRS), HiReg)
-      .addImm(HiCounter)
-      .addReg(YSX::X0);
-  BuildMI(LoopMBB, DL, TII->get(YSX::CSRRS), LoReg)
-      .addImm(LoCounter)
-      .addReg(YSX::X0);
-  BuildMI(LoopMBB, DL, TII->get(YSX::CSRRS), ReadAgainReg)
-      .addImm(HiCounter)
-      .addReg(YSX::X0);
-
-  BuildMI(LoopMBB, DL, TII->get(YSX::BNE))
-      .addReg(HiReg)
-      .addReg(ReadAgainReg)
-      .addMBB(LoopMBB);
-
-  LoopMBB->addSuccessor(LoopMBB);
-  LoopMBB->addSuccessor(DoneMBB);
-
-  MI.eraseFromParent();
-
-  return DoneMBB;
-}
-
 #if 0
 static MachineBasicBlock *emitSplitF64Pseudo(MachineInstr &MI,
                                              MachineBasicBlock *BB,
@@ -23093,10 +23007,6 @@ YSXTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   switch (MI.getOpcode()) {
   default:
     llvm_unreachable("Unexpected instr type to insert");
-  case YSX::ReadCounterWide:
-    assert(!Subtarget.is64Bit() &&
-           "ReadCounterWide is only to be used on ysx32");
-    return emitReadCounterWidePseudo(MI, BB);
   case YSX::Select_GPR_Using_CC_GPR:
     return emitSelectPseudo(MI, BB, Subtarget);
 #if 0
@@ -23457,41 +23367,8 @@ SDValue YSXTargetLowering::LowerFormalArguments(
 
   const Function &Func = MF.getFunction();
   if (Func.hasFnAttribute("interrupt")) {
-    if (!Func.arg_empty())
-      reportFatalUsageError(
-          "Functions with the interrupt attribute cannot have arguments!");
-
-    StringRef Kind =
-      MF.getFunction().getFnAttribute("interrupt").getValueAsString();
-
-    constexpr StringLiteral SupportedInterruptKinds[] = {
-        "machine",
-        "supervisor",
-        "rnmi",
-        "qci-nest",
-        "qci-nonest",
-        "SiFive-CLIC-preemptible",
-        "SiFive-CLIC-stack-swap",
-        "SiFive-CLIC-preemptible-stack-swap",
-    };
-    if (!llvm::is_contained(SupportedInterruptKinds, Kind))
-      reportFatalUsageError(
-          "Function interrupt attribute argument not supported!");
-
-    if (Kind.starts_with("qci-") && !Subtarget.hasVendorXRemovedQciint())
-      reportFatalUsageError(
-          "'qci-*' interrupt kinds require XRemovedQciint extension");
-
-    if (Kind.starts_with("SiFive-CLIC-") && !Subtarget.hasVendorXRemovedSfmclic())
-      reportFatalUsageError(
-          "'SiFive-CLIC-*' interrupt kinds require XRemovedSfmclic extension");
-
-    if (Kind == "rnmi" && !Subtarget.hasStdExtSmrnmi())
-      reportFatalUsageError("'rnmi' interrupt kind requires Srnmi extension");
-    const TargetFrameLowering *TFI = Subtarget.getFrameLowering();
-    if (Kind.starts_with("SiFive-CLIC-preemptible") && TFI->hasFP(MF))
-      reportFatalUsageError("'SiFive-CLIC-preemptible' interrupt kinds cannot "
-                            "have a frame pointer");
+    reportFatalUsageError(
+        "YSX rv64ima does not support interrupt handlers");
   }
 
   EVT PtrVT = getPointerTy(DAG.getDataLayout());
@@ -24134,30 +24011,10 @@ YSXTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
     MF.getInfo<YSXMachineFunctionInfo>()->setIsVectorCall();
 
   unsigned RetOpc = YSXISD::RET_GLUE;
-  // Interrupt service routines use different return instructions.
   const Function &Func = DAG.getMachineFunction().getFunction();
-  if (Func.hasFnAttribute("interrupt")) {
-    if (!Func.getReturnType()->isVoidTy())
-      reportFatalUsageError(
-          "Functions with the interrupt attribute must have void return type!");
-
-    MachineFunction &MF = DAG.getMachineFunction();
-    StringRef Kind =
-      MF.getFunction().getFnAttribute("interrupt").getValueAsString();
-
-    if (Kind == "supervisor")
-      RetOpc = YSXISD::SRET_GLUE;
-    else if (Kind == "rnmi") {
-      assert(Subtarget.hasFeature(YSX::FeatureStdExtSmrnmi) &&
-             "Need Smrnmi extension for rnmi");
-      RetOpc = YSXISD::MNRET_GLUE;
-    } else if (Kind == "qci-nest" || Kind == "qci-nonest") {
-      assert(Subtarget.hasFeature(YSX::YSXDisabledVendorFeatureXRemovedQciint) &&
-             "Need XRemovedQciint for qci-(no)nest");
-      RetOpc = YSXISD::QC_C_MILEAVERET_GLUE;
-    } else
-      RetOpc = YSXISD::MRET_GLUE;
-  }
+  if (Func.hasFnAttribute("interrupt"))
+    reportFatalUsageError(
+        "YSX rv64ima does not support interrupt handlers");
 
   return DAG.getNode(RetOpc, DL, MVT::Other, RetOps);
 }

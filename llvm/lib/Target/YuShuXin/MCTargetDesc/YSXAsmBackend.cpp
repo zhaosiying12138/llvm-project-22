@@ -215,9 +215,7 @@ bool YSXAsmBackend::relaxAlign(MCFragment &F, unsigned &Size) {
     return false;
 
   // Use default handling unless the alignment is larger than the nop size.
-  const MCSubtargetInfo *STI = F.getSubtargetInfo();
-  unsigned MinNopLen =
-      AlignRvc || STI->hasFeature(YSX::FeatureStdExtZca) ? 2 : 4;
+  unsigned MinNopLen = 4;
   if (F.getAlignment() <= MinNopLen)
     return false;
 

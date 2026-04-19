@@ -28,9 +28,9 @@ lla x1, %lo(foo) # CHECK: :[[@LINE]]:9: error: operand either must be a constant
 lla a1, foo+foo # CHECK: :[[@LINE]]:9: error: operand either must be a constant 64-bit integer or a bare symbol name
 lla a2, foo@plt # CHECK: :[[@LINE]]:12: error: unexpected token
 
-rdinstreth x29 # CHECK: :[[@LINE]]:1: error: instruction requires the following: RV32I Base Instruction Set{{$}}
-rdcycleh x27   # CHECK: :[[@LINE]]:1: error: instruction requires the following: RV32I Base Instruction Set{{$}}
-rdtimeh x28    # CHECK: :[[@LINE]]:1: error: instruction requires the following: RV32I Base Instruction Set{{$}}
+rdinstreth x29 # CHECK: :[[@LINE]]:1: error: unrecognized instruction mnemonic
+rdcycleh x27   # CHECK: :[[@LINE]]:1: error: unrecognized instruction mnemonic
+rdtimeh x28    # CHECK: :[[@LINE]]:1: error: unrecognized instruction mnemonic
 
 sll x2, x3, 64  # CHECK: :[[@LINE]]:13: error: immediate must be an integer in the range [0, 63]
 srl x2, x3, 64  # CHECK: :[[@LINE]]:13: error: immediate must be an integer in the range [0, 63]

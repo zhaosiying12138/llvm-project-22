@@ -19,7 +19,7 @@ using namespace llvm;
 
 unsigned
 YSXMCObjectFileInfo::getTextSectionAlignment(const MCSubtargetInfo &STI) {
-  return STI.hasFeature(YSX::FeatureStdExtZca) ? 2 : 4;
+  return 4;
 }
 
 unsigned YSXMCObjectFileInfo::getTextSectionAlignment() const {

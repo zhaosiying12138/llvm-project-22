@@ -60,7 +60,7 @@ for deterministic verification.
 ## MUTABLE SECTION
 <!-- Update each round with justification for changes -->
 
-### Plan Version: 8 (Updated: Round 3 Implementation)
+### Plan Version: 9 (Updated: Round 3 Review)
 
 #### Plan Evolution Log
 <!-- Document any changes to the plan with justification -->
@@ -75,20 +75,21 @@ for deterministic verification.
 | 2 | Implemented the Round-2 pruning and validation fix | Incremental `.option arch,+...` and `.option rvc` are now rejected with feature-bit rollback; unsupported opcode compatibility stubs were removed; the YSX compress generator and RVV MCA instrumentation were removed; YSX-only and RISCV+YSX static builds plus the YSX lit subset pass | AC-2 locally verified; AC-3 advanced and pending Codex review because the source is still larger than the desired final size |
 | 2 review | Rejected the Round-2 completion claim and reopened task3/task6 | The exact blocker-string scan was insufficient: YSX still carries renamed FP/C/V/bitmanip/crypto/vendor/supervisor feature definitions, FP/vector register classes, compressed/vector format includes, GISel-only TableGen artifacts, vector/FP/vendor lowering and frame helpers, and MC still accepts FP/vector CSRs such as `fflags`, `fcsr`, `frm`, `vtype`, `vl`, `vlenb`, `vxsat`, and `vxrm` | AC-2 and AC-3 remain unmet; AC-4 needs focused negative tests after the real pruning and CSR fix |
 | 3 | Implemented the first real Round-3 source pruning slice | Removed user-visible FP/vector CSR aliases and added negative tests; deleted C/V instruction-format includes and `.insn 16` support; pruned FP/vector register classes from `YSXRegisterInfo.td`; simplified calling convention, CSR insertion, selected MC/parser/disassembler/register/lowering paths to GPR-only behavior; YSX-only and RISCV+YSX static builds plus the 130-test YSX lit subset pass | AC-2 advanced for CSR leakage and C `.insn`; AC-3 advanced but remains open because `YSXFeatures.td`, frame lowering, instr-info, subtarget, and other copied surfaces still need further deletion |
+| 3 review | Rejected the Round-3 completion claim and kept task3/task6 active | The specific FP/vector CSR aliases now reject, but default MC still accepts non-`rv64ima` CSR/privileged/Zifencei surfaces such as `csrr mstatus`, `sfence.vma`, `hfence.vvma`, `mret`, `sret`, and `fence.i`; the backend also still carries the copied unsupported feature universe, vector/FP lowering and frame helpers, stale pass declarations, and generated target-feature exposure | AC-2 and AC-3 remain unmet; AC-4 needs expanded negative coverage for the remaining externally visible surfaces |
 
 #### Active Tasks
 <!-- Mainline tasks only: each task must directly advance the current round objective and carry routing metadata -->
 | Task | Target AC | Status | Tag | Owner | Notes |
 |------|-----------|--------|-----|-------|-------|
-| task3: Finish pruning YSX to the actual `rv64ima` source surface | AC-2, AC-3 | reopened by Round-2 review | coding | Claude | Remove retained renamed/disabled FP, compressed, vector, RV32, bitmanip, crypto, vendor, privileged/profile, GlobalISel, and stale lowering/register/calling-convention source surfaces instead of relying on front-door whitelists. |
-| task6: Revalidate after source pruning and MC surface fix | AC-1, AC-2, AC-4 | reopened by Round-2 review | coding | Claude | Rebuild YSX-only and RISCV+YSX, rerun the YSX lit subset, add negative MC tests for FP/vector CSR leakage, and confirm the RISCV backend diff remains zero. |
+| task3: Finish pruning YSX to the actual `rv64ima` source surface | AC-2, AC-3 | reopened by Round-3 review | coding | Claude | Remove retained renamed/disabled FP, compressed, vector, RV32, bitmanip, crypto, vendor, privileged/profile, GlobalISel, and stale lowering/register/calling-convention source surfaces instead of relying on front-door whitelists. |
+| task6: Revalidate after source pruning and MC surface fix | AC-1, AC-2, AC-4 | reopened by Round-3 review | coding | Claude | Rebuild YSX-only and RISCV+YSX, rerun the YSX lit subset, add negative MC tests for remaining non-IMA MC leakage, and confirm the RISCV backend diff remains zero. |
 
 ### Blocking Side Issues
 <!-- Only issues that directly block current mainline progress belong here -->
 | Issue | Discovered Round | Blocking AC | Resolution Path |
 |-------|-----------------|-------------|-----------------|
 | Removed feature source remains renamed/disabled instead of deleted | 2 review | AC-3 | Replace `YSXFeatures.td`, register/calling-convention tables, instruction-format includes, lowering, frame, subtarget, MC, and selection support with a minimal `rv64ima`-only surface; resolve generated-code breakage by deleting unsupported callers rather than adding compatibility stubs. |
-| Default YSX MC accepts FP/vector CSR names | 2 review | AC-2 | Gate or remove FP/vector CSR system operands and aliases so `fflags`, `frm`, `fcsr`, `vtype`, `vl`, `vxsat`, `vxrm`, and `vlenb` are rejected for YSX; add negative tests for these exact inputs. |
+| Default YSX MC still accepts non-`rv64ima` CSR, privileged, and Zifencei surfaces | 3 review | AC-2 | Remove or gate generic CSR aliases/system operands and privileged/Zifencei instructions so default `ysx64` rejects symbolic non-IMA CSRs and privileged instructions such as `mstatus`, `ssp`, `seed`, `sfence.vma`, `hfence.vvma`, `mret`, `sret`, and `fence.i`; add negative MC tests for these exact inputs. |
 | Residual copied frame/instr/subtarget vector helpers remain after first Round-3 slice | 3 | AC-3 | Continue replacing YSX vector/scalable frame, instruction-combiner, feature, and subtarget helpers with rv64ima-only implementations; keep rebuilding after each deletion slice. |
 
 ### Queued Side Issues

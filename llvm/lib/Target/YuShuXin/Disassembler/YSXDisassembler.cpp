@@ -80,7 +80,7 @@ LLVMInitializeYuShuXinDisassembler() {
 static DecodeStatus DecodeGPRRegisterClass(MCInst &Inst, uint32_t RegNo,
                                            uint64_t Address,
                                            const MCDisassembler *Decoder) {
-  bool IsRVE = Decoder->getSubtargetInfo().hasFeature(YSX::FeatureStdExtE);
+  bool IsRVE = false;
 
   if (RegNo >= 32 || (IsRVE && RegNo >= 16))
     return MCDisassembler::Fail;
@@ -429,7 +429,7 @@ static DecodeStatus decodeRTZArg(MCInst &Inst, uint32_t Imm, int64_t Address,
 static DecodeStatus decodeZcmpRlist(MCInst &Inst, uint32_t Imm,
                                     uint64_t Address,
                                     const MCDisassembler *Decoder) {
-  bool IsRVE = Decoder->getSubtargetInfo().hasFeature(YSX::FeatureStdExtE);
+  bool IsRVE = false;
   if (Imm < YSXZC::RA || (IsRVE && Imm >= YSXZC::RA_S0_S2))
     return MCDisassembler::Fail;
   Inst.addOperand(MCOperand::createImm(Imm));

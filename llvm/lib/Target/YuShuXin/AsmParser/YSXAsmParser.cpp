@@ -83,7 +83,7 @@ class YSXAsmParser : public MCTargetAsmParser {
 
   SMLoc getLoc() const { return getParser().getTok().getLoc(); }
   bool isRV64() const { return getSTI().hasFeature(YSX::Feature64Bit); }
-  bool isRVE() const { return getSTI().hasFeature(YSX::FeatureStdExtE); }
+  bool isRVE() const { return false; }
   bool enableExperimentalExtension() const {
     return getSTI().hasFeature(YSX::Experimental);
   }
@@ -308,12 +308,11 @@ public:
     setAvailableFeatures(ComputeAvailableFeatures(STI.getFeatureBits()));
 
     auto ABIName = StringRef(Options.ABIName);
-    if (ABIName.ends_with("f") && !getSTI().hasFeature(YSX::YSXDisabledStdExtF)) {
+    if (ABIName.ends_with("f")) {
       errs() << "Hard-float 'f' ABI can't be used for a target that "
                 "doesn't support the F instruction set extension (ignoring "
                 "target-abi)\n";
-    } else if (ABIName.ends_with("d") &&
-               !getSTI().hasFeature(YSX::FeatureStdExtD)) {
+    } else if (ABIName.ends_with("d")) {
       errs() << "Hard-float 'd' ABI can't be used for a target that "
                 "doesn't support the D instruction set extension (ignoring "
                 "target-abi)\n";
@@ -2039,7 +2038,7 @@ bool YSXAsmParser::parseVTypeToken(const AsmToken &Tok, VTypeState &State,
       return true;
 
     if (Fractional) {
-      unsigned ELEN = STI->hasFeature(YSX::FeatureStdExtZve64x) ? 64 : 32;
+      unsigned ELEN = 32;
       unsigned MinLMUL = ELEN / 8;
       if (Lmul > MinLMUL)
         Warning(Tok.getLoc(),
@@ -2108,7 +2107,7 @@ ParseStatus YSXAsmParser::parseVTypeI(OperandVector &Operands) {
 
   YSXVType::VLMUL VLMUL = YSXVType::encodeLMUL(Lmul, Fractional);
   if (Fractional) {
-    unsigned ELEN = STI->hasFeature(YSX::FeatureStdExtZve64x) ? 64 : 32;
+    unsigned ELEN = 32;
     unsigned MaxSEW = ELEN / Lmul;
     // If MaxSEW < 8, we should have printed warning about reserved LMUL.
     if (MaxSEW >= 8 && Sew > MaxSEW)
@@ -2124,12 +2123,6 @@ ParseStatus YSXAsmParser::parseVTypeI(OperandVector &Operands) {
 }
 
 bool YSXAsmParser::generateVTypeError(SMLoc ErrorLoc) {
-  if (STI->hasFeature(YSX::FeatureStdExtZvfbfa) ||
-      STI->hasFeature(YSX::YSXDisabledVendorFeatureXRemovedSfvfbfexp16e))
-    return Error(
-        ErrorLoc,
-        "operand must be "
-        "e[8|8alt|16|16alt|32|64],m[1|2|4|8|f2|f4|f8],[ta|tu],[ma|mu]");
   return Error(
       ErrorLoc,
       "operand must be "
@@ -2151,10 +2144,7 @@ ParseStatus YSXAsmParser::parseMaskReg(OperandVector &Operands) {
 }
 
 ParseStatus YSXAsmParser::parseGPRAsFPR64(OperandVector &Operands) {
-  if (!isRV64() || getSTI().hasFeature(YSX::YSXDisabledStdExtF))
-    return ParseStatus::NoMatch;
-
-  return parseGPRAsFPR(Operands);
+  return ParseStatus::NoMatch;
 }
 
 ParseStatus YSXAsmParser::parseGPRAsFPR(OperandVector &Operands) {
@@ -2169,14 +2159,12 @@ ParseStatus YSXAsmParser::parseGPRAsFPR(OperandVector &Operands) {
   SMLoc S = getLoc();
   SMLoc E = getTok().getEndLoc();
   getLexer().Lex();
-  Operands.push_back(YSXOperand::createReg(
-      Reg, S, E, !getSTI().hasFeature(YSX::YSXDisabledStdExtF)));
+  Operands.push_back(YSXOperand::createReg(Reg, S, E, /*IsFPR=*/false));
   return ParseStatus::Success;
 }
 
 ParseStatus YSXAsmParser::parseGPRPairAsFPR64(OperandVector &Operands) {
-  if (isRV64() || getSTI().hasFeature(YSX::YSXDisabledStdExtF))
-    return ParseStatus::NoMatch;
+  return ParseStatus::NoMatch;
 
   if (getLexer().isNot(AsmToken::Identifier))
     return ParseStatus::NoMatch;
@@ -2193,9 +2181,6 @@ ParseStatus YSXAsmParser::parseGPRPairAsFPR64(OperandVector &Operands) {
   if ((Reg - YSX::X0) & 1) {
     // Only report the even register error if we have at least Zfinx so we know
     // some FP is enabled. We already checked F earlier.
-    if (getSTI().hasFeature(YSX::FeatureStdExtZfinx))
-      return TokError("double precision floating point operands must use even "
-                      "numbered X register");
     return ParseStatus::NoMatch;
   }
 
@@ -2900,9 +2885,7 @@ bool YSXAsmParser::parseDirectiveOption() {
     if (getSTI().getTargetTriple().isYSX64())
       return Error(Tok.getLoc(), "YSX only supports arch string rv64ima");
 
-    getTargetStreamer().emitDirectiveOptionRVC();
-    setFeatureBits(YSX::YSXDisabledStdExtC, "c");
-    return false;
+    return Error(Tok.getLoc(), "YSX only supports arch string rv64ima");
   }
 
   if (Option == "norvc") {
@@ -3040,8 +3023,6 @@ bool YSXAsmParser::parseDirectiveAttribute() {
 static bool isValidInsnFormat(StringRef Format, const MCSubtargetInfo &STI) {
   return StringSwitch<bool>(Format)
       .Cases({"r", "r4", "i", "b", "sb", "u", "j", "uj", "s"}, true)
-      .Cases({"cr", "ci", "ciw", "css", "cl", "cs", "ca", "cb", "cj"},
-             STI.hasFeature(YSX::FeatureStdExtZca))
       .Cases({"qc.eai", "qc.ei", "qc.eb", "qc.ej", "qc.es"},
              !STI.hasFeature(YSX::Feature64Bit))
       .Default(false);
@@ -3097,8 +3078,7 @@ bool YSXAsmParser::parseDirectiveInsn(SMLoc L) {
         return Error(ErrorLoc, "encoding value does not fit into instruction");
     }
 
-    if (!getSTI().hasFeature(YSX::FeatureStdExtZca) &&
-        (EncodingDerivedLength == 2))
+    if (EncodingDerivedLength == 2)
       return Error(ErrorLoc, "compressed instructions are not allowed");
 
     if (getParser().parseEOL("invalid operand for instruction")) {

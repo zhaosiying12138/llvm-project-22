@@ -24,11 +24,6 @@ namespace llvm {
 
 extern const SubtargetFeatureKV YSXFeatureKV[YSX::NumSubtargetFeatures];
 
-namespace YSXSysReg {
-#define GET_SysRegsList_IMPL
-#include "YSXGenSearchableTables.inc"
-} // namespace YSXSysReg
-
 namespace YSXInsnOpcode {
 #define GET_YSXOpcodesList_IMPL
 #include "YSXGenSearchableTables.inc"
@@ -58,7 +53,7 @@ ABI computeTargetABI(const Triple &TT, const FeatureBitset &FeatureBits,
 
   auto TargetABI = getTargetABI(ABIName);
   bool IsRV64 = TT.isArch64Bit();
-  bool IsRVE = FeatureBits[YSX::FeatureStdExtE];
+  bool IsRVE = false;
 
   if (!ABIName.empty() && TargetABI == ABI_Unknown) {
     errs()
@@ -88,7 +83,7 @@ ABI computeTargetABI(const Triple &TT, const FeatureBitset &FeatureBits,
 
   if ((TargetABI == YSXABI::ABI::ABI_ILP32E ||
        (TargetABI == ABI_Unknown && IsRVE && !IsRV64)) &&
-      FeatureBits[YSX::FeatureStdExtD])
+      false)
     reportFatalUsageError("ILP32E cannot be used with the D ISA extension");
 
   if (TargetABI != ABI_Unknown)

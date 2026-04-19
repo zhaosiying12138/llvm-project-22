@@ -220,10 +220,7 @@ void YSXInstPrinter::printVTypeI(const MCInst *MI, unsigned OpNo,
   // above.
   if (YSXVType::getVLMUL(Imm) == YSXVType::VLMUL::LMUL_RESERVED ||
       YSXVType::getSEW(Imm) > 64 ||
-      (YSXVType::isAltFmt(Imm) &&
-       !(STI.hasFeature(YSX::FeatureStdExtZvfbfa) ||
-         STI.hasFeature(YSX::FeatureStdExtZvfofp8min) ||
-         STI.hasFeature(YSX::YSXDisabledVendorFeatureXRemovedSfvfbfexp16e))) ||
+      YSXVType::isAltFmt(Imm) ||
       (Imm >> 9) != 0) {
     O << formatImm(Imm);
     return;

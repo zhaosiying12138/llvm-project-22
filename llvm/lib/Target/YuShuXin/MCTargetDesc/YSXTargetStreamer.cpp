@@ -67,8 +67,8 @@ void YSXTargetStreamer::setTargetABI(YSXABI::ABI ABI) {
 }
 
 void YSXTargetStreamer::setFlagsFromFeatures(const MCSubtargetInfo &STI) {
-  HasRVC = STI.hasFeature(YSX::FeatureStdExtZca);
-  HasTSO = STI.hasFeature(YSX::FeatureStdExtZtso);
+  HasRVC = false;
+  HasTSO = false;
 }
 
 void YSXTargetStreamer::emitTargetAttributes(const MCSubtargetInfo &STI,
@@ -95,9 +95,7 @@ void YSXTargetStreamer::emitTargetAttributes(const MCSubtargetInfo &STI,
 
   if (RiscvAbiAttr && STI.hasFeature(YSX::FeatureStdExtA)) {
     unsigned AtomicABITag;
-    if (STI.hasFeature(YSX::FeatureStdExtZalasr))
-      AtomicABITag = static_cast<unsigned>(RISCVAttrs::RISCVAtomicAbiTag::A7);
-    else if (STI.hasFeature(YSX::FeatureNoTrailingSeqCstFence))
+    if (STI.hasFeature(YSX::FeatureNoTrailingSeqCstFence))
       AtomicABITag =
           static_cast<unsigned>(RISCVAttrs::RISCVAtomicAbiTag::A6C);
     else

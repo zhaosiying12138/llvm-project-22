@@ -16,6 +16,7 @@
 #include "MCTargetDesc/YSXMCTargetDesc.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/MC/MCInstrDesc.h"
@@ -274,9 +275,7 @@ static inline unsigned getVLOpNum(const MCInstrDesc &Desc) {
 
 static inline MCRegister
 getTailExpandUseRegNo(const FeatureBitset &FeatureBits) {
-  // For Zicfilp, PseudoTAIL should be expanded to a software guarded branch.
-  // It means to use t2(x7) as rs1 of JALR to expand PseudoTAIL.
-  return FeatureBits[YSX::FeatureStdExtZicfilp] ? YSX::X7 : YSX::X6;
+  return YSX::X6;
 }
 
 static inline unsigned getSEWOpNum(const MCInstrDesc &Desc) {
@@ -632,9 +631,8 @@ struct SysReg {
   }
 };
 
-#define GET_SysRegEncodings_DECL
-#define GET_SysRegsList_DECL
-#include "YSXGenSearchableTables.inc"
+inline ArrayRef<SysReg> lookupSysRegByEncoding(unsigned) { return {}; }
+inline const SysReg *lookupSysRegByName(StringRef) { return nullptr; }
 } // end namespace YSXSysReg
 
 namespace YSXInsnOpcode {

@@ -68,14 +68,6 @@ def ysx_sw_guarded_tail : RVSDNode<"SW_GUARDED_TAIL", SDT_YSXCall,
 
 def ysx_ret_glue  : RVSDNode<"RET_GLUE", SDTNone,
                                [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]>;
-def ysx_sret_glue : RVSDNode<"SRET_GLUE", SDTNone,
-                               [SDNPHasChain, SDNPOptInGlue]>;
-def ysx_mret_glue : RVSDNode<"MRET_GLUE", SDTNone,
-                               [SDNPHasChain, SDNPOptInGlue]>;
-def ysx_mnret_glue : RVSDNode<"MNRET_GLUE", SDTNone,
-                                [SDNPHasChain, SDNPOptInGlue]>;
-def ysx_mileaveret_glue : RVSDNode<"QC_C_MILEAVERET_GLUE", SDTNone,
-                                     [SDNPHasChain, SDNPOptInGlue]>;
 
 // Select with condition operator - This selects between a true value and
 // a false value (ops #3 and #4) based on the boolean result of comparing
@@ -96,16 +88,6 @@ def ysx_sw_guarded_brind : RVSDNode<"SW_GUARDED_BRIND",
 def ysx_sllw      : RVSDNode<"SLLW", SDT_YSXIntBinOpW>;
 def ysx_sraw      : RVSDNode<"SRAW", SDT_YSXIntBinOpW>;
 def ysx_srlw      : RVSDNode<"SRLW", SDT_YSXIntBinOpW>;
-
-// A read of the 64-bit counter CSR on a 32-bit target (returns (Lo, Hi)).
-// It takes a chain operand and another two target constant operands (the
-// CSR numbers of the low and high parts of the counter).
-def ysx_read_counter_wide : RVSDNode<"READ_COUNTER_WIDE",
-                                       SDTypeProfile<2, 2, [SDTCisVT<0, i32>,
-                                                            SDTCisVT<1, i32>,
-                                                            SDTCisInt<2>,
-                                                            SDTCisInt<3>]>,
-                                       [SDNPHasChain, SDNPSideEffect]>;
 
 // Add the Lo 12 bits from an address. Selected to ADDI.
 def ysx_add_lo : RVSDNode<"ADD_LO", SDTIntBinOp>;
@@ -793,12 +775,6 @@ def FENCE_TSO : RVInstI<0b000, OPC_MISC_MEM, (outs), (ins), "fence.tso", "">, Sc
   let imm12 = {0b1000,0b0011,0b0011};
 }
 
-def FENCE_I : RVInstI<0b001, OPC_MISC_MEM, (outs), (ins), "fence.i", "">, Sched<[]> {
-  let rs1 = 0;
-  let rd = 0;
-  let imm12 = 0;
-}
-
 def ECALL : RVInstI<0b000, OPC_SYSTEM, (outs), (ins), "ecall", "">, Sched<[WriteJmp]> {
   let rs1 = 0;
   let rd = 0;
@@ -825,14 +801,6 @@ def UNIMP : RVInstI<0b001, OPC_SYSTEM, (outs), (ins), "unimp", "">,
 }
 
 } // hasSideEffects = 1, mayLoad = 0, mayStore = 0
-
-def CSRRW : CSR_ir<0b001, "csrrw">;
-def CSRRS : CSR_ir<0b010, "csrrs">;
-def CSRRC : CSR_ir<0b011, "csrrc">;
-
-def CSRRWI : CSR_ii<0b101, "csrrwi">;
-def CSRRSI : CSR_ii<0b110, "csrrsi">;
-def CSRRCI : CSR_ii<0b111, "csrrci">;
 
 /// RV64I instructions
 
@@ -869,99 +837,6 @@ def SRAW  : ALUW_rr<0b0100000, 0b101, "sraw">,
             Sched<[WriteShiftReg32, ReadShiftReg32, ReadShiftReg32]>;
 } // IsSignExtendingOpW = 1
 } // Predicates = [IsRV64]
-
-//===----------------------------------------------------------------------===//
-// Privileged instructions
-//===----------------------------------------------------------------------===//
-
-let isBarrier = 1, isReturn = 1, isTerminator = 1 in {
-def SRET : Priv<"sret", 0b0001000>, Sched<[]> {
-  let rd = 0;
-  let rs1 = 0;
-  let rs2 = 0b00010;
-}
-
-def MRET : Priv<"mret", 0b0011000>, Sched<[]> {
-  let rd = 0;
-  let rs1 = 0;
-  let rs2 = 0b00010;
-}
-
-let Predicates = [HasStdExtSmrnmi] in {
-def MNRET : Priv<"mnret", 0b0111000>, Sched<[]> {
-  let rd = 0;
-  let rs1 = 0;
-  let rs2 = 0b00010;
-}
-}// Predicates = [HasStdExtSmrnmi]
-} // isBarrier = 1, isReturn = 1, isTerminator = 1
-
-
-def WFI : Priv<"wfi", 0b0001000>, Sched<[]> {
-  let rd = 0;
-  let rs1 = 0;
-  let rs2 = 0b00101;
-}
-
-let Predicates = [HasStdExtSvinval] in {
-def SFENCE_W_INVAL : Priv<"sfence.w.inval", 0b0001100>, Sched<[]> {
-  let rd = 0;
-  let rs1 = 0;
-  let rs2 = 0;
-}
-
-def SFENCE_INVAL_IR : Priv<"sfence.inval.ir", 0b0001100>, Sched<[]> {
-  let rd = 0;
-  let rs1 = 0;
-  let rs2 = 0b00001;
-}
-def SINVAL_VMA  : Priv_rr<"sinval.vma", 0b0001011>, Sched<[]>;
-def HINVAL_VVMA : Priv_rr<"hinval.vvma", 0b0010011>, Sched<[]>;
-def HINVAL_GVMA : Priv_rr<"hinval.gvma", 0b0110011>, Sched<[]>;
-} // Predicates = [HasStdExtSvinval]
-
-def SFENCE_VMA  : Priv_rr<"sfence.vma", 0b0001001>, Sched<[]>;
-
-let Predicates = [HasStdExtH] in {
-def HFENCE_VVMA : Priv_rr<"hfence.vvma", 0b0010001>, Sched<[]>;
-def HFENCE_GVMA : Priv_rr<"hfence.gvma", 0b0110001>, Sched<[]>;
-
-def HLV_B   : HLoad_r<0b0110000, 0b00000, "hlv.b">, Sched<[]>;
-def HLV_BU  : HLoad_r<0b0110000, 0b00001, "hlv.bu">, Sched<[]>;
-def HLV_H   : HLoad_r<0b0110010, 0b00000, "hlv.h">, Sched<[]>;
-def HLV_HU  : HLoad_r<0b0110010, 0b00001, "hlv.hu">, Sched<[]>;
-def HLVX_HU : HLoad_r<0b0110010, 0b00011, "hlvx.hu">, Sched<[]>;
-def HLV_W   : HLoad_r<0b0110100, 0b00000, "hlv.w">, Sched<[]>;
-def HLVX_WU : HLoad_r<0b0110100, 0b00011, "hlvx.wu">, Sched<[]>;
-def HSV_B   : HStore_rr<0b0110001, "hsv.b">, Sched<[]>;
-def HSV_H   : HStore_rr<0b0110011, "hsv.h">, Sched<[]>;
-def HSV_W   : HStore_rr<0b0110101, "hsv.w">, Sched<[]>;
-}
-let Predicates = [IsRV64, HasStdExtH] in {
-def HLV_WU  : HLoad_r<0b0110100, 0b00001, "hlv.wu">, Sched<[]>;
-def HLV_D   : HLoad_r<0b0110110, 0b00000, "hlv.d">, Sched<[]>;
-def HSV_D   : HStore_rr<0b0110111, "hsv.d">, Sched<[]>;
-}
-
-let Predicates = [HasStdExtSmctrOrSsctr] in {
-def SCTRCLR : Priv<"sctrclr", 0b0001000>, Sched<[]> {
-  let rd = 0;
-  let rs1 = 0;
-  let rs2 = 0b00100;
-}
-}
-
-//===----------------------------------------------------------------------===//
-// Debug instructions
-//===----------------------------------------------------------------------===//
-
-let isBarrier = 1, isReturn = 1, isTerminator = 1 in {
-def DRET : Priv<"dret", 0b0111101>, Sched<[]> {
-  let rd = 0;
-  let rs1 = 0;
-  let rs2 = 0b10010;
-}
-} // isBarrier = 1, isReturn = 1, isTerminator = 1
 
 //===----------------------------------------------------------------------===//
 // Assembler Pseudo Instructions (User-Level ISA, Version 2.2, Chapter 20)
@@ -1064,44 +939,6 @@ def : InstAlias<"fence", (FENCE 0xF, 0xF)>; // 0xF == iorw
 
 let Predicates = [HasStdExtZihintpause] in
 def : InstAlias<"pause", (FENCE 0x1, 0x0)>; // 0x1 == w
-
-def : InstAlias<"rdinstret $rd", (CSRRS GPR:$rd, INSTRET.Encoding, X0), 2>;
-def : InstAlias<"rdcycle $rd",   (CSRRS GPR:$rd, CYCLE.Encoding, X0), 2>;
-def : InstAlias<"rdtime $rd",    (CSRRS GPR:$rd, TIME.Encoding, X0), 2>;
-
-let Predicates = [IsRV32] in {
-def : InstAlias<"rdinstreth $rd", (CSRRS GPR:$rd, INSTRETH.Encoding, X0), 2>;
-def : InstAlias<"rdcycleh $rd",   (CSRRS GPR:$rd, CYCLEH.Encoding, X0), 2>;
-def : InstAlias<"rdtimeh $rd",    (CSRRS GPR:$rd, TIMEH.Encoding, X0), 2>;
-} // Predicates = [IsRV32]
-
-def : InstAlias<"csrr $rd, $csr", (CSRRS GPR:$rd, csr_sysreg:$csr,      X0)>;
-def : InstAlias<"csrw $csr, $rs", (CSRRW      X0, csr_sysreg:$csr, GPR:$rs)>;
-def : InstAlias<"csrs $csr, $rs", (CSRRS      X0, csr_sysreg:$csr, GPR:$rs)>;
-def : InstAlias<"csrc $csr, $rs", (CSRRC      X0, csr_sysreg:$csr, GPR:$rs)>;
-
-def : InstAlias<"csrwi $csr, $imm", (CSRRWI X0, csr_sysreg:$csr, uimm5:$imm)>;
-def : InstAlias<"csrsi $csr, $imm", (CSRRSI X0, csr_sysreg:$csr, uimm5:$imm)>;
-def : InstAlias<"csrci $csr, $imm", (CSRRCI X0, csr_sysreg:$csr, uimm5:$imm)>;
-
-let EmitPriority = 0 in {
-def : InstAlias<"csrw $csr, $imm", (CSRRWI X0, csr_sysreg:$csr, uimm5:$imm)>;
-def : InstAlias<"csrs $csr, $imm", (CSRRSI X0, csr_sysreg:$csr, uimm5:$imm)>;
-def : InstAlias<"csrc $csr, $imm", (CSRRCI X0, csr_sysreg:$csr, uimm5:$imm)>;
-
-def : InstAlias<"csrrw $rd, $csr, $imm", (CSRRWI GPR:$rd, csr_sysreg:$csr, uimm5:$imm)>;
-def : InstAlias<"csrrs $rd, $csr, $imm", (CSRRSI GPR:$rd, csr_sysreg:$csr, uimm5:$imm)>;
-def : InstAlias<"csrrc $rd, $csr, $imm", (CSRRCI GPR:$rd, csr_sysreg:$csr, uimm5:$imm)>;
-}
-
-def : InstAlias<"sfence.vma",     (SFENCE_VMA      X0, X0), 2>;
-def : InstAlias<"sfence.vma $rs", (SFENCE_VMA GPR:$rs, X0)>;
-
-def : InstAlias<"hfence.gvma",     (HFENCE_GVMA      X0, X0), 2>;
-def : InstAlias<"hfence.gvma $rs", (HFENCE_GVMA GPR:$rs, X0)>;
-
-def : InstAlias<"hfence.vvma",     (HFENCE_VVMA      X0, X0), 2>;
-def : InstAlias<"hfence.vvma $rs", (HFENCE_VVMA GPR:$rs, X0)>;
 
 let Predicates = [HasStdExtZihintntl] in {
   def : InstAlias<"ntl.p1",     (ADD   X0, X0, X2)>;
@@ -1710,11 +1547,6 @@ def PseudoCALL : Pseudo<(outs), (ins call_symbol:$func), [],
 def : Pat<(ysx_call tglobaladdr:$func), (PseudoCALL tglobaladdr:$func)>;
 def : Pat<(ysx_call texternalsym:$func), (PseudoCALL texternalsym:$func)>;
 
-def : Pat<(ysx_sret_glue), (SRET)>;
-def : Pat<(ysx_mret_glue), (MRET)>;
-let Predicates = [HasStdExtSmrnmi] in
-def : Pat<(ysx_mnret_glue), (MNRET)>;
-
 let isCall = 1, Defs = [X1] in {
 let Predicates = [NoStdExtZicfilp] in
 def PseudoCALLIndirect : Pseudo<(outs), (ins GPRJALR:$rs1),
@@ -2035,22 +1867,6 @@ def : LdPat<load, LD, i64>;
 def : StPat<truncstorei32, SW, GPR, i64>;
 def : StPat<store, SD, GPR, i64>;
 } // Predicates = [IsRV64]
-
-// On RV64, we can directly read these 64-bit counter CSRs.
-let Predicates = [IsRV64] in {
-/// readcyclecounter
-def : Pat<(i64 (readcyclecounter)), (CSRRS CYCLE.Encoding, (XLenVT X0))>;
-/// readsteadycounter
-def : Pat<(i64 (readsteadycounter)), (CSRRS TIME.Encoding, (XLenVT X0))>;
-}
-
-// On RV32, ReadCounterWide will be expanded to the suggested loop reading both
-// halves of 64-bit counter CSRs.
-let Predicates = [IsRV32], usesCustomInserter = 1, hasNoSchedulingInfo = 1 in
-def ReadCounterWide : Pseudo<(outs GPR:$lo, GPR:$hi), (ins i32imm:$csr_lo, i32imm:$csr_hi),
-                             [(set GPR:$lo, GPR:$hi,
-                              (ysx_read_counter_wide csr_sysreg:$csr_lo, csr_sysreg:$csr_hi))],
-                             "", "">;
 
 /// traps
 
