@@ -29,7 +29,6 @@ namespace YSXII {
 enum {
   InstFormatPseudo = 0,
   InstFormatR = 1,
-  InstFormatR4 = 2,
   InstFormatI = 3,
   InstFormatS = 4,
   InstFormatB = 5,

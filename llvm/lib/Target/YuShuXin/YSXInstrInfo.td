@@ -979,12 +979,6 @@ def InsnR : DirectiveInsnR<(outs AnyReg:$rd), (ins uimm7_opcode:$opcode, uimm3:$
                                                    uimm7:$funct7, AnyReg:$rs1,
                                                    AnyReg:$rs2),
                            "$opcode, $funct3, $funct7, $rd, $rs1, $rs2">;
-def InsnR4 : DirectiveInsnR4<(outs AnyReg:$rd), (ins uimm7_opcode:$opcode,
-                                                     uimm3:$funct3,
-                                                     uimm2:$funct2,
-                                                     AnyReg:$rs1, AnyReg:$rs2,
-                                                     AnyReg:$rs3),
-                            "$opcode, $funct3, $funct2, $rd, $rs1, $rs2, $rs3">;
 def InsnI : DirectiveInsnI<(outs AnyReg:$rd), (ins uimm7_opcode:$opcode, uimm3:$funct3,
                                                    AnyReg:$rs1, simm12_lo:$imm12),
                            "$opcode, $funct3, $rd, $rs1, $imm12">;
@@ -1017,13 +1011,6 @@ let EmitPriority = 0 in {
 def : InstAlias<".insn_r $opcode, $funct3, $funct7, $rd, $rs1, $rs2",
                 (InsnR AnyReg:$rd, uimm7_opcode:$opcode, uimm3:$funct3, uimm7:$funct7,
                        AnyReg:$rs1, AnyReg:$rs2)>;
-// Accept 4 register form of ".insn r" as alias for ".insn r4".
-def : InstAlias<".insn_r $opcode, $funct3, $funct2, $rd, $rs1, $rs2, $rs3",
-                (InsnR4 AnyReg:$rd, uimm7_opcode:$opcode, uimm3:$funct3, uimm2:$funct2,
-                        AnyReg:$rs1, AnyReg:$rs2, AnyReg:$rs3)>;
-def : InstAlias<".insn_r4 $opcode, $funct3, $funct2, $rd, $rs1, $rs2, $rs3",
-                (InsnR4 AnyReg:$rd, uimm7_opcode:$opcode, uimm3:$funct3, uimm2:$funct2,
-                        AnyReg:$rs1, AnyReg:$rs2, AnyReg:$rs3)>;
 def : InstAlias<".insn_i $opcode, $funct3, $rd, $rs1, $imm12",
                 (InsnI AnyReg:$rd, uimm7_opcode:$opcode, uimm3:$funct3, AnyReg:$rs1,
                        simm12_lo:$imm12)>;

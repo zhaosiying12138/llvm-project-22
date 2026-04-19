@@ -1152,6 +1152,28 @@ ParseStatus YSXAsmParser::parseRegister(OperandVector &Operands,
   return ParseStatus::Success;
 }
 
+static bool isRetainedInsnOpcode(int64_t Opcode) {
+  switch (Opcode) {
+  case 0b0000011: // LOAD
+  case 0b0001111: // MISC_MEM
+  case 0b0010011: // OP_IMM
+  case 0b0010111: // AUIPC
+  case 0b0011011: // OP_IMM_32
+  case 0b0100011: // STORE
+  case 0b0101111: // AMO
+  case 0b0110011: // OP
+  case 0b0110111: // LUI
+  case 0b0111011: // OP_32
+  case 0b1100011: // BRANCH
+  case 0b1100111: // JALR
+  case 0b1101111: // JAL
+  case 0b1110011: // SYSTEM
+    return true;
+  default:
+    return false;
+  }
+}
+
 ParseStatus YSXAsmParser::parseInsnDirectiveOpcode(OperandVector &Operands) {
   SMLoc S = getLoc();
   SMLoc E;
@@ -1173,7 +1195,7 @@ ParseStatus YSXAsmParser::parseInsnDirectiveOpcode(OperandVector &Operands) {
     auto *CE = dyn_cast<MCConstantExpr>(Res);
     if (CE) {
       int64_t Imm = CE->getValue();
-      if (isUInt<7>(Imm)) {
+      if (isRetainedInsnOpcode(Imm)) {
         Operands.push_back(YSXOperand::createExpr(Res, S, E, isRV64()));
         return ParseStatus::Success;
       }
@@ -1188,8 +1210,7 @@ ParseStatus YSXAsmParser::parseInsnDirectiveOpcode(OperandVector &Operands) {
 
     auto Opcode = YSXInsnOpcode::lookupYSXOpcodeByName(Identifier);
     if (Opcode) {
-      assert(isUInt<7>(Opcode->Value) && (Opcode->Value & 0x3) == 3 &&
-             "Unexpected opcode");
+      assert(isRetainedInsnOpcode(Opcode->Value) && "Unexpected opcode");
       Res = MCConstantExpr::create(Opcode->Value, getContext());
       E = SMLoc::getFromPointer(S.getPointer() + Identifier.size());
       Operands.push_back(YSXOperand::createExpr(Res, S, E, isRV64()));
@@ -1204,7 +1225,7 @@ ParseStatus YSXAsmParser::parseInsnDirectiveOpcode(OperandVector &Operands) {
 
   return generateImmOutOfRangeError(
       S, 0, 127,
-      "opcode must be a valid opcode name or an immediate in the range");
+      "opcode must be a retained rv64ima major opcode name or value in the range");
 }
 
 ParseStatus YSXAsmParser::parseExpression(OperandVector &Operands) {
@@ -2050,7 +2071,7 @@ bool YSXAsmParser::parseDirectiveAttribute() {
 
 static bool isValidInsnFormat(StringRef Format, const MCSubtargetInfo &STI) {
   return StringSwitch<bool>(Format)
-      .Cases({"r", "r4", "i", "b", "sb", "u", "j", "uj", "s"}, true)
+      .Cases({"r", "i", "b", "sb", "u", "j", "uj", "s"}, true)
       .Default(false);
 }
 

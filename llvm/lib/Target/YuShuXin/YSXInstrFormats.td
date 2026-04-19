@@ -32,7 +32,6 @@ class InstFormat<bits<5> val> {
 }
 def InstFormatPseudo        : InstFormat<0>;
 def InstFormatR             : InstFormat<1>;
-def InstFormatR4            : InstFormat<2>;
 def InstFormatI             : InstFormat<3>;
 def InstFormatS             : InstFormat<4>;
 def InstFormatB             : InstFormat<5>;
@@ -60,42 +59,19 @@ def lookupYSXOpcodeByName : SearchIndex {
   let Key = [ "Name" ];
 }
 def OPC_LOAD      : YSXOpcode<"LOAD",      0b0000011>;
-def OPC_LOAD_FP   : YSXOpcode<"LOAD_FP",   0b0000111>;
-def OPC_CUSTOM_0  : YSXOpcode<"CUSTOM_0",  0b0001011>;
 def OPC_MISC_MEM  : YSXOpcode<"MISC_MEM",  0b0001111>;
 def OPC_OP_IMM    : YSXOpcode<"OP_IMM",    0b0010011>;
 def OPC_AUIPC     : YSXOpcode<"AUIPC",     0b0010111>;
 def OPC_OP_IMM_32 : YSXOpcode<"OP_IMM_32", 0b0011011>;
 def OPC_STORE     : YSXOpcode<"STORE",     0b0100011>;
-def OPC_STORE_FP  : YSXOpcode<"STORE_FP",  0b0100111>;
-def OPC_CUSTOM_1  : YSXOpcode<"CUSTOM_1",  0b0101011>;
 def OPC_AMO       : YSXOpcode<"AMO",       0b0101111>;
 def OPC_OP        : YSXOpcode<"OP",        0b0110011>;
 def OPC_LUI       : YSXOpcode<"LUI",       0b0110111>;
 def OPC_OP_32     : YSXOpcode<"OP_32",     0b0111011>;
-def OPC_MADD      : YSXOpcode<"MADD",      0b1000011>;
-def OPC_MSUB      : YSXOpcode<"MSUB",      0b1000111>;
-def OPC_NMSUB     : YSXOpcode<"NMSUB",     0b1001011>;
-def OPC_NMADD     : YSXOpcode<"NMADD",     0b1001111>;
-def OPC_OP_FP     : YSXOpcode<"OP_FP",     0b1010011>;
-def OPC_OP_V      : YSXOpcode<"OP_V",      0b1010111>;
-def OPC_CUSTOM_2  : YSXOpcode<"CUSTOM_2",  0b1011011>;
 def OPC_BRANCH    : YSXOpcode<"BRANCH",    0b1100011>;
 def OPC_JALR      : YSXOpcode<"JALR",      0b1100111>;
 def OPC_JAL       : YSXOpcode<"JAL",       0b1101111>;
 def OPC_SYSTEM    : YSXOpcode<"SYSTEM",    0b1110011>;
-def OPC_OP_VE     : YSXOpcode<"OP_VE",     0b1110111>;
-def OPC_CUSTOM_3  : YSXOpcode<"CUSTOM_3",  0b1111011>;
-
-class EltDeps<bit vl, bit mask> {
-  bit VL = vl;
-  bit Mask = mask;
-}
-
-def EltDepsNone      : EltDeps<vl=0, mask=0>;
-def EltDepsVL        : EltDeps<vl=1, mask=0>;
-def EltDepsMask      : EltDeps<vl=0, mask=1>;
-def EltDepsVLMask    : EltDeps<vl=1, mask=1>;
 
 class RVInstCommon<dag outs, dag ins, string opcodestr, string argstr,
                    list<dag> pattern, InstFormat format> : Instruction {
@@ -168,7 +144,7 @@ class PseudoStore<string opcodestr, DAGOperand rsty = GPR>
 }
 
 // Instruction formats are listed in the order they appear in the RISC-V
-// instruction set manual (R, R4, I, S, B, U, J).
+// instruction set manual (R, I, S, B, U, J).
 
 // Common base class for R format instructions. Bits {31-25} should be set by
 // the subclasses.
@@ -199,57 +175,6 @@ class RVInstRAtomic<bits<5> funct5, bit aq, bit rl, bits<3> funct3,
   let Inst{31-27} = funct5;
   let Inst{26} = aq;
   let Inst{25} = rl;
-}
-
-class RVInstRFrm<bits<7> funct7, YSXOpcode opcode, dag outs, dag ins,
-                 string opcodestr, string argstr>
-    : RVInst<outs, ins, opcodestr, argstr, [], InstFormatR> {
-  bits<5> rs2;
-  bits<5> rs1;
-  bits<3> frm;
-  bits<5> rd;
-
-  let Inst{31-25} = funct7;
-  let Inst{24-20} = rs2;
-  let Inst{19-15} = rs1;
-  let Inst{14-12} = frm;
-  let Inst{11-7} = rd;
-  let Inst{6-0} = opcode.Value;
-}
-
-class RVInstR4<bits<2> funct2, bits<3> funct3, YSXOpcode opcode, dag outs,
-               dag ins, string opcodestr, string argstr>
-    : RVInst<outs, ins, opcodestr, argstr, [], InstFormatR4> {
-  bits<5> rs3;
-  bits<5> rs2;
-  bits<5> rs1;
-  bits<5> rd;
-
-  let Inst{31-27} = rs3;
-  let Inst{26-25} = funct2;
-  let Inst{24-20} = rs2;
-  let Inst{19-15} = rs1;
-  let Inst{14-12} = funct3;
-  let Inst{11-7} = rd;
-  let Inst{6-0} = opcode.Value;
-}
-
-class RVInstR4Frm<bits<2> funct2, YSXOpcode opcode, dag outs, dag ins,
-                  string opcodestr, string argstr>
-    : RVInst<outs, ins, opcodestr, argstr, [], InstFormatR4> {
-  bits<5> rs3;
-  bits<5> rs2;
-  bits<5> rs1;
-  bits<3> frm;
-  bits<5> rd;
-
-  let Inst{31-27} = rs3;
-  let Inst{26-25} = funct2;
-  let Inst{24-20} = rs2;
-  let Inst{19-15} = rs1;
-  let Inst{14-12} = frm;
-  let Inst{11-7} = rd;
-  let Inst{6-0} = opcode.Value;
 }
 
 // Common base class for I format instructions. Bits {31-20} should be set by
@@ -394,28 +319,6 @@ class DirectiveInsnR<dag outs, dag ins, string argstr>
   let Inst{6-0} = opcode;
 
   let AsmString = ".insn r " # argstr;
-}
-
-class DirectiveInsnR4<dag outs, dag ins, string argstr>
-  : RVInst<outs, ins, "", "", [], InstFormatR4> {
-  bits<7> opcode;
-  bits<2> funct2;
-  bits<3> funct3;
-
-  bits<5> rs3;
-  bits<5> rs2;
-  bits<5> rs1;
-  bits<5> rd;
-
-  let Inst{31-27} = rs3;
-  let Inst{26-25} = funct2;
-  let Inst{24-20} = rs2;
-  let Inst{19-15} = rs1;
-  let Inst{14-12} = funct3;
-  let Inst{11-7} = rd;
-  let Inst{6-0} = opcode;
-
-  let AsmString = ".insn r4 " # argstr;
 }
 
 class DirectiveInsnI<dag outs, dag ins, string argstr>
