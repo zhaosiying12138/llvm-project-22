@@ -30,12 +30,69 @@ RISCV_FLAGS = [
     "-ffreestanding",
     "-fno-builtin",
 ]
+VERSION_RE = re.compile(r"clang version\s+(\S+)")
+GIT_REV_RE = re.compile(r"\((?P<repo>.+?)\s+(?P<revision>[0-9a-f]{7,40})(?:[^\)]*)?\)")
+INCLUDE_RE = re.compile(r"^\s*#\s*include\b", re.MULTILINE)
+INLINE_ASM_RE = re.compile(r"\b(__asm__|__asm|asm)\b")
+FLOAT_TYPE_RE = re.compile(r"\b(float|double|long\s+double|_Float[0-9A-Za-z]*|__fp16)\b")
+FORBIDDEN_SOURCE_RE = re.compile(
+    r"\b("
+    r"printf|fprintf|sprintf|snprintf|puts|putchar|scanf|fscanf|sscanf|getchar|gets|"
+    r"fread|fwrite|fopen|fclose|fseek|ftell|fflush|malloc|calloc|realloc|free|"
+    r"exit|abort|system|getenv|time|clock|open|close|read|write|lseek|mmap|munmap|"
+    r"pthread_create|pthread_join|pthread_mutex|fork|exec|FILE|stdin|stdout|stderr|argc|argv"
+    r")\b"
+)
+TRAP_OR_CSR_MNEMONICS = {
+    "ecall",
+    "ebreak",
+    "uret",
+    "sret",
+    "mret",
+    "dret",
+    "wfi",
+    "fence.i",
+    "sfence.vma",
+    "sfence.w.inval",
+    "sfence.inval.ir",
+    "sinval.vma",
+    "hfence.vvma",
+    "hfence.gvma",
+    "csrrw",
+    "csrrs",
+    "csrrc",
+    "csrrwi",
+    "csrrsi",
+    "csrrci",
+    "csrr",
+    "csrw",
+    "csrs",
+    "csrc",
+    "csrwi",
+    "csrsi",
+    "csrci",
+    "frcsr",
+    "fscsr",
+    "frrm",
+    "fsrm",
+    "fsrmi",
+    "frflags",
+    "fsflags",
+    "fsflagsi",
+    "rdcycle",
+    "rdcycleh",
+    "rdtime",
+    "rdtimeh",
+    "rdinstret",
+    "rdinstreth",
+}
 BAD_ASM_RE = re.compile(
-    r"(^|\s)(c\.|vset|vle|vse|vadd|vsub|vmul|vdiv|vf|fadd|fsub|fmul|fdiv|"
-    r"fld|fsd|flw|fsw|fmv|fcvt|fsqrt|fsgnj|csrr|csrw|mret|sret|wfi|sfence|"
-    r"fence\.i)\b"
+    r"(^|\s)(c\.|v[a-z0-9_.]*|f(?!ence\b)[a-z0-9_.]*|"
+    r"ecall|ebreak|[usmd]ret|wfi|[sh]?fence\.[a-z0-9_.]+|"
+    r"csr[a-z0-9_.]*|rdcycleh?|rdtimeh?|rdinstreth?)\b"
 )
 BAD_REG_RE = re.compile(r"\b(fa[0-7]|fs[0-9]+|ft[0-9]+|f[0-9]+|v[0-9]+)\b")
+DISASM_RE = re.compile(r"^\s*[0-9a-fA-F]+:\s*(?:[0-9a-fA-F]{2}\s+)*\s*([A-Za-z0-9_.]+)\b(.*)$")
 
 
 def run(cmd, cwd=None, env=None, check=True, capture=True):
@@ -64,6 +121,7 @@ def parse_args():
     parser.add_argument("--repo-root", required=True)
     parser.add_argument("--bench-root", required=True)
     parser.add_argument("--mode", choices=["quick", "full"], default="full")
+    parser.add_argument("--self-test", action="store_true")
     return parser.parse_args()
 
 
@@ -82,6 +140,7 @@ def cmake_cache_subset(build_dir):
     cache_path = Path(build_dir) / "CMakeCache.txt"
     keys = {
         "CMAKE_BUILD_TYPE",
+        "CMAKE_HOME_DIRECTORY",
         "CMAKE_C_COMPILER",
         "CMAKE_CXX_COMPILER",
         "LLVM_CCACHE_BUILD",
@@ -121,6 +180,17 @@ def ldd_footprint(path):
     return {"bytes": total, "libraries": libs}
 
 
+def parse_compiler_version(version_lines):
+    first = version_lines[0] if version_lines else ""
+    version_match = VERSION_RE.search(first)
+    git_match = GIT_REV_RE.search(first)
+    return {
+        "version_token": version_match.group(1) if version_match else "",
+        "source_repository": git_match.group("repo") if git_match else "",
+        "git_revision": git_match.group("revision") if git_match else "",
+    }
+
+
 def compiler_info(label, clang, required, forbidden):
     if not Path(clang).exists():
         raise RuntimeError(f"{label} clang does not exist: {clang}")
@@ -135,10 +205,48 @@ def compiler_info(label, clang, required, forbidden):
     return {
         "path": str(Path(clang).resolve()),
         "version": version,
+        **parse_compiler_version(version),
         "targets_excerpt": [line for line in targets.splitlines() if "riscv" in line or "ysx" in line],
         "executable_bytes": real_size(clang),
         "linked_shared_libraries": ldd_footprint(clang),
     }
+
+
+def find_llvm_tool(compiler, tool, env_name):
+    env_path = os.environ.get(env_name)
+    if env_path:
+        path = Path(env_path)
+        if path.exists():
+            return path
+        raise RuntimeError(f"{env_name} points to a missing tool: {path}")
+    generic_env = os.environ.get(tool.upper().replace("-", "_"))
+    if generic_env:
+        path = Path(generic_env)
+        if path.exists():
+            return path
+        raise RuntimeError(f"{tool} override points to a missing tool: {path}")
+    candidate = Path(compiler).parent / tool
+    if candidate.exists():
+        return candidate
+    fallback = shutil.which(tool)
+    if fallback:
+        return Path(fallback)
+    raise RuntimeError(f"missing {tool} for {compiler}")
+
+
+def compare_compiler_identity(ysx_info, riscv_info):
+    if ysx_info["version_token"] != riscv_info["version_token"]:
+        raise RuntimeError(
+            "compiler version mismatch: "
+            f"YSX={ysx_info['version_token']} RISCV={riscv_info['version_token']}"
+        )
+    if not ysx_info["git_revision"] or not riscv_info["git_revision"]:
+        raise RuntimeError("compiler git revision missing from clang --version")
+    if ysx_info["git_revision"] != riscv_info["git_revision"]:
+        raise RuntimeError(
+            "compiler source revision mismatch: "
+            f"YSX={ysx_info['git_revision']} RISCV={riscv_info['git_revision']}"
+        )
 
 
 def ensure_riscv_build(repo_root):
@@ -190,20 +298,136 @@ def load_benchmarks(bench_root, mode):
     return benches
 
 
+def git_revision(repo_root):
+    proc = run(["git", "-C", str(repo_root), "rev-parse", "HEAD"], check=False)
+    return (proc.stdout or "").strip()
+
+
+def git_dirty(repo_root):
+    proc = run(["git", "-C", str(repo_root), "status", "--porcelain"], check=False)
+    return bool((proc.stdout or "").strip())
+
+
+def strip_c_comments(text):
+    text = re.sub(r"/\*.*?\*/", "", text, flags=re.DOTALL)
+    return re.sub(r"//.*", "", text)
+
+
+def validate_source(source):
+    raw = source.read_text(errors="ignore")
+    text = strip_c_comments(raw)
+    checks = [
+        (INCLUDE_RE, "preprocessor include"),
+        (INLINE_ASM_RE, "inline assembly"),
+        (FLOAT_TYPE_RE, "floating-point type"),
+        (FORBIDDEN_SOURCE_RE, "host/runtime dependency spelling"),
+        (re.compile(r"\b__builtin_[A-Za-z0-9_]+\b"), "compiler builtin"),
+    ]
+    for pattern, reason in checks:
+        match = pattern.search(text)
+        if match:
+            token = match.group(0).replace("\n", " ")
+            raise RuntimeError(f"invalid benchmark source {source}: {reason}: {token}")
+
+
+def bad_mnemonic(mnemonic):
+    mnemonic = mnemonic.lower()
+    if mnemonic == "fence":
+        return False
+    return (
+        mnemonic in TRAP_OR_CSR_MNEMONICS
+        or mnemonic.startswith("c.")
+        or mnemonic.startswith("v")
+        or mnemonic.startswith("f")
+        or mnemonic.startswith("csr")
+        or mnemonic.startswith("sfence.")
+        or mnemonic.startswith("hfence.")
+    )
+
+
+def check_instruction_text(text):
+    bad = []
+    for line in text.splitlines():
+        stripped = line.strip().lower()
+        if not stripped or stripped.startswith(".") or stripped.endswith(":") or stripped.startswith("#"):
+            continue
+        code = stripped.split("#", 1)[0].strip()
+        if BAD_ASM_RE.search(code) or BAD_REG_RE.search(code):
+            bad.append(line.strip())
+    return bad
+
+
 def check_asm(compiler, flags, source, out_dir):
     asm_path = out_dir / (source.stem + ".s")
     cmd = [str(compiler)] + flags + ["-S", str(source), "-o", str(asm_path)]
     run(cmd)
-    bad = []
-    for line in asm_path.read_text(errors="ignore").splitlines():
-        text = line.strip().lower()
-        if not text or text.startswith(".") or text.endswith(":") or text.startswith("#"):
-            continue
-        if BAD_ASM_RE.search(text) or BAD_REG_RE.search(text):
-            bad.append(line.strip())
+    bad = check_instruction_text(asm_path.read_text(errors="ignore"))
     if bad:
         raise RuntimeError(f"non-rv64ima assembly in {source}: {bad[:8]}")
     return asm_path
+
+
+def compile_object(compiler, flags, source, obj_path):
+    run([str(compiler)] + flags + ["-c", str(source), "-o", str(obj_path)])
+    return obj_path
+
+
+def check_undefined_symbols(objdump, obj_path):
+    proc = run([str(objdump), "-t", str(obj_path)])
+    undefined = []
+    for line in proc.stdout.splitlines():
+        if "*UND*" not in line and " UND " not in line:
+            continue
+        parts = line.split()
+        if parts:
+            undefined.append(parts[-1])
+    if undefined:
+        raise RuntimeError(f"undefined external symbols in {obj_path}: {undefined[:8]}")
+
+
+def check_disassembly(objdump, obj_path):
+    proc = run([str(objdump), "-d", "--no-show-raw-insn", str(obj_path)], check=False)
+    if proc.returncode != 0:
+        return
+    bad = []
+    for line in proc.stdout.splitlines():
+        match = DISASM_RE.match(line)
+        if not match:
+            continue
+        mnemonic = match.group(1).lower()
+        operands = match.group(2).lower()
+        if bad_mnemonic(mnemonic) or BAD_REG_RE.search(operands):
+            bad.append(line.strip())
+    if bad:
+        raise RuntimeError(f"non-rv64ima disassembly in {obj_path}: {bad[:8]}")
+
+
+def validate_benchmark(compiler, flags, objdump, source, out_dir):
+    validate_source(source)
+    check_asm(compiler, flags, source, out_dir)
+    obj_path = out_dir / (source.stem + ".validation.o")
+    compile_object(compiler, flags, source, obj_path)
+    check_undefined_symbols(objdump, obj_path)
+    check_disassembly(objdump, obj_path)
+
+
+def run_negative_self_tests(bench_root, compilers, work_dir):
+    negative_dir = bench_root / "tests" / "negative"
+    fixtures = sorted(negative_dir.glob("*.c"))
+    if not fixtures:
+        raise RuntimeError(f"missing negative fixtures under {negative_dir}")
+    accepted = []
+    for fixture in fixtures:
+        for compiler_name, compiler, flags, objdump in compilers:
+            out_dir = work_dir / "self-test" / compiler_name.lower() / fixture.stem
+            out_dir.mkdir(parents=True, exist_ok=True)
+            try:
+                validate_benchmark(compiler, flags, objdump, fixture, out_dir)
+            except RuntimeError:
+                continue
+            accepted.append(f"{compiler_name}:{fixture.name}")
+    if accepted:
+        raise RuntimeError(f"negative fixtures were accepted: {accepted}")
 
 
 def timed_compile(compiler, flags, source, obj_path):
@@ -336,6 +560,7 @@ def generate_reports(results_dir, bench_root, env_info, sample_rows, summary_row
     build_rows = []
     for compiler in ["YSX", "RISCV"]:
         cache = env_info["builds"].get(compiler, {})
+        revision = env_info["compilers"][compiler].get("git_revision", "")
         build_rows.append(
             [
                 f"{compiler}-only",
@@ -343,6 +568,7 @@ def generate_reports(results_dir, bench_root, env_info, sample_rows, summary_row
                 cache.get("LLVM_ENABLE_PROJECTS", ""),
                 cache.get("CMAKE_BUILD_TYPE", ""),
                 cache.get("LLVM_CCACHE_BUILD", ""),
+                revision[:12],
             ]
         )
 
@@ -369,10 +595,12 @@ def generate_reports(results_dir, bench_root, env_info, sample_rows, summary_row
         "- 优化参数：`-O2 -ffreestanding -fno-builtin -c`\n"
         "- YSX target：`--target=ysx64-unknown-elf -march=rv64ima -mabi=lp64`\n"
         "- RISCV target：`--target=riscv64-unknown-elf -march=rv64ima -mabi=lp64`\n"
-        "- 指令范围检查：生成 assembly 后扫描并拒绝 FP、V、C、特权/system 等非 rv64ima 指令\n\n"
+        "- 指令范围检查：扫描 assembly，检查 object symbol table，并在工具可反汇编时补充 object disassembly；"
+        "拒绝 FP、V、C、特权/system 等非 rv64ima 指令\n"
+        f"- 负向自测：`{env_info['negative_fixture_count']}` 个 fixture 覆盖 include、libc、inline asm、FP、V/C 指令和 undefined symbol\n\n"
         "## 构建配置\n\n"
         + markdown_table(
-            ["Compiler", "LLVM targets", "Projects", "Build type", "CCache"],
+            ["Compiler", "LLVM targets", "Projects", "Build type", "CCache", "Source rev"],
             build_rows,
         )
         + "\n\n"
@@ -438,18 +666,31 @@ def main():
     default_ysx = Path("/home/zhaosiying/codebase/compiler/build_ysx_only_host_llvm/bin/clang")
     ysx_clang = Path(os.environ.get("YSX_CLANG", default_ysx))
     riscv_clang = ensure_riscv_build(repo_root)
-    objdump = Path(os.environ.get("LLVM_OBJDUMP", ysx_clang.parent / "llvm-objdump"))
-    if not objdump.exists():
-        objdump = Path(shutil.which("llvm-objdump") or "")
+    ysx_objdump = find_llvm_tool(ysx_clang, "llvm-objdump", "YSX_LLVM_OBJDUMP")
+    riscv_objdump = find_llvm_tool(riscv_clang, "llvm-objdump", "RISCV_LLVM_OBJDUMP")
 
     ysx_info = compiler_info("YSX", str(ysx_clang), ["ysx64"], ["riscv64"])
     riscv_info = compiler_info("RISCV", str(riscv_clang), ["riscv64"], ["ysx64"])
-    if ysx_info["version"][0].split()[2] != riscv_info["version"][0].split()[2]:
-        raise RuntimeError("compiler version mismatch")
+    compare_compiler_identity(ysx_info, riscv_info)
 
     benches = load_benchmarks(bench_root, args.mode)
     results_dir = bench_root / "results" / "latest"
     work_dir = bench_root / "results" / "work"
+    self_test_dir = bench_root / "results" / "self-test"
+    if self_test_dir.exists():
+        shutil.rmtree(self_test_dir)
+    self_test_dir.mkdir(parents=True)
+    negative_fixture_count = len(list((bench_root / "tests" / "negative").glob("*.c")))
+
+    compilers = [
+        ("YSX", ysx_clang, YSX_FLAGS, ysx_objdump),
+        ("RISCV", riscv_clang, RISCV_FLAGS, riscv_objdump),
+    ]
+    run_negative_self_tests(bench_root, compilers, self_test_dir)
+    if args.self_test:
+        print(f"negative self-tests passed using {negative_fixture_count} fixtures")
+        return
+
     if results_dir.exists():
         shutil.rmtree(results_dir)
     if work_dir.exists():
@@ -464,7 +705,10 @@ def main():
         "host": platform.platform(),
         "python": sys.version.split()[0],
         "repo_root": str(repo_root),
+        "repo_revision": git_revision(repo_root),
+        "repo_dirty": git_dirty(repo_root),
         "bench_root": str(bench_root),
+        "negative_fixture_count": negative_fixture_count,
         "flags": {"YSX": YSX_FLAGS, "RISCV": RISCV_FLAGS},
         "compilers": {"YSX": ysx_info, "RISCV": riscv_info},
         "builds": {
@@ -475,25 +719,22 @@ def main():
             "cmake": tool_version(["cmake", "--version"]),
             "ninja": tool_version(["ninja", "--version"]),
             "time": "/usr/bin/time",
-            "llvm_objdump": str(objdump) if objdump else "",
+            "ysx_llvm_objdump": str(ysx_objdump),
+            "riscv_llvm_objdump": str(riscv_objdump),
         },
     }
 
     sample_rows = []
     summary_rows = []
-    compilers = [
-        ("YSX", ysx_clang, YSX_FLAGS),
-        ("RISCV", riscv_clang, RISCV_FLAGS),
-    ]
 
     for bench in benches:
         source = bench_root / "benchmarks" / bench["path"]
         if not source.exists():
             raise RuntimeError(f"missing benchmark source: {source}")
-        for compiler_name, compiler, flags in compilers:
+        for compiler_name, compiler, flags, objdump in compilers:
             out_dir = work_dir / compiler_name.lower() / bench["name"]
             out_dir.mkdir(parents=True, exist_ok=True)
-            check_asm(compiler, flags, source, out_dir)
+            validate_benchmark(compiler, flags, objdump, source, out_dir)
             warm_obj = out_dir / "warmup.o"
             timed_compile(compiler, flags, source, warm_obj)
             samples = []
