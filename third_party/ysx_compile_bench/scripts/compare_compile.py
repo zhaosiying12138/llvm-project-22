@@ -279,6 +279,9 @@ def generate_reports(results_dir, bench_root, env_info, sample_rows, summary_row
             r = float(compilers["RISCV"]["wall_median_s"])
             ratios.append(y / r if r else 0.0)
     ratio_summary = summarize(ratios)
+    improvement_summary = {
+        key: 100.0 * (1.0 - value) for key, value in ratio_summary.items()
+    }
     benchmark_count = len(paired)
 
     rows = []
@@ -286,12 +289,13 @@ def generate_reports(results_dir, bench_root, env_info, sample_rows, summary_row
         y = paired[name]["YSX"]
         r = paired[name]["RISCV"]
         ratio = float(y["wall_median_s"]) / float(r["wall_median_s"])
+        improvement = 100.0 * (1.0 - ratio)
         rows.append([
             name,
             y["suite"],
             f'{float(y["wall_median_s"]) * 1000:.3f}',
             f'{float(r["wall_median_s"]) * 1000:.3f}',
-            f"{ratio:.3f}x",
+            f"{improvement:.2f}%",
             y["object_bytes"],
             r["object_bytes"],
         ])
@@ -304,9 +308,9 @@ def generate_reports(results_dir, bench_root, env_info, sample_rows, summary_row
         f"- Iterations per benchmark/compiler: {env_info['iterations']}\n"
         f"- YSX median across benchmarks: {aggregate['YSX']['median'] * 1000:.3f} ms\n"
         f"- RISCV median across benchmarks: {aggregate['RISCV']['median'] * 1000:.3f} ms\n"
-        f"- Median YSX/RISCV per-benchmark ratio: {ratio_summary['median']:.3f}x\n\n"
+        f"- Median YSX compile-time improvement over RISCV: {improvement_summary['median']:.2f}%\n\n"
         + markdown_table(
-            ["Benchmark", "Suite", "YSX ms", "RISCV ms", "YSX/RISCV", "YSX .o", "RISCV .o"],
+            ["Benchmark", "Suite", "YSX ms", "RISCV ms", "YSX improvement", "YSX .o", "RISCV .o"],
             rows,
         )
         + "\n",
@@ -392,12 +396,12 @@ def generate_reports(results_dir, bench_root, env_info, sample_rows, summary_row
         "这不会单独解释全部耗时差异，但它会影响进程启动、代码页加载和指令缓存压力。\n\n"
         "## 编译耗时结果\n\n"
         + markdown_table(
-            ["Benchmark", "Suite", "YSX median ms", "RISCV median ms", "YSX/RISCV", "YSX .o", "RISCV .o"],
+            ["Benchmark", "Suite", "YSX median ms", "RISCV median ms", "YSX 提升", "YSX .o", "RISCV .o"],
             rows,
         )
         + "\n\n"
-        f"跨测试的 per-benchmark median 比值为 `{ratio_summary['median']:.3f}x`，"
-        f"{speed_sentence}"
+        f"跨测试的 per-benchmark median 口径下，YSX 相对 RISCV 的编译耗时性能提升为 "
+        f"`{improvement_summary['median']:.2f}%`。{speed_sentence}"
         "更完整的原始样本在 `results/latest/raw_samples.csv`，汇总在 "
         "`results/latest/summary.csv` 和 `results/latest/summary.json`。\n\n"
         "## 差异来源分析\n\n"

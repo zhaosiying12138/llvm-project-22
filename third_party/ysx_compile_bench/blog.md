@@ -10,7 +10,7 @@
 
 ## 方法
 
-- 生成时间：`2026-04-20T01:42:22.933230+00:00`
+- 生成时间：`2026-04-20T01:44:56.552480+00:00`
 - 主机：`Linux-6.5.0-microsoft-standard-WSL2+-x86_64-with-glibc2.38`
 - 重复次数：每个测试、每个编译器 `30` 次，先预热再测量
 - 缓存策略：暖缓存，减少 I/O 抖动，保留真实进程启动成本
@@ -37,30 +37,30 @@ YSX-only clang 可执行文件比 RISCV-only clang 小约 `8.85%`。这不会单
 
 ## 编译耗时结果
 
-| Benchmark | Suite | YSX median ms | RISCV median ms | YSX/RISCV | YSX .o | RISCV .o |
+| Benchmark | Suite | YSX median ms | RISCV median ms | YSX 提升 | YSX .o | RISCV .o |
 |---|---|---|---|---|---|---|
-| atax_i32 | polybench_style | 14.808 | 18.612 | 0.796x | 1568 | 1608 |
-| bicg_i32 | polybench_style | 15.117 | 17.452 | 0.866x | 1560 | 1600 |
-| bitmix_sha_style | embench_style | 14.256 | 18.455 | 0.772x | 1328 | 1360 |
-| convolution2d_i32 | polybench_style | 21.957 | 24.484 | 0.897x | 1816 | 1856 |
-| crc32_slice | embench_style | 14.769 | 18.760 | 0.787x | 1360 | 1400 |
-| dijkstra_i32 | embench_style | 17.067 | 20.086 | 0.850x | 2080 | 2112 |
-| doitgen_i32 | polybench_style | 16.284 | 19.385 | 0.840x | 1808 | 1848 |
-| fir_i32 | embench_style | 15.595 | 16.941 | 0.921x | 1672 | 1632 |
-| fixed_butterfly_i32 | embench_style | 18.010 | 20.041 | 0.899x | 1928 | 1968 |
-| floyd_warshall_i32 | polybench_style | 14.052 | 17.081 | 0.823x | 1744 | 1784 |
-| gemm_i32 | polybench_style | 14.815 | 17.715 | 0.836x | 1728 | 1768 |
-| insertion_sort | embench_style | 12.665 | 16.675 | 0.759x | 1496 | 1536 |
-| jacobi_1d_i32 | polybench_style | 15.673 | 17.941 | 0.874x | 1504 | 1544 |
-| levenshtein_i32 | embench_style | 17.086 | 20.449 | 0.836x | 1968 | 1952 |
-| matmul_i32 | embench_style | 13.866 | 16.861 | 0.822x | 1352 | 1392 |
-| montgomery64 | embench_style | 12.280 | 15.826 | 0.776x | 1440 | 1480 |
-| mvt_i32 | polybench_style | 14.977 | 19.402 | 0.772x | 1408 | 1448 |
-| seidel_2d_i32 | polybench_style | 17.168 | 20.967 | 0.819x | 1720 | 1792 |
-| state_machine | embench_style | 15.407 | 17.950 | 0.858x | 2472 | 2512 |
-| trisolv_i32 | polybench_style | 14.415 | 18.531 | 0.778x | 1496 | 1488 |
+| atax_i32 | polybench_style | 15.062 | 18.213 | 17.30% | 1568 | 1608 |
+| bicg_i32 | polybench_style | 14.492 | 18.634 | 22.23% | 1560 | 1600 |
+| bitmix_sha_style | embench_style | 13.984 | 17.004 | 17.76% | 1328 | 1360 |
+| convolution2d_i32 | polybench_style | 20.519 | 23.304 | 11.95% | 1816 | 1856 |
+| crc32_slice | embench_style | 14.755 | 18.137 | 18.65% | 1360 | 1400 |
+| dijkstra_i32 | embench_style | 16.000 | 20.097 | 20.38% | 2080 | 2112 |
+| doitgen_i32 | polybench_style | 15.854 | 18.609 | 14.80% | 1808 | 1848 |
+| fir_i32 | embench_style | 14.361 | 17.349 | 17.22% | 1672 | 1632 |
+| fixed_butterfly_i32 | embench_style | 18.662 | 20.788 | 10.23% | 1928 | 1968 |
+| floyd_warshall_i32 | polybench_style | 13.404 | 16.832 | 20.36% | 1744 | 1784 |
+| gemm_i32 | polybench_style | 14.501 | 17.518 | 17.22% | 1728 | 1768 |
+| insertion_sort | embench_style | 13.052 | 16.466 | 20.73% | 1496 | 1536 |
+| jacobi_1d_i32 | polybench_style | 14.695 | 18.536 | 20.72% | 1504 | 1544 |
+| levenshtein_i32 | embench_style | 18.729 | 20.848 | 10.17% | 1968 | 1952 |
+| matmul_i32 | embench_style | 15.058 | 17.223 | 12.57% | 1352 | 1392 |
+| montgomery64 | embench_style | 12.264 | 16.617 | 26.19% | 1440 | 1480 |
+| mvt_i32 | polybench_style | 14.906 | 17.729 | 15.92% | 1408 | 1448 |
+| seidel_2d_i32 | polybench_style | 18.010 | 20.073 | 10.28% | 1720 | 1792 |
+| state_machine | embench_style | 14.061 | 17.865 | 21.29% | 2472 | 2512 |
+| trisolv_i32 | polybench_style | 14.315 | 17.315 | 17.33% | 1496 | 1488 |
 
-跨测试的 per-benchmark median 比值为 `0.829x`，按这个口径 YSX-only clang 的端到端编译时间约减少 `17.09%`。更完整的原始样本在 `results/latest/raw_samples.csv`，汇总在 `results/latest/summary.csv` 和 `results/latest/summary.json`。
+跨测试的 per-benchmark median 口径下，YSX 相对 RISCV 的编译耗时性能提升为 `17.31%`。按这个口径 YSX-only clang 的端到端编译时间约减少 `17.31%`。更完整的原始样本在 `results/latest/raw_samples.csv`，汇总在 `results/latest/summary.csv` 和 `results/latest/summary.json`。
 
 ## 差异来源分析
 
