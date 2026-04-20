@@ -43,54 +43,173 @@ FORBIDDEN_SOURCE_RE = re.compile(
     r"pthread_create|pthread_join|pthread_mutex|fork|exec|FILE|stdin|stdout|stderr|argc|argv"
     r")\b"
 )
-TRAP_OR_CSR_MNEMONICS = {
-    "ecall",
-    "ebreak",
-    "uret",
-    "sret",
-    "mret",
-    "dret",
-    "wfi",
-    "fence.i",
-    "sfence.vma",
-    "sfence.w.inval",
-    "sfence.inval.ir",
-    "sinval.vma",
-    "hfence.vvma",
-    "hfence.gvma",
-    "csrrw",
-    "csrrs",
-    "csrrc",
-    "csrrwi",
-    "csrrsi",
-    "csrrci",
-    "csrr",
-    "csrw",
-    "csrs",
-    "csrc",
-    "csrwi",
-    "csrsi",
-    "csrci",
-    "frcsr",
-    "fscsr",
-    "frrm",
-    "fsrm",
-    "fsrmi",
-    "frflags",
-    "fsflags",
-    "fsflagsi",
-    "rdcycle",
-    "rdcycleh",
-    "rdtime",
-    "rdtimeh",
-    "rdinstret",
-    "rdinstreth",
+RV64IMA_ALLOWED_MNEMONICS = {
+    "add",
+    "addi",
+    "addiw",
+    "addw",
+    "amoadd.d",
+    "amoadd.w",
+    "amoand.d",
+    "amoand.w",
+    "amomax.d",
+    "amomax.w",
+    "amomaxu.d",
+    "amomaxu.w",
+    "amomin.d",
+    "amomin.w",
+    "amominu.d",
+    "amominu.w",
+    "amoor.d",
+    "amoor.w",
+    "amoswap.d",
+    "amoswap.w",
+    "amoxor.d",
+    "amoxor.w",
+    "and",
+    "andi",
+    "auipc",
+    "beq",
+    "beqz",
+    "bge",
+    "bgez",
+    "bgeu",
+    "bgt",
+    "bgtu",
+    "bgtz",
+    "ble",
+    "bleu",
+    "blez",
+    "blt",
+    "bltu",
+    "bltz",
+    "bne",
+    "bnez",
+    "call",
+    "div",
+    "divu",
+    "divuw",
+    "divw",
+    "fence",
+    "j",
+    "jal",
+    "jalr",
+    "jr",
+    "la",
+    "lb",
+    "lbu",
+    "ld",
+    "lh",
+    "lhu",
+    "li",
+    "lla",
+    "lr.d",
+    "lr.w",
+    "lui",
+    "lw",
+    "lwu",
+    "mul",
+    "mulh",
+    "mulhsu",
+    "mulhu",
+    "mulw",
+    "mv",
+    "neg",
+    "negw",
+    "nop",
+    "not",
+    "or",
+    "ori",
+    "rem",
+    "remu",
+    "remuw",
+    "remw",
+    "ret",
+    "sb",
+    "sc.d",
+    "sc.w",
+    "sd",
+    "seqz",
+    "sext.b",
+    "sext.h",
+    "sext.w",
+    "sgtz",
+    "sh",
+    "sll",
+    "slli",
+    "slliw",
+    "sllw",
+    "slt",
+    "slti",
+    "sltiu",
+    "sltu",
+    "sltz",
+    "snez",
+    "sra",
+    "srai",
+    "sraiw",
+    "sraw",
+    "srl",
+    "srli",
+    "srliw",
+    "srlw",
+    "sub",
+    "subw",
+    "sw",
+    "tail",
+    "xor",
+    "xori",
+    "zext.b",
+    "zext.h",
+    "zext.w",
 }
-BAD_ASM_RE = re.compile(
-    r"(^|\s)(c\.|v[a-z0-9_.]*|f(?!ence\b)[a-z0-9_.]*|"
-    r"ecall|ebreak|[usmd]ret|wfi|[sh]?fence\.[a-z0-9_.]+|"
-    r"csr[a-z0-9_.]*|rdcycleh?|rdtimeh?|rdinstreth?)\b"
-)
+RV64IMA_ATOMIC_BASES = {
+    "amoadd",
+    "amoand",
+    "amomax",
+    "amomaxu",
+    "amomin",
+    "amominu",
+    "amoor",
+    "amoswap",
+    "amoxor",
+    "lr",
+    "sc",
+}
+EXPECTED_NEGATIVE_FIXTURES = {
+    "compressed_inline.c": "inline assembly",
+    "floating_point.c": "floating-point type",
+    "include_stdio.c": "preprocessor include",
+    "inline_ecall.c": "inline assembly",
+    "libc_printf.c": "host/runtime dependency spelling",
+    "undefined_external.c": "undefined external symbols",
+    "vector_inline.c": "inline assembly",
+}
+BAD_ISA_SNIPPETS = {
+    "zbb_clz": "clz a0, a0",
+    "zbb_ctz": "ctz a0, a0",
+    "zbb_cpop": "cpop a0, a0",
+    "zbb_andn": "andn a0, a0, a1",
+    "zbb_orn": "orn a0, a0, a1",
+    "zbb_xnor": "xnor a0, a0, a1",
+    "zba_sh1add": "sh1add a0, a0, a1",
+    "zbc_clmul": "clmul a0, a0, a1",
+    "fp_fadd": "fadd.d fa0, fa0, fa1",
+    "vector_vsetvli": "vsetvli zero, zero, e8, m1, ta, ma",
+    "compressed_nop": "c.nop",
+    "system_ecall": "ecall",
+    "system_ebreak": "ebreak",
+    "csr_read": "csrr a0, cycle",
+}
+GOOD_ISA_SNIPPETS = {
+    "addi": "addi a0, a0, 1",
+    "mul": "mul a0, a0, a1",
+    "branch_alias": "blez a0, .Ldone",
+    "ret_alias": "ret",
+    "atomic": "amoadd.w.aqrl a0, a1, (a2)",
+    "zext_byte_alias": "zext.b a0, a0",
+    "zext_alias": "zext.w a0, a0",
+}
 BAD_REG_RE = re.compile(r"\b(fa[0-7]|fs[0-9]+|ft[0-9]+|f[0-9]+|v[0-9]+)\b")
 DISASM_RE = re.compile(r"^\s*[0-9a-fA-F]+:\s*(?:[0-9a-fA-F]{2}\s+)*\s*([A-Za-z0-9_.]+)\b(.*)$")
 
@@ -330,29 +449,49 @@ def validate_source(source):
             raise RuntimeError(f"invalid benchmark source {source}: {reason}: {token}")
 
 
-def bad_mnemonic(mnemonic):
+def canonical_mnemonic(mnemonic):
     mnemonic = mnemonic.lower()
-    if mnemonic == "fence":
-        return False
-    return (
-        mnemonic in TRAP_OR_CSR_MNEMONICS
-        or mnemonic.startswith("c.")
-        or mnemonic.startswith("v")
-        or mnemonic.startswith("f")
-        or mnemonic.startswith("csr")
-        or mnemonic.startswith("sfence.")
-        or mnemonic.startswith("hfence.")
-    )
+    for suffix in (".aqrl", ".aq", ".rl"):
+        if mnemonic.endswith(suffix):
+            mnemonic = mnemonic[: -len(suffix)]
+            break
+    return mnemonic
+
+
+def is_allowed_rv64ima_mnemonic(mnemonic):
+    canonical = canonical_mnemonic(mnemonic)
+    if canonical in RV64IMA_ALLOWED_MNEMONICS:
+        return True
+    parts = canonical.split(".")
+    if len(parts) == 2 and parts[0] in RV64IMA_ATOMIC_BASES and parts[1] in {"w", "d"}:
+        return True
+    return False
+
+
+def parse_asm_instruction(line):
+    code = line.split("#", 1)[0].strip()
+    if not code or code.startswith("."):
+        return None, ""
+    if code.endswith(":"):
+        return None, ""
+    if ":" in code:
+        _, code = code.split(":", 1)
+        code = code.strip()
+        if not code:
+            return None, ""
+    parts = code.split(None, 1)
+    if not parts:
+        return None, ""
+    return parts[0].rstrip(",").lower(), parts[1].lower() if len(parts) > 1 else ""
 
 
 def check_instruction_text(text):
     bad = []
     for line in text.splitlines():
-        stripped = line.strip().lower()
-        if not stripped or stripped.startswith(".") or stripped.endswith(":") or stripped.startswith("#"):
+        mnemonic, operands = parse_asm_instruction(line)
+        if not mnemonic:
             continue
-        code = stripped.split("#", 1)[0].strip()
-        if BAD_ASM_RE.search(code) or BAD_REG_RE.search(code):
+        if not is_allowed_rv64ima_mnemonic(mnemonic) or BAD_REG_RE.search(operands):
             bad.append(line.strip())
     return bad
 
@@ -396,7 +535,7 @@ def check_disassembly(objdump, obj_path):
             continue
         mnemonic = match.group(1).lower()
         operands = match.group(2).lower()
-        if bad_mnemonic(mnemonic) or BAD_REG_RE.search(operands):
+        if not is_allowed_rv64ima_mnemonic(mnemonic) or BAD_REG_RE.search(operands):
             bad.append(line.strip())
     if bad:
         raise RuntimeError(f"non-rv64ima disassembly in {obj_path}: {bad[:8]}")
@@ -416,18 +555,31 @@ def run_negative_self_tests(bench_root, compilers, work_dir):
     fixtures = sorted(negative_dir.glob("*.c"))
     if not fixtures:
         raise RuntimeError(f"missing negative fixtures under {negative_dir}")
-    accepted = []
+    problems = []
     for fixture in fixtures:
+        expected = EXPECTED_NEGATIVE_FIXTURES.get(fixture.name)
+        if not expected:
+            problems.append(f"{fixture.name}: missing expected rejection category")
+            continue
         for compiler_name, compiler, flags, objdump in compilers:
             out_dir = work_dir / "self-test" / compiler_name.lower() / fixture.stem
             out_dir.mkdir(parents=True, exist_ok=True)
             try:
                 validate_benchmark(compiler, flags, objdump, fixture, out_dir)
-            except RuntimeError:
+            except RuntimeError as exc:
+                if expected not in str(exc):
+                    problems.append(f"{compiler_name}:{fixture.name}: unexpected rejection: {exc}")
                 continue
-            accepted.append(f"{compiler_name}:{fixture.name}")
-    if accepted:
-        raise RuntimeError(f"negative fixtures were accepted: {accepted}")
+            problems.append(f"{compiler_name}:{fixture.name}: accepted")
+    for name, snippet in BAD_ISA_SNIPPETS.items():
+        if not check_instruction_text(f"\t{snippet}\n"):
+            problems.append(f"bad ISA snippet accepted: {name}: {snippet}")
+    for name, snippet in GOOD_ISA_SNIPPETS.items():
+        bad = check_instruction_text(f"\t{snippet}\n")
+        if bad:
+            problems.append(f"good ISA snippet rejected: {name}: {bad}")
+    if problems:
+        raise RuntimeError(f"negative self-test failures: {problems}")
 
 
 def timed_compile(compiler, flags, source, obj_path):
@@ -597,7 +749,9 @@ def generate_reports(results_dir, bench_root, env_info, sample_rows, summary_row
         "- RISCV target：`--target=riscv64-unknown-elf -march=rv64ima -mabi=lp64`\n"
         "- 指令范围检查：扫描 assembly，检查 object symbol table，并在工具可反汇编时补充 object disassembly；"
         "拒绝 FP、V、C、特权/system 等非 rv64ima 指令\n"
-        f"- 负向自测：`{env_info['negative_fixture_count']}` 个 fixture 覆盖 include、libc、inline asm、FP、V/C 指令和 undefined symbol\n\n"
+        f"- 负向自测：`{env_info['negative_fixture_count']}` 个源码 fixture 加 "
+        f"`{env_info['bad_isa_snippet_count']}` 个非法 ISA snippet，覆盖 include、libc、inline asm、FP、"
+        "V/C/system/Zb/Zbc 指令和 undefined symbol\n\n"
         "## 构建配置\n\n"
         + markdown_table(
             ["Compiler", "LLVM targets", "Projects", "Build type", "CCache", "Source rev"],
@@ -681,6 +835,8 @@ def main():
         shutil.rmtree(self_test_dir)
     self_test_dir.mkdir(parents=True)
     negative_fixture_count = len(list((bench_root / "tests" / "negative").glob("*.c")))
+    bad_isa_snippet_count = len(BAD_ISA_SNIPPETS)
+    good_isa_snippet_count = len(GOOD_ISA_SNIPPETS)
 
     compilers = [
         ("YSX", ysx_clang, YSX_FLAGS, ysx_objdump),
@@ -688,7 +844,10 @@ def main():
     ]
     run_negative_self_tests(bench_root, compilers, self_test_dir)
     if args.self_test:
-        print(f"negative self-tests passed using {negative_fixture_count} fixtures")
+        print(
+            "negative self-tests passed using "
+            f"{negative_fixture_count} fixtures and {bad_isa_snippet_count} bad ISA snippets"
+        )
         return
 
     if results_dir.exists():
@@ -709,6 +868,8 @@ def main():
         "repo_dirty": git_dirty(repo_root),
         "bench_root": str(bench_root),
         "negative_fixture_count": negative_fixture_count,
+        "bad_isa_snippet_count": bad_isa_snippet_count,
+        "good_isa_snippet_count": good_isa_snippet_count,
         "flags": {"YSX": YSX_FLAGS, "RISCV": RISCV_FLAGS},
         "compilers": {"YSX": ysx_info, "RISCV": riscv_info},
         "builds": {

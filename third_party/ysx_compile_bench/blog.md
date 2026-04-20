@@ -10,7 +10,7 @@
 
 ## 方法
 
-- 生成时间：`2026-04-20T02:05:23.500591+00:00`
+- 生成时间：`2026-04-20T02:18:13.468137+00:00`
 - 主机：`Linux-6.5.0-microsoft-standard-WSL2+-x86_64-with-glibc2.38`
 - 重复次数：每个测试、每个编译器 `30` 次，先预热再测量
 - 缓存策略：暖缓存，减少 I/O 抖动，保留真实进程启动成本
@@ -18,7 +18,7 @@
 - YSX target：`--target=ysx64-unknown-elf -march=rv64ima -mabi=lp64`
 - RISCV target：`--target=riscv64-unknown-elf -march=rv64ima -mabi=lp64`
 - 指令范围检查：扫描 assembly，检查 object symbol table，并在工具可反汇编时补充 object disassembly；拒绝 FP、V、C、特权/system 等非 rv64ima 指令
-- 负向自测：`7` 个 fixture 覆盖 include、libc、inline asm、FP、V/C 指令和 undefined symbol
+- 负向自测：`7` 个源码 fixture 加 `14` 个非法 ISA snippet，覆盖 include、libc、inline asm、FP、V/C/system/Zb/Zbc 指令和 undefined symbol
 
 ## 构建配置
 
@@ -40,28 +40,28 @@ YSX-only clang 可执行文件比 RISCV-only clang 小约 `8.85%`。这不会单
 
 | Benchmark | Suite | YSX median ms | RISCV median ms | YSX 提升 | YSX .o | RISCV .o |
 |---|---|---|---|---|---|---|
-| atax_i32 | polybench_style | 15.012 | 17.482 | 14.13% | 1568 | 1608 |
-| bicg_i32 | polybench_style | 14.036 | 16.444 | 14.64% | 1560 | 1600 |
-| bitmix_sha_style | embench_style | 18.834 | 15.932 | -18.21% | 1328 | 1360 |
-| convolution2d_i32 | polybench_style | 21.909 | 22.010 | 0.46% | 1816 | 1856 |
-| crc32_slice | embench_style | 15.185 | 17.205 | 11.74% | 1360 | 1400 |
-| dijkstra_i32 | embench_style | 16.924 | 17.789 | 4.86% | 2080 | 2112 |
-| doitgen_i32 | polybench_style | 16.466 | 18.795 | 12.39% | 1808 | 1848 |
-| fir_i32 | embench_style | 13.958 | 15.780 | 11.55% | 1672 | 1632 |
-| fixed_butterfly_i32 | embench_style | 17.098 | 19.542 | 12.50% | 1928 | 1968 |
-| floyd_warshall_i32 | polybench_style | 14.451 | 16.373 | 11.74% | 1744 | 1784 |
-| gemm_i32 | polybench_style | 14.599 | 16.245 | 10.13% | 1728 | 1768 |
-| insertion_sort | embench_style | 12.984 | 15.145 | 14.27% | 1496 | 1536 |
-| jacobi_1d_i32 | polybench_style | 14.832 | 17.201 | 13.77% | 1504 | 1544 |
-| levenshtein_i32 | embench_style | 17.065 | 19.844 | 14.00% | 1968 | 1952 |
-| matmul_i32 | embench_style | 14.394 | 19.806 | 27.32% | 1352 | 1392 |
-| montgomery64 | embench_style | 13.769 | 15.515 | 11.25% | 1440 | 1480 |
-| mvt_i32 | polybench_style | 14.588 | 16.855 | 13.45% | 1408 | 1448 |
-| seidel_2d_i32 | polybench_style | 18.261 | 20.292 | 10.01% | 1720 | 1792 |
-| state_machine | embench_style | 13.665 | 16.787 | 18.60% | 2472 | 2512 |
-| trisolv_i32 | polybench_style | 14.641 | 16.643 | 12.03% | 1496 | 1488 |
+| atax_i32 | polybench_style | 13.562 | 15.120 | 10.30% | 1568 | 1608 |
+| bicg_i32 | polybench_style | 12.678 | 14.555 | 12.90% | 1560 | 1600 |
+| bitmix_sha_style | embench_style | 12.293 | 14.322 | 14.17% | 1328 | 1360 |
+| convolution2d_i32 | polybench_style | 18.838 | 19.940 | 5.53% | 1816 | 1856 |
+| crc32_slice | embench_style | 13.556 | 14.938 | 9.25% | 1360 | 1400 |
+| dijkstra_i32 | embench_style | 14.321 | 15.942 | 10.17% | 2080 | 2112 |
+| doitgen_i32 | polybench_style | 14.478 | 16.017 | 9.61% | 1808 | 1848 |
+| fir_i32 | embench_style | 11.993 | 13.913 | 13.80% | 1672 | 1632 |
+| fixed_butterfly_i32 | embench_style | 15.751 | 17.730 | 11.16% | 1928 | 1968 |
+| floyd_warshall_i32 | polybench_style | 12.551 | 14.355 | 12.57% | 1744 | 1784 |
+| gemm_i32 | polybench_style | 13.049 | 14.215 | 8.20% | 1728 | 1768 |
+| insertion_sort | embench_style | 11.140 | 13.867 | 19.66% | 1496 | 1536 |
+| jacobi_1d_i32 | polybench_style | 12.793 | 14.732 | 13.16% | 1504 | 1544 |
+| levenshtein_i32 | embench_style | 15.408 | 16.857 | 8.60% | 1968 | 1952 |
+| matmul_i32 | embench_style | 11.746 | 13.669 | 14.07% | 1352 | 1392 |
+| montgomery64 | embench_style | 11.125 | 12.839 | 13.35% | 1440 | 1480 |
+| mvt_i32 | polybench_style | 13.573 | 15.344 | 11.54% | 1408 | 1448 |
+| seidel_2d_i32 | polybench_style | 15.714 | 17.213 | 8.71% | 1720 | 1792 |
+| state_machine | embench_style | 12.402 | 14.596 | 15.03% | 2472 | 2512 |
+| trisolv_i32 | polybench_style | 12.424 | 14.737 | 15.70% | 1496 | 1488 |
 
-跨测试的 per-benchmark median 口径下，YSX 相对 RISCV 的编译耗时性能提升为 `12.21%`。按这个口径 YSX-only clang 的端到端编译时间约减少 `12.21%`。更完整的原始样本在 `results/latest/raw_samples.csv`，汇总在 `results/latest/summary.csv` 和 `results/latest/summary.json`。
+跨测试的 per-benchmark median 口径下，YSX 相对 RISCV 的编译耗时性能提升为 `12.06%`。按这个口径 YSX-only clang 的端到端编译时间约减少 `12.06%`。更完整的原始样本在 `results/latest/raw_samples.csv`，汇总在 `results/latest/summary.csv` 和 `results/latest/summary.json`。
 
 ## 差异来源分析
 
