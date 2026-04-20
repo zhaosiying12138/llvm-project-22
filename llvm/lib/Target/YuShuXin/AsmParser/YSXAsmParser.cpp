@@ -2050,8 +2050,9 @@ bool YSXAsmParser::parseDirectiveAttribute() {
     if (resetToArch(StringValue, ValueExprLoc, Result))
       return true;
 
-    // Then emit the arch string.
-    getTargetStreamer().emitTextAttribute(Tag, Result);
+    // Emit a canonical attribute string that RISC-V ELF consumers can parse.
+    getTargetStreamer().emitTextAttribute(
+        Tag, YSXISAInfo::getRISCVAttributeString());
   }
 
   return false;

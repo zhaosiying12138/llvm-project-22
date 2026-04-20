@@ -71,8 +71,12 @@ public:
 
   std::string toString() const { return ArchString; }
 
-  std::string toRISCVAttributeString() const {
+  static StringRef getRISCVAttributeString() {
     return "rv64i2p1_m2p0_a2p1_zmmul1p0_zaamo1p0_zalrsc1p0";
+  }
+
+  std::string toRISCVAttributeString() const {
+    return getRISCVAttributeString().str();
   }
 
   StringRef computeDefaultABI() const { return "lp64"; }
@@ -151,7 +155,7 @@ public:
                   bool ExperimentalExtensionVersionCheck = true) {
     std::string Lower = Arch.lower();
     StringRef LowerArch(Lower);
-    if (LowerArch != "rv64ima")
+    if (LowerArch != "rv64ima" && LowerArch != getRISCVAttributeString())
       return unsupportedArch(Arch);
     return createRV64IMAInfo();
   }
