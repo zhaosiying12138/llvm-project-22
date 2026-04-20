@@ -368,24 +368,35 @@ def compare_compiler_identity(ysx_info, riscv_info):
         )
 
 
-def ensure_riscv_build(repo_root):
-    default_build = Path("/home/zhaosiying/codebase/compiler/build_riscv_only_22_1_3_host_llvm")
-    build_dir = Path(os.environ.get("RISCV_BUILD_DIR", default_build))
-    clang = Path(os.environ.get("RISCV_CLANG", build_dir / "bin" / "clang"))
+def resolve_host_compiler(env_name, fallback_env_name, tool):
+    for candidate in (os.environ.get(env_name), os.environ.get(fallback_env_name)):
+        if not candidate:
+            continue
+        path = Path(candidate)
+        if path.exists():
+            return path
+        raise RuntimeError(f"{env_name}/{fallback_env_name} points to a missing tool: {path}")
+    fallback = shutil.which(tool)
+    if fallback:
+        return Path(fallback)
+    raise RuntimeError(f"missing host compiler {tool}; set {env_name} or {fallback_env_name}")
+
+
+def ensure_target_build(repo_root, label, llvm_target, build_env, clang_env, default_dir_name):
+    default_build = repo_root.parent / default_dir_name
+    build_dir = Path(os.environ.get(build_env, default_build))
+    clang = Path(os.environ.get(clang_env, build_dir / "bin" / "clang"))
     if clang.exists():
         return clang
+    if os.environ.get(clang_env):
+        raise RuntimeError(f"{clang_env} points to a missing clang: {clang}")
 
     source_dir = Path(os.environ.get("LLVM_SOURCE_DIR", repo_root / "llvm"))
-    cc = os.environ.get(
-        "CMAKE_C_COMPILER",
-        "/home/zhaosiying/codebase/software/LLVM-19.1.3-Linux-X64/bin/clang",
-    )
-    cxx = os.environ.get(
-        "CMAKE_CXX_COMPILER",
-        "/home/zhaosiying/codebase/software/LLVM-19.1.3-Linux-X64/bin/clang++",
-    )
+    cc = resolve_host_compiler("CMAKE_C_COMPILER", "CC", "clang")
+    cxx = resolve_host_compiler("CMAKE_CXX_COMPILER", "CXX", "clang++")
     ccache = "ON" if shutil.which("ccache") else "OFF"
     build_dir.mkdir(parents=True, exist_ok=True)
+    print(f"configuring {label}-only LLVM build in {build_dir}", file=sys.stderr)
     run(
         [
             "cmake",
@@ -397,7 +408,7 @@ def ensure_riscv_build(repo_root):
             "Ninja",
             "-DCMAKE_BUILD_TYPE=Release",
             "-DLLVM_ENABLE_PROJECTS=clang;lld",
-            "-DLLVM_TARGETS_TO_BUILD=RISCV",
+            f"-DLLVM_TARGETS_TO_BUILD={llvm_target}",
             f"-DCMAKE_C_COMPILER={cc}",
             f"-DCMAKE_CXX_COMPILER={cxx}",
             f"-DLLVM_CCACHE_BUILD={ccache}",
@@ -406,6 +417,28 @@ def ensure_riscv_build(repo_root):
     )
     run(["ninja", "-C", str(build_dir), "clang", "lld", "llvm-objdump", "llvm-size"], capture=False)
     return clang
+
+
+def ensure_ysx_build(repo_root):
+    return ensure_target_build(
+        repo_root,
+        "YSX",
+        "YuShuXin",
+        "YSX_BUILD_DIR",
+        "YSX_CLANG",
+        "build_ysx_only_host_llvm",
+    )
+
+
+def ensure_riscv_build(repo_root):
+    return ensure_target_build(
+        repo_root,
+        "RISCV",
+        "RISCV",
+        "RISCV_BUILD_DIR",
+        "RISCV_CLANG",
+        "build_riscv_only_22_1_3_host_llvm",
+    )
 
 
 def load_benchmarks(bench_root, mode):
@@ -824,8 +857,7 @@ def main():
     if iterations <= 0:
         raise RuntimeError("iteration count must be positive")
 
-    default_ysx = Path("/home/zhaosiying/codebase/compiler/build_ysx_only_host_llvm/bin/clang")
-    ysx_clang = Path(os.environ.get("YSX_CLANG", default_ysx))
+    ysx_clang = ensure_ysx_build(repo_root)
     riscv_clang = ensure_riscv_build(repo_root)
     ysx_objdump = find_llvm_tool(ysx_clang, "llvm-objdump", "YSX_LLVM_OBJDUMP")
     riscv_objdump = find_llvm_tool(riscv_clang, "llvm-objdump", "RISCV_LLVM_OBJDUMP")

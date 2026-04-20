@@ -27,3 +27,10 @@ process startup and target backend load time.  Generated assembly is checked to
 stay within the rv64ima target surface before timing data is accepted.  The
 runner also rejects includes, inline assembly, host/runtime dependencies, and
 unexpected undefined symbols.
+
+By default the runner looks for sibling build directories named
+`build_ysx_only_host_llvm` and `build_riscv_only_22_1_3_host_llvm` next to the
+checkout. If either clang is missing, it configures that build with CMake/Ninja,
+`LLVM_ENABLE_PROJECTS=clang;lld`, and the matching single target. Override with
+`YSX_BUILD_DIR`, `YSX_CLANG`, `RISCV_BUILD_DIR`, `RISCV_CLANG`,
+`LLVM_SOURCE_DIR`, `CMAKE_C_COMPILER`, or `CMAKE_CXX_COMPILER` when needed.
