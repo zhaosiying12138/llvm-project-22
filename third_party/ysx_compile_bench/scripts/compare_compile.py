@@ -423,7 +423,7 @@ def ensure_ysx_build(repo_root):
     return ensure_target_build(
         repo_root,
         "YSX",
-        "YuShuXin",
+        "YSX",
         "YSX_BUILD_DIR",
         "YSX_CLANG",
         "build_ysx_only_host_llvm",
