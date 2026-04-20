@@ -691,7 +691,7 @@ def generate_reports(results_dir, bench_root, env_info, sample_rows, summary_row
         f"- Iterations per benchmark/compiler: {env_info['iterations']}\n"
         f"- YSX median across benchmarks: {aggregate['YSX']['median'] * 1000:.3f} ms\n"
         f"- RISCV median across benchmarks: {aggregate['RISCV']['median'] * 1000:.3f} ms\n"
-        f"- Median YSX compile-time improvement over RISCV: {improvement_summary['median']:.2f}%\n\n"
+        f"- YSX 相对 RISCV 的编译耗时性能提升: {improvement_summary['median']:.2f}%\n\n"
         + markdown_table(
             ["Benchmark", "Suite", "YSX ms", "RISCV ms", "YSX improvement", "YSX .o", "RISCV .o"],
             rows,
