@@ -524,10 +524,17 @@ def check_undefined_symbols(objdump, obj_path):
         raise RuntimeError(f"undefined external symbols in {obj_path}: {undefined[:8]}")
 
 
-def check_disassembly(objdump, obj_path):
-    proc = run([str(objdump), "-d", "--no-show-raw-insn", str(obj_path)], check=False)
+def check_disassembly(objdump, obj_path, triple):
+    proc = run(
+        [str(objdump), f"--triple={triple}", "-d", "--no-show-raw-insn", str(obj_path)],
+        check=False,
+    )
     if proc.returncode != 0:
-        return
+        raise RuntimeError(
+            "llvm-objdump failed while validating {} with {}:\nstdout:\n{}\nstderr:\n{}".format(
+                obj_path, triple, proc.stdout or "", proc.stderr or ""
+            )
+        )
     bad = []
     for line in proc.stdout.splitlines():
         match = DISASM_RE.match(line)
@@ -541,13 +548,13 @@ def check_disassembly(objdump, obj_path):
         raise RuntimeError(f"non-rv64ima disassembly in {obj_path}: {bad[:8]}")
 
 
-def validate_benchmark(compiler, flags, objdump, source, out_dir):
+def validate_benchmark(compiler, flags, objdump, objdump_triple, source, out_dir):
     validate_source(source)
     check_asm(compiler, flags, source, out_dir)
     obj_path = out_dir / (source.stem + ".validation.o")
     compile_object(compiler, flags, source, obj_path)
     check_undefined_symbols(objdump, obj_path)
-    check_disassembly(objdump, obj_path)
+    check_disassembly(objdump, obj_path, objdump_triple)
 
 
 def run_negative_self_tests(bench_root, compilers, work_dir):
@@ -561,11 +568,11 @@ def run_negative_self_tests(bench_root, compilers, work_dir):
         if not expected:
             problems.append(f"{fixture.name}: missing expected rejection category")
             continue
-        for compiler_name, compiler, flags, objdump in compilers:
+        for compiler_name, compiler, flags, objdump, objdump_triple in compilers:
             out_dir = work_dir / "self-test" / compiler_name.lower() / fixture.stem
             out_dir.mkdir(parents=True, exist_ok=True)
             try:
-                validate_benchmark(compiler, flags, objdump, fixture, out_dir)
+                validate_benchmark(compiler, flags, objdump, objdump_triple, fixture, out_dir)
             except RuntimeError as exc:
                 if expected not in str(exc):
                     problems.append(f"{compiler_name}:{fixture.name}: unexpected rejection: {exc}")
@@ -747,7 +754,7 @@ def generate_reports(results_dir, bench_root, env_info, sample_rows, summary_row
         "- 优化参数：`-O2 -ffreestanding -fno-builtin -c`\n"
         "- YSX target：`--target=ysx64-unknown-elf -march=rv64ima -mabi=lp64`\n"
         "- RISCV target：`--target=riscv64-unknown-elf -march=rv64ima -mabi=lp64`\n"
-        "- 指令范围检查：扫描 assembly，检查 object symbol table，并在工具可反汇编时补充 object disassembly；"
+        "- 指令范围检查：扫描 assembly，检查 object symbol table，并强制反汇编 object；"
         "拒绝 FP、V、C、特权/system 等非 rv64ima 指令\n"
         f"- 负向自测：`{env_info['negative_fixture_count']}` 个源码 fixture 加 "
         f"`{env_info['bad_isa_snippet_count']}` 个非法 ISA snippet，覆盖 include、libc、inline asm、FP、"
@@ -839,8 +846,8 @@ def main():
     good_isa_snippet_count = len(GOOD_ISA_SNIPPETS)
 
     compilers = [
-        ("YSX", ysx_clang, YSX_FLAGS, ysx_objdump),
-        ("RISCV", riscv_clang, RISCV_FLAGS, riscv_objdump),
+        ("YSX", ysx_clang, YSX_FLAGS, ysx_objdump, "ysx64"),
+        ("RISCV", riscv_clang, RISCV_FLAGS, riscv_objdump, "riscv64"),
     ]
     run_negative_self_tests(bench_root, compilers, self_test_dir)
     if args.self_test:
@@ -892,10 +899,10 @@ def main():
         source = bench_root / "benchmarks" / bench["path"]
         if not source.exists():
             raise RuntimeError(f"missing benchmark source: {source}")
-        for compiler_name, compiler, flags, objdump in compilers:
+        for compiler_name, compiler, flags, objdump, objdump_triple in compilers:
             out_dir = work_dir / compiler_name.lower() / bench["name"]
             out_dir.mkdir(parents=True, exist_ok=True)
-            validate_benchmark(compiler, flags, objdump, source, out_dir)
+            validate_benchmark(compiler, flags, objdump, objdump_triple, source, out_dir)
             warm_obj = out_dir / "warmup.o"
             timed_compile(compiler, flags, source, warm_obj)
             samples = []

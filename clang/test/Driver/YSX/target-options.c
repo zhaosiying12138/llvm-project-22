@@ -23,6 +23,7 @@
 // RUN: not %clang --target=ysx64 -march=rv64imac -c %s 2>&1 | FileCheck %s --check-prefix=ERR
 // RUN: not %clang --target=ysx64 -march=rv64imav -c %s 2>&1 | FileCheck %s --check-prefix=ERR
 // RUN: not %clang --target=ysx64 -mabi=lp64d -c %s 2>&1 | FileCheck %s --check-prefix=ABIERR
+// RUN: not %clang --target=ysx64 -m32 -### -c %s 2>&1 | FileCheck %s --check-prefix=M32ERR
 // RUN: not %clang --target=ysx64 -fno-integrated-as -march=rv64gc -### -x assembler -c %s 2>&1 | FileCheck %s --check-prefix=GASERR
 // RUN: not %clang --target=ysx64 -fno-integrated-as -mabi=lp64d -### -x assembler -c %s 2>&1 | FileCheck %s --check-prefix=GASABIERR
 // RUN: not %clang --target=ysx64 -mrvv-vector-bits=128 -### -c %s 2>&1 | FileCheck %s --check-prefix=RVVBITS --implicit-check-not="-mvscale" --implicit-check-not=__riscv_v_fixed_vlen
@@ -87,6 +88,7 @@
 
 // ERR: YuShuXin only supports -march=rv64ima
 // ABIERR: unsupported argument 'lp64d' to option '-mabi='
+// M32ERR: error: unsupported option '-m32' for target 'ysx64{{.*}}'
 // RVVBITS: error: unsupported option '-mrvv-vector-bits=' for target 'ysx64'
 // LINUX: "-dynamic-linker" "/lib/ld-linux-riscv64-lp64.so.1"
 // FREEBSD: "-m" "elf64lriscv"

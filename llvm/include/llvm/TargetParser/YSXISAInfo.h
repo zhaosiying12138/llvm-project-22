@@ -71,6 +71,10 @@ public:
 
   std::string toString() const { return ArchString; }
 
+  std::string toRISCVAttributeString() const {
+    return "rv64i2p1_m2p0_a2p1_zmmul1p0_zaamo1p0_zalrsc1p0";
+  }
+
   StringRef computeDefaultABI() const { return "lp64"; }
 
   static bool isSupportedExtensionFeature(StringRef Feature) {
