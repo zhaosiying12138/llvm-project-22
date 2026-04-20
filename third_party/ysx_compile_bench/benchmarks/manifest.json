@@ -1,0 +1,24 @@
+{
+  "benchmarks": [
+    {"name": "crc32_slice", "suite": "embench_style", "path": "embench_style/crc32_slice.c"},
+    {"name": "matmul_i32", "suite": "embench_style", "path": "embench_style/matmul_i32.c"},
+    {"name": "bitmix_sha_style", "suite": "embench_style", "path": "embench_style/bitmix_sha_style.c"},
+    {"name": "montgomery64", "suite": "embench_style", "path": "embench_style/montgomery64.c"},
+    {"name": "insertion_sort", "suite": "embench_style", "path": "embench_style/insertion_sort.c"},
+    {"name": "state_machine", "suite": "embench_style", "path": "embench_style/state_machine.c"},
+    {"name": "dijkstra_i32", "suite": "embench_style", "path": "embench_style/dijkstra_i32.c"},
+    {"name": "fir_i32", "suite": "embench_style", "path": "embench_style/fir_i32.c"},
+    {"name": "fixed_butterfly_i32", "suite": "embench_style", "path": "embench_style/fixed_butterfly_i32.c"},
+    {"name": "levenshtein_i32", "suite": "embench_style", "path": "embench_style/levenshtein_i32.c"},
+    {"name": "atax_i32", "suite": "polybench_style", "path": "polybench_style/atax_i32.c"},
+    {"name": "bicg_i32", "suite": "polybench_style", "path": "polybench_style/bicg_i32.c"},
+    {"name": "gemm_i32", "suite": "polybench_style", "path": "polybench_style/gemm_i32.c"},
+    {"name": "jacobi_1d_i32", "suite": "polybench_style", "path": "polybench_style/jacobi_1d_i32.c"},
+    {"name": "seidel_2d_i32", "suite": "polybench_style", "path": "polybench_style/seidel_2d_i32.c"},
+    {"name": "floyd_warshall_i32", "suite": "polybench_style", "path": "polybench_style/floyd_warshall_i32.c"},
+    {"name": "convolution2d_i32", "suite": "polybench_style", "path": "polybench_style/convolution2d_i32.c"},
+    {"name": "doitgen_i32", "suite": "polybench_style", "path": "polybench_style/doitgen_i32.c"},
+    {"name": "mvt_i32", "suite": "polybench_style", "path": "polybench_style/mvt_i32.c"},
+    {"name": "trisolv_i32", "suite": "polybench_style", "path": "polybench_style/trisolv_i32.c"}
+  ]
+}
