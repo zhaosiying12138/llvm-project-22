@@ -1,44 +1,154 @@
-# The LLVM Compiler Infrastructure
+# YSX LLVM Backend
 
-[![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/llvm/llvm-project/badge)](https://securityscorecards.dev/viewer/?uri=github.com/llvm/llvm-project)
-[![OpenSSF Best Practices](https://www.bestpractices.dev/projects/8273/badge)](https://www.bestpractices.dev/projects/8273)
-[![libc++](https://github.com/llvm/llvm-project/actions/workflows/libcxx-build-and-test.yaml/badge.svg?branch=main&event=schedule)](https://github.com/llvm/llvm-project/actions/workflows/libcxx-build-and-test.yaml?query=event%3Aschedule)
+This checkout contains the YuShuXin LLVM target, registered as `YSX` and exposed through the `ysx64` triple.  The backend is a standalone `rv64ima/lp64` target derived from LLVM 22.1.3 RISCV, with unsupported RV32, floating-point, compressed, vector, bitmanip, crypto, vendor, and experimental extension paths removed.
 
-Welcome to the LLVM project!
+The source directory is `llvm/lib/Target/YuShuXin`; the CMake target name is `YSX`.
 
-This repository contains the source code for LLVM, a toolkit for the
-construction of highly optimized compilers, optimizers, and run-time
-environments.
+## Build
 
-The LLVM project has multiple components. The core of the project is
-itself called "LLVM". This contains all of the tools, libraries, and header
-files needed to process intermediate representations and convert them into
-object files. Tools include an assembler, disassembler, bitcode analyzer, and
-bitcode optimizer.
+Configure a YSX-only host build with Ninja, Clang, and CCache:
 
-C-like languages use the [Clang](https://clang.llvm.org/) frontend. This
-component compiles C, C++, Objective-C, and Objective-C++ code into LLVM bitcode
--- and from there into object files, using LLVM.
+```bash
+cmake -S llvm -B ../build_ysx_only_host_llvm -G Ninja \
+  -DCMAKE_BUILD_TYPE=Release \
+  -DCMAKE_C_COMPILER=clang \
+  -DCMAKE_CXX_COMPILER=clang++ \
+  -DLLVM_ENABLE_PROJECTS="clang;lld" \
+  -DLLVM_TARGETS_TO_BUILD=YSX \
+  -DLLVM_CCACHE_BUILD=ON \
+  -DLLVM_ENABLE_ASSERTIONS=OFF
+```
 
-Other components include:
-the [libc++ C++ standard library](https://libcxx.llvm.org),
-the [LLD linker](https://lld.llvm.org), and more.
+Build the normal tools:
 
-## Getting the Source Code and Building LLVM
+```bash
+ninja -C ../build_ysx_only_host_llvm \
+  clang clang-22 llc llvm-mc llvm-objdump lld llvm-lit FileCheck
+```
 
-Consult the
-[Getting Started with LLVM](https://llvm.org/docs/GettingStarted.html#getting-the-source-code-and-building-llvm)
-page for information on building and running LLVM.
+If `ccache` is not installed, either install it or set `-DLLVM_CCACHE_BUILD=OFF`.
 
-For information on how to contribute to the LLVM project, please take a look at
-the [Contributing to LLVM](https://llvm.org/docs/Contributing.html) guide.
+## Lit Tests
 
-## Getting in touch
+Run the focused YSX regression suite:
 
-Join the [LLVM Discourse forums](https://discourse.llvm.org/), [Discord
-chat](https://discord.gg/xS7Z362),
-[LLVM Office Hours](https://llvm.org/docs/GettingInvolved.html#office-hours) or
-[Regular sync-ups](https://llvm.org/docs/GettingInvolved.html#online-sync-ups).
+```bash
+../build_ysx_only_host_llvm/bin/llvm-lit -q \
+  llvm/test/CodeGen/YSX \
+  llvm/test/MC/YSX \
+  clang/test/CodeGen/YSX \
+  clang/test/Driver/YSX
+```
 
-The LLVM project has adopted a [code of conduct](https://llvm.org/docs/CodeOfConduct.html) for
-participants to all modes of communication within the project.
+The suite covers YSX CodeGen, MC assembly/disassembly, object attributes, Clang target options, negative unsupported-feature diagnostics, and assembly/object round trips.
+
+## Compile-Time Benchmark
+
+The benchmark corpus and runner are in `third_party/ysx_compile_bench`.
+
+Run the negative validation fixtures only:
+
+```bash
+third_party/ysx_compile_bench/run_compare.sh --self-test
+```
+
+Run a quick smoke benchmark:
+
+```bash
+third_party/ysx_compile_bench/run_compare.sh --quick
+```
+
+Run the full benchmark:
+
+```bash
+third_party/ysx_compile_bench/run_compare.sh
+```
+
+By default the script looks for sibling build directories named `build_ysx_only_host_llvm` and `build_riscv_only_22_1_3_host_llvm` next to this checkout.  Override paths when needed:
+
+```bash
+YSX_CLANG=/path/to/ysx/bin/clang \
+RISCV_CLANG=/path/to/riscv/bin/clang \
+YSX_LLVM_OBJDUMP=/path/to/ysx/bin/llvm-objdump \
+RISCV_LLVM_OBJDUMP=/path/to/riscv/bin/llvm-objdump \
+third_party/ysx_compile_bench/run_compare.sh --quick
+```
+
+You can also override build directories and host compilers:
+
+```bash
+YSX_BUILD_DIR=/path/to/build_ysx \
+RISCV_BUILD_DIR=/path/to/build_riscv \
+CMAKE_C_COMPILER=/path/to/clang \
+CMAKE_CXX_COMPILER=/path/to/clang++ \
+third_party/ysx_compile_bench/run_compare.sh
+```
+
+The runner validates that generated assembly and object disassembly stay within the `rv64ima` instruction surface before accepting timing data.
+
+## Tool Usage
+
+Compile C to an object with Clang:
+
+```bash
+../build_ysx_only_host_llvm/bin/clang \
+  --target=ysx64-unknown-elf \
+  -march=rv64ima \
+  -mabi=lp64 \
+  -O2 \
+  -ffreestanding \
+  -fno-builtin \
+  -c input.c \
+  -o input.o
+```
+
+Compile LLVM IR to assembly with `llc`:
+
+```bash
+../build_ysx_only_host_llvm/bin/llc \
+  -mtriple=ysx64-unknown-elf \
+  -mattr=+m,+a \
+  input.ll \
+  -o input.s
+```
+
+Assemble with `llvm-mc`:
+
+```bash
+../build_ysx_only_host_llvm/bin/llvm-mc \
+  -triple=ysx64-unknown-elf \
+  -mattr=+m,+a \
+  -filetype=obj \
+  input.s \
+  -o input.o
+```
+
+Disassemble with `llvm-objdump`:
+
+```bash
+../build_ysx_only_host_llvm/bin/llvm-objdump \
+  -d \
+  --triple=ysx64 \
+  input.o
+```
+
+## Supported Target Surface
+
+YSX intentionally supports only:
+
+```text
+triple: ysx64-unknown-elf
+arch:   rv64ima
+abi:    lp64
+cpu:    generic-rv64
+```
+
+The backend rejects RV32, floating-point ABIs, compressed instructions, vector IR/intrinsics, and unsupported RISC-V extension feature strings.  The object attribute emitted for the retained ISA is the canonical versioned form:
+
+```text
+rv64i2p1_m2p0_a2p1_zmmul1p0_zaamo1p0_zalrsc1p0
+```
+
+## Report
+
+See `docs/blog-llvm.md` for the line-count reduction, correctness validation record, compile-time benchmark table, and binary-size comparison.
