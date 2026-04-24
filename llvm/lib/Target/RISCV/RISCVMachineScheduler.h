@@ -25,8 +25,15 @@ class RISCVPreRAMachineSchedStrategy : public GenericScheduler {
   RISCV::RISCVVSETVLIInfoAnalysis VIA;
   RISCV::VSETVLIInfo TopInfo;
   RISCV::VSETVLIInfo BottomInfo;
+  bool RVVPressureAwareRegion = false;
 
   RISCV::VSETVLIInfo getVSETVLIInfo(const MachineInstr *MI) const;
+  bool isRVVReg(Register Reg) const;
+  bool hasRVVRegDef(const MachineInstr &MI) const;
+  bool hasRVVRegUse(const MachineInstr &MI) const;
+  bool isRVVLoad(const MachineInstr &MI) const;
+  bool isRVVConsumerOrStore(const MachineInstr &MI) const;
+  bool hasHighRVVPressure() const;
   bool tryVSETVLIInfo(const RISCV::VSETVLIInfo &TryInfo,
                       const RISCV::VSETVLIInfo &CandInfo,
                       SchedCandidate &TryCand, SchedCandidate &Cand,
@@ -38,12 +45,18 @@ public:
         VIA(ST, C->LIS) {}
 
 protected:
+  void initPolicy(MachineBasicBlock::iterator Begin,
+                  MachineBasicBlock::iterator End,
+                  unsigned NumRegionInstrs) override;
+  void initialize(ScheduleDAGMI *DAG) override;
   bool tryCandidate(SchedCandidate &Cand, SchedCandidate &TryCand,
                     SchedBoundary *Zone) const override;
   void enterMBB(MachineBasicBlock *MBB) override;
   void leaveMBB() override;
   void schedNode(SUnit *SU, bool IsTopNode) override;
 };
+
+bool isRISCVVRegPressureAwareSchedEnabled();
 
 } // end namespace llvm
 

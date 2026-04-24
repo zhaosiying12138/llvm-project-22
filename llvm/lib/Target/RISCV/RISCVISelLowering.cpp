@@ -1208,6 +1208,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
       // Expand FP operations that need libcalls.
       setOperationAction(FloatingPointLibCallOps, VT, Expand);
+      if (Subtarget.hasExperimentalYushuxinVfexp())
+        setOperationAction(ISD::FEXP, VT, Legal);
 
       setOperationAction(ISD::FCOPYSIGN, VT, Legal);
 
@@ -1305,6 +1307,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
       // Expand FP operations that need libcalls.
       setOperationAction(FloatingPointLibCallOps, VT, Expand);
+      if (Subtarget.hasExperimentalYushuxinVfexp())
+        setOperationAction(ISD::FEXP, VT, Legal);
 
       // Custom split nxv32[b]f16 since nxv32[b]f32 is not legal.
       if (getLMUL(VT) == RISCVVType::LMUL_8) {
@@ -1358,6 +1362,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
       // Expand FP operations that need libcalls.
       setOperationAction(FloatingPointLibCallOps, VT, Expand);
+      if (Subtarget.hasExperimentalYushuxinVfexp())
+        setOperationAction(ISD::FEXP, VT, Legal);
 
       // Custom split nxv32[b]f16 since nxv32[b]f32 is not legal.
       if (getLMUL(VT) == RISCVVType::LMUL_8) {
@@ -1700,6 +1706,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
                             ISD::FMINIMUMNUM, ISD::FMAXIMUMNUM, ISD::IS_FPCLASS,
                             ISD::FMAXIMUM, ISD::FMINIMUM},
                            VT, Custom);
+        if (Subtarget.hasExperimentalYushuxinVfexp())
+          setOperationAction(ISD::FEXP, VT, Custom);
 
         setOperationAction({ISD::FTRUNC, ISD::FCEIL, ISD::FFLOOR, ISD::FROUND,
                             ISD::FROUNDEVEN, ISD::FRINT, ISD::LRINT,
@@ -7478,6 +7486,7 @@ static unsigned getRISCVVLOp(SDValue Op) {
   OP_CASE(FABS)
   OP_CASE(FCOPYSIGN)
   OP_CASE(FSQRT)
+  OP_CASE(FEXP)
   OP_CASE(SMIN)
   OP_CASE(SMAX)
   OP_CASE(UMIN)
@@ -8747,6 +8756,7 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
   case ISD::FMUL:
   case ISD::FDIV:
   case ISD::FSQRT:
+  case ISD::FEXP:
   case ISD::FMA:
   case ISD::FMINNUM:
   case ISD::FMAXNUM:

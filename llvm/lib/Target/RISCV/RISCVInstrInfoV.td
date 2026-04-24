@@ -1441,6 +1441,12 @@ defm VFSQRT_V : VSQR_FV_VS2<"vfsqrt.v", 0b010011, 0b00000>;
 defm VFREC7_V : VRCP_FV_VS2<"vfrec7.v", 0b010011, 0b00101>;
 }
 
+// Experimental Yushuxin Vector Floating-Point Exponential Instruction.
+// This uses a reserved OP-V unary slot as a non-final placeholder encoding.
+let Predicates = [HasExperimentalYushuxinVfexp],
+    Uses = [FRM, VL, VTYPE], mayRaiseFPException = true in
+defm YUSHUXIN_VFEXP_V : VSQR_FV_VS2<"yushuxin.vfexp", 0b010011, 0b01000>;
+
 let mayRaiseFPException = true in
 defm VFRSQRT7_V : VRCP_FV_VS2<"vfrsqrt7.v", 0b010011, 0b00100>;
 

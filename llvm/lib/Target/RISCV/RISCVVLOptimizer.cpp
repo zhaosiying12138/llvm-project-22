@@ -522,6 +522,7 @@ static std::optional<unsigned> getOperandLog2EEW(const MachineOperand &MO) {
   case RISCV::VFNMSUB_VF:
   // Vector Floating-Point Square-Root Instruction
   case RISCV::VFSQRT_V:
+  case RISCV::YUSHUXIN_VFEXP_V:
   // Vector Floating-Point Reciprocal Square-Root Estimate Instruction
   case RISCV::VFRSQRT7_V:
   // Vector Floating-Point Reciprocal Estimate Instruction
@@ -1234,6 +1235,7 @@ static bool isSupportedInstr(const MachineInstr &MI) {
   case RISCV::VFWMACCBF16_VF:
   // Vector Floating-Point Square-Root Instruction
   case RISCV::VFSQRT_V:
+  case RISCV::YUSHUXIN_VFEXP_V:
   // Vector Floating-Point Reciprocal Square-Root Estimate Instruction
   case RISCV::VFRSQRT7_V:
   // Vector Floating-Point Reciprocal Estimate Instruction

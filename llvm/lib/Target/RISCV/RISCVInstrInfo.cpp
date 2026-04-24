@@ -5284,6 +5284,7 @@ bool RISCVInstrInfo::isHighLatencyDef(int Opc) const {
   case RISCV::VFDIV_VF:
   case RISCV::VFRDIV_VF:
   case RISCV::VFSQRT_V:
+  case RISCV::YUSHUXIN_VFEXP_V:
   case RISCV::VFRSQRT7_V:
     return true;
   }

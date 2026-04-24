@@ -191,6 +191,7 @@ let HasMaskOp = true in {
   def riscv_fneg_vl  : RVSDNode<"FNEG_VL",  SDT_RISCVFPUnOp_VL>;
   def riscv_fabs_vl  : RVSDNode<"FABS_VL",  SDT_RISCVFPUnOp_VL>;
   def riscv_fsqrt_vl : RVSDNode<"FSQRT_VL", SDT_RISCVFPUnOp_VL>;
+  def riscv_fexp_vl  : RVSDNode<"FEXP_VL",  SDT_RISCVFPUnOp_VL>;
 } // let HasMaskOp = true
 
 let HasPassthruOp = true, HasMaskOp = true in {
@@ -2403,6 +2404,18 @@ foreach vti = AllFloatVectors in {
     def : Pat<(any_riscv_fsqrt_vl (vti.Vector vti.RegClass:$rs2), (vti.Mask VMV0:$vm),
                               VLOpFrag),
               (!cast<Instruction>("PseudoVFSQRT_V_"# vti.LMul.MX # "_E" # vti.SEW # "_MASK")
+                   (vti.Vector (IMPLICIT_DEF)), vti.RegClass:$rs2,
+                   (vti.Mask VMV0:$vm),
+                   // Value to indicate no rounding mode change in
+                   // RISCVInsertReadWriteCSR
+                   FRM_DYN,
+                   GPR:$vl, vti.Log2SEW, TA_MA)>;
+
+    let Predicates = !listconcat(GetVTypePredicates<vti>.Predicates,
+                                 [HasExperimentalYushuxinVfexp]) in
+    def : Pat<(riscv_fexp_vl (vti.Vector vti.RegClass:$rs2), (vti.Mask VMV0:$vm),
+                            VLOpFrag),
+              (!cast<Instruction>("PseudoYUSHUXIN_VFEXP_V_"# vti.LMul.MX # "_E" # vti.SEW # "_MASK")
                    (vti.Vector (IMPLICIT_DEF)), vti.RegClass:$rs2,
                    (vti.Mask VMV0:$vm),
                    // Value to indicate no rounding mode change in

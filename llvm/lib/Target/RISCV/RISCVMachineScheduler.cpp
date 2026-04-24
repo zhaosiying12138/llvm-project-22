@@ -7,11 +7,25 @@
 //===----------------------------------------------------------------------===//
 
 #include "RISCVMachineScheduler.h"
+#include "RISCVRegisterInfo.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/ScheduleDAG.h"
+#include "llvm/Support/CommandLine.h"
 
 using namespace llvm;
 
 #define DEBUG_TYPE "riscv-prera-sched-strategy"
+
+static cl::opt<bool> EnableRVVRegPressureAwareSched(
+    "riscv-v-reg-pressure-aware-sched", cl::Hidden, cl::init(false),
+    cl::desc("Enable experimental RISCV RVV register-pressure-aware "
+             "pre-register-allocation scheduling"));
+
+bool llvm::isRISCVVRegPressureAwareSchedEnabled() {
+  return EnableRVVRegPressureAwareSched;
+}
 
 RISCV::VSETVLIInfo
 RISCVPreRAMachineSchedStrategy::getVSETVLIInfo(const MachineInstr *MI) const {
@@ -19,6 +33,77 @@ RISCVPreRAMachineSchedStrategy::getVSETVLIInfo(const MachineInstr *MI) const {
   if (!RISCVII::hasSEWOp(TSFlags))
     return RISCV::VSETVLIInfo();
   return VIA.computeInfoForInstr(*MI);
+}
+
+bool RISCVPreRAMachineSchedStrategy::isRVVReg(Register Reg) const {
+  if (!Reg.isVirtual())
+    return false;
+  const TargetRegisterClass *RC = DAG->MRI.getRegClass(Reg);
+  return RISCVRegisterInfo::isRVVRegClass(RC);
+}
+
+bool RISCVPreRAMachineSchedStrategy::hasRVVRegDef(
+    const MachineInstr &MI) const {
+  return any_of(MI.operands(), [&](const MachineOperand &MO) {
+    return MO.isReg() && MO.isDef() && isRVVReg(MO.getReg());
+  });
+}
+
+bool RISCVPreRAMachineSchedStrategy::hasRVVRegUse(
+    const MachineInstr &MI) const {
+  return any_of(MI.operands(), [&](const MachineOperand &MO) {
+    return MO.isReg() && MO.isUse() && isRVVReg(MO.getReg());
+  });
+}
+
+bool RISCVPreRAMachineSchedStrategy::isRVVLoad(const MachineInstr &MI) const {
+  return MI.mayLoad() && !MI.mayStore() && hasRVVRegDef(MI);
+}
+
+bool RISCVPreRAMachineSchedStrategy::isRVVConsumerOrStore(
+    const MachineInstr &MI) const {
+  if (isRVVLoad(MI))
+    return false;
+  return hasRVVRegUse(MI) && (hasRVVRegDef(MI) || MI.mayStore());
+}
+
+bool RISCVPreRAMachineSchedStrategy::hasHighRVVPressure() const {
+  SmallPtrSet<const MachineInstr *, 32> RVVDefs;
+  unsigned RVVOps = 0;
+  for (const SUnit &SU : DAG->SUnits) {
+    const MachineInstr *MI = SU.getInstr();
+    if (!MI)
+      continue;
+    bool HasRVVOperand = false;
+    for (const MachineOperand &MO : MI->operands()) {
+      if (!MO.isReg() || !isRVVReg(MO.getReg()))
+        continue;
+      HasRVVOperand = true;
+      if (MO.isDef())
+        RVVDefs.insert(MI);
+    }
+    if (HasRVVOperand)
+      ++RVVOps;
+  }
+  return RVVOps >= 12 && RVVDefs.size() >= 8;
+}
+
+void RISCVPreRAMachineSchedStrategy::initPolicy(
+    MachineBasicBlock::iterator Begin, MachineBasicBlock::iterator End,
+    unsigned NumRegionInstrs) {
+  GenericScheduler::initPolicy(Begin, End, NumRegionInstrs);
+  if (EnableRVVRegPressureAwareSched)
+    RegionPolicy.ShouldTrackPressure = true;
+}
+
+void RISCVPreRAMachineSchedStrategy::initialize(ScheduleDAGMI *DAG) {
+  GenericScheduler::initialize(DAG);
+  RVVPressureAwareRegion =
+      EnableRVVRegPressureAwareSched && hasHighRVVPressure();
+  if (RVVPressureAwareRegion) {
+    RegionPolicy.OnlyTopDown = true;
+    RegionPolicy.OnlyBottomUp = false;
+  }
 }
 
 bool RISCVPreRAMachineSchedStrategy::tryVSETVLIInfo(
@@ -125,6 +210,19 @@ bool RISCVPreRAMachineSchedStrategy::tryCandidate(SchedCandidate &Cand,
   if (tryGreater(TryCandIsClusterSucc, CandIsClusterSucc, TryCand, Cand,
                  Cluster))
     return TryCand.Reason != NoCand;
+
+  if (RVVPressureAwareRegion && SameBoundary) {
+    const MachineInstr &TryMI = *TryCand.SU->getInstr();
+    const MachineInstr &CandMI = *Cand.SU->getInstr();
+    bool TryUsesCurrentVector = isRVVConsumerOrStore(TryMI);
+    bool CandUsesCurrentVector = isRVVConsumerOrStore(CandMI);
+    bool TryStartsVectorLiveRange = isRVVLoad(TryMI);
+    bool CandStartsVectorLiveRange = isRVVLoad(CandMI);
+    if (tryGreater(TryUsesCurrentVector && CandStartsVectorLiveRange,
+                   CandUsesCurrentVector && TryStartsVectorLiveRange, TryCand,
+                   Cand, RegMax))
+      return TryCand.Reason != NoCand;
+  }
 
   if (SameBoundary) {
     // Weak edges are for clustering and other constraints.

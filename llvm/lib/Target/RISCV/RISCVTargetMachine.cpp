@@ -133,6 +133,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeRISCVTarget() {
   initializeRISCVExpandPseudoPass(*PR);
   initializeRISCVVectorPeepholePass(*PR);
   initializeRISCVVLOptimizerPass(*PR);
+  initializeRISCVVRegPressureReloadPass(*PR);
   initializeRISCVVMV0EliminationPass(*PR);
   initializeRISCVInsertVSETVLIPass(*PR);
   initializeRISCVInsertReadWriteCSRPass(*PR);
@@ -288,11 +289,13 @@ RISCVTargetMachine::createMachineScheduler(MachineSchedContext *C) const {
   const RISCVSubtarget &ST = C->MF->getSubtarget<RISCVSubtarget>();
   ScheduleDAGMILive *DAG = createSchedLive<RISCVPreRAMachineSchedStrategy>(C);
 
-  if (ST.enableMISchedLoadClustering())
+  if (!isRISCVVRegPressureAwareSchedEnabled() &&
+      ST.enableMISchedLoadClustering())
     DAG->addMutation(createLoadClusterDAGMutation(
         DAG->TII, DAG->TRI, /*ReorderWhileClustering=*/true));
 
-  if (ST.enableMISchedStoreClustering())
+  if (!isRISCVVRegPressureAwareSchedEnabled() &&
+      ST.enableMISchedStoreClustering())
     DAG->addMutation(createStoreClusterDAGMutation(
         DAG->TII, DAG->TRI, /*ReorderWhileClustering=*/true));
 
@@ -612,6 +615,8 @@ void RISCVPassConfig::addPreRegAlloc() {
   if (TM->getOptLevel() != CodeGenOptLevel::None) {
     addPass(createRISCVMergeBaseOffsetOptPass());
     addPass(createRISCVVLOptimizerPass());
+    if (isRISCVVRegPressureAwareSchedEnabled())
+      addPass(createRISCVVRegPressureReloadPass());
     // Add Zilsd pre-allocation load/store optimization
     addPass(createRISCVPreAllocZilsdOptPass());
   }
@@ -630,7 +635,6 @@ void RISCVPassConfig::addFastRegAlloc() {
   addPass(&InitUndefID);
   TargetPassConfig::addFastRegAlloc();
 }
-
 
 void RISCVPassConfig::addPostRegAlloc() {
   if (TM->getOptLevel() != CodeGenOptLevel::None &&

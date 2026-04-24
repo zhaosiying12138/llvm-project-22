@@ -24,13 +24,19 @@
 #include "llvm/CodeGen/RegisterScavenging.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/MC/MCDwarf.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/LEB128.h"
+#include "llvm/Support/raw_ostream.h"
 
 #include <algorithm>
 
 #define DEBUG_TYPE "riscv-frame"
 
 using namespace llvm;
+
+static cl::opt<bool> EnableRVVRegPressureReport(
+    "riscv-v-reg-pressure-report", cl::Hidden, cl::init(false),
+    cl::desc("Print RISCV RVV stack and spill-slot diagnostics"));
 
 static Align getABIStackAlignment(RISCVABI::ABI ABI) {
   if (ABI == RISCVABI::ABI_ILP32E)
@@ -1809,6 +1815,20 @@ void RISCVFrameLowering::processFunctionBeforeFrameFinalized(
 
   RVFI->setRVVStackSize(RVVStackSize);
   RVFI->setRVVStackAlign(RVVStackAlign);
+
+  if (EnableRVVRegPressureReport) {
+    unsigned RVVSpillSlots = 0;
+    for (int I = MFI.getObjectIndexBegin(), E = MFI.getObjectIndexEnd(); I != E;
+         ++I) {
+      if (!MFI.isDeadObjectIndex(I) &&
+          MFI.getStackID(I) == TargetStackID::ScalableVector)
+        ++RVVSpillSlots;
+    }
+    errs() << "riscv-v-reg-pressure-report: function=" << MF.getName()
+           << " rvv-scalable-stack-bytes=" << RVVStackSize
+           << " rvv-spill-slots=" << RVVSpillSlots
+           << " fixed-stack-estimate=" << MFI.estimateStackSize(MF) << "\n";
+  }
 
   if (hasRVVFrameObject(MF)) {
     // Ensure the entire stack is aligned to at least the RVV requirement: some

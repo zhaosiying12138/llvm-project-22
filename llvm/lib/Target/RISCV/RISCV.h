@@ -129,6 +129,9 @@ void initializeRISCVPromoteConstantPass(PassRegistry &);
 FunctionPass *createRISCVVLOptimizerPass();
 void initializeRISCVVLOptimizerPass(PassRegistry &);
 
+FunctionPass *createRISCVVRegPressureReloadPass();
+void initializeRISCVVRegPressureReloadPass(PassRegistry &);
+
 FunctionPass *createRISCVVMV0EliminationPass();
 void initializeRISCVVMV0EliminationPass(PassRegistry &);
 
