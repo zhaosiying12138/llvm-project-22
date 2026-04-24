@@ -12,6 +12,7 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/ScheduleDAG.h"
+#include "llvm/CodeGen/ScheduleDAGMutation.h"
 #include "llvm/Support/CommandLine.h"
 
 using namespace llvm;
@@ -27,6 +28,74 @@ bool llvm::isRISCVVRegPressureAwareSchedEnabled() {
   return EnableRVVRegPressureAwareSched;
 }
 
+static bool isRVVReg(const MachineRegisterInfo &MRI, Register Reg) {
+  if (!Reg.isVirtual())
+    return false;
+  return RISCVRegisterInfo::isRVVRegClass(MRI.getRegClass(Reg));
+}
+
+static bool hasHighRVVPressure(const ScheduleDAG &DAG) {
+  SmallPtrSet<const MachineInstr *, 32> RVVDefs;
+  unsigned RVVOps = 0;
+  for (const SUnit &SU : DAG.SUnits) {
+    const MachineInstr *MI = SU.getInstr();
+    if (!MI)
+      continue;
+    bool HasRVVOperand = false;
+    for (const MachineOperand &MO : MI->operands()) {
+      if (!MO.isReg() || !isRVVReg(DAG.MRI, MO.getReg()))
+        continue;
+      HasRVVOperand = true;
+      if (MO.isDef())
+        RVVDefs.insert(MI);
+    }
+    if (HasRVVOperand)
+      ++RVVOps;
+  }
+  return RVVOps >= 12 && RVVDefs.size() >= 8;
+}
+
+namespace {
+
+class RISCVVRegPressureClusterMutation : public ScheduleDAGMutation {
+  std::unique_ptr<ScheduleDAGMutation> Cluster;
+
+public:
+  RISCVVRegPressureClusterMutation(std::unique_ptr<ScheduleDAGMutation> Cluster)
+      : Cluster(std::move(Cluster)) {}
+
+  void apply(ScheduleDAGInstrs *DAG) override {
+    if (hasHighRVVPressure(*DAG))
+      return;
+    Cluster->apply(DAG);
+  }
+};
+
+} // end anonymous namespace
+
+static std::unique_ptr<ScheduleDAGMutation> wrapRVVRegPressureClusterMutation(
+    std::unique_ptr<ScheduleDAGMutation> Cluster) {
+  if (!Cluster)
+    return nullptr;
+  return std::make_unique<RISCVVRegPressureClusterMutation>(std::move(Cluster));
+}
+
+std::unique_ptr<ScheduleDAGMutation>
+llvm::createRISCVVRegPressureLoadClusterDAGMutation(
+    const TargetInstrInfo *TII, const TargetRegisterInfo *TRI,
+    bool ReorderWhileClustering) {
+  return wrapRVVRegPressureClusterMutation(
+      createLoadClusterDAGMutation(TII, TRI, ReorderWhileClustering));
+}
+
+std::unique_ptr<ScheduleDAGMutation>
+llvm::createRISCVVRegPressureStoreClusterDAGMutation(
+    const TargetInstrInfo *TII, const TargetRegisterInfo *TRI,
+    bool ReorderWhileClustering) {
+  return wrapRVVRegPressureClusterMutation(
+      createStoreClusterDAGMutation(TII, TRI, ReorderWhileClustering));
+}
+
 RISCV::VSETVLIInfo
 RISCVPreRAMachineSchedStrategy::getVSETVLIInfo(const MachineInstr *MI) const {
   unsigned TSFlags = MI->getDesc().TSFlags;
@@ -36,10 +105,7 @@ RISCVPreRAMachineSchedStrategy::getVSETVLIInfo(const MachineInstr *MI) const {
 }
 
 bool RISCVPreRAMachineSchedStrategy::isRVVReg(Register Reg) const {
-  if (!Reg.isVirtual())
-    return false;
-  const TargetRegisterClass *RC = DAG->MRI.getRegClass(Reg);
-  return RISCVRegisterInfo::isRVVRegClass(RC);
+  return ::isRVVReg(DAG->MRI, Reg);
 }
 
 bool RISCVPreRAMachineSchedStrategy::hasRVVRegDef(
@@ -68,24 +134,7 @@ bool RISCVPreRAMachineSchedStrategy::isRVVConsumerOrStore(
 }
 
 bool RISCVPreRAMachineSchedStrategy::hasHighRVVPressure() const {
-  SmallPtrSet<const MachineInstr *, 32> RVVDefs;
-  unsigned RVVOps = 0;
-  for (const SUnit &SU : DAG->SUnits) {
-    const MachineInstr *MI = SU.getInstr();
-    if (!MI)
-      continue;
-    bool HasRVVOperand = false;
-    for (const MachineOperand &MO : MI->operands()) {
-      if (!MO.isReg() || !isRVVReg(MO.getReg()))
-        continue;
-      HasRVVOperand = true;
-      if (MO.isDef())
-        RVVDefs.insert(MI);
-    }
-    if (HasRVVOperand)
-      ++RVVOps;
-  }
-  return RVVOps >= 12 && RVVDefs.size() >= 8;
+  return ::hasHighRVVPressure(*DAG);
 }
 
 void RISCVPreRAMachineSchedStrategy::initPolicy(

@@ -23,28 +23,77 @@ as `llvm/test/CodeGen/RISCV/rvv/v-reg-pressure-aware-sched-workloads.ll`.
 All runs used fixed `VLEN=1024`. The softmax workload also enabled
 `+experimental-yushuxin-vfexp`.
 
+## Workload Extraction
+
+The checked-in workload test contains all four functions. For measurements, the
+following exact splitter was used so each table row counts one function only:
+
+```sh
+python3 - <<'PY'
+from pathlib import Path
+src = Path('llvm/test/CodeGen/RISCV/rvv/v-reg-pressure-aware-sched-workloads.ll').read_text().splitlines()
+outdir = Path('/tmp/rvv-pressure-report')
+outdir.mkdir(exist_ok=True)
+decls = [l for l in src if l.startswith('declare ')]
+for name in ['vector_add_32', 'safe_softmax_32', 'top2_32', 'rmsnorm_32']:
+    body = []
+    capture = False
+    depth = 0
+    for line in src:
+        if line.startswith(f'define void @{name}'):
+            capture = True
+        if capture:
+            body.append(line)
+            depth += line.count('{') - line.count('}')
+            if depth == 0 and line.strip() == '}':
+                break
+    (outdir / f'{name}.ll').write_text('\n'.join(decls) + '\n\n' + '\n'.join(body) + '\n')
+PY
+```
+
 ## Commands
 
-Baseline:
+Baseline and optimized assembly were produced with these exact command forms:
 
 ```sh
 build-riscv/bin/llc -O2 -mtriple=riscv64 -mattr=+v,+zvl1024b \
-  -riscv-v-vector-bits-min=1024 INPUT.ll -o base.s
-build-riscv/bin/llc -O3 -mtriple=riscv64 -mattr=+v,+zvl1024b \
-  -riscv-v-vector-bits-min=1024 INPUT.ll -o base.s
+  -riscv-v-vector-bits-min=1024 \
+  /tmp/rvv-pressure-report/vector_add_32.ll \
+  -o /tmp/rvv-pressure-report/vector_add_32.O2.base.s
+build-riscv/bin/llc -O2 -mtriple=riscv64 -mattr=+v,+zvl1024b \
+  -riscv-v-vector-bits-min=1024 -riscv-v-reg-pressure-aware-sched \
+  /tmp/rvv-pressure-report/vector_add_32.ll \
+  -o /tmp/rvv-pressure-report/vector_add_32.O2.opt.s
 ```
 
-Optimized:
+The same command shape was used for `-O3` and for `top2_32.ll` and
+`rmsnorm_32.ll`. For `safe_softmax_32.ll`, `-mattr` was
+`+v,+experimental-yushuxin-vfexp,+zvl1024b` so `llvm.exp.v128f32` used the
+experimental instruction.
+
+The exact loop used to produce every row was:
 
 ```sh
-build-riscv/bin/llc -O2 -mtriple=riscv64 -mattr=+v,+zvl1024b \
-  -riscv-v-vector-bits-min=1024 -riscv-v-reg-pressure-aware-sched INPUT.ll -o opt.s
-build-riscv/bin/llc -O3 -mtriple=riscv64 -mattr=+v,+zvl1024b \
-  -riscv-v-vector-bits-min=1024 -riscv-v-reg-pressure-aware-sched INPUT.ll -o opt.s
+for w in vector_add_32 safe_softmax_32 top2_32 rmsnorm_32; do
+  for optlevel in O2 O3; do
+    for mode in base opt; do
+      flags="-${optlevel} -mtriple=riscv64 -mattr=+v,+zvl1024b -riscv-v-vector-bits-min=1024"
+      if [ "$w" = safe_softmax_32 ]; then
+        flags="-${optlevel} -mtriple=riscv64 -mattr=+v,+experimental-yushuxin-vfexp,+zvl1024b -riscv-v-vector-bits-min=1024"
+      fi
+      if [ "$mode" = opt ]; then
+        flags="$flags -riscv-v-reg-pressure-aware-sched"
+      fi
+      build-riscv/bin/llc $flags /tmp/rvv-pressure-report/${w}.ll \
+        -o /tmp/rvv-pressure-report/${w}.${optlevel}.${mode}.s
+      rg -o '\b[vu][sl][1248]r\.v\b' \
+        /tmp/rvv-pressure-report/${w}.${optlevel}.${mode}.s | wc -l
+      build-riscv/bin/llc $flags -riscv-v-reg-pressure-report \
+        /tmp/rvv-pressure-report/${w}.ll -o /dev/null 2>&1
+    done
+  done
+done
 ```
-
-For softmax, `-mattr` was
-`+v,+experimental-yushuxin-vfexp,+zvl1024b`.
 
 Whole-register spill/reload counts were collected with:
 
@@ -53,6 +102,25 @@ rg -o '\b[vu][sl][1248]r\.v\b' output.s | wc -l
 ```
 
 Diagnostics were collected by adding `-riscv-v-reg-pressure-report`.
+
+The alloca sanity check for the diagnostic counter was:
+
+```sh
+build-riscv/bin/llc -mtriple=riscv64 -mattr=+v,+zvl128b \
+  -riscv-v-reg-pressure-report -o /dev/null - <<'EOF'
+define void @sv_alloca() {
+entry:
+  %x = alloca <vscale x 4 x i32>, align 16
+  ret void
+}
+EOF
+```
+
+It produced:
+
+```text
+riscv-v-reg-pressure-report: function=sv_alloca rvv-scalable-stack-bytes=16 rvv-spill-slots=0 fixed-stack-estimate=0
+```
 
 ## Results
 
@@ -66,6 +134,19 @@ Diagnostics were collected by adding `-riscv-v-reg-pressure-report`.
 | top-2 compare/select/reduce | O3 | 93 | 8 | 872 / 34 | 64 / 2 |
 | RMSNorm square/sum/sqrt/normalize | O2 | 268 | 40 | 2208 / 69 | 128 / 4 |
 | RMSNorm square/sum/sqrt/normalize | O3 | 268 | 40 | 2208 / 69 | 128 / 4 |
+
+Representative diagnostics from the measured O2 runs:
+
+```text
+riscv-v-reg-pressure-report: function=vector_add_32 rvv-scalable-stack-bytes=768 rvv-spill-slots=24 fixed-stack-estimate=160
+riscv-v-reg-pressure-report: function=vector_add_32 rvv-scalable-stack-bytes=0 rvv-spill-slots=0 fixed-stack-estimate=672
+riscv-v-reg-pressure-report: function=safe_softmax_32 rvv-scalable-stack-bytes=816 rvv-spill-slots=33 fixed-stack-estimate=32
+riscv-v-reg-pressure-report: function=safe_softmax_32 rvv-scalable-stack-bytes=96 rvv-spill-slots=3 fixed-stack-estimate=608
+riscv-v-reg-pressure-report: function=top2_32 rvv-scalable-stack-bytes=872 rvv-spill-slots=34 fixed-stack-estimate=0
+riscv-v-reg-pressure-report: function=top2_32 rvv-scalable-stack-bytes=64 rvv-spill-slots=2 fixed-stack-estimate=608
+riscv-v-reg-pressure-report: function=rmsnorm_32 rvv-scalable-stack-bytes=2208 rvv-spill-slots=69 fixed-stack-estimate=176
+riscv-v-reg-pressure-report: function=rmsnorm_32 rvv-scalable-stack-bytes=128 rvv-spill-slots=4 fixed-stack-estimate=608
+```
 
 ## Snippets
 

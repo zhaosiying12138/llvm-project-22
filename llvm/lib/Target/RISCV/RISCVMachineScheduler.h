@@ -19,6 +19,10 @@
 
 namespace llvm {
 
+class ScheduleDAGMutation;
+class TargetInstrInfo;
+class TargetRegisterInfo;
+
 /// A GenericScheduler implementation for RISCV pre RA scheduling.
 class RISCVPreRAMachineSchedStrategy : public GenericScheduler {
   const RISCVSubtarget *ST;
@@ -57,6 +61,14 @@ protected:
 };
 
 bool isRISCVVRegPressureAwareSchedEnabled();
+std::unique_ptr<ScheduleDAGMutation>
+createRISCVVRegPressureLoadClusterDAGMutation(const TargetInstrInfo *TII,
+                                              const TargetRegisterInfo *TRI,
+                                              bool ReorderWhileClustering);
+std::unique_ptr<ScheduleDAGMutation>
+createRISCVVRegPressureStoreClusterDAGMutation(const TargetInstrInfo *TII,
+                                               const TargetRegisterInfo *TRI,
+                                               bool ReorderWhileClustering);
 
 } // end namespace llvm
 

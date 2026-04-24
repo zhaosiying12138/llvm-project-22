@@ -1820,7 +1820,7 @@ void RISCVFrameLowering::processFunctionBeforeFrameFinalized(
     unsigned RVVSpillSlots = 0;
     for (int I = MFI.getObjectIndexBegin(), E = MFI.getObjectIndexEnd(); I != E;
          ++I) {
-      if (!MFI.isDeadObjectIndex(I) &&
+      if (!MFI.isDeadObjectIndex(I) && MFI.isSpillSlotObjectIndex(I) &&
           MFI.getStackID(I) == TargetStackID::ScalableVector)
         ++RVVSpillSlots;
     }

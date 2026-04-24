@@ -41,6 +41,7 @@ The quantitative acceptance criteria are trend-based rather than absolute perfor
 |-------|--------|--------|--------------|
 | 0 | Initial plan | Extracted from `docs/plan.md` | Defines AC-1 through AC-6 |
 | 0 | Completed full implementation scope in this pass | The active user instruction was to implement the full prior plan in a fresh context, not stop at the narrowed round contract | AC-1 through AC-6 completed and verified locally |
+| 0 | Reopened AC-3 through AC-6 after review | Codex review found tracker drift: completion claims exceeded the current code/test/report evidence, and AC-5 has a concrete diagnostics bug | AC-3 through AC-6 remain in progress |
 
 #### Active Tasks
 <!-- Mainline tasks only: each task must directly advance the current round objective and carry routing metadata -->
@@ -56,7 +57,7 @@ The quantitative acceptance criteria are trend-based rather than absolute perfor
 <!-- Non-blocking issues stay queued and must NOT replace the round objective -->
 | Issue | Discovered Round | Why Not Blocking | Revisit Trigger |
 |-------|-----------------|------------------|-----------------|
-| Full scheduler/reload/report implementation may exceed a single RLCR round because setup was capped at `--max 1`. | 0 | Resolved in this pass because the implementation completed AC-3 through AC-6 before stop-gate review. | No revisit needed unless stop gate asks for another round. |
+| Goal tracker completion claims drifted ahead of the verified evidence for AC-3 through AC-6. | 0 | Resolved in Round 1 by completing the missing code/test/report evidence and moving tasks after verification. | Revisit only if the stop gate finds new drift. |
 
 ### Completed and Verified
 <!-- Only move tasks here after Codex verification -->
@@ -65,10 +66,10 @@ The quantitative acceptance criteria are trend-based rather than absolute perfor
 | AC-1..AC-6 | Planning docs and RLCR setup | 0 | 0 | `docs/plan.md`, `.humanize/rlcr/2026-04-24_23-29-30/` |
 | AC-1 | RISCV-only build setup | 0 | 0 | `cmake -S llvm -B build-riscv ...`; `ninja -C build-riscv llc clang lld FileCheck llvm-mc llvm-objdump count not llvm-config llvm-readobj` |
 | AC-1, AC-2 | Experimental Yushuxin vector exp lowering and feature gating | 0 | 0 | `llvm/test/CodeGen/RISCV/rvv/yushuxin-vfexp.ll`, `llvm/test/MC/RISCV/rvv/yushuxin-vfexp.s`, `llvm/test/CodeGen/RISCV/features-info.ll`; lit passed |
-| AC-3 | Pressure-aware scheduler strategy and cluster suppression under hidden flag | 0 | 0 | `llvm/lib/Target/RISCV/RISCVMachineScheduler.cpp`, `llvm/lib/Target/RISCV/RISCVTargetMachine.cpp`; workload lit passed |
-| AC-4 | Conservative same-block RVV reload rematerialization pass | 0 | 0 | `llvm/lib/Target/RISCV/RISCVVRegPressureReload.cpp`; workload lit passed and measurements recorded |
-| AC-5 | RVV frame diagnostics | 0 | 0 | `-riscv-v-reg-pressure-report` checks in `llvm/test/CodeGen/RISCV/rvv/yushuxin-vfexp.ll` passed |
-| AC-6 | Workload tests and measured report | 0 | 0 | `llvm/test/CodeGen/RISCV/rvv/v-reg-pressure-aware-sched-workloads.ll`, `docs/report.md`; lit passed |
+| AC-3 | Pressure-aware scheduler scoping, default-off coverage, and masked-vector validity | 1 | 1 | Conditional RISCV cluster mutation in `RISCVMachineScheduler.cpp`; `v-reg-pressure-aware-sched-workloads.ll` baseline and masked checks; lit passed |
+| AC-4 | Reload rematerialization positive and safety coverage | 1 | 1 | `v-reg-pressure-reload.ll` and `v-reg-pressure-reload-atomic.mir`; lit passed |
+| AC-5 | True RVV spill-slot diagnostics | 1 | 1 | `RISCVFrameLowering.cpp` counts `isSpillSlotObjectIndex`; `yushuxin-vfexp.ll` alloca regression; direct alloca repro reports `rvv-spill-slots=0` |
+| AC-6 | Exact measured report | 1 | 1 | `docs/report.md` contains extraction script, exact measurement loop, counts, diagnostics, and snippets |
 
 ### Explicitly Deferred
 <!-- Items here require strong justification -->

@@ -1,6 +1,10 @@
 ; RUN: llc -O2 -mtriple=riscv64 -mattr=+v,+experimental-yushuxin-vfexp,+zvl1024b -riscv-v-vector-bits-min=1024 -riscv-v-reg-pressure-aware-sched -verify-machineinstrs < %s | FileCheck %s
 ; RUN: llc -O3 -mtriple=riscv64 -mattr=+v,+experimental-yushuxin-vfexp,+zvl1024b -riscv-v-vector-bits-min=1024 -riscv-v-reg-pressure-aware-sched -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -O2 -mtriple=riscv64 -mattr=+v,+experimental-yushuxin-vfexp,+zvl1024b -riscv-v-vector-bits-min=1024 -verify-machineinstrs < %s | FileCheck %s --check-prefix=BASE
 
+; BASE-LABEL: vector_add_32:
+; BASE-NOT: safe_softmax_32:
+; BASE: vs{{[1248]}}r.v
 ; CHECK-LABEL: vector_add_32:
 ; CHECK-NOT: vs{{[1248]}}r.v
 ; CHECK-NOT: vl{{[1248]}}r.v
@@ -15,11 +19,16 @@
 ; CHECK: vfredosum.vs
 ; CHECK: vfsqrt.v
 ; CHECK: ret
+; CHECK-LABEL: masked_add:
+; CHECK: v0.t
+; CHECK: ret
 
 declare float @llvm.vector.reduce.fadd.v128f32(float, <128 x float>)
 declare <128 x float> @llvm.exp.v128f32(<128 x float>)
 declare float @llvm.vector.reduce.fmax.v128f32(<128 x float>)
 declare <128 x float> @llvm.sqrt.v128f32(<128 x float>)
+declare <128 x float> @llvm.masked.load.v128f32.p0(ptr, i32 immarg, <128 x i1>, <128 x float>)
+declare void @llvm.masked.store.v128f32.p0(<128 x float>, ptr, i32 immarg, <128 x i1>)
 
 define void @vector_add_32(ptr noalias %a, ptr noalias %b, ptr noalias %out) {
   %ap0 = getelementptr <128 x float>, ptr %a, i64 0
@@ -1154,5 +1163,17 @@ define void @rmsnorm_32(ptr noalias %in, ptr noalias %out, ptr noalias %rms) {
   %norm31 = fdiv <128 x float> %v31, %root31
   %op31 = getelementptr <128 x float>, ptr %out, i64 31
   store <128 x float> %norm31, ptr %op31, align 4
+  ret void
+}
+
+define void @masked_add(ptr noalias %a, ptr noalias %b, ptr noalias %out,
+                        <128 x i1> %mask) {
+  %av = call <128 x float> @llvm.masked.load.v128f32.p0(
+      ptr %a, i32 4, <128 x i1> %mask, <128 x float> zeroinitializer)
+  %bv = call <128 x float> @llvm.masked.load.v128f32.p0(
+      ptr %b, i32 4, <128 x i1> %mask, <128 x float> zeroinitializer)
+  %sum = fadd <128 x float> %av, %bv
+  call void @llvm.masked.store.v128f32.p0(<128 x float> %sum, ptr %out,
+                                          i32 4, <128 x i1> %mask)
   ret void
 }

@@ -18,11 +18,20 @@ define void @exp_v128f32(ptr noalias %in, ptr noalias %out) {
 ; YUSHUXIN:       ret
 ; REPORT:         riscv-v-reg-pressure-report: function=exp_v128f32
 ; REPORT-SAME:    rvv-scalable-stack-bytes=
-; REPORT-SAME:    rvv-spill-slots=
+; REPORT-SAME:    rvv-spill-slots=0
 ; REPORT-SAME:    fixed-stack-estimate=
 ; NOREPORT-NOT:   riscv-v-reg-pressure-report
   %v = load <128 x float>, ptr %in, align 4
   %e = call <128 x float> @llvm.exp.v128f32(<128 x float> %v)
   store <128 x float> %e, ptr %out, align 4
+  ret void
+}
+
+define void @rvv_alloca() {
+; REPORT:         riscv-v-reg-pressure-report: function=rvv_alloca
+; REPORT-SAME:    rvv-scalable-stack-bytes=
+; REPORT-SAME:    rvv-spill-slots=0
+; REPORT-SAME:    fixed-stack-estimate=
+  %x = alloca <vscale x 4 x i32>, align 16
   ret void
 }

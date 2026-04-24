@@ -289,15 +289,21 @@ RISCVTargetMachine::createMachineScheduler(MachineSchedContext *C) const {
   const RISCVSubtarget &ST = C->MF->getSubtarget<RISCVSubtarget>();
   ScheduleDAGMILive *DAG = createSchedLive<RISCVPreRAMachineSchedStrategy>(C);
 
-  if (!isRISCVVRegPressureAwareSchedEnabled() &&
-      ST.enableMISchedLoadClustering())
-    DAG->addMutation(createLoadClusterDAGMutation(
-        DAG->TII, DAG->TRI, /*ReorderWhileClustering=*/true));
+  if (ST.enableMISchedLoadClustering())
+    DAG->addMutation(
+        isRISCVVRegPressureAwareSchedEnabled()
+            ? createRISCVVRegPressureLoadClusterDAGMutation(
+                  DAG->TII, DAG->TRI, /*ReorderWhileClustering=*/true)
+            : createLoadClusterDAGMutation(DAG->TII, DAG->TRI,
+                                           /*ReorderWhileClustering=*/true));
 
-  if (!isRISCVVRegPressureAwareSchedEnabled() &&
-      ST.enableMISchedStoreClustering())
-    DAG->addMutation(createStoreClusterDAGMutation(
-        DAG->TII, DAG->TRI, /*ReorderWhileClustering=*/true));
+  if (ST.enableMISchedStoreClustering())
+    DAG->addMutation(
+        isRISCVVRegPressureAwareSchedEnabled()
+            ? createRISCVVRegPressureStoreClusterDAGMutation(
+                  DAG->TII, DAG->TRI, /*ReorderWhileClustering=*/true)
+            : createStoreClusterDAGMutation(DAG->TII, DAG->TRI,
+                                            /*ReorderWhileClustering=*/true));
 
   if (!DisableVectorMaskMutation && ST.hasVInstructions())
     DAG->addMutation(createRISCVVectorMaskDAGMutation(DAG->TRI));
