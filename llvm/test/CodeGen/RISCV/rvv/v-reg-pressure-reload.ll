@@ -1,4 +1,9 @@
 ; RUN: llc -O2 -mtriple=riscv64 -mattr=+v,+zvl1024b -riscv-v-vector-bits-min=1024 -riscv-v-reg-pressure-aware-sched -stop-after=riscv-v-reg-pressure-reload < %s | FileCheck %s
+; RUN: llc -O2 -mtriple=riscv64 -mattr=+v,+zvl1024b -riscv-v-vector-bits-min=1024 -riscv-v-reg-pressure-aware-sched -debug-pass=Structure < %s -o /dev/null 2>&1 | FileCheck %s --check-prefix=PIPELINE
+
+; PIPELINE: Machine Instruction Scheduler
+; PIPELINE: RISC-V RVV register pressure reload rematerialization
+; PIPELINE: Greedy Register Allocator
 
 declare float @llvm.vector.reduce.fadd.v128f32(float, <128 x float>)
 declare void @side_effect()
@@ -10,6 +15,18 @@ define void @reload_safe(ptr noalias %in, ptr noalias %out, ptr noalias %sum) {
   %r = call float @llvm.vector.reduce.fadd.v128f32(float 0.0, <128 x float> %v)
   %x = fadd <128 x float> %v, %v
   store <128 x float> %x, ptr %out, align 4
+  store float %r, ptr %sum, align 4
+  ret void
+}
+
+; CHECK-LABEL: name: reload_volatile_late_store
+; CHECK: PseudoVLE32_V_M4
+; CHECK-NOT: PseudoVLE32_V_M4
+define void @reload_volatile_late_store(ptr noalias %in, ptr noalias %out,
+                                        ptr noalias %sum) {
+  %v = load <128 x float>, ptr %in, align 4
+  %r = call float @llvm.vector.reduce.fadd.v128f32(float 0.0, <128 x float> %v)
+  store volatile <128 x float> %v, ptr %out, align 4
   store float %r, ptr %sum, align 4
   ret void
 }

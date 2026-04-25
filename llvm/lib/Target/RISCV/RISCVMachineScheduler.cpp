@@ -8,8 +8,10 @@
 
 #include "RISCVMachineScheduler.h"
 #include "RISCVRegisterInfo.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/ScheduleDAG.h"
 #include "llvm/CodeGen/ScheduleDAGMutation.h"
@@ -29,21 +31,21 @@ bool llvm::isRISCVVRegPressureAwareSchedEnabled() {
 }
 
 static bool isRVVReg(const MachineRegisterInfo &MRI, Register Reg) {
-  if (!Reg.isVirtual())
+  if (!Reg || !Reg.isVirtual())
     return false;
   return RISCVRegisterInfo::isRVVRegClass(MRI.getRegClass(Reg));
 }
 
-static bool hasHighRVVPressure(const ScheduleDAG &DAG) {
+static bool hasHighRVVPressure(const MachineRegisterInfo &MRI,
+                               ArrayRef<const MachineInstr *> Instrs) {
   SmallPtrSet<const MachineInstr *, 32> RVVDefs;
   unsigned RVVOps = 0;
-  for (const SUnit &SU : DAG.SUnits) {
-    const MachineInstr *MI = SU.getInstr();
+  for (const MachineInstr *MI : Instrs) {
     if (!MI)
       continue;
     bool HasRVVOperand = false;
     for (const MachineOperand &MO : MI->operands()) {
-      if (!MO.isReg() || !isRVVReg(DAG.MRI, MO.getReg()))
+      if (!MO.isReg() || !isRVVReg(MRI, MO.getReg()))
         continue;
       HasRVVOperand = true;
       if (MO.isDef())
@@ -53,6 +55,22 @@ static bool hasHighRVVPressure(const ScheduleDAG &DAG) {
       ++RVVOps;
   }
   return RVVOps >= 12 && RVVDefs.size() >= 8;
+}
+
+static bool hasHighRVVPressure(const ScheduleDAG &DAG) {
+  SmallVector<const MachineInstr *, 32> Instrs;
+  for (const SUnit &SU : DAG.SUnits)
+    Instrs.push_back(SU.getInstr());
+  return hasHighRVVPressure(DAG.MRI, Instrs);
+}
+
+static bool hasHighRVVPressure(const MachineRegisterInfo &MRI,
+                               MachineBasicBlock::iterator Begin,
+                               MachineBasicBlock::iterator End) {
+  SmallVector<const MachineInstr *, 32> Instrs;
+  for (auto I = Begin; I != End; ++I)
+    Instrs.push_back(&*I);
+  return hasHighRVVPressure(MRI, Instrs);
 }
 
 namespace {
@@ -141,18 +159,20 @@ void RISCVPreRAMachineSchedStrategy::initPolicy(
     MachineBasicBlock::iterator Begin, MachineBasicBlock::iterator End,
     unsigned NumRegionInstrs) {
   GenericScheduler::initPolicy(Begin, End, NumRegionInstrs);
+  RVVPressureAwareRegion = false;
+  if (EnableRVVRegPressureAwareSched && Begin != End)
+    RVVPressureAwareRegion =
+        ::hasHighRVVPressure(Begin->getMF()->getRegInfo(), Begin, End);
   if (EnableRVVRegPressureAwareSched)
     RegionPolicy.ShouldTrackPressure = true;
-}
-
-void RISCVPreRAMachineSchedStrategy::initialize(ScheduleDAGMI *DAG) {
-  GenericScheduler::initialize(DAG);
-  RVVPressureAwareRegion =
-      EnableRVVRegPressureAwareSched && hasHighRVVPressure();
   if (RVVPressureAwareRegion) {
     RegionPolicy.OnlyTopDown = true;
     RegionPolicy.OnlyBottomUp = false;
   }
+}
+
+void RISCVPreRAMachineSchedStrategy::initialize(ScheduleDAGMI *DAG) {
+  GenericScheduler::initialize(DAG);
 }
 
 bool RISCVPreRAMachineSchedStrategy::tryVSETVLIInfo(

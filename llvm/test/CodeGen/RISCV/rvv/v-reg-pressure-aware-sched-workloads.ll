@@ -1,6 +1,7 @@
 ; RUN: llc -O2 -mtriple=riscv64 -mattr=+v,+experimental-yushuxin-vfexp,+zvl1024b -riscv-v-vector-bits-min=1024 -riscv-v-reg-pressure-aware-sched -verify-machineinstrs < %s | FileCheck %s
 ; RUN: llc -O3 -mtriple=riscv64 -mattr=+v,+experimental-yushuxin-vfexp,+zvl1024b -riscv-v-vector-bits-min=1024 -riscv-v-reg-pressure-aware-sched -verify-machineinstrs < %s | FileCheck %s
 ; RUN: llc -O2 -mtriple=riscv64 -mattr=+v,+experimental-yushuxin-vfexp,+zvl1024b -riscv-v-vector-bits-min=1024 -verify-machineinstrs < %s | FileCheck %s --check-prefix=BASE
+; RUN: llc -O2 -mtriple=riscv64 -mattr=+v,+experimental-yushuxin-vfexp,+zvl1024b -riscv-v-vector-bits-min=1024 -riscv-v-reg-pressure-aware-sched -debug-only=machine-scheduler < %s -o /dev/null 2>&1 | FileCheck %s --check-prefix=POLICY
 
 ; BASE-LABEL: vector_add_32:
 ; BASE-NOT: safe_softmax_32:
@@ -22,6 +23,7 @@
 ; CHECK-LABEL: masked_add:
 ; CHECK: v0.t
 ; CHECK: ret
+; POLICY: GenericScheduler RegionPolicy:{{.*}}ShouldTrackPressure=1 OnlyTopDown=1 OnlyBottomUp=0
 
 declare float @llvm.vector.reduce.fadd.v128f32(float, <128 x float>)
 declare <128 x float> @llvm.exp.v128f32(<128 x float>)

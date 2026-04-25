@@ -132,8 +132,8 @@ riscv-v-reg-pressure-report: function=sv_alloca rvv-scalable-stack-bytes=16 rvv-
 | safe-softmax reduce + exp | O3 | 86 | 17 | 816 / 33 | 96 / 3 |
 | top-2 compare/select/reduce | O2 | 93 | 8 | 872 / 34 | 64 / 2 |
 | top-2 compare/select/reduce | O3 | 93 | 8 | 872 / 34 | 64 / 2 |
-| RMSNorm square/sum/sqrt/normalize | O2 | 268 | 40 | 2208 / 69 | 128 / 4 |
-| RMSNorm square/sum/sqrt/normalize | O3 | 268 | 40 | 2208 / 69 | 128 / 4 |
+| RMSNorm square/sum/sqrt/normalize | O2 | 268 | 37 | 2208 / 69 | 128 / 4 |
+| RMSNorm square/sum/sqrt/normalize | O3 | 268 | 37 | 2208 / 69 | 128 / 4 |
 
 Representative diagnostics from the measured O2 runs:
 

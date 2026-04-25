@@ -392,6 +392,9 @@ public:
       : TargetPassConfig(TM, PM) {
     if (TM.getOptLevel() != CodeGenOptLevel::None)
       substitutePass(&PostRASchedulerID, &PostMachineSchedulerID);
+    if (TM.getOptLevel() != CodeGenOptLevel::None &&
+        isRISCVVRegPressureAwareSchedEnabled())
+      insertPass(&MachineSchedulerID, createRISCVVRegPressureReloadPass());
     setEnableSinkAndFold(EnableSinkFold);
     EnableLoopTermFold = true;
   }
@@ -621,8 +624,6 @@ void RISCVPassConfig::addPreRegAlloc() {
   if (TM->getOptLevel() != CodeGenOptLevel::None) {
     addPass(createRISCVMergeBaseOffsetOptPass());
     addPass(createRISCVVLOptimizerPass());
-    if (isRISCVVRegPressureAwareSchedEnabled())
-      addPass(createRISCVVRegPressureReloadPass());
     // Add Zilsd pre-allocation load/store optimization
     addPass(createRISCVPreAllocZilsdOptPass());
   }

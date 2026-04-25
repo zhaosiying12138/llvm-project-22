@@ -44,16 +44,13 @@ public:
     return "RISC-V RVV register pressure reload rematerialization";
   }
 
-  MachineFunctionProperties getRequiredProperties() const override {
-    return MachineFunctionProperties().setIsSSA();
-  }
-
 private:
   const TargetInstrInfo *TII = nullptr;
   MachineRegisterInfo *MRI = nullptr;
 
   bool isRVVReg(Register Reg) const;
   bool hasRVVUse(const MachineInstr &MI, Register Reg) const;
+  bool hasRegDef(const MachineInstr &MI, Register Reg) const;
   bool hasRVVRegUse(const MachineInstr &MI) const;
   bool hasRVVRegDef(const MachineInstr &MI) const;
   bool isUnsafeMemory(const MachineInstr &MI) const;
@@ -76,7 +73,7 @@ INITIALIZE_PASS(RISCVVRegPressureReload, DEBUG_TYPE,
                 "RISC-V RVV pressure reload rematerialization", false, false)
 
 bool RISCVVRegPressureReload::isRVVReg(Register Reg) const {
-  if (!Reg.isVirtual())
+  if (!Reg || !Reg.isVirtual())
     return false;
   return RISCVRegisterInfo::isRVVRegClass(MRI->getRegClass(Reg));
 }
@@ -84,13 +81,20 @@ bool RISCVVRegPressureReload::isRVVReg(Register Reg) const {
 bool RISCVVRegPressureReload::hasRVVUse(const MachineInstr &MI,
                                         Register Reg) const {
   return any_of(MI.operands(), [&](const MachineOperand &MO) {
-    return MO.isReg() && MO.isUse() && MO.getReg() == Reg;
+    return MO.isReg() && MO.isUse() && !MO.isUndef() && MO.getReg() == Reg;
+  });
+}
+
+bool RISCVVRegPressureReload::hasRegDef(const MachineInstr &MI,
+                                        Register Reg) const {
+  return any_of(MI.operands(), [&](const MachineOperand &MO) {
+    return MO.isReg() && MO.isDef() && MO.getReg() == Reg;
   });
 }
 
 bool RISCVVRegPressureReload::hasRVVRegUse(const MachineInstr &MI) const {
   return any_of(MI.operands(), [&](const MachineOperand &MO) {
-    return MO.isReg() && MO.isUse() && isRVVReg(MO.getReg());
+    return MO.isReg() && MO.isUse() && !MO.isUndef() && isRVVReg(MO.getReg());
   });
 }
 
@@ -134,7 +138,7 @@ RISCVVRegPressureReload::getSimpleRVVLoadDef(const MachineInstr &MI) const {
   for (const MachineOperand &MO : MI.operands()) {
     if (!MO.isReg())
       continue;
-    if (MO.isUse() && isRVVReg(MO.getReg()))
+    if (MO.isUse() && isRVVReg(MO.getReg()) && !MO.isUndef())
       return std::nullopt;
     if (MO.isDef() && isRVVReg(MO.getReg())) {
       if (Def)
@@ -169,6 +173,8 @@ bool RISCVVRegPressureReload::cloneLoadForUse(MachineFunction &MF,
   for (MachineOperand &MO : Clone->operands()) {
     if (MO.isReg() && MO.isDef() && MO.getReg() == OldReg)
       MO.setReg(NewReg);
+    if (MO.isReg() && MO.isUse() && MO.isUndef() && MO.getReg() == OldReg)
+      MO.setReg(NewReg);
   }
 
   MachineBasicBlock *MBB = Use.getParent();
@@ -198,13 +204,15 @@ bool RISCVVRegPressureReload::processLoad(MachineFunction &MF,
   for (auto I = std::next(Load.getIterator()), E = MBB->instr_end(); I != E;
        ++I) {
     MachineInstr &MI = *I;
+    if (hasRegDef(MI, *Def))
+      break;
     if (!hasRVVUse(MI, *Def))
       continue;
     if (isReductionUse(MI)) {
       SawReductionUse = true;
       continue;
     }
-    if (SawReductionUse && isLateElementwiseUse(MI) &&
+    if (SawReductionUse && isLateElementwiseUse(MI) && !isAliasBarrier(MI) &&
         !hasBarrierBetween(Load, MI))
       LateUses.push_back(&MI);
   }

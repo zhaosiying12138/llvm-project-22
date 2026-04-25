@@ -266,15 +266,16 @@ elementwise add 的形状比较友好：两个输入 load 后做 `vfadd`，结�
 做 subtract、exp、normalize、store。即使 scheduler 尽量就近消费，reduce
 链本身也会迫使某些宽值跨过一段较长的依赖链。
 
-本分支因此加了 `RISCVVRegPressureReload` pass。它的位置在
-`RISCVVLOptimizer` 之后、generic MachineScheduler 之前，并且只在
-`-riscv-v-reg-pressure-aware-sched` 开启时插入。放在 VL optimizer 后面，
-是因为我们希望先让 RVV VL 相关伪指令和 operands 稳定下来；放在 MachineScheduler
-前面，是因为 cloned load 应该作为可调度节点参与后续排序，而不是在最终顺序
-已经决定后再插入。
+本分支因此加了 `RISCVVRegPressureReload` pass。它的位置在 pre-RA
+MachineScheduler 之后、register allocation 之前，并且只在
+`-riscv-v-reg-pressure-aware-sched` 开启时通过 `insertPass(&MachineSchedulerID,
+...)` 插入。它仍然运行在 pre-RA virtual-register 形式下，但不会再让后续 pre-RA scheduler
+把刚插入的 cloned load 拉回到 block 前面。`RISCVVLOptimizer` 仍在更早位置
+先稳定 RVV VL 相关伪指令和 operands；reload clone 则在最终 pre-RA schedule
+确定后，把重新物化的 load 放在 late use 附近。
 
 这个 pass 的名字里有 reload，但它不是在 register allocation 后修补真实
-reload。它做的是 pre-RA、SSA 形式下的 conservative rematerialization：
+reload。它做的是 pre-RA virtual-register 形式下的 conservative rematerialization：
 对同一 basic block 内的 simple RVV load，如果它先被 reduction 使用，之后
 又被 elementwise 或 store 使用，pass 可以在 late use 前 clone 一份 load，
 并把 late use 的 operand 改写到新虚拟寄存器。这样原始 load 的 def 不必
@@ -409,8 +410,8 @@ spill/reload，但数量和 RVV stack slot 明显下降。若同时观察 MIR，
 | safe-softmax reduce + exp | O3 | 86 | 17 | 816 / 33 | 96 / 3 |
 | top-2 compare/select/reduce | O2 | 93 | 8 | 872 / 34 | 64 / 2 |
 | top-2 compare/select/reduce | O3 | 93 | 8 | 872 / 34 | 64 / 2 |
-| RMSNorm square/sum/sqrt/normalize | O2 | 268 | 40 | 2208 / 69 | 128 / 4 |
-| RMSNorm square/sum/sqrt/normalize | O3 | 268 | 40 | 2208 / 69 | 128 / 4 |
+| RMSNorm square/sum/sqrt/normalize | O2 | 268 | 37 | 2208 / 69 | 128 / 4 |
+| RMSNorm square/sum/sqrt/normalize | O3 | 268 | 37 | 2208 / 69 | 128 / 4 |
 
 vector add 是最纯粹的 elementwise case。baseline 的 IR 形状是 32 组 a/b
 load，随后 32 组 `fadd`，再 32 组 store。generic scheduling 和 clustering
@@ -436,9 +437,9 @@ top2 workload 的形状是 compare/select/reduce 混合。它要保留候选 top
 RMSNorm 是四个 workload 中压力最高的一个。它包括 square、sum reduction、
 sqrt 或 reciprocal sqrt、normalize、store，多阶段依赖让输入、平方结果、
 归一化中间值都可能跨较长区间。baseline 达到 268 次 whole-register
-spill/reload，RVV stack/slots 是 2208/69。打开实验后降到 40 次和 128/4。
+spill/reload，RVV stack/slots 是 2208/69。打开实验后降到 37 次和 128/4。
 这个下降主要来自两部分：调度器缩短 elementwise 段的 live range，reload
-clone 避免原输入向量无谓跨过 reduce 后的 late normalize use。剩余 40 次
+clone 避免原输入向量无谓跨过 reduce 后的 late normalize use。剩余 37 次
 说明这不是一个“消灭所有 spill”的算法重写；它只是把由调度顺序造成的额外
 压力去掉了大部分。
 
@@ -637,12 +638,12 @@ bottom 来，final schedule 中 RVV load 和 consumer 的距离是否缩短。ba
 也会跟上。
 
 调试 reload clone 时，`-stop-after=riscv-v-reg-pressure-reload` 比最终汇编
-更清楚。最终汇编里的新增 `vle32.v` 可能会被调度移动，也可能和其他访存交错，
-不容易判断它来自原始 IR 还是 clone。停在 pass 后可以直接数某个 basic block
-里同一个 simple RVV load 是否被复制，并检查 late use 是否改写到新虚拟寄存器。
-如果没有 clone，先看三类原因：load 是否 simple，是否确实先出现 reduction
-use，load 到 late use 之间是否有 barrier。大多数“为什么没 clone”的答案都
-落在 volatile、store、call、side effect 或跨块这些保守跳过条件上。
+更清楚。这个 pass 现在位于 pre-RA MachineScheduler 之后，所以停在这里可以
+直接观察最终 pre-RA schedule 上 late use 附近是否插入了 cloned load，并检查
+late use 是否改写到新虚拟寄存器。如果没有 clone，先看三类原因：load 是否
+simple，是否确实先出现 reduction use，load 到 late use 之间或 late use 本身
+是否有 barrier。大多数“为什么没 clone”的答案都落在 volatile、store、call、
+side effect 或跨块这些保守跳过条件上。
 
 还要避免一个常见误判：optimized 汇编中普通 `vle32.v` 变多，不一定是退化。
 对 reduce workload 来说，reload clone 的目标就是用更近的一次普通 load
@@ -678,7 +679,7 @@ RMSNorm 的压力最高，因为它同时有“先算统计量”和“再用统
 或中间值乘以归一化系数输出。这个形状会制造多个不同来源的宽值：原输入、
 平方结果、归一化结果，每类值的最晚 use 都可能不近。调度器可以让局部 elementwise
 链更紧凑，reload clone 可以切断部分原输入跨 reduce 链的活跃区间，但无法把
-统计量依赖本身消掉。因此 RMSNorm 的下降幅度很大，却仍保留 40 次 whole-register
+统计量依赖本身消掉。因此 RMSNorm 的下降幅度很大，却仍保留 37 次 whole-register
 spill/reload。
 
 ## 这不是哪些问题的解法
@@ -792,7 +793,7 @@ same-block simple load 提供 clone，避免原输入向量跨过过长依赖链
 
 四个 workload 的结果显示了这个方向的价值：vector add 从 50 次 whole-register
 spill/reload 降到 0，safe-softmax 从 86 降到 17，top2 从 93 降到 8，
-RMSNorm 从 268 降到 40；对应 RVV spill slots 也从 24/33/34/69 降到
+RMSNorm 从 268 降到 37；对应 RVV spill slots 也从 24/33/34/69 降到
 0/3/2/4。对 elementwise 场景，关键是就近消费；对 reduce 场景，关键是
 调度和保守 reload clone 共同缩短宽值活跃跨度。剩余 spill 是设计边界的一部分：
 当算法依赖要求宽值跨越 reduction 或 normalize 链时，调度器不能也不应该假装
