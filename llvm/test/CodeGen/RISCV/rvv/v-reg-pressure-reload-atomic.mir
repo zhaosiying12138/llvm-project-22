@@ -9,6 +9,15 @@
 # CHECK-LABEL: name: reload_avl_redefined
 # CHECK: PseudoVLE32_V_M4
 # CHECK-NOT: PseudoVLE32_V_M4
+# CHECK-LABEL: name: reload_fault_first
+# CHECK: PseudoVLE32FF_V_M4
+# CHECK-NOT: PseudoVLE32FF_V_M4
+# CHECK-LABEL: name: reload_kill_flags
+# CHECK-NOT: killed %0
+# CHECK: PseudoVLE32_V_M4 $noreg, %0, %3
+# CHECK-NOT: killed %0
+# CHECK: PseudoVLE32_V_M4 $noreg, %0, %3
+# CHECK-NOT: killed %0
 # CHECK-LABEL: name: reload_ordered_monotonic
 # CHECK: PseudoVLE32_V_M4
 # CHECK-NOT: PseudoVLE32_V_M4
@@ -106,6 +115,71 @@ body:             |
     %5:vr = PseudoVMV_S_X $noreg, $x0, %3, 5
     %6:vr = nofpexcept PseudoVFREDOSUM_VS_M4_E32 $noreg, %4, killed %5, 7, %3, 5, 1, implicit $frm
     %3:gprnox0 = ADDI $x0, 64
+    %7:vrm4 = nofpexcept PseudoVFADD_VV_M4_E32 $noreg, %4, %4, 7, %3, 5, 1, implicit $frm
+    PseudoVSE32_V_M4 killed %7, %1, %3, 5 :: (store (s4096))
+    PseudoVSE32_V_M1 killed %6, %2, 1, 5 :: (store (s32))
+    PseudoRET
+...
+---
+name:            reload_fault_first
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: gpr }
+  - { id: 1, class: gpr }
+  - { id: 2, class: gpr }
+  - { id: 3, class: gprnox0 }
+  - { id: 4, class: vrm4 }
+  - { id: 5, class: vr }
+  - { id: 6, class: vr }
+  - { id: 7, class: vrm4 }
+  - { id: 8, class: gpr }
+liveins:
+  - { reg: '$x10', virtual-reg: '%0' }
+  - { reg: '$x11', virtual-reg: '%1' }
+  - { reg: '$x12', virtual-reg: '%2' }
+body:             |
+  bb.0:
+    liveins: $x10, $x11, $x12
+
+    %2:gpr = COPY $x12
+    %1:gpr = COPY $x11
+    %0:gpr = COPY $x10
+    %3:gprnox0 = ADDI $x0, 128
+    %4:vrm4, %8:gpr = PseudoVLE32FF_V_M4 $noreg, %0, %3, 5, 2 :: (load unknown-size)
+    %5:vr = PseudoVMV_S_X $noreg, $x0, %3, 5
+    %6:vr = nofpexcept PseudoVFREDOSUM_VS_M4_E32 $noreg, %4, killed %5, 7, %3, 5, 1, implicit $frm
+    %7:vrm4 = nofpexcept PseudoVFADD_VV_M4_E32 $noreg, %4, %4, 7, %3, 5, 1, implicit $frm
+    PseudoVSE32_V_M4 killed %7, %1, %3, 5 :: (store (s4096))
+    PseudoVSE32_V_M1 killed %6, %2, 1, 5 :: (store (s32))
+    PseudoRET
+...
+---
+name:            reload_kill_flags
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: gpr }
+  - { id: 1, class: gpr }
+  - { id: 2, class: gpr }
+  - { id: 3, class: gprnox0 }
+  - { id: 4, class: vrm4 }
+  - { id: 5, class: vr }
+  - { id: 6, class: vr }
+  - { id: 7, class: vrm4 }
+liveins:
+  - { reg: '$x10', virtual-reg: '%0' }
+  - { reg: '$x11', virtual-reg: '%1' }
+  - { reg: '$x12', virtual-reg: '%2' }
+body:             |
+  bb.0:
+    liveins: $x10, $x11, $x12
+
+    %2:gpr = COPY $x12
+    %1:gpr = COPY $x11
+    %0:gpr = COPY $x10
+    %3:gprnox0 = ADDI $x0, 128
+    %4:vrm4 = PseudoVLE32_V_M4 $noreg, killed %0, %3, 5, 2 :: (load (s4096))
+    %5:vr = PseudoVMV_S_X $noreg, $x0, %3, 5
+    %6:vr = nofpexcept PseudoVFREDOSUM_VS_M4_E32 $noreg, %4, killed %5, 7, %3, 5, 1, implicit $frm
     %7:vrm4 = nofpexcept PseudoVFADD_VV_M4_E32 $noreg, %4, %4, 7, %3, 5, 1, implicit $frm
     PseudoVSE32_V_M4 killed %7, %1, %3, 5 :: (store (s4096))
     PseudoVSE32_V_M1 killed %6, %2, 1, 5 :: (store (s32))

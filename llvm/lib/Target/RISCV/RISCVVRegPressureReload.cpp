@@ -60,9 +60,12 @@ private:
   bool isUnsafeMemory(const MachineInstr &MI) const;
   bool isAliasBarrier(const MachineInstr &MI) const;
   bool isReductionUse(const MachineInstr &MI) const;
+  bool isFaultFirstLoad(const MachineInstr &MI) const;
   bool isLateElementwiseUse(const MachineInstr &MI) const;
   void collectLoadInputRegs(const MachineInstr &Load,
                             SmallVectorImpl<Register> &Regs) const;
+  void clearLoadInputKillFlags(MachineInstr &Load, MachineInstr &Use,
+                               ArrayRef<Register> LoadInputRegs) const;
   std::optional<Register> getSimpleRVVLoadDef(const MachineInstr &MI) const;
   bool hasBarrierBetween(const MachineInstr &Load,
                          const MachineInstr &Use,
@@ -141,6 +144,10 @@ bool RISCVVRegPressureReload::isReductionUse(const MachineInstr &MI) const {
          Name.contains("VWRED");
 }
 
+bool RISCVVRegPressureReload::isFaultFirstLoad(const MachineInstr &MI) const {
+  return TII->getName(MI.getOpcode()).contains("FF_V");
+}
+
 bool RISCVVRegPressureReload::isLateElementwiseUse(
     const MachineInstr &MI) const {
   return hasRVVRegUse(MI) && !isReductionUse(MI) &&
@@ -159,10 +166,27 @@ void RISCVVRegPressureReload::collectLoadInputRegs(
   }
 }
 
+void RISCVVRegPressureReload::clearLoadInputKillFlags(
+    MachineInstr &Load, MachineInstr &Use,
+    ArrayRef<Register> LoadInputRegs) const {
+  for (Register Reg : LoadInputRegs) {
+    if (Reg.isVirtual()) {
+      MRI->clearKillFlags(Reg);
+      continue;
+    }
+
+    for (auto I = Load.getIterator(), E = Use.getIterator();; ++I) {
+      I->clearRegisterKills(Reg, TRI);
+      if (I == E)
+        break;
+    }
+  }
+}
+
 std::optional<Register>
 RISCVVRegPressureReload::getSimpleRVVLoadDef(const MachineInstr &MI) const {
   if (!MI.mayLoad() || MI.mayStore() || MI.hasUnmodeledSideEffects() ||
-      MI.memoperands_empty() || isUnsafeMemory(MI))
+      MI.memoperands_empty() || isUnsafeMemory(MI) || isFaultFirstLoad(MI))
     return std::nullopt;
 
   Register Def;
@@ -202,9 +226,14 @@ bool RISCVVRegPressureReload::cloneLoadForUse(MachineFunction &MF,
                                               MachineInstr &Load,
                                               MachineInstr &Use,
                                               Register OldReg) {
+  SmallVector<Register, 8> LoadInputRegs;
+  collectLoadInputRegs(Load, LoadInputRegs);
+  clearLoadInputKillFlags(Load, Use, LoadInputRegs);
+
   const TargetRegisterClass *RC = MRI->getRegClass(OldReg);
   Register NewReg = MRI->createVirtualRegister(RC);
   MachineInstr *Clone = MF.CloneMachineInstr(&Load);
+  Clone->clearKillInfo();
 
   for (MachineOperand &MO : Clone->operands()) {
     if (MO.isReg() && MO.isDef() && MO.getReg() == OldReg)
