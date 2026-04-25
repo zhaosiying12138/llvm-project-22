@@ -15,6 +15,8 @@
   define void @no_pair_if_offset_out_of_range_lw() nounwind { ret void }
   define void @no_pair_if_offset_out_of_range_sw() nounwind { ret void }
   define void @no_pair_if_non_consecutive_regs() nounwind { ret void }
+  define void @no_pair_if_reversed_non_consecutive_regs_lw() nounwind { ret void }
+  define void @no_pair_if_reversed_non_consecutive_regs_sw() nounwind { ret void }
   define void @no_pair_if_rd_is_x0_lwmi() nounwind { ret void }
   define void @no_pair_if_rd_is_x0_swmi() nounwind { ret void }
   define void @pair_if_rd_is_x0_setwmi() nounwind { ret void }
@@ -226,6 +228,40 @@ body: |
     ; CHECK-NEXT: PseudoRET
     $x11 = LW $x10, 0 :: (load (s32), align 4)
     $x13 = LW $x10, 4 :: (load (s32), align 4)
+    PseudoRET
+
+...
+---
+name: no_pair_if_reversed_non_consecutive_regs_lw
+tracksRegLiveness: false
+body: |
+  bb.0:
+    liveins: $x10
+    ; CHECK-LABEL: name: no_pair_if_reversed_non_consecutive_regs_lw
+    ; CHECK: liveins: $x10
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: $x12 = LW $x10, 0 :: (load (s32))
+    ; CHECK-NEXT: $x20 = LW $x10, 4 :: (load (s32))
+    ; CHECK-NEXT: PseudoRET
+    $x20 = LW $x10, 4 :: (load (s32), align 4)
+    $x12 = LW $x10, 0 :: (load (s32), align 4)
+    PseudoRET
+
+...
+---
+name: no_pair_if_reversed_non_consecutive_regs_sw
+tracksRegLiveness: false
+body: |
+  bb.0:
+    liveins: $x10, $x12, $x20
+    ; CHECK-LABEL: name: no_pair_if_reversed_non_consecutive_regs_sw
+    ; CHECK: liveins: $x10, $x12, $x20
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: SW $x12, $x10, 0 :: (store (s32))
+    ; CHECK-NEXT: SW $x20, $x10, 4 :: (store (s32))
+    ; CHECK-NEXT: PseudoRET
+    SW $x20, $x10, 4 :: (store (s32), align 4)
+    SW $x12, $x10, 0 :: (store (s32), align 4)
     PseudoRET
 
 ...

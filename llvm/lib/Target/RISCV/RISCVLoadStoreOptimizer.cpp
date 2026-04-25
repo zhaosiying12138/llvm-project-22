@@ -407,22 +407,25 @@ bool RISCVLoadStoreOpt::tryConvertToXqcilsmLdStPair(
   if (!isMemOpAligned(*First, Align(4)) || !isMemOpAligned(*Second, Align(4)))
     return false;
 
-  auto &FirstOp0 = First->getOperand(0);
-  auto &SecondOp0 = Second->getOperand(0);
-
   int64_t Off1 = FirstOp2.getImm();
   int64_t Off2 = SecondOp2.getImm();
 
+  MachineInstr *LowerMI = &*First;
+  MachineInstr *UpperMI = &*Second;
   if (Off2 < Off1) {
-    std::swap(FirstOp0, SecondOp0);
+    std::swap(LowerMI, UpperMI);
     std::swap(Off1, Off2);
   }
 
   if (!isShiftedUInt<5, 2>(Off1) || (Off2 - Off1 != 4))
     return false;
 
-  Register StartReg = FirstOp0.getReg();
-  Register NextReg = SecondOp0.getReg();
+  const MachineOperand &LowerOp0 = LowerMI->getOperand(0);
+  const MachineOperand &UpperOp0 = UpperMI->getOperand(0);
+  const MachineOperand &LowerBaseOp = LowerMI->getOperand(1);
+  const MachineOperand &UpperBaseOp = UpperMI->getOperand(1);
+  Register StartReg = LowerOp0.getReg();
+  Register NextReg = UpperOp0.getReg();
 
   unsigned XqciOpc;
   unsigned StartRegState;
@@ -449,12 +452,12 @@ bool RISCVLoadStoreOpt::tryConvertToXqcilsmLdStPair(
     assert(Opc == RISCV::SW && "Expected a SW instruction");
     if (StartReg == NextReg) {
       XqciOpc = RISCV::QC_SETWMI;
-      StartRegState = getKillRegState(FirstOp0.isKill() || SecondOp0.isKill());
+      StartRegState = getKillRegState(LowerOp0.isKill() || UpperOp0.isKill());
       AddNextReg = false;
     } else if (NextReg == StartReg + 1 && StartReg != RISCV::X0) {
       XqciOpc = RISCV::QC_SWMI;
-      StartRegState = getKillRegState(FirstOp0.isKill());
-      NextRegState = RegState::Implicit | getKillRegState(SecondOp0.isKill());
+      StartRegState = getKillRegState(LowerOp0.isKill());
+      NextRegState = RegState::Implicit | getKillRegState(UpperOp0.isKill());
     } else {
       return false;
     }
@@ -464,7 +467,8 @@ bool RISCVLoadStoreOpt::tryConvertToXqcilsmLdStPair(
       First->getDebugLoc() ? First->getDebugLoc() : Second->getDebugLoc();
   MachineInstrBuilder MIB = BuildMI(*MF, DL, TII->get(XqciOpc));
   MIB.addReg(StartReg, StartRegState)
-      .addReg(Base1, getKillRegState(FirstOp1.isKill() || SecondOp1.isKill()))
+      .addReg(Base1,
+              getKillRegState(LowerBaseOp.isKill() || UpperBaseOp.isKill()))
       .addImm(2)
       .addImm(Off1)
       .cloneMergedMemRefs({&*First, &*Second});

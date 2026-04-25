@@ -190,7 +190,7 @@ PB.registerAnalysisRegistrationCallback([](LoopAnalysisManager &AM) {
 PB.registerAnalysisRegistrationCallback(
     [=](MachineFunctionAnalysisManager &AM) {
 #define MACHINE_FUNCTION_ANALYSIS(NAME, CREATE_PASS)                           \
-  AM.registerPass([&] { return CREATE_PASS; });
+  AM.registerPass([=] { return CREATE_PASS; });
 #include GET_PASS_REGISTRY
 #undef MACHINE_FUNCTION_ANALYSIS
     });
