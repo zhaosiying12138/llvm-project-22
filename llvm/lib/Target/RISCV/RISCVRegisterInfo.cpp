@@ -185,14 +185,35 @@ BitVector RISCVRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
     for (MCPhysReg Reg = RISCV::T0; Reg <= RISCV::T15; Reg++)
       markSuperRegs(Reserved, Reg);
   } else {
+    const TargetInstrInfo *TII = Subtarget.getInstrInfo();
+    auto ReserveTileAndOverlappingGroups = [&](unsigned Tile) {
+      markSuperRegs(Reserved, RISCV::T0 + Tile);
+      markSuperRegs(Reserved, RISCV::T0 + (Tile & ~1U));
+      markSuperRegs(Reserved, RISCV::T0 + (Tile & ~3U));
+    };
+    auto GetTileGroupSize = [](const TargetRegisterClass *RC) {
+      if (RC && RISCV::TRM4RegClass.hasSubClassEq(RC))
+        return 4U;
+      if (RC && RISCV::TRM2RegClass.hasSubClassEq(RC))
+        return 2U;
+      return 1U;
+    };
+
     for (const MachineBasicBlock &MBB : MF)
       for (const MachineInstr &MI : MBB)
         for (const MachineOperand &MO : MI.operands()) {
           if (!MO.isReg())
             continue;
           Register Reg = MO.getReg();
-          if (Reg.isPhysical() && Reg >= RISCV::T0 && Reg <= RISCV::T15)
-            markSuperRegs(Reserved, Reg);
+          if (!Reg.isPhysical() || Reg < RISCV::T0 || Reg > RISCV::T15)
+            continue;
+
+          const TargetRegisterClass *RC =
+              MI.getRegClassConstraint(MO.getOperandNo(), TII, this);
+          unsigned Tile = Reg - RISCV::T0;
+          unsigned GroupSize = GetTileGroupSize(RC);
+          for (unsigned I = 0; I != GroupSize && Tile + I < 16; ++I)
+            ReserveTileAndOverlappingGroups(Tile + I);
         }
   }
 

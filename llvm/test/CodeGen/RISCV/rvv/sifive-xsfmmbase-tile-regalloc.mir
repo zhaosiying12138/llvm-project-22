@@ -2,6 +2,7 @@
 
 --- |
   define void @tile_regalloc() { ret void }
+  define void @mixed_tile_pair_regalloc() { ret void }
   define void @mixed_tile_regalloc() { ret void }
 ...
 ---
@@ -18,6 +19,26 @@ body: |
     %1:gprnox0 = COPY $x11
     %2:tr = IMPLICIT_DEF
     PseudoSF_VTZERO_T %2, %0, %1, 3, 4
+    PseudoRET
+...
+---
+name: mixed_tile_pair_regalloc
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $x10, $x11
+
+    ; CHECK-LABEL: name: mixed_tile_pair_regalloc
+    ; CHECK: PseudoSF_MM_F_F $t0,
+    ; CHECK: renamable $t[[TILE:(1[0-5]|[2-9])]] = IMPLICIT_DEF
+    ; CHECK: PseudoSF_VTZERO_T killed renamable $t[[TILE]],
+    %0:gprnox0 = COPY $x10
+    %1:gprnox0 = COPY $x11
+    %2:vrm8 = IMPLICIT_DEF
+    %3:vrm8 = IMPLICIT_DEF
+    PseudoSF_MM_F_F $t0, %2, %3, 7, %0, %1, %0, 4, 2, implicit $frm
+    %4:tr = IMPLICIT_DEF
+    PseudoSF_VTZERO_T %4, %0, %1, 3, 4
     PseudoRET
 ...
 ---
