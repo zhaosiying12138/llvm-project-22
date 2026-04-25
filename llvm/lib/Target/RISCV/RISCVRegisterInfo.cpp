@@ -178,27 +178,23 @@ BitVector RISCVRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   // Shadow stack pointer.
   markSuperRegs(Reserved, RISCV::SSP);
 
-  auto HasFixedXSfmmTileReg = [&]() {
-    for (const MachineBasicBlock &MBB : MF) {
-      for (const MachineInstr &MI : MBB) {
+  // XSfmmbase tile registers are allocatable for virtual TR/TRM values. If
+  // fixed physical tile operands are present, reserve only those fixed tiles so
+  // virtual tile values in the same function still have registers available.
+  if (!Subtarget.hasVendorXSfmmbase()) {
+    for (MCPhysReg Reg = RISCV::T0; Reg <= RISCV::T15; Reg++)
+      markSuperRegs(Reserved, Reg);
+  } else {
+    for (const MachineBasicBlock &MBB : MF)
+      for (const MachineInstr &MI : MBB)
         for (const MachineOperand &MO : MI.operands()) {
           if (!MO.isReg())
             continue;
           Register Reg = MO.getReg();
           if (Reg.isPhysical() && Reg >= RISCV::T0 && Reg <= RISCV::T15)
-            return true;
+            markSuperRegs(Reserved, Reg);
         }
-      }
-    }
-    return false;
-  };
-
-  // XSfmmbase tile registers are allocatable for virtual TR/TRM values. Keep
-  // them reserved only when the function already contains fixed physical tile
-  // operands produced from immarg tile IDs.
-  if (!Subtarget.hasVendorXSfmmbase() || HasFixedXSfmmTileReg())
-    for (MCPhysReg Reg = RISCV::T0; Reg <= RISCV::T15; Reg++)
-      markSuperRegs(Reserved, Reg);
+  }
 
   assert(checkAllSuperRegsMarked(Reserved));
   return Reserved;
