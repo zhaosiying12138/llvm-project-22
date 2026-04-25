@@ -276,10 +276,12 @@ MachineScheduler 之后、register allocation 之前，并且只在
 
 这个 pass 的名字里有 reload，但它不是在 register allocation 后修补真实
 reload。它做的是 pre-RA virtual-register 形式下的 conservative rematerialization：
-对同一 basic block 内的 simple RVV load，如果它先被 reduction 使用，之后
-又被 elementwise 或 store 使用，pass 可以在 late use 前 clone 一份 load，
-并把 late use 的 operand 改写到新虚拟寄存器。这样原始 load 的 def 不必
-从 block 前部一直活到 late use；late use 获得一个更近的 def。
+只有同一 basic block 命中和 scheduler 一致的高压阈值，即 `RVVOps >= 12 &&
+RVVDefs.size() >= 8`，pass 才会考虑 clone。对这个高压 block 内的 simple
+RVV load，如果它先被 reduction 使用，之后又被 elementwise 或 store 使用，
+pass 可以在 late use 前 clone 一份 load，并把 late use 的 operand 改写到
+新虚拟寄存器。这样原始 load 的 def 不必从 block 前部一直活到 late use；
+late use 获得一个更近的 def。
 
 simple RVV load 的定义很严格：
 
@@ -288,7 +290,8 @@ simple RVV load 的定义很严格：
 - 必须有 memory operand，且 memory operand 不能 volatile、atomic，也必须
   是 unordered；
 - 必须只定义一个 RVV virtual register；
-- 不能同时使用 RVV register。
+- 不能同时使用 RVV register；
+- 不能是 fault-first load，例如 `PseudoVLE*FF_V*`。
 
 reduction use 的识别也保持直接：通过 `TII->getName(opcode)`，名字包含
 `VRED`、`VFRED` 或 `VWRED` 即视为 reduce。late elementwise use 则要求该
@@ -299,9 +302,12 @@ reduction use 的识别也保持直接：通过 `TII->getName(opcode)`，名字�
 有 barrier。原 load 到 late use 之间如果出现 store、call、unmodeled side
 effects，或者 volatile/atomic/ordered memory，都会跳过 clone。这个策略
 没有做复杂 alias analysis，也不尝试证明 noalias 参数关系；遇到可能改变
-内存可见值的情况就保守放弃。测试 `v-reg-pressure-reload.ll` 覆盖了正例
-和 skip case：普通 noalias reduce-plus-late-use 会看到两条 `PseudoVLE32_V_M4`，
-volatile load、可能别名的 intervening store、call intervened 都不会 clone。
+内存可见值的情况就保守放弃。原 load 的 scalar/physical 输入如果在 late use
+之前被重新定义或 clobber，也会跳过；真正 clone 时还会清理被延长 live range
+的 kill flags，避免生成 use-after-kill MIR。测试覆盖了高压 MIR 正例以及 skip
+case：低压 reduce-plus-late-use 不 clone，volatile/atomic/ordered memory、
+可能别名的 intervening store、call intervened、fault-first load、输入寄存器
+被重定义等情况也都不会 clone。
 
 clone 本身也保持机械：创建同 register class 的新虚拟寄存器，复制 load
 MachineInstr，把 clone 的 def 改成新寄存器，插到 late use 前，然后只改写
@@ -557,9 +563,9 @@ clone 后，MIR 形状接近：
 这多了一次真实数据 load，但换来的是更短的宽寄存器 live range。是否盈利
 取决于 workload：如果原来的 live range 迫使 allocator 生成多次
 whole-register spill/reload，那么一次普通 vector load 往往更便宜；如果
-区域本来没有压力，clone 就没有必要。因此 pass 只在 scheduler flag 开启时
-运行，而且只寻找“先 reduce、后 late elementwise/store”的形状。它不是一个
-通用 rematerialization pass。
+区域本来没有压力，clone 就没有必要。因此 pass 只在 scheduler flag 开启且
+basic block 命中高压阈值时运行，而且只寻找“先 reduce、后 late elementwise/store”
+的形状。它不是一个通用 rematerialization pass。
 
 安全判断是这段逻辑的底线。volatile load 不能复制，因为每次 load 都是可观察
 事件；atomic 或 ordered memory 不能复制，因为内存顺序语义会改变；中间有
@@ -640,10 +646,11 @@ bottom 来，final schedule 中 RVV load 和 consumer 的距离是否缩短。ba
 调试 reload clone 时，`-stop-after=riscv-v-reg-pressure-reload` 比最终汇编
 更清楚。这个 pass 现在位于 pre-RA MachineScheduler 之后，所以停在这里可以
 直接观察最终 pre-RA schedule 上 late use 附近是否插入了 cloned load，并检查
-late use 是否改写到新虚拟寄存器。如果没有 clone，先看三类原因：load 是否
-simple，是否确实先出现 reduction use，load 到 late use 之间或 late use 本身
-是否有 barrier。大多数“为什么没 clone”的答案都落在 volatile、store、call、
-side effect 或跨块这些保守跳过条件上。
+late use 是否改写到新虚拟寄存器。如果没有 clone，先看四类原因：block 是否
+命中高压阈值，load 是否 simple，是否确实先出现 reduction use，load 到 late
+use 之间或 late use 本身是否有 barrier。大多数“为什么没 clone”的答案都落在
+低压 block、volatile、store、call、side effect、fault-first load、输入寄存器
+重定义或跨块这些保守跳过条件上。
 
 还要避免一个常见误判：optimized 汇编中普通 `vle32.v` 变多，不一定是退化。
 对 reduce workload 来说，reload clone 的目标就是用更近的一次普通 load
@@ -716,10 +723,11 @@ softmax、top2、RMSNorm 仍能生成关键 RVV 指令。这里没有把每一�
 锁定的是行为边界：flag 开启后高压 workload 应该明显改善，flag 关闭时不假设
 新调度。
 
-第三层是 reload 安全性：`v-reg-pressure-reload.ll` 同时有正例和反例。正例
-要求 reduce 后 late use 前出现 cloned load；反例要求 volatile、intervening
-store、call intervened 等情况不 clone。这个测试比单纯看性能更重要，因为
-reload clone 一旦越过 memory 语义边界，错误可能只在特定运行时数据下暴露。
+第三层是 reload 安全性：IR 测试覆盖低压 no-clone、pipeline 位置和基础 skip
+case，MIR 测试则构造高压 block 来确认 reduce 后 late use 前可以出现 cloned
+load，并确认 volatile、atomic/ordered、fault-first load、输入寄存器重定义、
+stale kill flag 等边界都被保守处理。这个测试比单纯看性能更重要，因为 reload
+clone 一旦越过 memory 或机器寄存器语义边界，错误可能只在特定运行时数据下暴露。
 因此测试宁愿保守，也不接受“看起来 noalias”但机器层没有证明的改写。
 
 第四层是诊断：`-riscv-v-reg-pressure-report` 的测试确认输出字段存在，同时

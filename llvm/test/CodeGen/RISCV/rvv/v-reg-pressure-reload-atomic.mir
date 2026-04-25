@@ -34,6 +34,13 @@ registers:
   - { id: 5, class: vr }
   - { id: 6, class: vr }
   - { id: 7, class: vrm4 }
+  - { id: 8, class: vr }
+  - { id: 9, class: vr }
+  - { id: 10, class: vr }
+  - { id: 11, class: vr }
+  - { id: 12, class: vr }
+  - { id: 13, class: vr }
+  - { id: 14, class: vr }
 liveins:
   - { reg: '$x10', virtual-reg: '%0' }
   - { reg: '$x11', virtual-reg: '%1' }
@@ -46,6 +53,13 @@ body:             |
     %1:gpr = COPY $x11
     %0:gpr = COPY $x10
     %3:gprnox0 = ADDI $x0, 128
+    %8:vr = PseudoVMV_S_X $noreg, $x0, %3, 5
+    %9:vr = PseudoVMV_S_X $noreg, $x0, %3, 5
+    %10:vr = PseudoVMV_S_X $noreg, $x0, %3, 5
+    %11:vr = PseudoVMV_S_X $noreg, $x0, %3, 5
+    %12:vr = PseudoVMV_S_X $noreg, $x0, %3, 5
+    %13:vr = PseudoVMV_S_X $noreg, $x0, %3, 5
+    %14:vr = PseudoVMV_S_X $noreg, $x0, %3, 5
     %4:vrm4 = PseudoVLE32_V_M4 $noreg, %0, %3, 5, 2 :: (load unordered (s4096))
     %5:vr = PseudoVMV_S_X $noreg, $x0, %3, 5
     %6:vr = nofpexcept PseudoVFREDOSUM_VS_M4_E32 $noreg, %4, killed %5, 7, %3, 5, 1, implicit $frm
@@ -66,6 +80,13 @@ registers:
   - { id: 5, class: vr }
   - { id: 6, class: vr }
   - { id: 7, class: vrm4 }
+  - { id: 8, class: vr }
+  - { id: 9, class: vr }
+  - { id: 10, class: vr }
+  - { id: 11, class: vr }
+  - { id: 12, class: vr }
+  - { id: 13, class: vr }
+  - { id: 14, class: vr }
 liveins:
   - { reg: '$x10', virtual-reg: '%0' }
   - { reg: '$x11', virtual-reg: '%1' }
@@ -78,6 +99,13 @@ body:             |
     %1:gpr = COPY $x11
     %0:gpr = COPY $x10
     %3:gprnox0 = ADDI $x0, 128
+    %8:vr = PseudoVMV_S_X $noreg, $x0, %3, 5
+    %9:vr = PseudoVMV_S_X $noreg, $x0, %3, 5
+    %10:vr = PseudoVMV_S_X $noreg, $x0, %3, 5
+    %11:vr = PseudoVMV_S_X $noreg, $x0, %3, 5
+    %12:vr = PseudoVMV_S_X $noreg, $x0, %3, 5
+    %13:vr = PseudoVMV_S_X $noreg, $x0, %3, 5
+    %14:vr = PseudoVMV_S_X $noreg, $x0, %3, 5
     %4:vrm4 = PseudoVLE32_V_M4 $noreg, %0, %3, 5, 2 :: (load (s4096))
     %5:vr = PseudoVMV_S_X $noreg, $x0, %3, 5
     %6:vr = nofpexcept PseudoVFREDOSUM_VS_M4_E32 $noreg, %4, killed %5, 7, %3, 5, 1, implicit $frm
@@ -99,6 +127,13 @@ registers:
   - { id: 5, class: vr }
   - { id: 6, class: vr }
   - { id: 7, class: vrm4 }
+  - { id: 8, class: vr }
+  - { id: 9, class: vr }
+  - { id: 10, class: vr }
+  - { id: 11, class: vr }
+  - { id: 12, class: vr }
+  - { id: 13, class: vr }
+  - { id: 14, class: vr }
 liveins:
   - { reg: '$x10', virtual-reg: '%0' }
   - { reg: '$x11', virtual-reg: '%1' }
@@ -111,6 +146,13 @@ body:             |
     %1:gpr = COPY $x11
     %0:gpr = COPY $x10
     %3:gprnox0 = ADDI $x0, 128
+    %8:vr = PseudoVMV_S_X $noreg, $x0, %3, 5
+    %9:vr = PseudoVMV_S_X $noreg, $x0, %3, 5
+    %10:vr = PseudoVMV_S_X $noreg, $x0, %3, 5
+    %11:vr = PseudoVMV_S_X $noreg, $x0, %3, 5
+    %12:vr = PseudoVMV_S_X $noreg, $x0, %3, 5
+    %13:vr = PseudoVMV_S_X $noreg, $x0, %3, 5
+    %14:vr = PseudoVMV_S_X $noreg, $x0, %3, 5
     %4:vrm4 = PseudoVLE32_V_M4 $noreg, %0, %3, 5, 2 :: (load (s4096))
     %5:vr = PseudoVMV_S_X $noreg, $x0, %3, 5
     %6:vr = nofpexcept PseudoVFREDOSUM_VS_M4_E32 $noreg, %4, killed %5, 7, %3, 5, 1, implicit $frm
@@ -133,6 +175,13 @@ registers:
   - { id: 6, class: vr }
   - { id: 7, class: vrm4 }
   - { id: 8, class: gpr }
+  - { id: 9, class: vr }
+  - { id: 10, class: vr }
+  - { id: 11, class: vr }
+  - { id: 12, class: vr }
+  - { id: 13, class: vr }
+  - { id: 14, class: vr }
+  - { id: 15, class: vr }
 liveins:
   - { reg: '$x10', virtual-reg: '%0' }
   - { reg: '$x11', virtual-reg: '%1' }
@@ -145,6 +194,13 @@ body:             |
     %1:gpr = COPY $x11
     %0:gpr = COPY $x10
     %3:gprnox0 = ADDI $x0, 128
+    %9:vr = PseudoVMV_S_X $noreg, $x0, %3, 5
+    %10:vr = PseudoVMV_S_X $noreg, $x0, %3, 5
+    %11:vr = PseudoVMV_S_X $noreg, $x0, %3, 5
+    %12:vr = PseudoVMV_S_X $noreg, $x0, %3, 5
+    %13:vr = PseudoVMV_S_X $noreg, $x0, %3, 5
+    %14:vr = PseudoVMV_S_X $noreg, $x0, %3, 5
+    %15:vr = PseudoVMV_S_X $noreg, $x0, %3, 5
     %4:vrm4, %8:gpr = PseudoVLE32FF_V_M4 $noreg, %0, %3, 5, 2 :: (load unknown-size)
     %5:vr = PseudoVMV_S_X $noreg, $x0, %3, 5
     %6:vr = nofpexcept PseudoVFREDOSUM_VS_M4_E32 $noreg, %4, killed %5, 7, %3, 5, 1, implicit $frm
@@ -165,6 +221,13 @@ registers:
   - { id: 5, class: vr }
   - { id: 6, class: vr }
   - { id: 7, class: vrm4 }
+  - { id: 8, class: vr }
+  - { id: 9, class: vr }
+  - { id: 10, class: vr }
+  - { id: 11, class: vr }
+  - { id: 12, class: vr }
+  - { id: 13, class: vr }
+  - { id: 14, class: vr }
 liveins:
   - { reg: '$x10', virtual-reg: '%0' }
   - { reg: '$x11', virtual-reg: '%1' }
@@ -177,6 +240,13 @@ body:             |
     %1:gpr = COPY $x11
     %0:gpr = COPY $x10
     %3:gprnox0 = ADDI $x0, 128
+    %8:vr = PseudoVMV_S_X $noreg, $x0, %3, 5
+    %9:vr = PseudoVMV_S_X $noreg, $x0, %3, 5
+    %10:vr = PseudoVMV_S_X $noreg, $x0, %3, 5
+    %11:vr = PseudoVMV_S_X $noreg, $x0, %3, 5
+    %12:vr = PseudoVMV_S_X $noreg, $x0, %3, 5
+    %13:vr = PseudoVMV_S_X $noreg, $x0, %3, 5
+    %14:vr = PseudoVMV_S_X $noreg, $x0, %3, 5
     %4:vrm4 = PseudoVLE32_V_M4 $noreg, killed %0, %3, 5, 2 :: (load (s4096))
     %5:vr = PseudoVMV_S_X $noreg, $x0, %3, 5
     %6:vr = nofpexcept PseudoVFREDOSUM_VS_M4_E32 $noreg, %4, killed %5, 7, %3, 5, 1, implicit $frm
@@ -197,6 +267,13 @@ registers:
   - { id: 5, class: vr }
   - { id: 6, class: vr }
   - { id: 7, class: vrm4 }
+  - { id: 8, class: vr }
+  - { id: 9, class: vr }
+  - { id: 10, class: vr }
+  - { id: 11, class: vr }
+  - { id: 12, class: vr }
+  - { id: 13, class: vr }
+  - { id: 14, class: vr }
 liveins:
   - { reg: '$x10', virtual-reg: '%0' }
   - { reg: '$x11', virtual-reg: '%1' }
@@ -209,6 +286,13 @@ body:             |
     %1:gpr = COPY $x11
     %0:gpr = COPY $x10
     %3:gprnox0 = ADDI $x0, 128
+    %8:vr = PseudoVMV_S_X $noreg, $x0, %3, 5
+    %9:vr = PseudoVMV_S_X $noreg, $x0, %3, 5
+    %10:vr = PseudoVMV_S_X $noreg, $x0, %3, 5
+    %11:vr = PseudoVMV_S_X $noreg, $x0, %3, 5
+    %12:vr = PseudoVMV_S_X $noreg, $x0, %3, 5
+    %13:vr = PseudoVMV_S_X $noreg, $x0, %3, 5
+    %14:vr = PseudoVMV_S_X $noreg, $x0, %3, 5
     %4:vrm4 = PseudoVLE32_V_M4 $noreg, %0, %3, 5, 2 :: (load monotonic (s4096))
     %5:vr = PseudoVMV_S_X $noreg, $x0, %3, 5
     %6:vr = nofpexcept PseudoVFREDOSUM_VS_M4_E32 $noreg, %4, killed %5, 7, %3, 5, 1, implicit $frm

@@ -57,6 +57,7 @@ private:
   bool hasRegDefOrClobber(const MachineInstr &MI, Register Reg) const;
   bool hasRVVRegUse(const MachineInstr &MI) const;
   bool hasRVVRegDef(const MachineInstr &MI) const;
+  bool hasHighRVVPressure(const MachineBasicBlock &MBB) const;
   bool isUnsafeMemory(const MachineInstr &MI) const;
   bool isAliasBarrier(const MachineInstr &MI) const;
   bool isReductionUse(const MachineInstr &MI) const;
@@ -124,6 +125,25 @@ bool RISCVVRegPressureReload::hasRVVRegDef(const MachineInstr &MI) const {
   return any_of(MI.operands(), [&](const MachineOperand &MO) {
     return MO.isReg() && MO.isDef() && isRVVReg(MO.getReg());
   });
+}
+
+bool RISCVVRegPressureReload::hasHighRVVPressure(
+    const MachineBasicBlock &MBB) const {
+  unsigned RVVOps = 0;
+  unsigned RVVDefs = 0;
+  for (const MachineInstr &MI : MBB) {
+    bool HasRVVOperand = false;
+    bool HasRVVDef = false;
+    for (const MachineOperand &MO : MI.operands()) {
+      if (!MO.isReg() || !isRVVReg(MO.getReg()))
+        continue;
+      HasRVVOperand = true;
+      HasRVVDef |= MO.isDef();
+    }
+    RVVOps += HasRVVOperand;
+    RVVDefs += HasRVVDef;
+  }
+  return RVVOps >= 12 && RVVDefs >= 8;
 }
 
 bool RISCVVRegPressureReload::isUnsafeMemory(const MachineInstr &MI) const {
@@ -300,6 +320,9 @@ bool RISCVVRegPressureReload::runOnMachineFunction(MachineFunction &MF) {
 
   bool Changed = false;
   for (MachineBasicBlock &MBB : MF) {
+    if (!hasHighRVVPressure(MBB))
+      continue;
+
     SmallVector<MachineInstr *, 8> Loads;
     for (MachineInstr &MI : MBB)
       if (getSimpleRVVLoadDef(MI))

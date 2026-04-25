@@ -9,7 +9,8 @@ declare float @llvm.vector.reduce.fadd.v128f32(float, <128 x float>)
 declare void @side_effect()
 
 ; CHECK-LABEL: name: reload_safe
-; CHECK-COUNT-2: PseudoVLE32_V_M4
+; CHECK: PseudoVLE32_V_M4
+; CHECK-NOT: PseudoVLE32_V_M4
 define void @reload_safe(ptr noalias %in, ptr noalias %out, ptr noalias %sum) {
   %v = load <128 x float>, ptr %in, align 4
   %r = call float @llvm.vector.reduce.fadd.v128f32(float 0.0, <128 x float> %v)
