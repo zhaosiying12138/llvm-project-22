@@ -1073,15 +1073,22 @@ Error ASTNodeImporter::ImportConstraintSatisfaction(
   ToSat.ContainsErrors = FromSat.ContainsErrors;
   if (!ToSat.IsSatisfied) {
     for (auto Record = FromSat.begin(); Record != FromSat.end(); ++Record) {
-      if (const Expr *E = Record->dyn_cast<const Expr *>()) {
+      if (Record->isNull()) {
+        ToSat.Details.emplace_back(nullptr);
+      } else if (const Expr *E = Record->dyn_cast<const Expr *>()) {
         ExpectedExpr ToSecondExpr = import(E);
         if (!ToSecondExpr)
           return ToSecondExpr.takeError();
         ToSat.Details.emplace_back(ToSecondExpr.get());
-      } else {
-        auto Pair =
-            Record->dyn_cast<const ConstraintSubstitutionDiagnostic *>();
-
+      } else if (const ConceptReference *Concept =
+                     Record->dyn_cast<const ConceptReference *>()) {
+        Expected<ConceptReference *> ToConcept = import(Concept);
+        if (!ToConcept)
+          return ToConcept.takeError();
+        ToSat.Details.emplace_back(ToConcept.get());
+      } else if (auto Pair =
+                     Record->dyn_cast<
+                         const ConstraintSubstitutionDiagnostic *>()) {
         ExpectedSLoc ToPairFirst = import(Pair->first);
         if (!ToPairFirst)
           return ToPairFirst.takeError();
@@ -1089,6 +1096,8 @@ Error ASTNodeImporter::ImportConstraintSatisfaction(
         ToSat.Details.emplace_back(new (Importer.getToContext())
                                        ConstraintSubstitutionDiagnostic{
                                            ToPairFirst.get(), ToPairSecond});
+      } else {
+        llvm_unreachable("unknown unsatisfied constraint detail");
       }
     }
   }
@@ -1194,9 +1203,13 @@ ASTNodeImporter::ImportNestedRequirement(concepts::NestedRequirement *From) {
       From->getConstraintSatisfaction();
   if (From->hasInvalidConstraint()) {
     StringRef ToEntity = ImportASTStringRef(From->getInvalidConstraintEntity());
+    ConstraintSatisfaction Satisfaction;
+    if (Error Err =
+            ImportConstraintSatisfaction(FromSatisfaction, Satisfaction))
+      return std::move(Err);
     ASTConstraintSatisfaction *ToSatisfaction =
-        ASTConstraintSatisfaction::Rebuild(Importer.getToContext(),
-                                           FromSatisfaction);
+        ASTConstraintSatisfaction::Create(Importer.getToContext(),
+                                          Satisfaction);
     return new (Importer.getToContext())
         NestedRequirement(ToEntity, ToSatisfaction);
   } else {

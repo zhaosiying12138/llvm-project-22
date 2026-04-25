@@ -11,6 +11,9 @@
 #include "MatchVerifier.h"
 #include "gtest/gtest.h"
 
+#include <string>
+#include <vector>
+
 using namespace clang::ast_matchers;
 
 namespace clang {
@@ -194,6 +197,33 @@ TEST(DynTypedNode, TypeLocSourceRange) {
   RangeVerifier<DynTypedNode> Verifier;
   Verifier.expectRange(1, 1, 1, 8);
   EXPECT_TRUE(Verifier.match("void f() {}", typeLoc(loc(functionType()))));
+}
+
+TEST(DynTypedNode, QualifiedTypeLocSourceRangeIncludesQualifierByDefault) {
+  std::string Code = "namespace ns { struct Foo {}; }\nns::Foo x;";
+  std::vector<std::string> Args = {"-target", "x86_64-unknown-linux-gnu"};
+  auto AST = clang::tooling::buildASTFromCodeWithArgs(Code, Args);
+  auto Matches =
+      match(traverse(TK_AsIs,
+                     varDecl(hasName("x"), hasTypeLoc(typeLoc().bind("tl")))),
+            AST->getASTContext());
+  ASSERT_EQ(Matches.size(), 1u);
+
+  const auto &TL = *Matches[0].getNodeAs<TypeLoc>("tl");
+  DynTypedNode Node = DynTypedNode::create(TL);
+  const SourceManager &SM = AST->getSourceManager();
+
+  SourceRange FullRange = Node.getSourceRange();
+  EXPECT_EQ(SM.getSpellingLineNumber(FullRange.getBegin()), 2u);
+  EXPECT_EQ(SM.getSpellingColumnNumber(FullRange.getBegin()), 1u);
+  EXPECT_EQ(SM.getSpellingLineNumber(FullRange.getEnd()), 2u);
+  EXPECT_EQ(SM.getSpellingColumnNumber(FullRange.getEnd()), 5u);
+
+  SourceRange UnqualifiedRange = Node.getSourceRange(false);
+  EXPECT_EQ(SM.getSpellingLineNumber(UnqualifiedRange.getBegin()), 2u);
+  EXPECT_EQ(SM.getSpellingColumnNumber(UnqualifiedRange.getBegin()), 5u);
+  EXPECT_EQ(SM.getSpellingLineNumber(UnqualifiedRange.getEnd()), 2u);
+  EXPECT_EQ(SM.getSpellingColumnNumber(UnqualifiedRange.getEnd()), 5u);
 }
 
 TEST(DynTypedNode, NNSLocSourceRange) {

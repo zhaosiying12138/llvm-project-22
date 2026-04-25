@@ -36,6 +36,14 @@ struct ImportExpr : TestImportBase {};
 struct ImportType : TestImportBase {};
 struct ImportDecl : TestImportBase {};
 struct ImportFixedPointExpr : ImportExpr {};
+struct ImportConcepts : ASTImporterOptionSpecificTestBase {
+  std::vector<std::string> getExtraArgs() const override {
+    std::vector<std::string> Args = GetParam();
+    Args.push_back("-target");
+    Args.push_back("x86_64-unknown-linux-gnu");
+    return Args;
+  }
+};
 
 struct CanonicalRedeclChain : ASTImporterOptionSpecificTestBase {};
 
@@ -3339,6 +3347,41 @@ TEST_P(ImportExpr, ConceptNestedRequirement) {
              conceptDecl(has(requiresExpr(has(requiresExprBodyDecl())))));
 }
 
+TEST_P(ImportConcepts, ConceptNestedConceptRequirementUnsatisfied) {
+  const char *Code = R"(
+    template<typename T>
+    concept always_false = false;
+
+    template<typename T>
+    concept declToImport = requires {
+      requires always_false<int>;
+    };
+  )";
+  TranslationUnitDecl *FromTU = getTuDecl(Code, Lang_CXX20);
+  auto *FromConcept = FirstDeclMatcher<ConceptDecl>().match(
+      FromTU, conceptDecl(hasName("declToImport")));
+  ASSERT_TRUE(FromConcept);
+
+  auto *ToConcept = Import(FromConcept, Lang_CXX20);
+  ASSERT_TRUE(ToConcept);
+
+  auto *RE = dyn_cast_or_null<RequiresExpr>(ToConcept->getConstraintExpr());
+  ASSERT_TRUE(RE);
+  ASSERT_EQ(RE->getRequirements().size(), 1u);
+  auto *Nested =
+      dyn_cast<concepts::NestedRequirement>(RE->getRequirements()[0]);
+  ASSERT_TRUE(Nested);
+
+  ArrayRef<UnsatisfiedConstraintRecord> Records =
+      Nested->getConstraintSatisfaction().records();
+  ASSERT_FALSE(Records.empty());
+  bool HasConceptReference = false;
+  for (const UnsatisfiedConstraintRecord &Record : Records)
+    if (Record.dyn_cast<const ConceptReference *>())
+      HasConceptReference = true;
+  EXPECT_TRUE(HasConceptReference);
+}
+
 TEST_P(ImportExpr, ConceptNestedNonInstantiationDependentRequirement) {
   MatchVerifier<Decl> Verifier;
   const char *Code = R"(
@@ -3349,6 +3392,38 @@ TEST_P(ImportExpr, ConceptNestedNonInstantiationDependentRequirement) {
   )";
   testImport(Code, Lang_CXX20, "", Lang_CXX20, Verifier,
              conceptDecl(has(requiresExpr(has(requiresExprBodyDecl())))));
+}
+
+TEST_P(ImportConcepts, ImportInvalidNestedRequirementSatisfaction) {
+  const char *Code = R"(
+    template<class T>
+    constexpr bool declToImport = requires {
+      requires sizeof(typename T::missing) == 1;
+    };
+
+    constexpr bool use = declToImport<int>;
+  )";
+  TranslationUnitDecl *FromTU = getTuDecl(Code, Lang_CXX20);
+  auto *FromSpec = FirstDeclMatcher<VarTemplateSpecializationDecl>().match(
+      FromTU, varTemplateSpecializationDecl(hasName("declToImport")));
+  ASSERT_TRUE(FromSpec);
+
+  auto *ToSpec = Import(FromSpec, Lang_CXX20);
+  ASSERT_TRUE(ToSpec);
+
+  auto *RE = dyn_cast_or_null<RequiresExpr>(ToSpec->getInit());
+  ASSERT_TRUE(RE);
+  ASSERT_EQ(RE->getRequirements().size(), 1u);
+  auto *Nested =
+      dyn_cast<concepts::NestedRequirement>(RE->getRequirements()[0]);
+  ASSERT_TRUE(Nested);
+  EXPECT_TRUE(Nested->hasInvalidConstraint());
+
+  ArrayRef<UnsatisfiedConstraintRecord> Records =
+      Nested->getConstraintSatisfaction().records();
+  ASSERT_EQ(Records.size(), 1u);
+  EXPECT_TRUE(
+      Records[0].dyn_cast<const ConstraintSubstitutionDiagnostic *>());
 }
 
 TEST_P(ImportExpr, ImportSubstNonTypeTemplateParmPackExpr) {
@@ -10757,6 +10832,9 @@ INSTANTIATE_TEST_SUITE_P(ParameterizedTests, ImportFixedPointExpr,
                          ExtendWithOptions(DefaultTestArrayForRunOptions,
                                            std::vector<std::string>{
                                                "-ffixed-point"}));
+
+INSTANTIATE_TEST_SUITE_P(ParameterizedTests, ImportConcepts,
+                         DefaultTestValuesForRunOptions);
 
 INSTANTIATE_TEST_SUITE_P(ParameterizedTests, ImportBlock,
                          ExtendWithOptions(DefaultTestArrayForRunOptions,
