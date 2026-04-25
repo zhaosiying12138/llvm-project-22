@@ -280,19 +280,6 @@ bool RISCVPreRAMachineSchedStrategy::tryCandidate(SchedCandidate &Cand,
                  Cluster))
     return TryCand.Reason != NoCand;
 
-  if (RVVPressureAwareRegion && SameBoundary) {
-    const MachineInstr &TryMI = *TryCand.SU->getInstr();
-    const MachineInstr &CandMI = *Cand.SU->getInstr();
-    bool TryUsesCurrentVector = isRVVConsumerOrStore(TryMI);
-    bool CandUsesCurrentVector = isRVVConsumerOrStore(CandMI);
-    bool TryStartsVectorLiveRange = isRVVLoad(TryMI);
-    bool CandStartsVectorLiveRange = isRVVLoad(CandMI);
-    if (tryGreater(TryUsesCurrentVector && CandStartsVectorLiveRange,
-                   CandUsesCurrentVector && TryStartsVectorLiveRange, TryCand,
-                   Cand, RegMax))
-      return TryCand.Reason != NoCand;
-  }
-
   if (SameBoundary) {
     // Weak edges are for clustering and other constraints.
     if (tryLess(getWeakLeft(TryCand.SU, TryCand.AtTop),
@@ -345,6 +332,19 @@ bool RISCVPreRAMachineSchedStrategy::tryCandidate(SchedCandidate &Cand,
                      getVSETVLIInfo(Cand.SU->getInstr()), TryCand, Cand,
                      Cluster))
     return TryCand.Reason != NoCand;
+
+  if (RVVPressureAwareRegion && SameBoundary) {
+    const MachineInstr &TryMI = *TryCand.SU->getInstr();
+    const MachineInstr &CandMI = *Cand.SU->getInstr();
+    bool TryUsesCurrentVector = isRVVConsumerOrStore(TryMI);
+    bool CandUsesCurrentVector = isRVVConsumerOrStore(CandMI);
+    bool TryStartsVectorLiveRange = isRVVLoad(TryMI);
+    bool CandStartsVectorLiveRange = isRVVLoad(CandMI);
+    if (tryGreater(TryUsesCurrentVector && CandStartsVectorLiveRange,
+                   CandUsesCurrentVector && TryStartsVectorLiveRange, TryCand,
+                   Cand, RegMax))
+      return TryCand.Reason != NoCand;
+  }
 
   return TryCand.Reason != NoCand;
 }

@@ -178,6 +178,14 @@ SelectionDAG lowering 只处理受支持的 RVV floating vector type。`RISCVISe
 `yushuxin.vfexp`，feature 开启后出现 `vle32.v`、`yushuxin.vfexp`、
 `vse32.v`。
 
+bf16 是一个刻意保守的例外。TableGen pattern 只为非 bf16 FP vector 生成
+`PseudoYUSHUXIN_VFEXP_*` 匹配，因此 lowering 不能把 bf16 vector `FEXP`
+直接标成 Legal。对 `+zvfbfmin` 或 `+experimental-zvfbfa`，bf16 exp 仍走
+bf16 到 f32 的 promote/custom split 路径；如果同时开启
+`+experimental-yushuxin-vfexp`，被提升后的 f32 `FEXP` 可以再选择
+`yushuxin.vfexp`。`yushuxin-vfexp-bf16.ll` 覆盖了这个边界，避免 scalable
+bf16 exp 掉进没有 bf16 pattern 的 instruction selection 路径。
+
 这里没有覆盖 strict FP exp、GlobalISel `G_FEXP` 选择，也没有试图为所有
 element type 构建近似数学语义。它是一个受 feature gate 保护的 CodeGen
 实验入口，服务于 RVV pressure 调度实验。
@@ -603,8 +611,9 @@ load 与预期 spill 节省之间的关系，并考虑 cache、带宽和目标�
 这个实验没有绕开 RISC-V 后端已有的 vsetvli 处理。`RISCVPreRAMachineSchedStrategy`
 本来就维护 `TopInfo` 和 `BottomInfo`，用 `RISCVVSETVLIInfoAnalysis` 比较候选
 指令的 VTYPE/VL 兼容性，尽量减少不必要的 vsetvli 变化。新增 RVV pressure
-偏置和这个启发式共存在同一个 `tryCandidate` 流程里；当 vsetvli 兼容性成为
-关键因素时，RISC-V 特定的 vsetvli heuristic 仍会参与决策。
+偏置和这个启发式共存在同一个 `tryCandidate` 流程里，并且排在已有 vsetvli
+heuristic 之后；当 VTYPE/VL 兼容性能够区分候选时，RISC-V 特定的 vsetvli
+决策先保留住，pressure tie-breaker 只在它没有选出更好候选时再介入。
 
 load/store clustering 的处理也不是全局删除。包装器只是在高压 DAG 上跳过
 cluster mutation；非高压区域仍然使用原来的 `createLoadClusterDAGMutation`

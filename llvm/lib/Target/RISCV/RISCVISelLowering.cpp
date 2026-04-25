@@ -1132,6 +1132,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
     // TODO: Make more of these ops legal.
     static const unsigned ZvfbfaPromoteOps[] = {ISD::FDIV,
+                                                ISD::FEXP,
                                                 ISD::FSQRT,
                                                 ISD::FCEIL,
                                                 ISD::FTRUNC,
@@ -1208,7 +1209,10 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
       // Expand FP operations that need libcalls.
       setOperationAction(FloatingPointLibCallOps, VT, Expand);
-      if (Subtarget.hasExperimentalYushuxinVfexp())
+      // The experimental vfexp patterns intentionally exclude bf16, so bf16
+      // must keep the existing promote/expand path instead of becoming Legal.
+      if (Subtarget.hasExperimentalYushuxinVfexp() &&
+          VT.getVectorElementType() != MVT::bf16)
         setOperationAction(ISD::FEXP, VT, Legal);
 
       setOperationAction(ISD::FCOPYSIGN, VT, Legal);
@@ -1307,17 +1311,24 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
       // Expand FP operations that need libcalls.
       setOperationAction(FloatingPointLibCallOps, VT, Expand);
-      if (Subtarget.hasExperimentalYushuxinVfexp())
+      // The experimental vfexp patterns intentionally exclude bf16, so bf16
+      // must keep the existing promote/expand path instead of becoming Legal.
+      if (Subtarget.hasExperimentalYushuxinVfexp() &&
+          VT.getVectorElementType() != MVT::bf16)
         setOperationAction(ISD::FEXP, VT, Legal);
 
       // Custom split nxv32[b]f16 since nxv32[b]f32 is not legal.
       if (getLMUL(VT) == RISCVVType::LMUL_8) {
         setOperationAction(ZvfhminZvfbfminPromoteOps, VT, Custom);
         setOperationAction(ZvfhminZvfbfminPromoteVPOps, VT, Custom);
+        if (VT.getVectorElementType() == MVT::bf16)
+          setOperationAction(ISD::FEXP, VT, Custom);
       } else {
         MVT F32VecVT = MVT::getVectorVT(MVT::f32, VT.getVectorElementCount());
         setOperationPromotedToType(ZvfhminZvfbfminPromoteOps, VT, F32VecVT);
         setOperationPromotedToType(ZvfhminZvfbfminPromoteVPOps, VT, F32VecVT);
+        if (VT.getVectorElementType() == MVT::bf16)
+          setOperationPromotedToType(ISD::FEXP, VT, F32VecVT);
       }
     };
 
@@ -1362,8 +1373,6 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
       // Expand FP operations that need libcalls.
       setOperationAction(FloatingPointLibCallOps, VT, Expand);
-      if (Subtarget.hasExperimentalYushuxinVfexp())
-        setOperationAction(ISD::FEXP, VT, Legal);
 
       // Custom split nxv32[b]f16 since nxv32[b]f32 is not legal.
       if (getLMUL(VT) == RISCVVType::LMUL_8) {
@@ -1691,8 +1700,10 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
           if (Subtarget.hasStdExtZvfbfa())
             setOperationPromotedToType(ZvfbfaPromoteOps, VT, F32VecVT);
-          else
+          else {
             setOperationPromotedToType(ZvfhminZvfbfminPromoteOps, VT, F32VecVT);
+            setOperationPromotedToType(ISD::FEXP, VT, F32VecVT);
+          }
           setOperationPromotedToType(ZvfhminZvfbfminPromoteVPOps, VT, F32VecVT);
           continue;
         }
