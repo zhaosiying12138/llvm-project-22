@@ -5,6 +5,7 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+v,+experimental-yushuxin-vfexp,+zvl1024b -riscv-v-vector-bits-min=1024 < %s 2>&1 >/dev/null | FileCheck %s --allow-empty --check-prefix=NOREPORT
 
 declare <128 x float> @llvm.exp.v128f32(<128 x float>)
+declare <128 x float> @llvm.experimental.constrained.exp.v128f32(<128 x float>, metadata, metadata)
 
 define void @exp_v128f32(ptr noalias %in, ptr noalias %out) {
 ; DEFAULT-LABEL: exp_v128f32:
@@ -23,6 +24,25 @@ define void @exp_v128f32(ptr noalias %in, ptr noalias %out) {
 ; NOREPORT-NOT:   riscv-v-reg-pressure-report
   %v = load <128 x float>, ptr %in, align 4
   %e = call <128 x float> @llvm.exp.v128f32(<128 x float> %v)
+  store <128 x float> %e, ptr %out, align 4
+  ret void
+}
+
+define void @strict_exp_v128f32(ptr noalias %in, ptr noalias %out) strictfp {
+; DEFAULT-LABEL: strict_exp_v128f32:
+; DEFAULT-NOT: yushuxin.vfexp
+; DEFAULT:       ret
+;
+; YUSHUXIN-LABEL: strict_exp_v128f32:
+; YUSHUXIN:       vle32.v
+; YUSHUXIN:       yushuxin.vfexp
+; YUSHUXIN:       vse32.v
+; YUSHUXIN:       ret
+  %v = load <128 x float>, ptr %in, align 4
+  %e = call <128 x float> @llvm.experimental.constrained.exp.v128f32(
+      <128 x float> %v,
+      metadata !"round.dynamic",
+      metadata !"fpexcept.strict") strictfp
   store <128 x float> %e, ptr %out, align 4
   ret void
 }

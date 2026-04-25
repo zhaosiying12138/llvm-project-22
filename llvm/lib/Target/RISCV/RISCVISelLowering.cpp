@@ -1213,7 +1213,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       // must keep the existing promote/expand path instead of becoming Legal.
       if (Subtarget.hasExperimentalYushuxinVfexp() &&
           VT.getVectorElementType() != MVT::bf16)
-        setOperationAction(ISD::FEXP, VT, Legal);
+        setOperationAction({ISD::FEXP, ISD::STRICT_FEXP}, VT, Legal);
 
       setOperationAction(ISD::FCOPYSIGN, VT, Legal);
 
@@ -1315,7 +1315,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       // must keep the existing promote/expand path instead of becoming Legal.
       if (Subtarget.hasExperimentalYushuxinVfexp() &&
           VT.getVectorElementType() != MVT::bf16)
-        setOperationAction(ISD::FEXP, VT, Legal);
+        setOperationAction({ISD::FEXP, ISD::STRICT_FEXP}, VT, Legal);
 
       // Custom split nxv32[b]f16 since nxv32[b]f32 is not legal.
       if (getLMUL(VT) == RISCVVType::LMUL_8) {
@@ -1718,7 +1718,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
                             ISD::FMAXIMUM, ISD::FMINIMUM},
                            VT, Custom);
         if (Subtarget.hasExperimentalYushuxinVfexp())
-          setOperationAction(ISD::FEXP, VT, Custom);
+          setOperationAction({ISD::FEXP, ISD::STRICT_FEXP}, VT, Custom);
 
         setOperationAction({ISD::FTRUNC, ISD::FCEIL, ISD::FFLOOR, ISD::FROUND,
                             ISD::FROUNDEVEN, ISD::FRINT, ISD::LRINT,
@@ -7507,6 +7507,7 @@ static unsigned getRISCVVLOp(SDValue Op) {
   OP_CASE(STRICT_FMUL)
   OP_CASE(STRICT_FDIV)
   OP_CASE(STRICT_FSQRT)
+  OP_CASE(STRICT_FEXP)
   VP_CASE(ADD)        // VP_ADD
   VP_CASE(SUB)        // VP_SUB
   VP_CASE(MUL)        // VP_MUL
@@ -8827,6 +8828,7 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
   case ISD::STRICT_FMUL:
   case ISD::STRICT_FDIV:
   case ISD::STRICT_FSQRT:
+  case ISD::STRICT_FEXP:
   case ISD::STRICT_FMA:
     if (isPromotedOpNeedingSplit(Op, Subtarget))
       return SplitStrictFPVectorOp(Op, DAG);

@@ -190,11 +190,6 @@ void RISCVVRegPressureReload::clearLoadInputKillFlags(
     MachineInstr &Load, MachineInstr &Use,
     ArrayRef<Register> LoadInputRegs) const {
   for (Register Reg : LoadInputRegs) {
-    if (Reg.isVirtual()) {
-      MRI->clearKillFlags(Reg);
-      continue;
-    }
-
     for (auto I = Load.getIterator(), E = Use.getIterator();; ++I) {
       I->clearRegisterKills(Reg, TRI);
       if (I == E)
