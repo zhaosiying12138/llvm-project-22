@@ -2126,29 +2126,9 @@ void CodeGenFunction::EmitCXXDeleteExpr(const CXXDeleteExpr *E) {
         // devirtualize destructor call.
         // Emit virtual call to vector deleting destructor otherwise.
         if (!TryDevirtualizeDtorCall(E, Dtor, CGM.getLangOpts())) {
-          llvm::Value *NumElements = nullptr;
-          llvm::Value *AllocatedPtr = nullptr;
-          CharUnits CookieSize;
-          llvm::BasicBlock *BodyBB = createBasicBlock("vdtor.call");
-          llvm::BasicBlock *DoneBB = createBasicBlock("vdtor.nocall");
-          // Check array cookie to see if the array has length 0. Don't call
-          // the destructor in that case.
-          CGM.getCXXABI().ReadArrayCookie(*this, Ptr, E, DeleteTy, NumElements,
-                                          AllocatedPtr, CookieSize);
-
-          auto *CondTy = cast<llvm::IntegerType>(NumElements->getType());
-          llvm::Value *IsEmpty = Builder.CreateICmpEQ(
-              NumElements, llvm::ConstantInt::get(CondTy, 0));
-          Builder.CreateCondBr(IsEmpty, DoneBB, BodyBB);
-
-          // Delete cookie for empty array.
-          const FunctionDecl *OperatorDelete = E->getOperatorDelete();
-          EmitBlock(DoneBB);
-          EmitDeleteCall(OperatorDelete, AllocatedPtr, DeleteTy, NumElements,
-                         CookieSize);
-          EmitBranch(DeleteEnd);
-
-          EmitBlock(BodyBB);
+          // MS ABI vector deleting destructors own both element destruction
+          // and the runtime deallocation choice. Even an empty array must use
+          // the virtual path so the dynamic type selects the right delete[].
           CGM.getCXXABI().emitVirtualObjectDelete(*this, E, Ptr, DeleteTy,
                                                   Dtor);
           EmitBlock(DeleteEnd);

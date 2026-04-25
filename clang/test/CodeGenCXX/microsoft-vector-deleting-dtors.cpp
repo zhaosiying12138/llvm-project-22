@@ -92,22 +92,6 @@ void bar() {
 // CHECK-NEXT:   %[[ISNULL:.*]] = icmp eq ptr %[[LPTR]], null
 // CHECK-NEXT:   br i1 %[[ISNULL]], label %delete.end, label %delete.notnull
 // CHECK: delete.notnull:
-// X64-NEXT:   %[[COOKIEGEP:.*]] = getelementptr inbounds i8, ptr %[[LPTR]], i64 -8
-// X86-NEXT:   %[[COOKIEGEP:.*]] = getelementptr inbounds i8, ptr %[[LPTR]], i32 -4
-// X64-NEXT:   %[[HOWMANY:.*]] = load i64, ptr %[[COOKIEGEP]]
-// X86-NEXT:   %[[HOWMANY:.*]] = load i32, ptr %[[COOKIEGEP]]
-// X64-NEXT:   %[[ISNOELEM:.*]] = icmp eq i64 %2, 0
-// X86-NEXT:   %[[ISNOELEM:.*]] = icmp eq i32 %2, 0
-// CHECK-NEXT:   br i1 %[[ISNOELEM]], label %vdtor.nocall, label %vdtor.call
-// CHECK: vdtor.nocall:
-// X64-NEXT:   %[[HOWMANYBYTES:.*]] = mul i64 8, %[[HOWMANY]]
-// X86-NEXT:   %[[HOWMANYBYTES:.*]] = mul i32 4, %[[HOWMANY]]
-// X64-NEXT:   %[[ADDCOOKIESIZE:.*]] = add i64 %[[HOWMANYBYTES]], 8
-// X86-NEXT:   %[[ADDCOOKIESIZE:.*]] = add i32 %[[HOWMANYBYTES]], 4
-// X64-NEXT:   call void @"??_V@YAXPEAX_K@Z"(ptr noundef %[[COOKIEGEP]], i64 noundef %[[ADDCOOKIESIZE]])
-// X86-NEXT:   call void @"??_V@YAXPAXI@Z"(ptr noundef %[[COOKIEGEP]], i32 noundef %[[ADDCOOKIESIZE]])
-// CHECK-NEXT:   br label %delete.end
-// CHECK: vdtor.call:
 // CHECK-NEXT:   %[[VTABLE:.*]] = load ptr, ptr %[[LPTR]]
 // CHECK-NEXT:   %[[FPGEP:.*]] = getelementptr inbounds ptr, ptr %[[VTABLE]], i64 0
 // CHECK-NEXT:   %[[FPLOAD:.*]]  = load ptr, ptr %[[FPGEP]]
@@ -152,22 +136,6 @@ void bar() {
 // CHECK: store ptr %[[ARR]], ptr %[[DP:.*]]
 // CHECK: %[[DEL_PTR:.*]] = load ptr, ptr %[[DP:.*]]
 // CHECK: delete.notnull:
-// X64-NEXT:   %[[COOKIEGEP:.*]] = getelementptr inbounds i8, ptr %[[DEL_PTR]], i64 -8
-// X86-NEXT:   %[[COOKIEGEP:.*]] = getelementptr inbounds i8, ptr %[[DEL_PTR]], i32 -4
-// X64-NEXT:   %[[HOWMANY:.*]] = load i64, ptr %[[COOKIEGEP]]
-// X86-NEXT:   %[[HOWMANY:.*]] = load i32, ptr %[[COOKIEGEP]]
-// X64-NEXT:   %[[ISNOELEM:.*]] = icmp eq i64 %[[HOWMANY]], 0
-// X86-NEXT:   %[[ISNOELEM:.*]] = icmp eq i32 %[[HOWMANY]], 0
-// CHECK-NEXT:   br i1 %[[ISNOELEM]], label %vdtor.nocall, label %vdtor.call
-// CHECK: vdtor.nocall:                                     ; preds = %delete.notnull
-// X64-NEXT:   %[[HOWMANYBYTES:.*]] = mul i64 8, %[[HOWMANY]]
-// X86-NEXT:   %[[HOWMANYBYTES:.*]] = mul i32 4, %[[HOWMANY]]
-// X64-NEXT:   %[[ADDCOOKIESIZE:.*]] = add i64 %[[HOWMANYBYTES]], 8
-// X86-NEXT:   %[[ADDCOOKIESIZE:.*]] = add i32 %[[HOWMANYBYTES]], 4
-// X64-NEXT:   call void @"??_V@YAXPEAX_K@Z"(ptr noundef %[[COOKIEGEP]], i64 noundef %[[ADDCOOKIESIZE]])
-// X86-NEXT:   call void @"??_V@YAXPAXI@Z"(ptr noundef %[[COOKIEGEP]], i32 noundef %[[ADDCOOKIESIZE]])
-// CHECK-NEXT:   br label %delete.end
-// CHECK: vdtor.call:                                       ; preds = %delete.notnull
 // CHECK-NEXT:   %[[VTABLE:.*]] = load ptr, ptr %[[DEL_PTR]]
 // CHECK-NEXT:   %[[FPGEP:.*]] = getelementptr inbounds ptr, ptr %[[VTABLE]], i64 0
 // CHECK-NEXT:   %[[FPLOAD:.*]]  = load ptr, ptr %[[FPGEP]]
