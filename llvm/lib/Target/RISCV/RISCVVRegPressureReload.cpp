@@ -13,6 +13,7 @@
 #include "RISCV.h"
 #include "RISCVMachineScheduler.h"
 #include "RISCVRegisterInfo.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
@@ -21,6 +22,7 @@
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
+#include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/Debug.h"
 #include <iterator>
@@ -46,20 +48,25 @@ public:
 
 private:
   const TargetInstrInfo *TII = nullptr;
+  const TargetRegisterInfo *TRI = nullptr;
   MachineRegisterInfo *MRI = nullptr;
 
   bool isRVVReg(Register Reg) const;
   bool hasRVVUse(const MachineInstr &MI, Register Reg) const;
   bool hasRegDef(const MachineInstr &MI, Register Reg) const;
+  bool hasRegDefOrClobber(const MachineInstr &MI, Register Reg) const;
   bool hasRVVRegUse(const MachineInstr &MI) const;
   bool hasRVVRegDef(const MachineInstr &MI) const;
   bool isUnsafeMemory(const MachineInstr &MI) const;
   bool isAliasBarrier(const MachineInstr &MI) const;
   bool isReductionUse(const MachineInstr &MI) const;
   bool isLateElementwiseUse(const MachineInstr &MI) const;
+  void collectLoadInputRegs(const MachineInstr &Load,
+                            SmallVectorImpl<Register> &Regs) const;
   std::optional<Register> getSimpleRVVLoadDef(const MachineInstr &MI) const;
   bool hasBarrierBetween(const MachineInstr &Load,
-                         const MachineInstr &Use) const;
+                         const MachineInstr &Use,
+                         ArrayRef<Register> LoadInputRegs) const;
   bool cloneLoadForUse(MachineFunction &MF, MachineInstr &Load,
                        MachineInstr &Use, Register OldReg);
   bool processLoad(MachineFunction &MF, MachineInstr &Load);
@@ -89,6 +96,18 @@ bool RISCVVRegPressureReload::hasRegDef(const MachineInstr &MI,
                                         Register Reg) const {
   return any_of(MI.operands(), [&](const MachineOperand &MO) {
     return MO.isReg() && MO.isDef() && MO.getReg() == Reg;
+  });
+}
+
+bool RISCVVRegPressureReload::hasRegDefOrClobber(const MachineInstr &MI,
+                                                 Register Reg) const {
+  return any_of(MI.operands(), [&](const MachineOperand &MO) {
+    if (MO.isRegMask())
+      return Reg.isPhysical() && MO.clobbersPhysReg(Reg);
+    if (!MO.isReg() || !MO.isDef())
+      return false;
+    Register DefReg = MO.getReg();
+    return DefReg && TRI->regsOverlap(DefReg, Reg);
   });
 }
 
@@ -128,6 +147,18 @@ bool RISCVVRegPressureReload::isLateElementwiseUse(
          (hasRVVRegDef(MI) || MI.mayStore());
 }
 
+void RISCVVRegPressureReload::collectLoadInputRegs(
+    const MachineInstr &Load, SmallVectorImpl<Register> &Regs) const {
+  for (const MachineOperand &MO : Load.operands()) {
+    if (!MO.isReg() || !MO.isUse() || MO.isUndef())
+      continue;
+    Register Reg = MO.getReg();
+    if (!Reg || isRVVReg(Reg) || is_contained(Regs, Reg))
+      continue;
+    Regs.push_back(Reg);
+  }
+}
+
 std::optional<Register>
 RISCVVRegPressureReload::getSimpleRVVLoadDef(const MachineInstr &MI) const {
   if (!MI.mayLoad() || MI.mayStore() || MI.hasUnmodeledSideEffects() ||
@@ -151,14 +182,19 @@ RISCVVRegPressureReload::getSimpleRVVLoadDef(const MachineInstr &MI) const {
   return Def;
 }
 
-bool RISCVVRegPressureReload::hasBarrierBetween(const MachineInstr &Load,
-                                                const MachineInstr &Use) const {
+bool RISCVVRegPressureReload::hasBarrierBetween(
+    const MachineInstr &Load, const MachineInstr &Use,
+    ArrayRef<Register> LoadInputRegs) const {
   if (Load.getParent() != Use.getParent())
     return true;
   for (auto I = std::next(Load.getIterator()), E = Use.getIterator(); I != E;
-       ++I)
+       ++I) {
     if (isAliasBarrier(*I))
       return true;
+    for (Register Reg : LoadInputRegs)
+      if (hasRegDefOrClobber(*I, Reg))
+        return true;
+  }
   return false;
 }
 
@@ -199,7 +235,9 @@ bool RISCVVRegPressureReload::processLoad(MachineFunction &MF,
     return false;
 
   bool SawReductionUse = false;
+  SmallVector<Register, 8> LoadInputRegs;
   SmallVector<MachineInstr *, 4> LateUses;
+  collectLoadInputRegs(Load, LoadInputRegs);
   MachineBasicBlock *MBB = Load.getParent();
   for (auto I = std::next(Load.getIterator()), E = MBB->instr_end(); I != E;
        ++I) {
@@ -213,7 +251,7 @@ bool RISCVVRegPressureReload::processLoad(MachineFunction &MF,
       continue;
     }
     if (SawReductionUse && isLateElementwiseUse(MI) && !isAliasBarrier(MI) &&
-        !hasBarrierBetween(Load, MI))
+        !hasBarrierBetween(Load, MI, LoadInputRegs))
       LateUses.push_back(&MI);
   }
 
@@ -228,6 +266,7 @@ bool RISCVVRegPressureReload::runOnMachineFunction(MachineFunction &MF) {
     return false;
 
   TII = MF.getSubtarget().getInstrInfo();
+  TRI = MF.getSubtarget().getRegisterInfo();
   MRI = &MF.getRegInfo();
 
   bool Changed = false;
