@@ -72,6 +72,8 @@
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
+#include <optional>
+#include <tuple>
 #include <utility>
 
 using namespace llvm;
@@ -387,6 +389,7 @@ void RAGreedy::LRE_WillShrinkVirtReg(Register VirtReg) {
 
   // Register is assigned, put it back on the queue for reassignment.
   LiveInterval &LI = LIS->getInterval(VirtReg);
+  eraseRecentPhysRegReuseRecords(VirtReg);
   Matrix->unassign(LI);
   RegAllocBase::enqueue(&LI);
 }
@@ -412,6 +415,7 @@ void RAGreedy::ExtraRegInfo::LRE_DidCloneVirtReg(Register New, Register Old) {
 void RAGreedy::releaseMemory() {
   SpillerInstance.reset();
   GlobalCand.clear();
+  RecentPhysRegReuseRecords.clear();
 }
 
 void RAGreedy::enqueueImpl(const LiveInterval *LI) { enqueue(Queue, LI); }
@@ -532,14 +536,18 @@ MCRegister RAGreedy::tryAssign(const LiveInterval &VirtReg,
                                AllocationOrder &Order,
                                SmallVectorImpl<Register> &NewVRegs,
                                const SmallVirtRegSet &FixedRegisters) {
-  MCRegister PhysReg;
-  for (auto I = Order.begin(), E = Order.end(); I != E && !PhysReg; ++I) {
-    assert(*I);
-    if (!Matrix->checkInterference(VirtReg, *I)) {
-      if (I.isHint())
-        return *I;
-      else
-        PhysReg = *I;
+  MCRegister PhysReg = tryAssignRecentReuseAvoidingPhysReg(VirtReg, Order);
+  bool UsedRecentReuseScoring = PhysReg.isValid();
+
+  if (!PhysReg) {
+    for (auto I = Order.begin(), E = Order.end(); I != E && !PhysReg; ++I) {
+      assert(*I);
+      if (!Matrix->checkInterference(VirtReg, *I)) {
+        if (I.isHint())
+          return *I;
+        else
+          PhysReg = *I;
+      }
     }
   }
   if (!PhysReg.isValid())
@@ -552,6 +560,11 @@ MCRegister RAGreedy::tryAssign(const LiveInterval &VirtReg,
   if (Register Hint = MRI->getSimpleHint(VirtReg.reg()))
     if (Order.isHint(Hint)) {
       MCRegister PhysHint = Hint.asMCReg();
+      if (PhysHint == PhysReg)
+        return PhysReg;
+      if (UsedRecentReuseScoring &&
+          !Matrix->checkInterference(VirtReg, PhysHint))
+        return PhysReg;
       LLVM_DEBUG(dbgs() << "missed hint " << printReg(PhysHint, TRI) << '\n');
 
       if (EvictAdvisor->canEvictHintInterference(VirtReg, PhysHint,
@@ -580,6 +593,191 @@ MCRegister RAGreedy::tryAssign(const LiveInterval &VirtReg,
                     << (unsigned)Cost << '\n');
   MCRegister CheapReg = tryEvict(VirtReg, Order, NewVRegs, Cost, FixedRegisters);
   return CheapReg ? CheapReg : PhysReg;
+}
+
+void RAGreedy::recordRecentPhysRegReuse(const LiveInterval &VirtReg,
+                                        MCRegister PhysReg) {
+  const TargetRegisterClass *RC = MRI->getRegClass(VirtReg.reg());
+  if (!TRI->shouldUseRecentPhysRegReuseAvoidance(VirtReg.reg(), RC, *MF))
+    return;
+
+  RecentPhysRegReuseRecord Record;
+  Record.VirtReg = VirtReg.reg();
+  Record.PhysReg = PhysReg;
+  Record.RC = RC;
+  for (const LiveRange::Segment &Segment : VirtReg.segments) {
+    if (!Segment.valno)
+      continue;
+    Record.Segments.push_back({Segment.valno->def, Segment.end});
+  }
+  if (Record.Segments.empty())
+    return;
+
+  SmallVector<MCRegister, 8> Aliases;
+  TRI->getRecentPhysRegReuseAliases(PhysReg, RC, Aliases, *MF);
+  for (MCRegister Alias : Aliases)
+    RecentPhysRegReuseRecords[Alias].push_back(Record);
+}
+
+void RAGreedy::commitRecentPhysRegReuseAssignments(
+    ArrayRef<RecentPhysRegReuseAssignment> Assignments) {
+  SmallSet<Register, 8> SeenRegs;
+  for (size_t I = Assignments.size(); I != 0; --I) {
+    const LiveInterval *LI;
+    MCRegister PhysReg;
+    std::tie(LI, PhysReg) = Assignments[I - 1];
+    Register VirtReg = LI->reg();
+    if (!SeenRegs.insert(VirtReg).second)
+      continue;
+    if (LI->empty() || MRI->reg_nodbg_empty(VirtReg) ||
+        !VRM->hasPhys(VirtReg) || VRM->getPhys(VirtReg) != PhysReg)
+      continue;
+    recordRecentPhysRegReuse(*LI, PhysReg);
+  }
+}
+
+void RAGreedy::eraseRecentPhysRegReuseRecords(Register VirtReg) {
+  for (auto &Entry : RecentPhysRegReuseRecords) {
+    SmallVectorImpl<RecentPhysRegReuseRecord> &Records = Entry.second;
+    Records.erase(std::remove_if(Records.begin(), Records.end(),
+                                 [VirtReg](
+                                     const RecentPhysRegReuseRecord &Record) {
+                                   return Record.VirtReg == VirtReg;
+                                 }),
+                  Records.end());
+  }
+}
+
+void RAGreedy::markRecentPhysRegReuseRecordsRemoved(Register VirtReg) {
+  for (auto &Entry : RecentPhysRegReuseRecords) {
+    SmallVectorImpl<RecentPhysRegReuseRecord> &Records = Entry.second;
+    for (RecentPhysRegReuseRecord &Record : Records)
+      if (Record.VirtReg == VirtReg)
+        Record.IntervalRemoved = true;
+  }
+}
+
+MCRegister
+RAGreedy::tryAssignRecentReuseAvoidingPhysReg(const LiveInterval &VirtReg,
+                                              AllocationOrder &Order) {
+  const TargetRegisterClass *RC = MRI->getRegClass(VirtReg.reg());
+  if (!TRI->shouldUseRecentPhysRegReuseAvoidance(VirtReg.reg(), RC, *MF) ||
+      VirtReg.empty())
+    return MCRegister();
+
+  const LiveRange::Segment &FirstSegment = VirtReg.segments.front();
+  if (!FirstSegment.valno || FirstSegment.valno->def != FirstSegment.start)
+    return MCRegister();
+
+  const SlotIndex CurrentDef = FirstSegment.start;
+  const MachineBasicBlock *MBB = LIS->getMBBFromIndex(CurrentDef);
+  if (!MBB)
+    return MCRegister();
+
+  const MachineInstr *DefMI = LIS->getInstructionFromIndex(CurrentDef);
+  if (!DefMI || !DefMI->definesRegister(VirtReg.reg(), TRI))
+    return MCRegister();
+
+  const SlotIndex MBBStart = LIS->getMBBStartIdx(MBB);
+  const SlotIndex MBBEnd = LIS->getMBBEndIdx(MBB);
+
+  struct CandidateScore {
+    MCRegister PhysReg;
+    SlotIndex LastSameBlockEnd;
+    bool HasSameBlockEnd = false;
+    bool IsHint = false;
+    uint8_t Cost = 0;
+  };
+
+  auto IsBetter = [](const CandidateScore &LHS,
+                     const CandidateScore &RHS) {
+    if (LHS.Cost != RHS.Cost)
+      return LHS.Cost < RHS.Cost;
+    if (LHS.HasSameBlockEnd != RHS.HasSameBlockEnd)
+      return !LHS.HasSameBlockEnd;
+    if (LHS.HasSameBlockEnd &&
+        LHS.LastSameBlockEnd != RHS.LastSameBlockEnd)
+      return LHS.LastSameBlockEnd < RHS.LastSameBlockEnd;
+    if (LHS.IsHint != RHS.IsHint)
+      return LHS.IsHint;
+    return false;
+  };
+
+  auto RecordRecentEnd = [&](CandidateScore &Score, Register AssignedReg,
+                             ArrayRef<RecentPhysRegReuseRecord::SegmentSnapshot>
+                                 Segments) {
+    for (const RecentPhysRegReuseRecord::SegmentSnapshot &Segment : Segments) {
+      if (Segment.End <= MBBStart || Segment.End > CurrentDef ||
+          Segment.End > MBBEnd)
+        continue;
+      const MachineInstr *AssignedDefMI =
+          LIS->getInstructionFromIndex(Segment.Def);
+      if (!AssignedDefMI ||
+          !AssignedDefMI->definesRegister(AssignedReg, TRI))
+        continue;
+      const MachineBasicBlock *EndMBB =
+          LIS->getMBBFromIndex(Segment.End.getPrevSlot());
+      if (EndMBB != MBB)
+        continue;
+      if (!Score.HasSameBlockEnd ||
+          Score.LastSameBlockEnd < Segment.End) {
+        Score.HasSameBlockEnd = true;
+        Score.LastSameBlockEnd = Segment.End;
+      }
+    }
+  };
+
+  std::optional<CandidateScore> Best;
+  for (auto I = Order.begin(), E = Order.end(); I != E; ++I) {
+    MCRegister PhysReg = *I;
+    assert(PhysReg);
+    if (Matrix->checkInterference(VirtReg, PhysReg))
+      continue;
+
+    CandidateScore Score;
+    Score.PhysReg = PhysReg;
+    Score.IsHint = I.isHint();
+    Score.Cost = RegCosts[PhysReg.id()];
+
+    SmallVector<MCRegister, 8> Aliases;
+    TRI->getRecentPhysRegReuseAliases(PhysReg, RC, Aliases, *MF);
+    SmallSet<Register, 16> SeenRegs;
+    for (MCRegister Alias : Aliases) {
+      auto RecordsIt = RecentPhysRegReuseRecords.find(Alias);
+      if (RecordsIt == RecentPhysRegReuseRecords.end())
+        continue;
+
+      for (const RecentPhysRegReuseRecord &Record : RecordsIt->second) {
+        Register AssignedReg = Record.VirtReg;
+        if (AssignedReg == VirtReg.reg())
+          continue;
+        if (Record.IntervalRemoved) {
+          if (!SeenRegs.insert(AssignedReg).second)
+            continue;
+          RecordRecentEnd(Score, AssignedReg, Record.Segments);
+          continue;
+        }
+        if (!VRM->hasPhys(AssignedReg) || !LIS->hasInterval(AssignedReg))
+          continue;
+        if (VRM->getPhys(AssignedReg) != Record.PhysReg)
+          continue;
+        if (!SeenRegs.insert(AssignedReg).second)
+          continue;
+        RecordRecentEnd(Score, AssignedReg, Record.Segments);
+      }
+    }
+
+    if (!Best || IsBetter(Score, *Best))
+      Best = Score;
+  }
+
+  if (!Best)
+    return MCRegister();
+
+  LLVM_DEBUG(dbgs() << "recent-reuse avoiding assignment: "
+                    << printReg(Best->PhysReg, TRI) << " for "
+                    << printReg(VirtReg.reg()) << '\n');
+  return Best->PhysReg;
 }
 
 //===----------------------------------------------------------------------===//
@@ -2122,7 +2320,9 @@ bool RAGreedy::mayRecolorAllInterferences(
 MCRegister RAGreedy::tryLastChanceRecoloring(
     const LiveInterval &VirtReg, AllocationOrder &Order,
     SmallVectorImpl<Register> &NewVRegs, SmallVirtRegSet &FixedRegisters,
-    RecoloringStack &RecolorStack, unsigned Depth) {
+    RecoloringStack &RecolorStack,
+    RecentPhysRegReuseAssignmentList &RecentPhysRegReuseAssignments,
+    unsigned Depth) {
   if (!TRI->shouldUseLastChanceRecoloringForVirtReg(*MF, VirtReg))
     return ~0u;
 
@@ -2158,6 +2358,8 @@ MCRegister RAGreedy::tryLastChanceRecoloring(
                       << printReg(PhysReg, TRI) << '\n');
     RecoloringCandidates.clear();
     CurrentNewVRegs.clear();
+    const size_t EntryRecentPhysRegReuseAssignmentSize =
+        RecentPhysRegReuseAssignments.size();
 
     // It is only possible to recolor virtual register interference.
     if (Matrix->checkInterference(VirtReg, PhysReg) >
@@ -2206,7 +2408,8 @@ MCRegister RAGreedy::tryLastChanceRecoloring(
     // at this point for the next physical register.
     SmallVirtRegSet SaveFixedRegisters(FixedRegisters);
     if (tryRecoloringCandidates(RecoloringQueue, CurrentNewVRegs,
-                                FixedRegisters, RecolorStack, Depth)) {
+                                FixedRegisters, RecolorStack,
+                                RecentPhysRegReuseAssignments, Depth)) {
       // Push the queued vregs into the main queue.
       llvm::append_range(NewVRegs, CurrentNewVRegs);
       // Do not mess up with the global assignment process.
@@ -2228,6 +2431,8 @@ MCRegister RAGreedy::tryLastChanceRecoloring(
 
     // The recoloring attempt failed, undo the changes.
     FixedRegisters = SaveFixedRegisters;
+    RecentPhysRegReuseAssignments.resize(
+        EntryRecentPhysRegReuseAssignmentSize);
     Matrix->unassign(VirtReg);
 
     // For a newly created vreg which is also in RecoloringCandidates,
@@ -2283,12 +2488,16 @@ bool RAGreedy::tryRecoloringCandidates(PQueue &RecoloringQueue,
                                        SmallVectorImpl<Register> &NewVRegs,
                                        SmallVirtRegSet &FixedRegisters,
                                        RecoloringStack &RecolorStack,
+                                       RecentPhysRegReuseAssignmentList
+                                           &RecentPhysRegReuseAssignments,
                                        unsigned Depth) {
   while (!RecoloringQueue.empty()) {
     const LiveInterval *LI = dequeue(RecoloringQueue);
     LLVM_DEBUG(dbgs() << "Try to recolor: " << *LI << '\n');
     MCRegister PhysReg = selectOrSplitImpl(*LI, NewVRegs, FixedRegisters,
-                                           RecolorStack, Depth + 1);
+                                           RecolorStack,
+                                           RecentPhysRegReuseAssignments,
+                                           Depth + 1);
     // When splitting happens, the live-range may actually be empty.
     // In that case, this is okay to continue the recoloring even
     // if we did not find an alternative color for it. Indeed,
@@ -2306,6 +2515,7 @@ bool RAGreedy::tryRecoloringCandidates(PQueue &RecoloringQueue,
                       << " succeeded with: " << printReg(PhysReg, TRI) << '\n');
 
     Matrix->assign(*LI, PhysReg);
+    RecentPhysRegReuseAssignments.push_back({LI, PhysReg});
     FixedRegisters.insert(LI->reg());
   }
   return true;
@@ -2321,8 +2531,10 @@ MCRegister RAGreedy::selectOrSplit(const LiveInterval &VirtReg,
   LLVMContext &Ctx = MF->getFunction().getContext();
   SmallVirtRegSet FixedRegisters;
   RecoloringStack RecolorStack;
+  RecentPhysRegReuseAssignmentList RecentPhysRegReuseAssignments;
   MCRegister Reg =
-      selectOrSplitImpl(VirtReg, NewVRegs, FixedRegisters, RecolorStack);
+      selectOrSplitImpl(VirtReg, NewVRegs, FixedRegisters, RecolorStack,
+                        RecentPhysRegReuseAssignments);
   if (Reg == ~0U && (CutOffInfo != CO_None)) {
     uint8_t CutOffEncountered = CutOffInfo & (CO_Depth | CO_Interf);
     if (CutOffEncountered == CO_Depth)
@@ -2338,6 +2550,10 @@ MCRegister RAGreedy::selectOrSplit(const LiveInterval &VirtReg,
                     "depth for recoloring reached. Use "
                     "-fexhaustive-register-search to skip cutoffs");
   }
+  if (Reg != ~0U)
+    commitRecentPhysRegReuseAssignments(RecentPhysRegReuseAssignments);
+  if (Reg && Reg != ~0U)
+    recordRecentPhysRegReuse(VirtReg, Reg);
   return Reg;
 }
 
@@ -2384,6 +2600,7 @@ MCRegister RAGreedy::tryAssignCSRFirstTime(
 void RAGreedy::aboutToRemoveInterval(const LiveInterval &LI) {
   // Do not keep invalid information around.
   SetOfBrokenHints.remove(&LI);
+  markRecentPhysRegReuseRecordsRemoved(LI.reg());
 }
 
 void RAGreedy::initializeCSRCost() {
@@ -2542,6 +2759,7 @@ void RAGreedy::tryHintRecoloring(const LiveInterval &VirtReg) {
       // Recolor the live-range.
       Matrix->unassign(LI);
       Matrix->assign(LI, PhysReg);
+      recordRecentPhysRegReuse(LI, PhysReg);
     }
     // Push all copy-related live-ranges to keep reconciling the broken
     // hints.
@@ -2605,6 +2823,8 @@ MCRegister RAGreedy::selectOrSplitImpl(const LiveInterval &VirtReg,
                                        SmallVectorImpl<Register> &NewVRegs,
                                        SmallVirtRegSet &FixedRegisters,
                                        RecoloringStack &RecolorStack,
+                                       RecentPhysRegReuseAssignmentList
+                                           &RecentPhysRegReuseAssignments,
                                        unsigned Depth) {
   uint8_t CostPerUseLimit = uint8_t(~0u);
   // First try assigning a free register.
@@ -2677,7 +2897,8 @@ MCRegister RAGreedy::selectOrSplitImpl(const LiveInterval &VirtReg,
   // invalid inline assembly. The base class will report it.
   if (Stage >= RS_Done || !VirtReg.isSpillable()) {
     return tryLastChanceRecoloring(VirtReg, Order, NewVRegs, FixedRegisters,
-                                   RecolorStack, Depth);
+                                   RecolorStack,
+                                   RecentPhysRegReuseAssignments, Depth);
   }
 
   // Finally spill VirtReg itself.
@@ -2940,6 +3161,7 @@ bool RAGreedy::run(MachineFunction &mf) {
   IntfCache.init(MF, Matrix->getLiveUnions(), Indexes, LIS, TRI);
   GlobalCand.resize(32);  // This will grow as needed.
   SetOfBrokenHints.clear();
+  RecentPhysRegReuseRecords.clear();
 
   allocatePhysRegs();
   tryHintsRecoloring();

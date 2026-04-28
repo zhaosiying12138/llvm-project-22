@@ -36,6 +36,10 @@ static cl::opt<bool>
                          cl::init(false),
                          cl::desc("Disable two address hints for register "
                                   "allocation"));
+static cl::opt<bool> RISCVRVVAvoidRecentVRegReuse(
+    "riscv-rvv-avoid-recent-vreg-reuse", cl::Hidden, cl::init(false),
+    cl::desc("Prefer RVV physical registers whose previous same-block virtual "
+             "register assignment ended farther from the current definition"));
 
 static_assert(RISCV::X1 == RISCV::X0 + 1, "Register list not consecutive");
 static_assert(RISCV::X31 == RISCV::X0 + 31, "Register list not consecutive");
@@ -1052,6 +1056,50 @@ bool RISCVRegisterInfo::getRegAllocationHints(
       Hints.push_back(OrderReg);
 
   return BaseImplRetVal;
+}
+
+bool RISCVRegisterInfo::shouldUseRecentPhysRegReuseAvoidance(
+    Register VirtReg, const TargetRegisterClass *RC,
+    const MachineFunction &MF) const {
+  return RISCVRVVAvoidRecentVRegReuse && RC && isRVVRegClass(RC);
+}
+
+static unsigned getRecentReuseRVVGroupSize(const TargetRegisterClass *RC) {
+  unsigned LMUL = 1;
+  switch (RISCVRI::getLMul(RC->TSFlags)) {
+  case RISCVVType::LMUL_8:
+    LMUL = 8;
+    break;
+  case RISCVVType::LMUL_4:
+    LMUL = 4;
+    break;
+  case RISCVVType::LMUL_2:
+    LMUL = 2;
+    break;
+  default:
+    break;
+  }
+  return LMUL * RISCVRI::getNF(RC->TSFlags);
+}
+
+void RISCVRegisterInfo::getRecentPhysRegReuseAliases(
+    MCRegister PhysReg, const TargetRegisterClass *RC,
+    SmallVectorImpl<MCRegister> &Aliases, const MachineFunction &MF) const {
+  if (!RISCVRVVAvoidRecentVRegReuse || !RC || !isRVVRegClass(RC)) {
+    Aliases.push_back(PhysReg);
+    return;
+  }
+
+  unsigned Start = getEncodingValue(PhysReg);
+  if (Start >= 32) {
+    Aliases.push_back(PhysReg);
+    return;
+  }
+
+  unsigned End = Start + getRecentReuseRVVGroupSize(RC);
+  End = End > 32 ? 32 : End;
+  for (unsigned Index = Start; Index != End; ++Index)
+    Aliases.push_back(RISCV::V0 + Index);
 }
 
 void RISCVRegisterInfo::updateRegAllocHint(Register Reg, Register NewReg,

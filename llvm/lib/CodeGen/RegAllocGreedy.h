@@ -17,6 +17,7 @@
 #include "SplitKit.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitVector.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/IndexedMap.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
@@ -163,6 +164,10 @@ private:
   // successful and unsuccessful recoloring attempts.
   using RecoloringStack =
       SmallVector<std::pair<const LiveInterval *, MCRegister>, 8>;
+  using RecentPhysRegReuseAssignment =
+      std::pair<const LiveInterval *, MCRegister>;
+  using RecentPhysRegReuseAssignmentList =
+      SmallVector<RecentPhysRegReuseAssignment, 8>;
 
   // context
   MachineFunction *MF = nullptr;
@@ -275,6 +280,25 @@ private:
   /// Set of broken hints that may be reconciled later because of eviction.
   SmallSetVector<const LiveInterval *, 8> SetOfBrokenHints;
 
+  struct RecentPhysRegReuseRecord {
+    struct SegmentSnapshot {
+      SlotIndex Def;
+      SlotIndex End;
+    };
+
+    Register VirtReg;
+    MCRegister PhysReg;
+    const TargetRegisterClass *RC = nullptr;
+    SmallVector<SegmentSnapshot, 4> Segments;
+    bool IntervalRemoved = false;
+  };
+
+  /// Assigned virtual-register history keyed by target-provided physical
+  /// aliases. This keeps the opt-in recent-reuse heuristic away from full
+  /// virtual-register scans in the allocation hot path.
+  DenseMap<MCRegister, SmallVector<RecentPhysRegReuseRecord, 4>>
+      RecentPhysRegReuseRecords;
+
   /// The register cost values. This list will be recreated for each Machine
   /// Function
   ArrayRef<uint8_t> RegCosts;
@@ -303,7 +327,9 @@ public:
 private:
   MCRegister selectOrSplitImpl(const LiveInterval &,
                                SmallVectorImpl<Register> &, SmallVirtRegSet &,
-                               RecoloringStack &, unsigned = 0);
+                               RecoloringStack &,
+                               RecentPhysRegReuseAssignmentList &,
+                               unsigned = 0);
 
   bool LRE_CanEraseVirtReg(Register) override;
   void LRE_WillShrinkVirtReg(Register) override;
@@ -330,6 +356,13 @@ private:
 
   MCRegister tryAssign(const LiveInterval &, AllocationOrder &,
                        SmallVectorImpl<Register> &, const SmallVirtRegSet &);
+  void recordRecentPhysRegReuse(const LiveInterval &, MCRegister);
+  void commitRecentPhysRegReuseAssignments(
+      ArrayRef<RecentPhysRegReuseAssignment>);
+  void eraseRecentPhysRegReuseRecords(Register);
+  void markRecentPhysRegReuseRecordsRemoved(Register);
+  MCRegister tryAssignRecentReuseAvoidingPhysReg(const LiveInterval &,
+                                                 AllocationOrder &);
   MCRegister tryEvict(const LiveInterval &, AllocationOrder &,
                       SmallVectorImpl<Register> &, uint8_t,
                       const SmallVirtRegSet &);
@@ -372,9 +405,11 @@ private:
   MCRegister tryLastChanceRecoloring(const LiveInterval &, AllocationOrder &,
                                      SmallVectorImpl<Register> &,
                                      SmallVirtRegSet &, RecoloringStack &,
+                                     RecentPhysRegReuseAssignmentList &,
                                      unsigned);
   bool tryRecoloringCandidates(PQueue &, SmallVectorImpl<Register> &,
-                               SmallVirtRegSet &, RecoloringStack &, unsigned);
+                               SmallVirtRegSet &, RecoloringStack &,
+                               RecentPhysRegReuseAssignmentList &, unsigned);
   void tryHintRecoloring(const LiveInterval &);
   void tryHintsRecoloring();
 

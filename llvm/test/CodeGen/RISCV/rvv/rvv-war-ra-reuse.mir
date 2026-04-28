@@ -1,0 +1,626 @@
+# RUN: llc %s -mtriple=riscv64 -mattr=+v -run-pass=greedy,virtregrewriter -o - | FileCheck %s --check-prefix=DEFAULT
+# RUN: llc %s -mtriple=riscv64 -mattr=+v -run-pass=greedy,virtregrewriter -riscv-rvv-avoid-recent-vreg-reuse -o - | FileCheck %s --check-prefix=AVOID
+
+---
+name:            rvv_war_ra_load_m1
+alignment:       4
+tracksRegLiveness: true
+frameInfo:
+  maxAlignment:    4
+  localFrameSize:  4
+stack:
+  - { id: 0, size: 1, alignment: 4, local-offset: -4 }
+machineFunctionInfo:
+  varArgsFrameIndex: 0
+  varArgsSaveSize: 0
+body:             |
+  bb.0.entry:
+    ; DEFAULT-LABEL: name: rvv_war_ra_load_m1
+    ; DEFAULT:      renamable $v29 = VL1RE8_V
+    ; DEFAULT-NEXT: VS1R_V killed renamable $v29
+    ; DEFAULT-NEXT: renamable $v29 = VL1RE8_V
+    ; DEFAULT-NEXT: VS1R_V killed renamable $v29
+    ;
+    ; AVOID-LABEL: name: rvv_war_ra_load_m1
+    ; AVOID:      renamable $v29 = VL1RE8_V
+    ; AVOID-NEXT: VS1R_V killed renamable $v29
+    ; AVOID-NEXT: renamable $v30 = VL1RE8_V
+    ; AVOID-NEXT: VS1R_V killed renamable $v30
+    $v0 = VL1RE8_V %stack.0 :: (volatile load unknown-size)
+    $v1 = VL1RE8_V %stack.0 :: (volatile load unknown-size)
+    $v2 = VL1RE8_V %stack.0 :: (volatile load unknown-size)
+    $v3 = VL1RE8_V %stack.0 :: (volatile load unknown-size)
+    $v4 = VL1RE8_V %stack.0 :: (volatile load unknown-size)
+    $v5 = VL1RE8_V %stack.0 :: (volatile load unknown-size)
+    $v6 = VL1RE8_V %stack.0 :: (volatile load unknown-size)
+    $v7 = VL1RE8_V %stack.0 :: (volatile load unknown-size)
+    $v8 = VL1RE8_V %stack.0 :: (volatile load unknown-size)
+    $v9 = VL1RE8_V %stack.0 :: (volatile load unknown-size)
+    $v10 = VL1RE8_V %stack.0 :: (volatile load unknown-size)
+    $v11 = VL1RE8_V %stack.0 :: (volatile load unknown-size)
+    $v12 = VL1RE8_V %stack.0 :: (volatile load unknown-size)
+    $v13 = VL1RE8_V %stack.0 :: (volatile load unknown-size)
+    $v14 = VL1RE8_V %stack.0 :: (volatile load unknown-size)
+    $v15 = VL1RE8_V %stack.0 :: (volatile load unknown-size)
+    $v16 = VL1RE8_V %stack.0 :: (volatile load unknown-size)
+    $v17 = VL1RE8_V %stack.0 :: (volatile load unknown-size)
+    $v18 = VL1RE8_V %stack.0 :: (volatile load unknown-size)
+    $v19 = VL1RE8_V %stack.0 :: (volatile load unknown-size)
+    $v20 = VL1RE8_V %stack.0 :: (volatile load unknown-size)
+    $v21 = VL1RE8_V %stack.0 :: (volatile load unknown-size)
+    $v22 = VL1RE8_V %stack.0 :: (volatile load unknown-size)
+    $v23 = VL1RE8_V %stack.0 :: (volatile load unknown-size)
+    $v24 = VL1RE8_V %stack.0 :: (volatile load unknown-size)
+    $v25 = VL1RE8_V %stack.0 :: (volatile load unknown-size)
+    $v26 = VL1RE8_V %stack.0 :: (volatile load unknown-size)
+    $v27 = VL1RE8_V %stack.0 :: (volatile load unknown-size)
+    $v28 = VL1RE8_V %stack.0 :: (volatile load unknown-size)
+
+    %0:vr = VL1RE8_V %stack.0 :: (volatile load unknown-size)
+    VS1R_V killed %0, %stack.0 :: (volatile store unknown-size)
+    %1:vr = VL1RE8_V %stack.0 :: (volatile load unknown-size)
+    VS1R_V killed %1, %stack.0 :: (volatile store unknown-size)
+
+    VS1R_V $v0, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v1, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v2, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v3, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v4, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v5, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v6, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v7, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v8, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v9, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v10, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v11, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v12, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v13, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v14, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v15, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v16, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v17, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v18, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v19, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v20, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v21, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v22, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v23, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v24, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v25, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v26, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v27, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v28, %stack.0 :: (volatile store unknown-size)
+    PseudoRET
+
+...
+---
+name:            rvv_war_ra_preserve_missed_hint
+alignment:       4
+tracksRegLiveness: true
+frameInfo:
+  maxAlignment:    4
+  localFrameSize:  4
+stack:
+  - { id: 0, size: 1, alignment: 4, local-offset: -4 }
+machineFunctionInfo:
+  varArgsFrameIndex: 0
+  varArgsSaveSize: 0
+registers:
+  - { id: 0, class: vr, preferred-register: '' }
+  - { id: 1, class: vr, preferred-register: '$v8' }
+body:             |
+  bb.0:
+    ; AVOID-LABEL: name: rvv_war_ra_preserve_missed_hint
+    ; AVOID:      renamable $v9 = VL1RE8_V
+    ; AVOID-NEXT: renamable $v8 = VL1RE8_V
+    ; AVOID-NEXT: VS1R_V killed renamable $v8
+    ; AVOID-NEXT: VS1R_V killed renamable $v9
+    %0:vr = VL1RE8_V %stack.0 :: (volatile load unknown-size)
+    %1:vr = VL1RE8_V %stack.0 :: (volatile load unknown-size)
+    VS1R_V killed %1, %stack.0 :: (volatile store unknown-size)
+    VS1R_V killed %0, %stack.0 :: (volatile store unknown-size)
+    PseudoRET
+
+...
+---
+name:            rvv_war_ra_pred_livein_current_use
+alignment:       4
+tracksRegLiveness: true
+frameInfo:
+  maxAlignment:    4
+  localFrameSize:  4
+stack:
+  - { id: 0, size: 1, alignment: 4, local-offset: -4 }
+machineFunctionInfo:
+  varArgsFrameIndex: 0
+  varArgsSaveSize: 0
+body:             |
+  bb.0:
+    successors: %bb.1
+
+    ; DEFAULT-LABEL: name: rvv_war_ra_pred_livein_current_use
+    ; DEFAULT:      renamable $v8 = VL1RE8_V
+    ; DEFAULT:      VS1R_V killed renamable $v8
+    ; DEFAULT-NEXT: renamable $v8 = VL1RE8_V
+    ;
+    ; AVOID-LABEL: name: rvv_war_ra_pred_livein_current_use
+    ; AVOID:      renamable $v8 = VL1RE8_V
+    ; AVOID:      VS1R_V killed renamable $v8
+    ; AVOID-NEXT: renamable $v9 = VL1RE8_V
+    %0:vr = VL1RE8_V %stack.0 :: (volatile load unknown-size)
+    PseudoBR %bb.1
+
+  bb.1:
+    $v0 = VL1RE8_V %stack.0 :: (volatile load unknown-size)
+    VS1R_V killed %0, %stack.0 :: (volatile store unknown-size)
+    %1:vr = VL1RE8_V %stack.0 :: (volatile load unknown-size)
+    VS1R_V killed %1, %stack.0 :: (volatile store unknown-size)
+    PseudoRET
+
+...
+---
+name:            rvv_war_ra_liveout_current
+alignment:       4
+tracksRegLiveness: true
+frameInfo:
+  maxAlignment:    4
+  localFrameSize:  4
+stack:
+  - { id: 0, size: 1, alignment: 4, local-offset: -4 }
+machineFunctionInfo:
+  varArgsFrameIndex: 0
+  varArgsSaveSize: 0
+body:             |
+  bb.0:
+    successors: %bb.1
+
+    ; DEFAULT-LABEL: name: rvv_war_ra_liveout_current
+    ; DEFAULT:      renamable $v29 = VL1RE8_V
+    ; DEFAULT-NEXT: VS1R_V killed renamable $v29
+    ; DEFAULT-NEXT: renamable $v29 = VL1RE8_V
+    ; DEFAULT:      bb.1:
+    ; DEFAULT:      VS1R_V killed renamable $v29
+    ;
+    ; AVOID-LABEL: name: rvv_war_ra_liveout_current
+    ; AVOID:      renamable $v29 = VL1RE8_V
+    ; AVOID-NEXT: VS1R_V killed renamable $v29
+    ; AVOID-NEXT: renamable $v30 = VL1RE8_V
+    ; AVOID:      bb.1:
+    ; AVOID:      VS1R_V killed renamable $v30
+    $v0 = VL1RE8_V %stack.0 :: (volatile load unknown-size)
+    $v1 = VL1RE8_V %stack.0 :: (volatile load unknown-size)
+    $v2 = VL1RE8_V %stack.0 :: (volatile load unknown-size)
+    $v3 = VL1RE8_V %stack.0 :: (volatile load unknown-size)
+    $v4 = VL1RE8_V %stack.0 :: (volatile load unknown-size)
+    $v5 = VL1RE8_V %stack.0 :: (volatile load unknown-size)
+    $v6 = VL1RE8_V %stack.0 :: (volatile load unknown-size)
+    $v7 = VL1RE8_V %stack.0 :: (volatile load unknown-size)
+    $v8 = VL1RE8_V %stack.0 :: (volatile load unknown-size)
+    $v9 = VL1RE8_V %stack.0 :: (volatile load unknown-size)
+    $v10 = VL1RE8_V %stack.0 :: (volatile load unknown-size)
+    $v11 = VL1RE8_V %stack.0 :: (volatile load unknown-size)
+    $v12 = VL1RE8_V %stack.0 :: (volatile load unknown-size)
+    $v13 = VL1RE8_V %stack.0 :: (volatile load unknown-size)
+    $v14 = VL1RE8_V %stack.0 :: (volatile load unknown-size)
+    $v15 = VL1RE8_V %stack.0 :: (volatile load unknown-size)
+    $v16 = VL1RE8_V %stack.0 :: (volatile load unknown-size)
+    $v17 = VL1RE8_V %stack.0 :: (volatile load unknown-size)
+    $v18 = VL1RE8_V %stack.0 :: (volatile load unknown-size)
+    $v19 = VL1RE8_V %stack.0 :: (volatile load unknown-size)
+    $v20 = VL1RE8_V %stack.0 :: (volatile load unknown-size)
+    $v21 = VL1RE8_V %stack.0 :: (volatile load unknown-size)
+    $v22 = VL1RE8_V %stack.0 :: (volatile load unknown-size)
+    $v23 = VL1RE8_V %stack.0 :: (volatile load unknown-size)
+    $v24 = VL1RE8_V %stack.0 :: (volatile load unknown-size)
+    $v25 = VL1RE8_V %stack.0 :: (volatile load unknown-size)
+    $v26 = VL1RE8_V %stack.0 :: (volatile load unknown-size)
+    $v27 = VL1RE8_V %stack.0 :: (volatile load unknown-size)
+    $v28 = VL1RE8_V %stack.0 :: (volatile load unknown-size)
+
+    %0:vr = VL1RE8_V %stack.0 :: (volatile load unknown-size)
+    VS1R_V killed %0, %stack.0 :: (volatile store unknown-size)
+    %1:vr = VL1RE8_V %stack.0 :: (volatile load unknown-size)
+    PseudoBR %bb.1
+
+  bb.1:
+    liveins: $v0, $v1, $v2, $v3, $v4, $v5, $v6, $v7, $v8, $v9, $v10, $v11, $v12, $v13, $v14, $v15, $v16, $v17, $v18, $v19, $v20, $v21, $v22, $v23, $v24, $v25, $v26, $v27, $v28
+
+    VS1R_V killed %1, %stack.0 :: (volatile store unknown-size)
+    %0:vr = VL1RE8_V %stack.0 :: (volatile load unknown-size)
+    VS1R_V $v0, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v1, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v2, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v3, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v4, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v5, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v6, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v7, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v8, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v9, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v10, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v11, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v12, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v13, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v14, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v15, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v16, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v17, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v18, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v19, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v20, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v21, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v22, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v23, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v24, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v25, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v26, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v27, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v28, %stack.0 :: (volatile store unknown-size)
+    VS1R_V killed %0, %stack.0 :: (volatile store unknown-size)
+    PseudoRET
+
+...
+---
+name:            rvv_war_ra_alu_m1
+alignment:       4
+tracksRegLiveness: true
+frameInfo:
+  maxAlignment:    4
+  localFrameSize:  4
+stack:
+  - { id: 0, size: 1, alignment: 4, local-offset: -4 }
+machineFunctionInfo:
+  varArgsFrameIndex: 0
+  varArgsSaveSize: 0
+body:             |
+  bb.0.entry:
+    ; DEFAULT-LABEL: name: rvv_war_ra_alu_m1
+    ; DEFAULT:      renamable $v29 = PseudoVADD_VV_M1
+    ; DEFAULT-NEXT: VS1R_V killed renamable $v29
+    ; DEFAULT-NEXT: renamable $v29 = PseudoVADD_VV_M1
+    ; DEFAULT-NEXT: VS1R_V killed renamable $v29
+    ;
+    ; AVOID-LABEL: name: rvv_war_ra_alu_m1
+    ; AVOID:      renamable $v29 = PseudoVADD_VV_M1
+    ; AVOID-NEXT: VS1R_V killed renamable $v29
+    ; AVOID-NEXT: renamable $v30 = PseudoVADD_VV_M1
+    ; AVOID-NEXT: VS1R_V killed renamable $v30
+    $v0 = IMPLICIT_DEF
+    $v1 = IMPLICIT_DEF
+    $v2 = IMPLICIT_DEF
+    $v3 = IMPLICIT_DEF
+    $v4 = IMPLICIT_DEF
+    $v5 = IMPLICIT_DEF
+    $v6 = IMPLICIT_DEF
+    $v7 = IMPLICIT_DEF
+    $v8 = IMPLICIT_DEF
+    $v9 = IMPLICIT_DEF
+    $v10 = IMPLICIT_DEF
+    $v11 = IMPLICIT_DEF
+    $v12 = IMPLICIT_DEF
+    $v13 = IMPLICIT_DEF
+    $v14 = IMPLICIT_DEF
+    $v15 = IMPLICIT_DEF
+    $v16 = IMPLICIT_DEF
+    $v17 = IMPLICIT_DEF
+    $v18 = IMPLICIT_DEF
+    $v19 = IMPLICIT_DEF
+    $v20 = IMPLICIT_DEF
+    $v21 = IMPLICIT_DEF
+    $v22 = IMPLICIT_DEF
+    $v23 = IMPLICIT_DEF
+    $v24 = IMPLICIT_DEF
+    $v25 = IMPLICIT_DEF
+    $v26 = IMPLICIT_DEF
+    $v27 = IMPLICIT_DEF
+    $v28 = IMPLICIT_DEF
+
+    %0:vr = PseudoVADD_VV_M1 $noreg, $v0, $v1, -1, 3, 0
+    VS1R_V killed %0, %stack.0 :: (volatile store unknown-size)
+    %1:vr = PseudoVADD_VV_M1 $noreg, $v2, $v3, -1, 3, 0
+    VS1R_V killed %1, %stack.0 :: (volatile store unknown-size)
+
+    VS1R_V $v0, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v1, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v2, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v3, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v4, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v5, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v6, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v7, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v8, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v9, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v10, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v11, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v12, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v13, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v14, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v15, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v16, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v17, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v18, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v19, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v20, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v21, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v22, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v23, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v24, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v25, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v26, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v27, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v28, %stack.0 :: (volatile store unknown-size)
+    PseudoRET
+
+...
+---
+name:            rvv_war_ra_load_then_alu_m1
+alignment:       4
+tracksRegLiveness: true
+frameInfo:
+  maxAlignment:    4
+  localFrameSize:  4
+stack:
+  - { id: 0, size: 1, alignment: 4, local-offset: -4 }
+machineFunctionInfo:
+  varArgsFrameIndex: 0
+  varArgsSaveSize: 0
+body:             |
+  bb.0.entry:
+    ; DEFAULT-LABEL: name: rvv_war_ra_load_then_alu_m1
+    ; DEFAULT:      renamable $v29 = VL1RE8_V
+    ; DEFAULT-NEXT: VS1R_V killed renamable $v29
+    ; DEFAULT-NEXT: renamable $v29 = PseudoVADD_VV_M1
+    ; DEFAULT-NEXT: VS1R_V killed renamable $v29
+    ;
+    ; AVOID-LABEL: name: rvv_war_ra_load_then_alu_m1
+    ; AVOID:      renamable $v29 = VL1RE8_V
+    ; AVOID-NEXT: VS1R_V killed renamable $v29
+    ; AVOID-NEXT: renamable $v30 = PseudoVADD_VV_M1
+    ; AVOID-NEXT: VS1R_V killed renamable $v30
+    $v0 = IMPLICIT_DEF
+    $v1 = IMPLICIT_DEF
+    $v2 = IMPLICIT_DEF
+    $v3 = IMPLICIT_DEF
+    $v4 = IMPLICIT_DEF
+    $v5 = IMPLICIT_DEF
+    $v6 = IMPLICIT_DEF
+    $v7 = IMPLICIT_DEF
+    $v8 = IMPLICIT_DEF
+    $v9 = IMPLICIT_DEF
+    $v10 = IMPLICIT_DEF
+    $v11 = IMPLICIT_DEF
+    $v12 = IMPLICIT_DEF
+    $v13 = IMPLICIT_DEF
+    $v14 = IMPLICIT_DEF
+    $v15 = IMPLICIT_DEF
+    $v16 = IMPLICIT_DEF
+    $v17 = IMPLICIT_DEF
+    $v18 = IMPLICIT_DEF
+    $v19 = IMPLICIT_DEF
+    $v20 = IMPLICIT_DEF
+    $v21 = IMPLICIT_DEF
+    $v22 = IMPLICIT_DEF
+    $v23 = IMPLICIT_DEF
+    $v24 = IMPLICIT_DEF
+    $v25 = IMPLICIT_DEF
+    $v26 = IMPLICIT_DEF
+    $v27 = IMPLICIT_DEF
+    $v28 = IMPLICIT_DEF
+
+    %0:vr = VL1RE8_V %stack.0 :: (volatile load unknown-size)
+    VS1R_V killed %0, %stack.0 :: (volatile store unknown-size)
+    %1:vr = PseudoVADD_VV_M1 $noreg, $v0, $v1, -1, 3, 0
+    VS1R_V killed %1, %stack.0 :: (volatile store unknown-size)
+
+    VS1R_V $v0, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v1, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v2, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v3, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v4, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v5, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v6, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v7, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v8, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v9, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v10, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v11, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v12, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v13, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v14, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v15, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v16, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v17, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v18, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v19, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v20, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v21, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v22, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v23, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v24, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v25, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v26, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v27, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v28, %stack.0 :: (volatile store unknown-size)
+    PseudoRET
+
+...
+---
+name:            rvv_war_ra_lmul2
+alignment:       4
+tracksRegLiveness: true
+frameInfo:
+  maxAlignment:    4
+  localFrameSize:  4
+stack:
+  - { id: 0, size: 1, alignment: 4, local-offset: -4 }
+machineFunctionInfo:
+  varArgsFrameIndex: 0
+  varArgsSaveSize: 0
+body:             |
+  bb.0.entry:
+    ; DEFAULT-LABEL: name: rvv_war_ra_lmul2
+    ; DEFAULT:      renamable $v28m2 = VL2RE8_V
+    ; DEFAULT-NEXT: VS2R_V killed renamable $v28m2
+    ; DEFAULT-NEXT: renamable $v28m2 = VL2RE8_V
+    ; DEFAULT-NEXT: VS2R_V killed renamable $v28m2
+    ;
+    ; AVOID-LABEL: name: rvv_war_ra_lmul2
+    ; AVOID:      renamable $v28m2 = VL2RE8_V
+    ; AVOID-NEXT: VS2R_V killed renamable $v28m2
+    ; AVOID-NEXT: renamable $v30m2 = VL2RE8_V
+    ; AVOID-NEXT: VS2R_V killed renamable $v30m2
+    $v0 = IMPLICIT_DEF
+    $v1 = IMPLICIT_DEF
+    $v2 = IMPLICIT_DEF
+    $v3 = IMPLICIT_DEF
+    $v4 = IMPLICIT_DEF
+    $v5 = IMPLICIT_DEF
+    $v6 = IMPLICIT_DEF
+    $v7 = IMPLICIT_DEF
+    $v8 = IMPLICIT_DEF
+    $v9 = IMPLICIT_DEF
+    $v10 = IMPLICIT_DEF
+    $v11 = IMPLICIT_DEF
+    $v12 = IMPLICIT_DEF
+    $v13 = IMPLICIT_DEF
+    $v14 = IMPLICIT_DEF
+    $v15 = IMPLICIT_DEF
+    $v16 = IMPLICIT_DEF
+    $v17 = IMPLICIT_DEF
+    $v18 = IMPLICIT_DEF
+    $v19 = IMPLICIT_DEF
+    $v20 = IMPLICIT_DEF
+    $v21 = IMPLICIT_DEF
+    $v22 = IMPLICIT_DEF
+    $v23 = IMPLICIT_DEF
+    $v24 = IMPLICIT_DEF
+    $v25 = IMPLICIT_DEF
+    $v26 = IMPLICIT_DEF
+    $v27 = IMPLICIT_DEF
+
+    %0:vrm2 = VL2RE8_V %stack.0 :: (volatile load unknown-size)
+    VS2R_V killed %0, %stack.0 :: (volatile store unknown-size)
+    %1:vrm2 = VL2RE8_V %stack.0 :: (volatile load unknown-size)
+    VS2R_V killed %1, %stack.0 :: (volatile store unknown-size)
+
+    VS1R_V $v0, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v1, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v2, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v3, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v4, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v5, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v6, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v7, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v8, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v9, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v10, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v11, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v12, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v13, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v14, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v15, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v16, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v17, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v18, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v19, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v20, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v21, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v22, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v23, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v24, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v25, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v26, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v27, %stack.0 :: (volatile store unknown-size)
+    PseudoRET
+
+...
+---
+name:            rvv_war_ra_lmul2_then_m1_partial_overlap
+alignment:       4
+tracksRegLiveness: true
+frameInfo:
+  maxAlignment:    4
+  localFrameSize:  4
+stack:
+  - { id: 0, size: 1, alignment: 4, local-offset: -4 }
+machineFunctionInfo:
+  varArgsFrameIndex: 0
+  varArgsSaveSize: 0
+body:             |
+  bb.0.entry:
+    ; DEFAULT-LABEL: name: rvv_war_ra_lmul2_then_m1_partial_overlap
+    ; DEFAULT:      renamable $v28m2 = VL2RE8_V
+    ; DEFAULT-NEXT: VS2R_V killed renamable $v28m2
+    ; DEFAULT-NEXT: renamable $v28 = PseudoVADD_VV_M1
+    ; DEFAULT-NEXT: VS1R_V killed renamable $v28
+    ;
+    ; AVOID-LABEL: name: rvv_war_ra_lmul2_then_m1_partial_overlap
+    ; AVOID:      renamable $v28m2 = VL2RE8_V
+    ; AVOID-NEXT: VS2R_V killed renamable $v28m2
+    ; AVOID-NEXT: renamable $v30 = PseudoVADD_VV_M1
+    ; AVOID-NEXT: VS1R_V killed renamable $v30
+    $v0 = IMPLICIT_DEF
+    $v1 = IMPLICIT_DEF
+    $v2 = IMPLICIT_DEF
+    $v3 = IMPLICIT_DEF
+    $v4 = IMPLICIT_DEF
+    $v5 = IMPLICIT_DEF
+    $v6 = IMPLICIT_DEF
+    $v7 = IMPLICIT_DEF
+    $v8 = IMPLICIT_DEF
+    $v9 = IMPLICIT_DEF
+    $v10 = IMPLICIT_DEF
+    $v11 = IMPLICIT_DEF
+    $v12 = IMPLICIT_DEF
+    $v13 = IMPLICIT_DEF
+    $v14 = IMPLICIT_DEF
+    $v15 = IMPLICIT_DEF
+    $v16 = IMPLICIT_DEF
+    $v17 = IMPLICIT_DEF
+    $v18 = IMPLICIT_DEF
+    $v19 = IMPLICIT_DEF
+    $v20 = IMPLICIT_DEF
+    $v21 = IMPLICIT_DEF
+    $v22 = IMPLICIT_DEF
+    $v23 = IMPLICIT_DEF
+    $v24 = IMPLICIT_DEF
+    $v25 = IMPLICIT_DEF
+    $v26 = IMPLICIT_DEF
+    $v27 = IMPLICIT_DEF
+
+    %0:vrm2 = VL2RE8_V %stack.0 :: (volatile load unknown-size)
+    VS2R_V killed %0, %stack.0 :: (volatile store unknown-size)
+    %1:vr = PseudoVADD_VV_M1 $noreg, $v0, $v1, -1, 3, 0
+    VS1R_V killed %1, %stack.0 :: (volatile store unknown-size)
+
+    VS1R_V $v0, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v1, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v2, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v3, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v4, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v5, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v6, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v7, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v8, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v9, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v10, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v11, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v12, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v13, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v14, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v15, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v16, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v17, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v18, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v19, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v20, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v21, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v22, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v23, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v24, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v25, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v26, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v27, %stack.0 :: (volatile store unknown-size)
+    PseudoRET
+
+...

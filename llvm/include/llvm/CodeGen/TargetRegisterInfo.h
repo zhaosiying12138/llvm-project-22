@@ -1004,6 +1004,27 @@ public:
                         const VirtRegMap *VRM = nullptr,
                         const LiveRegMatrix *Matrix = nullptr) const;
 
+  /// Return true if greedy register allocation should prefer a free physical
+  /// register whose most recent same-block assignment ended farther away from
+  /// \p VirtReg. This is a narrow, opt-in hook for targets that want to avoid
+  /// short-distance physical-register reuse without changing generic eviction
+  /// or splitting policy.
+  virtual bool shouldUseRecentPhysRegReuseAvoidance(
+      Register VirtReg, const TargetRegisterClass *RC,
+      const MachineFunction &MF) const {
+    return false;
+  }
+
+  /// Append the physical register aliases that should share recent-reuse
+  /// history for \p PhysReg when allocating a virtual register in \p RC.
+  /// Targets with grouped physical registers can expand a wide allocation into
+  /// the scalar registers it occupies.
+  virtual void getRecentPhysRegReuseAliases(
+      MCRegister PhysReg, const TargetRegisterClass *RC,
+      SmallVectorImpl<MCRegister> &Aliases, const MachineFunction &MF) const {
+    Aliases.push_back(PhysReg);
+  }
+
   /// A callback to allow target a chance to update register allocation hints
   /// when a register is "changed" (e.g. coalesced) to another register.
   /// e.g. On ARM, some virtual registers should target register pairs,

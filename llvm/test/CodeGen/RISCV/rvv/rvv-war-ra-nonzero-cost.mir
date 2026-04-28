@@ -1,0 +1,94 @@
+# RUN: llc %s -mtriple=riscv64 -mattr=+v -run-pass=greedy,virtregrewriter -riscv-rvv-avoid-recent-vreg-reuse -o - | FileCheck %s
+
+--- |
+  define riscv_vector_cc void @rvv_war_ra_nonzero_cost_candidates() {
+  entry:
+    ret void
+  }
+...
+---
+name:            rvv_war_ra_nonzero_cost_candidates
+alignment:       4
+tracksRegLiveness: true
+frameInfo:
+  maxAlignment:    4
+  localFrameSize:  4
+stack:
+  - { id: 0, size: 1, alignment: 4, local-offset: -4 }
+machineFunctionInfo:
+  varArgsFrameIndex: 0
+  varArgsSaveSize: 0
+body:             |
+  bb.0.entry:
+    ; CHECK-LABEL: name: rvv_war_ra_nonzero_cost_candidates
+    ; CHECK:      renamable $v29 = VL1RE8_V
+    ; CHECK-NEXT: VS1R_V killed renamable $v29
+    ; CHECK-NEXT: renamable $v30 = VL1RE8_V
+    ; CHECK-NEXT: VS1R_V killed renamable $v30
+    $v0 = VL1RE8_V %stack.0 :: (volatile load unknown-size)
+    $v1 = VL1RE8_V %stack.0 :: (volatile load unknown-size)
+    $v2 = VL1RE8_V %stack.0 :: (volatile load unknown-size)
+    $v3 = VL1RE8_V %stack.0 :: (volatile load unknown-size)
+    $v4 = VL1RE8_V %stack.0 :: (volatile load unknown-size)
+    $v5 = VL1RE8_V %stack.0 :: (volatile load unknown-size)
+    $v6 = VL1RE8_V %stack.0 :: (volatile load unknown-size)
+    $v7 = VL1RE8_V %stack.0 :: (volatile load unknown-size)
+    $v8 = VL1RE8_V %stack.0 :: (volatile load unknown-size)
+    $v9 = VL1RE8_V %stack.0 :: (volatile load unknown-size)
+    $v10 = VL1RE8_V %stack.0 :: (volatile load unknown-size)
+    $v11 = VL1RE8_V %stack.0 :: (volatile load unknown-size)
+    $v12 = VL1RE8_V %stack.0 :: (volatile load unknown-size)
+    $v13 = VL1RE8_V %stack.0 :: (volatile load unknown-size)
+    $v14 = VL1RE8_V %stack.0 :: (volatile load unknown-size)
+    $v15 = VL1RE8_V %stack.0 :: (volatile load unknown-size)
+    $v16 = VL1RE8_V %stack.0 :: (volatile load unknown-size)
+    $v17 = VL1RE8_V %stack.0 :: (volatile load unknown-size)
+    $v18 = VL1RE8_V %stack.0 :: (volatile load unknown-size)
+    $v19 = VL1RE8_V %stack.0 :: (volatile load unknown-size)
+    $v20 = VL1RE8_V %stack.0 :: (volatile load unknown-size)
+    $v21 = VL1RE8_V %stack.0 :: (volatile load unknown-size)
+    $v22 = VL1RE8_V %stack.0 :: (volatile load unknown-size)
+    $v23 = VL1RE8_V %stack.0 :: (volatile load unknown-size)
+    $v24 = VL1RE8_V %stack.0 :: (volatile load unknown-size)
+    $v25 = VL1RE8_V %stack.0 :: (volatile load unknown-size)
+    $v26 = VL1RE8_V %stack.0 :: (volatile load unknown-size)
+    $v27 = VL1RE8_V %stack.0 :: (volatile load unknown-size)
+    $v28 = VL1RE8_V %stack.0 :: (volatile load unknown-size)
+
+    %0:vr = VL1RE8_V %stack.0 :: (volatile load unknown-size)
+    VS1R_V killed %0, %stack.0 :: (volatile store unknown-size)
+    %1:vr = VL1RE8_V %stack.0 :: (volatile load unknown-size)
+    VS1R_V killed %1, %stack.0 :: (volatile store unknown-size)
+
+    VS1R_V $v0, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v1, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v2, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v3, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v4, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v5, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v6, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v7, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v8, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v9, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v10, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v11, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v12, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v13, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v14, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v15, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v16, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v17, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v18, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v19, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v20, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v21, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v22, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v23, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v24, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v25, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v26, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v27, %stack.0 :: (volatile store unknown-size)
+    VS1R_V $v28, %stack.0 :: (volatile store unknown-size)
+    PseudoRET
+
+...

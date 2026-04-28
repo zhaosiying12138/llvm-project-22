@@ -150,6 +150,15 @@ struct RISCVRegisterInfo : public RISCVGenRegisterInfo {
                              const MachineFunction &MF, const VirtRegMap *VRM,
                              const LiveRegMatrix *Matrix) const override;
 
+  bool shouldUseRecentPhysRegReuseAvoidance(
+      Register VirtReg, const TargetRegisterClass *RC,
+      const MachineFunction &MF) const override;
+
+  void getRecentPhysRegReuseAliases(
+      MCRegister PhysReg, const TargetRegisterClass *RC,
+      SmallVectorImpl<MCRegister> &Aliases,
+      const MachineFunction &MF) const override;
+
   void updateRegAllocHint(Register Reg, Register NewReg,
                           MachineFunction &MF) const override;
 
