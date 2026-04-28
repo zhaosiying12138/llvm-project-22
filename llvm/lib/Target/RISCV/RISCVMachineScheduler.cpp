@@ -7,11 +7,588 @@
 //===----------------------------------------------------------------------===//
 
 #include "RISCVMachineScheduler.h"
+#include "RISCVRegisterInfo.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/Analysis/AliasAnalysis.h"
+#include "llvm/Analysis/ValueTracking.h"
+#include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineMemOperand.h"
+#include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/ScheduleDAG.h"
+#include "llvm/CodeGen/ScheduleDAGMutation.h"
+#include "llvm/CodeGen/TargetInstrInfo.h"
+#include "llvm/IR/Argument.h"
+#include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Debug.h"
+#include <optional>
 
 using namespace llvm;
 
 #define DEBUG_TYPE "riscv-prera-sched-strategy"
+
+static cl::opt<bool> EnableRVVPressureDAGSched(
+    "riscv-rvv-pressure-dag-sched", cl::Hidden, cl::init(false),
+    cl::desc("Enable experimental RISCV RVV pressure-aware MachineScheduler "
+             "DAG scheduling"));
+
+static cl::opt<bool> EnableRVVPressureRemat(
+    "riscv-rvv-pressure-remat", cl::Hidden, cl::init(false),
+    cl::desc("Enable experimental RISCV RVV pressure-aware load "
+             "rematerialization and recomputation"));
+
+bool llvm::isRISCVRVVPressureDAGSchedEnabled() {
+  return EnableRVVPressureDAGSched;
+}
+
+bool llvm::isRISCVRVVPressureRematRequested() { return EnableRVVPressureRemat; }
+
+static bool isRVVReg(const MachineRegisterInfo &MRI, Register Reg) {
+  if (!Reg || !Reg.isVirtual())
+    return false;
+  return RISCVRegisterInfo::isRVVRegClass(MRI.getRegClass(Reg));
+}
+
+static unsigned getRVVRegWeight(const MachineRegisterInfo &MRI, Register Reg) {
+  if (!isRVVReg(MRI, Reg))
+    return 0;
+
+  const TargetRegisterClass *RC = MRI.getRegClass(Reg);
+  if (RISCV::VRM8RegClass.hasSubClassEq(RC))
+    return 8;
+  if (RISCV::VRM4RegClass.hasSubClassEq(RC))
+    return 4;
+  if (RISCV::VRM2RegClass.hasSubClassEq(RC))
+    return 2;
+  return 1;
+}
+
+static bool hasRVVRegOperand(const MachineRegisterInfo &MRI,
+                             const MachineInstr &MI) {
+  return any_of(MI.operands(), [&](const MachineOperand &MO) {
+    return MO.isReg() && isRVVReg(MRI, MO.getReg());
+  });
+}
+
+static bool hasUnsafeMemory(const MachineInstr &MI) {
+  if (!MI.mayLoadOrStore())
+    return false;
+  if (MI.memoperands_empty())
+    return true;
+  for (MachineMemOperand *MMO : MI.memoperands()) {
+    if (MMO->isVolatile() || MMO->isAtomic() || !MMO->isUnordered())
+      return true;
+    if (!MMO->getSize().hasValue() || !MMO->getValue())
+      return true;
+  }
+  return false;
+}
+
+static bool hasUncleanRVVOpcode(const TargetInstrInfo &TII,
+                                const MachineInstr &MI) {
+  StringRef Name = TII.getName(MI.getOpcode());
+  return Name.contains("VRED") || Name.contains("VFRED") ||
+         Name.contains("VWRED") || Name.contains("_MASK") ||
+         Name.contains("SEG") || Name.contains("VLUX") ||
+         Name.contains("VLOX") || Name.contains("VSUX") ||
+         Name.contains("VSOX") || Name.contains("GATHER") ||
+         Name.contains("SCATTER");
+}
+
+static bool isRVVReductionOpcode(const TargetInstrInfo &TII,
+                                 const MachineInstr &MI) {
+  StringRef Name = TII.getName(MI.getOpcode());
+  return Name.contains("VRED") || Name.contains("VFRED") ||
+         Name.contains("VWRED");
+}
+
+static bool hasUnsupportedRVVPressureOpcode(const TargetInstrInfo &TII,
+                                            const MachineInstr &MI) {
+  StringRef Name = TII.getName(MI.getOpcode());
+  return Name.contains("_MASK") || Name.contains("SEG") ||
+         Name.contains("VLUX") || Name.contains("VLOX") ||
+         Name.contains("VSUX") || Name.contains("VSOX") ||
+         Name.contains("GATHER") || Name.contains("SCATTER");
+}
+
+namespace {
+
+struct RVVMemRef {
+  const MachineInstr *MI = nullptr;
+  const MachineMemOperand *MMO = nullptr;
+  const Value *Ptr = nullptr;
+  const Value *Base = nullptr;
+  int64_t Offset = 0;
+  LocationSize Size = LocationSize::beforeOrAfterPointer();
+  bool IsStore = false;
+};
+
+} // end anonymous namespace
+
+static bool isNoAliasBase(const Value *V) {
+  const auto *Arg = dyn_cast_or_null<Argument>(V);
+  return Arg && Arg->hasNoAliasAttr();
+}
+
+static std::optional<RVVMemRef> getRVVMemRef(const MachineInstr &MI,
+                                             const MachineMemOperand &MMO) {
+  if (!MMO.getSize().hasValue() || !MMO.getValue())
+    return std::nullopt;
+
+  int64_t BaseOffset = 0;
+  const MachineFunction *MF = MI.getMF();
+  const DataLayout &DL = MF->getDataLayout();
+  const Value *Base =
+      GetPointerBaseWithConstantOffset(MMO.getValue(), BaseOffset, DL);
+  if (!Base)
+    return std::nullopt;
+
+  RVVMemRef Ref;
+  Ref.MI = &MI;
+  Ref.MMO = &MMO;
+  Ref.Ptr = MMO.getValue();
+  Ref.Base = Base;
+  Ref.Offset = BaseOffset + MMO.getOffset();
+  Ref.Size = MMO.getSize();
+  Ref.IsStore = MMO.isStore();
+  return Ref;
+}
+
+static bool areDisjointByConstantRange(const RVVMemRef &A, const RVVMemRef &B) {
+  if (A.Base != B.Base || !A.Size.hasValue() || !B.Size.hasValue())
+    return false;
+
+  TypeSize ASize = A.Size.getValue();
+  TypeSize BSize = B.Size.getValue();
+  if (ASize.isScalable() || BSize.isScalable())
+    return false;
+
+  int64_t AEnd = A.Offset + static_cast<int64_t>(ASize.getFixedValue());
+  int64_t BEnd = B.Offset + static_cast<int64_t>(BSize.getFixedValue());
+  return AEnd <= B.Offset || BEnd <= A.Offset;
+}
+
+static bool areMemRefsIndependent(const RVVMemRef &A, const RVVMemRef &B,
+                                  AAResults *AA) {
+  if (!A.IsStore && !B.IsStore)
+    return true;
+
+  if (AA && A.Ptr && B.Ptr &&
+      AA->isNoAlias(MemoryLocation(A.Ptr, A.Size, A.MMO->getAAInfo()),
+                    MemoryLocation(B.Ptr, B.Size, B.MMO->getAAInfo())))
+    return true;
+
+  if (areDisjointByConstantRange(A, B))
+    return true;
+
+  if (A.Base != B.Base && (isNoAliasBase(A.Base) || isNoAliasBase(B.Base)))
+    return true;
+
+  return false;
+}
+
+static bool hasIndependentMemory(ArrayRef<RVVMemRef> MemRefs, AAResults *AA) {
+  for (unsigned I = 0, E = MemRefs.size(); I != E; ++I)
+    for (unsigned J = I + 1; J != E; ++J)
+      if (!areMemRefsIndependent(MemRefs[I], MemRefs[J], AA))
+        return false;
+  return true;
+}
+
+static bool isCleanRVVPressureRegion(const MachineRegisterInfo &MRI,
+                                     const TargetInstrInfo &TII,
+                                     ArrayRef<const MachineInstr *> Instrs,
+                                     AAResults *AA = nullptr) {
+  unsigned WeightedRVVDefs = 0;
+  unsigned RVVOps = 0;
+  unsigned RVVLoads = 0;
+  unsigned RVVStores = 0;
+  unsigned RVVPureOps = 0;
+  SmallVector<RVVMemRef, 32> MemRefs;
+
+  for (const MachineInstr *MI : Instrs) {
+    if (!MI)
+      continue;
+    if (MI->isCall() || MI->hasUnmodeledSideEffects() || MI->isInlineAsm() ||
+        hasUnsafeMemory(*MI))
+      return false;
+    if (MI->mayLoadOrStore()) {
+      for (MachineMemOperand *MMO : MI->memoperands()) {
+        std::optional<RVVMemRef> Ref = getRVVMemRef(*MI, *MMO);
+        if (!Ref)
+          return false;
+        MemRefs.push_back(*Ref);
+      }
+    }
+
+    bool HasRVVOperand = hasRVVRegOperand(MRI, *MI);
+    if (!HasRVVOperand)
+      continue;
+
+    if (hasUncleanRVVOpcode(TII, *MI))
+      return false;
+
+    ++RVVOps;
+    bool HasRVVDef = false;
+    bool HasRVVUse = false;
+    for (const MachineOperand &MO : MI->operands()) {
+      if (!MO.isReg())
+        continue;
+      unsigned Weight = getRVVRegWeight(MRI, MO.getReg());
+      if (!Weight)
+        continue;
+      HasRVVDef |= MO.isDef();
+      HasRVVUse |= MO.isUse() && !MO.isUndef();
+      if (MO.isDef())
+        WeightedRVVDefs += Weight;
+    }
+
+    if (MI->mayLoad() && !MI->mayStore() && HasRVVDef)
+      ++RVVLoads;
+    else if (MI->mayStore() && HasRVVUse)
+      ++RVVStores;
+    else if (!MI->mayLoadOrStore() && HasRVVDef && HasRVVUse)
+      ++RVVPureOps;
+  }
+
+  return RVVOps >= 12 && WeightedRVVDefs >= 32 && RVVLoads >= 2 &&
+         RVVPureOps >= 1 && RVVStores >= 1 && hasIndependentMemory(MemRefs, AA);
+}
+
+static bool isReduceRVVPressureRegion(const MachineRegisterInfo &MRI,
+                                      const TargetInstrInfo &TII,
+                                      ArrayRef<const MachineInstr *> Instrs,
+                                      AAResults *AA = nullptr) {
+  unsigned WeightedRVVDefs = 0;
+  unsigned RVVOps = 0;
+  unsigned RVVLoads = 0;
+  unsigned RVVReductions = 0;
+  unsigned RVVLateUses = 0;
+  SmallVector<RVVMemRef, 32> MemRefs;
+
+  for (const MachineInstr *MI : Instrs) {
+    if (!MI)
+      continue;
+    if (MI->isCall() || MI->hasUnmodeledSideEffects() || MI->isInlineAsm() ||
+        hasUnsafeMemory(*MI))
+      return false;
+    if (MI->mayLoadOrStore()) {
+      for (MachineMemOperand *MMO : MI->memoperands()) {
+        std::optional<RVVMemRef> Ref = getRVVMemRef(*MI, *MMO);
+        if (!Ref)
+          return false;
+        MemRefs.push_back(*Ref);
+      }
+    }
+
+    bool HasRVVOperand = hasRVVRegOperand(MRI, *MI);
+    if (!HasRVVOperand)
+      continue;
+
+    if (hasUnsupportedRVVPressureOpcode(TII, *MI))
+      return false;
+
+    ++RVVOps;
+    bool HasRVVDef = false;
+    bool HasRVVUse = false;
+    for (const MachineOperand &MO : MI->operands()) {
+      if (!MO.isReg())
+        continue;
+      unsigned Weight = getRVVRegWeight(MRI, MO.getReg());
+      if (!Weight)
+        continue;
+      HasRVVDef |= MO.isDef();
+      HasRVVUse |= MO.isUse() && !MO.isUndef();
+      if (MO.isDef())
+        WeightedRVVDefs += Weight;
+    }
+
+    if (MI->mayLoad() && !MI->mayStore() && HasRVVDef)
+      ++RVVLoads;
+    if (isRVVReductionOpcode(TII, *MI) && HasRVVUse)
+      ++RVVReductions;
+    else if ((MI->mayStore() || (!MI->mayLoadOrStore() && HasRVVDef)) &&
+             HasRVVUse)
+      ++RVVLateUses;
+  }
+
+  return RVVOps >= 12 && WeightedRVVDefs >= 32 && RVVLoads >= 2 &&
+         RVVReductions >= 1 && RVVLateUses >= 1 &&
+         hasIndependentMemory(MemRefs, AA);
+}
+
+static bool isCleanRVVPressureRegion(const ScheduleDAGInstrs &DAG,
+                                     AAResults *AA = nullptr) {
+  SmallVector<const MachineInstr *, 32> Instrs;
+  for (const SUnit &SU : DAG.SUnits)
+    Instrs.push_back(SU.getInstr());
+  return isCleanRVVPressureRegion(DAG.MRI, *DAG.TII, Instrs, AA);
+}
+
+static bool isCleanRVVPressureRegion(const MachineRegisterInfo &MRI,
+                                     const TargetInstrInfo &TII,
+                                     MachineBasicBlock::iterator Begin,
+                                     MachineBasicBlock::iterator End,
+                                     AAResults *AA = nullptr) {
+  SmallVector<const MachineInstr *, 32> Instrs;
+  for (auto I = Begin; I != End; ++I)
+    Instrs.push_back(&*I);
+  return isCleanRVVPressureRegion(MRI, TII, Instrs, AA);
+}
+
+static bool isReduceRVVPressureRegion(const ScheduleDAGInstrs &DAG,
+                                      AAResults *AA = nullptr) {
+  SmallVector<const MachineInstr *, 32> Instrs;
+  for (const SUnit &SU : DAG.SUnits)
+    Instrs.push_back(SU.getInstr());
+  return isReduceRVVPressureRegion(DAG.MRI, *DAG.TII, Instrs, AA);
+}
+
+static bool isReduceRVVPressureRegion(const MachineRegisterInfo &MRI,
+                                      const TargetInstrInfo &TII,
+                                      MachineBasicBlock::iterator Begin,
+                                      MachineBasicBlock::iterator End,
+                                      AAResults *AA = nullptr) {
+  SmallVector<const MachineInstr *, 32> Instrs;
+  for (auto I = Begin; I != End; ++I)
+    Instrs.push_back(&*I);
+  return isReduceRVVPressureRegion(MRI, TII, Instrs, AA);
+}
+
+static bool isRVVLoadSU(const MachineRegisterInfo &MRI, const SUnit &SU) {
+  const MachineInstr *MI = SU.getInstr();
+  return MI && MI->mayLoad() && !MI->mayStore() &&
+         any_of(MI->operands(), [&](const MachineOperand &MO) {
+           return MO.isReg() && MO.isDef() && isRVVReg(MRI, MO.getReg());
+         });
+}
+
+static unsigned getRVVLoadDefWeight(const MachineRegisterInfo &MRI,
+                                    const SUnit &SU) {
+  const MachineInstr *MI = SU.getInstr();
+  if (!MI)
+    return 0;
+
+  unsigned Weight = 0;
+  for (const MachineOperand &MO : MI->operands())
+    if (MO.isReg() && MO.isDef())
+      Weight += getRVVRegWeight(MRI, MO.getReg());
+  return Weight;
+}
+
+static bool isRVVPureDefSU(const MachineRegisterInfo &MRI, const SUnit &SU) {
+  const MachineInstr *MI = SU.getInstr();
+  return MI && !MI->mayLoadOrStore() &&
+         any_of(MI->operands(), [&](const MachineOperand &MO) {
+           return MO.isReg() && MO.isDef() && isRVVReg(MRI, MO.getReg());
+         });
+}
+
+static SUnit *laterSUnit(SUnit *A, SUnit *B) {
+  if (!A)
+    return B;
+  if (!B)
+    return A;
+  return A->NodeNum < B->NodeNum ? B : A;
+}
+
+static SUnit *findRVVSliceClose(SUnit &LoadSU, const MachineRegisterInfo &MRI,
+                                const TargetInstrInfo &TII,
+                                bool PreferReduction) {
+  SmallVector<SUnit *, 8> Worklist;
+  SmallPtrSet<SUnit *, 16> Seen;
+  SUnit *LatestClose = nullptr;
+
+  Worklist.push_back(&LoadSU);
+  Seen.insert(&LoadSU);
+  while (!Worklist.empty()) {
+    SUnit *SU = Worklist.pop_back_val();
+    for (SDep &SuccDep : SU->Succs) {
+      if (SuccDep.getKind() != SDep::Data)
+        continue;
+      SUnit *Succ = SuccDep.getSUnit();
+      if (!Succ || !Seen.insert(Succ).second)
+        continue;
+
+      const MachineInstr *MI = Succ->getInstr();
+      if (!MI || !hasRVVRegOperand(MRI, *MI))
+        continue;
+
+      if (PreferReduction && isRVVReductionOpcode(TII, *MI))
+        return Succ;
+
+      if (MI->mayStore()) {
+        LatestClose = laterSUnit(LatestClose, Succ);
+        continue;
+      }
+
+      if (isRVVPureDefSU(MRI, *Succ))
+        Worklist.push_back(Succ);
+      else
+        LatestClose = laterSUnit(LatestClose, Succ);
+    }
+  }
+
+  return LatestClose;
+}
+
+static bool reachesSUnit(SUnit *From, SUnit *To) {
+  if (From == To)
+    return true;
+
+  SmallVector<SUnit *, 16> Worklist;
+  SmallPtrSet<SUnit *, 32> Seen;
+  Worklist.push_back(From);
+  Seen.insert(From);
+  while (!Worklist.empty()) {
+    SUnit *SU = Worklist.pop_back_val();
+    for (const SDep &SuccDep : SU->Succs) {
+      SUnit *Succ = SuccDep.getSUnit();
+      if (!Succ || !Seen.insert(Succ).second)
+        continue;
+      if (Succ == To)
+        return true;
+      Worklist.push_back(Succ);
+    }
+  }
+  return false;
+}
+
+static bool isRVVMemorySU(const MachineRegisterInfo &MRI, const SUnit *SU) {
+  if (!SU)
+    return false;
+  const MachineInstr *MI = SU->getInstr();
+  return MI && MI->mayLoadOrStore() && hasRVVRegOperand(MRI, *MI);
+}
+
+static void removeIndependentRVVMemoryOrderDeps(ScheduleDAGInstrs &DAG) {
+  for (SUnit &SU : DAG.SUnits) {
+    if (!isRVVMemorySU(DAG.MRI, &SU))
+      continue;
+
+    SmallVector<SDep, 8> ToRemove;
+    for (const SDep &PredDep : SU.Preds) {
+      if (PredDep.getKind() != SDep::Order)
+        continue;
+      if (isRVVMemorySU(DAG.MRI, PredDep.getSUnit()))
+        ToRemove.push_back(PredDep);
+    }
+
+    for (const SDep &PredDep : ToRemove)
+      SU.removePred(PredDep);
+  }
+}
+
+static void addRVVPressureWindowDeps(ScheduleDAGInstrs &DAG,
+                                     bool PreferReduction) {
+  struct SliceClose {
+    SUnit *Start = nullptr;
+    SUnit *Close = nullptr;
+    unsigned Weight = 0;
+  };
+
+  constexpr unsigned MaxOpenRVVLoadWeight = 8;
+  SmallVector<SliceClose, 32> SliceCloses;
+
+  for (SUnit &SU : DAG.SUnits) {
+    if (!isRVVLoadSU(DAG.MRI, SU))
+      continue;
+    if (SUnit *Close =
+            findRVVSliceClose(SU, DAG.MRI, *DAG.TII, PreferReduction))
+      SliceCloses.push_back({&SU, Close, getRVVLoadDefWeight(DAG.MRI, SU)});
+  }
+
+  llvm::sort(SliceCloses, [](const SliceClose &A, const SliceClose &B) {
+    if (A.Close->NodeNum != B.Close->NodeNum)
+      return A.Close->NodeNum < B.Close->NodeNum;
+    return A.Start->NodeNum < B.Start->NodeNum;
+  });
+
+  unsigned Added = 0;
+  unsigned SkippedCycle = 0;
+  for (unsigned I = 0, E = SliceCloses.size(); I != E; ++I) {
+    unsigned WindowWeight = 0;
+    unsigned J = I;
+    for (; J != E; ++J) {
+      WindowWeight += SliceCloses[J].Weight;
+      if (WindowWeight > MaxOpenRVVLoadWeight)
+        break;
+    }
+    if (J == E)
+      break;
+
+    SUnit *Close = SliceCloses[I].Close;
+    SUnit *NextLoad = SliceCloses[J].Start;
+    if (Close == NextLoad)
+      continue;
+    if (reachesSUnit(NextLoad, Close)) {
+      ++SkippedCycle;
+      continue;
+    }
+    NextLoad->addPred(SDep(Close, SDep::Artificial));
+    ++Added;
+  }
+  LLVM_DEBUG(dbgs() << "RISCV RVV pressure DAG sched: function="
+                    << DAG.MF.getName() << " pressure-window-slices="
+                    << SliceCloses.size() << " pressure-window-added=" << Added
+                    << " pressure-window-cycle-skips=" << SkippedCycle << "\n");
+}
+
+namespace {
+
+class RISCVVRegPressureClusterMutation : public ScheduleDAGMutation {
+  std::unique_ptr<ScheduleDAGMutation> Cluster;
+  AAResults *AA = nullptr;
+
+public:
+  RISCVVRegPressureClusterMutation(std::unique_ptr<ScheduleDAGMutation> Cluster,
+                                   AAResults *AA)
+      : Cluster(std::move(Cluster)), AA(AA) {}
+
+  void apply(ScheduleDAGInstrs *DAG) override {
+    bool CleanRegion = isCleanRVVPressureRegion(*DAG, AA);
+    bool ReduceRegion = !CleanRegion && isReduceRVVPressureRegion(*DAG, AA);
+    LLVM_DEBUG(dbgs() << "RISCV RVV pressure DAG sched: function="
+                      << DAG->MF.getName()
+                      << " cluster-clean-region=" << CleanRegion
+                      << " cluster-reduce-region=" << ReduceRegion << "\n");
+    if (CleanRegion || ReduceRegion) {
+      removeIndependentRVVMemoryOrderDeps(*DAG);
+      addRVVPressureWindowDeps(*DAG, ReduceRegion);
+      return;
+    }
+    Cluster->apply(DAG);
+  }
+};
+
+} // end anonymous namespace
+
+static std::unique_ptr<ScheduleDAGMutation>
+wrapRVVRegPressureClusterMutation(std::unique_ptr<ScheduleDAGMutation> Cluster,
+                                  AAResults *AA) {
+  if (!Cluster)
+    return nullptr;
+  return std::make_unique<RISCVVRegPressureClusterMutation>(std::move(Cluster),
+                                                            AA);
+}
+
+std::unique_ptr<ScheduleDAGMutation>
+llvm::createRISCVVRegPressureLoadClusterDAGMutation(
+    const TargetInstrInfo *TII, const TargetRegisterInfo *TRI,
+    bool ReorderWhileClustering, AAResults *AA) {
+  return wrapRVVRegPressureClusterMutation(
+      createLoadClusterDAGMutation(TII, TRI, ReorderWhileClustering), AA);
+}
+
+std::unique_ptr<ScheduleDAGMutation>
+llvm::createRISCVVRegPressureStoreClusterDAGMutation(
+    const TargetInstrInfo *TII, const TargetRegisterInfo *TRI,
+    bool ReorderWhileClustering, AAResults *AA) {
+  return wrapRVVRegPressureClusterMutation(
+      createStoreClusterDAGMutation(TII, TRI, ReorderWhileClustering), AA);
+}
 
 RISCV::VSETVLIInfo
 RISCVPreRAMachineSchedStrategy::getVSETVLIInfo(const MachineInstr *MI) const {
@@ -19,6 +596,75 @@ RISCVPreRAMachineSchedStrategy::getVSETVLIInfo(const MachineInstr *MI) const {
   if (!RISCVII::hasSEWOp(TSFlags))
     return RISCV::VSETVLIInfo();
   return VIA.computeInfoForInstr(*MI);
+}
+
+bool RISCVPreRAMachineSchedStrategy::isRVVReg(Register Reg) const {
+  return ::isRVVReg(DAG->MRI, Reg);
+}
+
+bool RISCVPreRAMachineSchedStrategy::hasRVVRegDef(
+    const MachineInstr &MI) const {
+  return any_of(MI.operands(), [&](const MachineOperand &MO) {
+    return MO.isReg() && MO.isDef() && isRVVReg(MO.getReg());
+  });
+}
+
+bool RISCVPreRAMachineSchedStrategy::hasRVVRegUse(
+    const MachineInstr &MI) const {
+  return any_of(MI.operands(), [&](const MachineOperand &MO) {
+    return MO.isReg() && MO.isUse() && isRVVReg(MO.getReg());
+  });
+}
+
+bool RISCVPreRAMachineSchedStrategy::isRVVLoad(const MachineInstr &MI) const {
+  return MI.mayLoad() && !MI.mayStore() && hasRVVRegDef(MI);
+}
+
+bool RISCVPreRAMachineSchedStrategy::isRVVConsumerOrStore(
+    const MachineInstr &MI) const {
+  if (isRVVLoad(MI))
+    return false;
+  return hasRVVRegUse(MI) && (hasRVVRegDef(MI) || MI.mayStore());
+}
+
+void RISCVPreRAMachineSchedStrategy::initPolicy(
+    MachineBasicBlock::iterator Begin, MachineBasicBlock::iterator End,
+    unsigned NumRegionInstrs) {
+  GenericScheduler::initPolicy(Begin, End, NumRegionInstrs);
+  RVVPressureAwareRegion = false;
+  bool CleanRegion = false;
+  bool ReduceRegion = false;
+  if (EnableRVVPressureDAGSched && Begin != End) {
+    MachineFunction *MF = Begin->getMF();
+    CleanRegion = ::isCleanRVVPressureRegion(MF->getRegInfo(),
+                                             *MF->getSubtarget().getInstrInfo(),
+                                             Begin, End, Context->AA);
+    ReduceRegion = !CleanRegion &&
+                   ::isReduceRVVPressureRegion(
+                       MF->getRegInfo(), *MF->getSubtarget().getInstrInfo(),
+                       Begin, End, Context->AA);
+    RVVPressureAwareRegion = CleanRegion || ReduceRegion;
+  }
+  if (EnableRVVPressureDAGSched)
+    RegionPolicy.ShouldTrackPressure = true;
+  if (RVVPressureAwareRegion) {
+    RegionPolicy.OnlyTopDown = true;
+    RegionPolicy.OnlyBottomUp = false;
+  }
+  LLVM_DEBUG({
+    dbgs() << "RISCV RVV pressure DAG sched:";
+    if (Begin != End)
+      dbgs() << " function=" << Begin->getMF()->getName();
+    dbgs() << " pressure-region=" << RVVPressureAwareRegion
+           << " clean-region=" << CleanRegion
+           << " reduce-region=" << ReduceRegion
+           << " track-pressure=" << RegionPolicy.ShouldTrackPressure
+           << " top-down=" << RegionPolicy.OnlyTopDown << "\n";
+  });
+}
+
+void RISCVPreRAMachineSchedStrategy::initialize(ScheduleDAGMI *DAG) {
+  GenericScheduler::initialize(DAG);
 }
 
 bool RISCVPreRAMachineSchedStrategy::tryVSETVLIInfo(
@@ -70,6 +716,19 @@ bool RISCVPreRAMachineSchedStrategy::tryCandidate(SchedCandidate &Cand,
   if (!Cand.isValid()) {
     TryCand.Reason = FirstValid;
     return true;
+  }
+
+  if (RVVPressureAwareRegion && Zone && Zone->isTop()) {
+    const MachineInstr &TryMI = *TryCand.SU->getInstr();
+    const MachineInstr &CandMI = *Cand.SU->getInstr();
+    bool TryUsesCurrentVector = isRVVConsumerOrStore(TryMI);
+    bool CandUsesCurrentVector = isRVVConsumerOrStore(CandMI);
+    bool TryStartsVectorLiveRange = isRVVLoad(TryMI);
+    bool CandStartsVectorLiveRange = isRVVLoad(CandMI);
+    if (tryGreater(TryUsesCurrentVector && CandStartsVectorLiveRange,
+                   CandUsesCurrentVector && TryStartsVectorLiveRange, TryCand,
+                   Cand, RegMax))
+      return TryCand.Reason != NoCand;
   }
 
   // Bias PhysReg Defs and copies to their uses and defined respectively.
