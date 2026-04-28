@@ -1,0 +1,8 @@
+# RUN: %python %llvm_src_root/utils/riscv-rvv-war-report.py --window=4 %s | FileCheck %s
+
+# CHECK:      RVV WAR pairs: 1
+# CHECK-NEXT: Window: 4
+# CHECK:      line [[#]] reads v8 -> line [[#]] writes v8
+
+vadd.vv v10, v8, v12
+vadd.vv v8, v14, v15
