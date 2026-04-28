@@ -25,6 +25,15 @@ unsigned CustomBehaviour::checkCustomHazard(ArrayRef<InstRef> IssuedInst,
   return 0;
 }
 
+bool CustomBehaviour::checkCustomIssueHazard(const InstRef &IR,
+                                             ArrayRef<InstRef> WaitSet,
+                                             ArrayRef<InstRef> PendingSet,
+                                             ArrayRef<InstRef> ReadySet) {
+  return false;
+}
+
+void CustomBehaviour::noteCustomIssueBlockedCycle() {}
+
 std::vector<std::unique_ptr<View>>
 CustomBehaviour::getStartViews(llvm::MCInstPrinter &IP,
                                llvm::ArrayRef<llvm::MCInst> Insts) {

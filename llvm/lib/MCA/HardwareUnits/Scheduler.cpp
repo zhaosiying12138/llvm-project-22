@@ -11,6 +11,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/MCA/HardwareUnits/Scheduler.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/MCA/CustomBehaviour.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -191,29 +193,54 @@ bool Scheduler::promoteToPendingSet(SmallVectorImpl<InstRef> &Pending) {
 }
 
 InstRef Scheduler::select() {
-  unsigned QueueIndex = ReadySet.size();
-  for (unsigned I = 0, E = ReadySet.size(); I != E; ++I) {
-    InstRef &IR = ReadySet[I];
-    if (QueueIndex == ReadySet.size() ||
-        Strategy->compare(IR, ReadySet[QueueIndex])) {
-      Instruction &IS = *IR.getInstruction();
-      uint64_t BusyResourceMask = Resources->checkAvailability(IS.getDesc());
-      if (BusyResourceMask)
-        IS.setCriticalResourceMask(BusyResourceMask);
-      BusyResourceUnits |= BusyResourceMask;
-      if (!BusyResourceMask)
+  SmallVector<unsigned, 4> CustomBlockedIndices;
+  bool SawCustomBlock = false;
+
+  while (true) {
+    unsigned QueueIndex = ReadySet.size();
+    for (unsigned I = 0, E = ReadySet.size(); I != E; ++I) {
+      if (llvm::is_contained(CustomBlockedIndices, I))
+        continue;
+      InstRef &IR = ReadySet[I];
+      if (QueueIndex == ReadySet.size() ||
+          Strategy->compare(IR, ReadySet[QueueIndex])) {
+        Instruction &IS = *IR.getInstruction();
+        uint64_t BusyResourceMask = Resources->checkAvailability(IS.getDesc());
+        if (BusyResourceMask)
+          IS.setCriticalResourceMask(BusyResourceMask);
+        BusyResourceUnits |= BusyResourceMask;
+        if (BusyResourceMask)
+          continue;
         QueueIndex = I;
+      }
     }
+
+    if (QueueIndex == ReadySet.size()) {
+      if (SawCustomBlock && CB && !CustomIssueBlockedThisCycle) {
+        CB->noteCustomIssueBlockedCycle();
+        CustomIssueBlockedThisCycle = true;
+      }
+      return InstRef();
+    }
+
+    InstRef &IR = ReadySet[QueueIndex];
+    if (CB && CB->checkCustomIssueHazard(IR, WaitSet, PendingSet, ReadySet)) {
+      SawCustomBlock = true;
+      CustomBlockedIndices.push_back(QueueIndex);
+      continue;
+    }
+
+    if (SawCustomBlock && CB && !CustomIssueBlockedThisCycle) {
+      CB->noteCustomIssueBlockedCycle();
+      CustomIssueBlockedThisCycle = true;
+    }
+
+    // We found an instruction to issue.
+    InstRef Selected = IR;
+    std::swap(ReadySet[QueueIndex], ReadySet[ReadySet.size() - 1]);
+    ReadySet.pop_back();
+    return Selected;
   }
-
-  if (QueueIndex == ReadySet.size())
-    return InstRef();
-
-  // We found an instruction to issue.
-  InstRef IR = ReadySet[QueueIndex];
-  std::swap(ReadySet[QueueIndex], ReadySet[ReadySet.size() - 1]);
-  ReadySet.pop_back();
-  return IR;
 }
 
 void Scheduler::updateIssuedSet(SmallVectorImpl<InstRef> &Executed) {
@@ -286,6 +313,7 @@ void Scheduler::cycleEvent(SmallVectorImpl<ResourceRef> &Freed,
 
   NumDispatchedToThePendingSet = 0;
   BusyResourceUnits = 0;
+  CustomIssueBlockedThisCycle = false;
 }
 
 bool Scheduler::mustIssueImmediately(const InstRef &IR) const {

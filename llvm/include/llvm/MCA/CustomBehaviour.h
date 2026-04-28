@@ -90,6 +90,18 @@ public:
   virtual unsigned checkCustomHazard(ArrayRef<InstRef> IssuedInst,
                                      const InstRef &IR);
 
+  /// Out-of-order schedulers call this before issuing a ready instruction.
+  /// Return true if target-specific state should keep \p IR unissued while an
+  /// older instruction remains in one of the scheduler queues.
+  virtual bool checkCustomIssueHazard(const InstRef &IR,
+                                      ArrayRef<InstRef> WaitSet,
+                                      ArrayRef<InstRef> PendingSet,
+                                      ArrayRef<InstRef> ReadySet);
+
+  /// Called once for a cycle where the OOO scheduler had at least one
+  /// target-specific issue hazard blocking a ready instruction.
+  virtual void noteCustomIssueBlockedCycle();
+
   // Functions that target CBs can override to return a list of
   // target specific Views that need to live within /lib/Target/ so that
   // they can benefit from the target CB or from backend functionality that is

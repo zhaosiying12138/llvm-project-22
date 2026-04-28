@@ -17,14 +17,61 @@
 #ifndef LLVM_LIB_TARGET_RISCV_MCA_RISCVCUSTOMBEHAVIOUR_H
 #define LLVM_LIB_TARGET_RISCV_MCA_RISCVCUSTOMBEHAVIOUR_H
 
+#include "llvm/ADT/SmallSet.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MCA/CustomBehaviour.h"
+#include <cstdint>
 
 namespace llvm {
 namespace mca {
+
+class RISCVCustomBehaviour : public CustomBehaviour {
+public:
+  struct RVVWarSample {
+    unsigned WriterIndex;
+    unsigned ReaderIndex;
+    MCPhysReg Reg;
+  };
+
+private:
+  unsigned BlockedIssueEvents = 0;
+  unsigned BlockedIssueCycles = 0;
+  SmallSet<uint64_t, 16> SeenHazards;
+  SmallSetVector<MCPhysReg, 8> HazardRegisters;
+  SmallVector<RVVWarSample, 8> Samples;
+
+  bool hasRVVWarHazard(const InstRef &Writer, const InstRef &Reader,
+                       MCPhysReg &Reg) const;
+  void recordRVVWarHazard(const InstRef &Writer, const InstRef &Reader,
+                          MCPhysReg Reg);
+
+public:
+  RISCVCustomBehaviour(const MCSubtargetInfo &STI,
+                       const mca::SourceMgr &SrcMgr,
+                       const MCInstrInfo &MCII)
+      : CustomBehaviour(STI, SrcMgr, MCII) {}
+
+  bool checkCustomIssueHazard(const InstRef &IR, ArrayRef<InstRef> WaitSet,
+                              ArrayRef<InstRef> PendingSet,
+                              ArrayRef<InstRef> ReadySet) override;
+  void noteCustomIssueBlockedCycle() override;
+
+  std::vector<std::unique_ptr<View>>
+  getEndViews(llvm::MCInstPrinter &IP,
+              llvm::ArrayRef<llvm::MCInst> Insts) override;
+
+  unsigned getTotalRVVWarHazards() const { return SeenHazards.size(); }
+  unsigned getBlockedIssueEvents() const { return BlockedIssueEvents; }
+  unsigned getBlockedIssueCycles() const { return BlockedIssueCycles; }
+  ArrayRef<MCPhysReg> getHazardRegisters() const {
+    return HazardRegisters.getArrayRef();
+  }
+  ArrayRef<RVVWarSample> getRVVWarSamples() const { return Samples; }
+};
 
 class RISCVLMULInstrument : public Instrument {
 public:

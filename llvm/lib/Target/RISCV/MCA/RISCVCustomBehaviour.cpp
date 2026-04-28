@@ -16,11 +16,18 @@
 #include "RISCV.h"
 #include "TargetInfo/RISCVTargetInfo.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/MCA/Instruction.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/DebugLog.h"
+#include <string>
 
 #define DEBUG_TYPE "llvm-mca-riscv-custombehaviour"
+
+static llvm::cl::opt<bool> RISCVRVVWarHazardModel(
+    "riscv-rvv-war-hazard-model", llvm::cl::Hidden, llvm::cl::init(false),
+    llvm::cl::desc("Model RVV write-after-read issue hazards in llvm-mca"));
 
 namespace llvm::RISCV {
 struct VXMemOpInfo {
@@ -37,6 +44,141 @@ struct VXMemOpInfo {
 
 namespace llvm {
 namespace mca {
+
+static bool isRVVPhysReg(MCPhysReg Reg) {
+  return Reg >= RISCV::V0 && Reg <= RISCV::V31;
+}
+
+static bool rvvRegsOverlap(MCPhysReg LHS, MCPhysReg RHS) {
+  return isRVVPhysReg(LHS) && LHS == RHS;
+}
+
+static std::string getRVVRegName(MCPhysReg Reg) {
+  if (!isRVVPhysReg(Reg))
+    return "unknown";
+  return "v" + std::to_string(Reg - RISCV::V0);
+}
+
+static uint64_t getRVVWarHazardKey(unsigned WriterIndex, unsigned ReaderIndex,
+                                   MCPhysReg Reg) {
+  return (static_cast<uint64_t>(WriterIndex) << 32) |
+         (static_cast<uint64_t>(ReaderIndex) << 16) |
+         static_cast<uint64_t>(Reg);
+}
+
+bool RISCVCustomBehaviour::hasRVVWarHazard(const InstRef &Writer,
+                                           const InstRef &Reader,
+                                           MCPhysReg &Reg) const {
+  const Instruction *WriterIS = Writer.getInstruction();
+  const Instruction *ReaderIS = Reader.getInstruction();
+  if (!WriterIS || !ReaderIS)
+    return false;
+
+  for (const WriteState &Def : WriterIS->getDefs()) {
+    MCPhysReg DefReg = Def.getRegisterID();
+    if (!isRVVPhysReg(DefReg))
+      continue;
+    for (const ReadState &Use : ReaderIS->getUses()) {
+      MCPhysReg UseReg = Use.getRegisterID();
+      if (rvvRegsOverlap(DefReg, UseReg)) {
+        Reg = DefReg;
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+void RISCVCustomBehaviour::recordRVVWarHazard(const InstRef &Writer,
+                                              const InstRef &Reader,
+                                              MCPhysReg Reg) {
+  ++BlockedIssueEvents;
+  uint64_t Key =
+      getRVVWarHazardKey(Writer.getSourceIndex(), Reader.getSourceIndex(), Reg);
+  if (!SeenHazards.insert(Key).second)
+    return;
+
+  HazardRegisters.insert(Reg);
+  if (Samples.size() < 8)
+    Samples.push_back({Writer.getSourceIndex(), Reader.getSourceIndex(), Reg});
+}
+
+bool RISCVCustomBehaviour::checkCustomIssueHazard(const InstRef &IR,
+                                                  ArrayRef<InstRef> WaitSet,
+                                                  ArrayRef<InstRef> PendingSet,
+                                                  ArrayRef<InstRef> ReadySet) {
+  if (!RISCVRVVWarHazardModel)
+    return false;
+
+  auto CheckSet = [&](ArrayRef<InstRef> Set) {
+    for (const InstRef &Other : Set) {
+      if (!Other || Other == IR || Other.getSourceIndex() >= IR.getSourceIndex())
+        continue;
+      MCPhysReg Reg = 0;
+      if (hasRVVWarHazard(IR, Other, Reg)) {
+        recordRVVWarHazard(IR, Other, Reg);
+        return true;
+      }
+    }
+    return false;
+  };
+
+  return CheckSet(WaitSet) || CheckSet(PendingSet) || CheckSet(ReadySet);
+}
+
+void RISCVCustomBehaviour::noteCustomIssueBlockedCycle() {
+  if (RISCVRVVWarHazardModel)
+    ++BlockedIssueCycles;
+}
+
+namespace {
+class RISCVRVVWarHazardView : public View {
+  const RISCVCustomBehaviour &CB;
+
+public:
+  RISCVRVVWarHazardView(const RISCVCustomBehaviour &CB) : CB(CB) {}
+
+  void printView(raw_ostream &OS) const override {
+    OS << "\n\nRVV WAR Hazard\n";
+    OS << "Total hazards: " << CB.getTotalRVVWarHazards() << '\n';
+    OS << "Blocked issue events: " << CB.getBlockedIssueEvents() << '\n';
+    OS << "Blocked issue cycles: " << CB.getBlockedIssueCycles() << '\n';
+    OS << "Registers:";
+    if (CB.getHazardRegisters().empty()) {
+      OS << " none\n";
+    } else {
+      for (MCPhysReg Reg : CB.getHazardRegisters())
+        OS << ' ' << getRVVRegName(Reg);
+      OS << '\n';
+    }
+
+    OS << "Samples:\n";
+    if (CB.getRVVWarSamples().empty()) {
+      OS << "  none\n";
+      return;
+    }
+    for (const RISCVCustomBehaviour::RVVWarSample &Sample :
+         CB.getRVVWarSamples()) {
+      OS << "  #" << Sample.WriterIndex << " waits for #"
+         << Sample.ReaderIndex << " on " << getRVVRegName(Sample.Reg) << '\n';
+    }
+  }
+
+  StringRef getNameAsString() const override {
+    return "RISCVRVVWarHazardView";
+  }
+};
+} // namespace
+
+std::vector<std::unique_ptr<View>>
+RISCVCustomBehaviour::getEndViews(llvm::MCInstPrinter &IP,
+                                  llvm::ArrayRef<llvm::MCInst> Insts) {
+  if (!RISCVRVVWarHazardModel)
+    return {};
+  std::vector<std::unique_ptr<View>> Views;
+  Views.push_back(std::make_unique<RISCVRVVWarHazardView>(*this));
+  return Views;
+}
 
 const llvm::StringRef RISCVLMULInstrument::DESC_NAME = "RISCV-LMUL";
 
@@ -339,6 +481,13 @@ unsigned RISCVInstrumentManager::getSchedClassID(
 using namespace llvm;
 using namespace mca;
 
+static CustomBehaviour *
+createRISCVCustomBehaviour(const MCSubtargetInfo &STI,
+                           const mca::SourceMgr &SrcMgr,
+                           const MCInstrInfo &MCII) {
+  return new RISCVCustomBehaviour(STI, SrcMgr, MCII);
+}
+
 static InstrumentManager *
 createRISCVInstrumentManager(const MCSubtargetInfo &STI,
                              const MCInstrInfo &MCII) {
@@ -348,6 +497,10 @@ createRISCVInstrumentManager(const MCSubtargetInfo &STI,
 /// Extern function to initialize the targets for the RISC-V backend
 extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
 LLVMInitializeRISCVTargetMCA() {
+  TargetRegistry::RegisterCustomBehaviour(getTheRISCV32Target(),
+                                          createRISCVCustomBehaviour);
+  TargetRegistry::RegisterCustomBehaviour(getTheRISCV64Target(),
+                                          createRISCVCustomBehaviour);
   TargetRegistry::RegisterInstrumentManager(getTheRISCV32Target(),
                                             createRISCVInstrumentManager);
   TargetRegistry::RegisterInstrumentManager(getTheRISCV64Target(),

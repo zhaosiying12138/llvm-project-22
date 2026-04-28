@@ -25,6 +25,8 @@
 namespace llvm {
 namespace mca {
 
+class CustomBehaviour;
+
 class LLVM_ABI SchedulerStrategy {
 public:
   SchedulerStrategy() = default;
@@ -76,6 +78,9 @@ class Scheduler : public HardwareUnit {
 
   // Hardware resources that are managed by this scheduler.
   std::unique_ptr<ResourceManager> Resources;
+
+  // Optional target-specific issue hazard model.
+  CustomBehaviour *CB;
 
   // Instructions dispatched to the Scheduler are internally classified based on
   // the instruction stage (see Instruction::InstrStage).
@@ -129,6 +134,9 @@ class Scheduler : public HardwareUnit {
   // opcodes because scheduler buffers (or LS queues) were unavailable.
   bool HadTokenStall;
 
+  // True if a custom issue hazard has already been counted in this cycle.
+  bool CustomIssueBlockedThisCycle;
+
   /// Verify the given selection strategy and set the Strategy member
   /// accordingly.  If no strategy is provided, the DefaultSchedulerStrategy is
   /// used.
@@ -156,17 +164,23 @@ class Scheduler : public HardwareUnit {
 
 public:
   Scheduler(const MCSchedModel &Model, LSUnitBase &Lsu)
-      : Scheduler(Model, Lsu, nullptr) {}
+      : Scheduler(Model, Lsu, nullptr, nullptr) {}
+
+  Scheduler(const MCSchedModel &Model, LSUnitBase &Lsu, CustomBehaviour *CB)
+      : Scheduler(Model, Lsu, nullptr, CB) {}
 
   Scheduler(const MCSchedModel &Model, LSUnitBase &Lsu,
-            std::unique_ptr<SchedulerStrategy> SelectStrategy)
+            std::unique_ptr<SchedulerStrategy> SelectStrategy,
+            CustomBehaviour *CB = nullptr)
       : Scheduler(std::make_unique<ResourceManager>(Model), Lsu,
-                  std::move(SelectStrategy)) {}
+                  std::move(SelectStrategy), CB) {}
 
   Scheduler(std::unique_ptr<ResourceManager> RM, LSUnitBase &Lsu,
-            std::unique_ptr<SchedulerStrategy> SelectStrategy)
-      : LSU(Lsu), Resources(std::move(RM)), BusyResourceUnits(0),
-        NumDispatchedToThePendingSet(0), HadTokenStall(false) {
+            std::unique_ptr<SchedulerStrategy> SelectStrategy,
+            CustomBehaviour *CB = nullptr)
+      : LSU(Lsu), Resources(std::move(RM)), CB(CB), BusyResourceUnits(0),
+        NumDispatchedToThePendingSet(0), HadTokenStall(false),
+        CustomIssueBlockedThisCycle(false) {
     initializeStrategy(std::move(SelectStrategy));
   }
 
