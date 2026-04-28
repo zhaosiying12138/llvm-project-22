@@ -24,13 +24,19 @@
 #include "llvm/CodeGen/RegisterScavenging.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/MC/MCDwarf.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/LEB128.h"
+#include "llvm/Support/raw_ostream.h"
 
 #include <algorithm>
 
 #define DEBUG_TYPE "riscv-frame"
 
 using namespace llvm;
+
+static cl::opt<bool> EnableRVVRegPressureReport(
+    "riscv-v-reg-pressure-report", cl::Hidden, cl::init(false),
+    cl::desc("Print RISCV RVV stack and spill-slot diagnostics"));
 
 static Align getABIStackAlignment(RISCVABI::ABI ABI) {
   if (ABI == RISCVABI::ABI_ILP32E)
@@ -1796,9 +1802,9 @@ static unsigned estimateFunctionSizeInBytes(const MachineFunction &MF,
 
 void RISCVFrameLowering::processFunctionBeforeFrameFinalized(
     MachineFunction &MF, RegScavenger *RS) const {
-  const RISCVRegisterInfo *RegInfo =
-      MF.getSubtarget<RISCVSubtarget>().getRegisterInfo();
-  const RISCVInstrInfo *TII = MF.getSubtarget<RISCVSubtarget>().getInstrInfo();
+  const RISCVSubtarget &ST = MF.getSubtarget<RISCVSubtarget>();
+  const RISCVRegisterInfo *RegInfo = ST.getRegisterInfo();
+  const RISCVInstrInfo *TII = ST.getInstrInfo();
   MachineFrameInfo &MFI = MF.getFrameInfo();
   const TargetRegisterClass *RC = &RISCV::GPRRegClass;
   auto *RVFI = MF.getInfo<RISCVMachineFunctionInfo>();
@@ -1809,6 +1815,39 @@ void RISCVFrameLowering::processFunctionBeforeFrameFinalized(
 
   RVFI->setRVVStackSize(RVVStackSize);
   RVFI->setRVVStackAlign(RVVStackAlign);
+
+  if (EnableRVVRegPressureReport) {
+    unsigned ScalarSpillSlots = 0;
+    unsigned VectorSpillSlots = 0;
+    uint64_t ScalarSpillBytes = 0;
+    uint64_t VectorSpillBytes = 0;
+    uint64_t RVVVScale =
+        std::max<uint64_t>(ST.getRealMinVLen() / RISCV::RVVBitsPerBlock, 1);
+    for (int I = MFI.getObjectIndexBegin(), E = MFI.getObjectIndexEnd(); I != E;
+         ++I) {
+      if (MFI.isDeadObjectIndex(I) || !MFI.isSpillSlotObjectIndex(I))
+        continue;
+
+      if (MFI.getStackID(I) == TargetStackID::ScalableVector) {
+        ++VectorSpillSlots;
+        int64_t ObjectSize = MFI.getObjectSize(I);
+        if (ObjectSize < RISCV::RVVBytesPerBlock)
+          ObjectSize = RISCV::RVVBytesPerBlock;
+        VectorSpillBytes += static_cast<uint64_t>(ObjectSize) * RVVVScale;
+        continue;
+      }
+
+      ++ScalarSpillSlots;
+      ScalarSpillBytes += MFI.getObjectSize(I);
+    }
+    errs() << "riscv-v-reg-pressure-report: function=" << MF.getName()
+           << " scalar-spill-bytes=" << ScalarSpillBytes
+           << " scalar-spill-slots=" << ScalarSpillSlots
+           << " vector-spill-bytes=" << VectorSpillBytes
+           << " vector-spill-slots=" << VectorSpillSlots
+           << " fixed-stack-estimate=" << MFI.estimateStackSize(MF)
+           << "\n";
+  }
 
   if (hasRVVFrameObject(MF)) {
     // Ensure the entire stack is aligned to at least the RVV requirement: some

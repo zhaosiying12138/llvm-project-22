@@ -1378,6 +1378,18 @@ foreach vti = AllFloatAndBF16Vectors in {
                    FRM_DYN,
                    vti.AVL, vti.Log2SEW, TA_MA)>;
 
+    if !ne(vti.Scalar, bf16) then
+    let Predicates = !listconcat(GetVTypePredicates<vti>.Predicates,
+                                 [HasExperimentalYushuxinVfexp]) in
+    def : Pat<(fexp (vti.Vector vti.RegClass:$rs2)),
+              (!cast<Instruction>("PseudoYUSHUXIN_VFEXP_V_"# vti.LMul.MX#"_E"#vti.SEW)
+                   (vti.Vector (IMPLICIT_DEF)),
+                   vti.RegClass:$rs2,
+                   // Value to indicate no rounding mode change in
+                   // RISCVInsertReadWriteCSR
+                   FRM_DYN,
+                   vti.AVL, vti.Log2SEW, TA_MA)>;
+
     // 13.12. Vector Floating-Point Sign-Injection Instructions
     def : Pat<(fabs (vti.Vector vti.RegClass:$rs)),
               (!cast<Instruction>("PseudoVFSGNJX"#

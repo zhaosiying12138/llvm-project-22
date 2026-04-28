@@ -3370,6 +3370,7 @@ void DAGTypeLegalizer::SoftPromoteHalfResult(SDNode *N, unsigned ResNo) {
   case ISD::FCEIL:
   case ISD::FCOS:
   case ISD::FCOSH:
+  case ISD::STRICT_FEXP:
   case ISD::FEXP:
   case ISD::FEXP2:
   case ISD::FEXP10:
@@ -3730,15 +3731,30 @@ SDValue DAGTypeLegalizer::SoftPromoteHalfRes_UNDEF(SDNode *N) {
 }
 
 SDValue DAGTypeLegalizer::SoftPromoteHalfRes_UnaryOp(SDNode *N) {
+  bool IsStrict = N->isStrictFPOpcode();
   EVT OVT = N->getValueType(0);
   EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), OVT);
-  SDValue Op = GetSoftPromotedHalf(N->getOperand(0));
+  unsigned Offset = IsStrict ? 1 : 0;
+  SDValue Op = GetSoftPromotedHalf(N->getOperand(Offset));
   SDLoc dl(N);
 
   // Promote to the larger FP type.
   Op = DAG.getNode(GetPromotionOpcode(OVT, NVT), dl, NVT, Op);
 
-  SDValue Res = DAG.getNode(N->getOpcode(), dl, NVT, Op);
+  SDValue Res;
+  if (IsStrict) {
+    SDValue Chain = N->getOperand(0);
+    Res = DAG.getNode(N->getOpcode(), dl, DAG.getVTList(NVT, MVT::Other),
+                      Chain, Op);
+    // Preserve constrained FP ordering for the final round back to half/bfloat.
+    SDValue Round =
+        DAG.getNode(GetPromotionOpcodeStrict(NVT, OVT), dl,
+                    DAG.getVTList(MVT::i16, MVT::Other), Res.getValue(1), Res);
+    ReplaceValueWith(SDValue(N, 1), Round.getValue(1));
+    return Round;
+  } else {
+    Res = DAG.getNode(N->getOpcode(), dl, NVT, Op);
+  }
 
   // Convert back to FP16 as an integer.
   return DAG.getNode(GetPromotionOpcode(NVT, OVT), dl, MVT::i16, Res);

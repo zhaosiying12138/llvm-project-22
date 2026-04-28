@@ -661,6 +661,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::BF16_TO_FP, MVT::f32, Custom);
     setOperationAction(ISD::FP_TO_BF16, MVT::f32,
                        Subtarget.isSoftFPABI() ? LibCall : Custom);
+    setOperationAction(ISD::STRICT_FP_TO_BF16, MVT::f32,
+                       Subtarget.isSoftFPABI() ? LibCall : Custom);
     setOperationAction(ISD::FP_TO_FP16, MVT::f32, Custom);
     setOperationAction(ISD::FP16_TO_FP, MVT::f32, Custom);
     setOperationAction(ISD::STRICT_FP_TO_FP16, MVT::f32, Custom);
@@ -719,6 +721,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::IS_FPCLASS, MVT::f64, Custom);
     setOperationAction(ISD::BF16_TO_FP, MVT::f64, Custom);
     setOperationAction(ISD::FP_TO_BF16, MVT::f64,
+                       Subtarget.isSoftFPABI() ? LibCall : Custom);
+    setOperationAction(ISD::STRICT_FP_TO_BF16, MVT::f64,
                        Subtarget.isSoftFPABI() ? LibCall : Custom);
     setOperationAction(ISD::FP_TO_FP16, MVT::f64, Custom);
     setOperationAction(ISD::FP16_TO_FP, MVT::f64, Expand);
@@ -1132,6 +1136,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
     // TODO: Make more of these ops legal.
     static const unsigned ZvfbfaPromoteOps[] = {ISD::FDIV,
+                                                ISD::FEXP,
                                                 ISD::FSQRT,
                                                 ISD::FCEIL,
                                                 ISD::FTRUNC,
@@ -1208,6 +1213,14 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
       // Expand FP operations that need libcalls.
       setOperationAction(FloatingPointLibCallOps, VT, Expand);
+      // Strict scalable-vector exp cannot be lane-unrolled by generic
+      // legalization, and the experimental vfexp instruction is not strict.
+      setOperationAction(ISD::STRICT_FEXP, VT, Custom);
+      // The experimental vfexp patterns intentionally exclude bf16, so bf16
+      // must keep the existing promote/expand path instead of becoming Legal.
+      if (Subtarget.hasExperimentalYushuxinVfexp() &&
+          VT.getVectorElementType() != MVT::bf16)
+        setOperationAction(ISD::FEXP, VT, Legal);
 
       setOperationAction(ISD::FCOPYSIGN, VT, Legal);
 
@@ -1305,15 +1318,33 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
       // Expand FP operations that need libcalls.
       setOperationAction(FloatingPointLibCallOps, VT, Expand);
+      // Strict scalable-vector exp cannot be lane-unrolled by generic
+      // legalization, and the experimental vfexp instruction is not strict.
+      setOperationAction(ISD::STRICT_FEXP, VT, Custom);
+      // The experimental vfexp patterns intentionally exclude bf16, so bf16
+      // must keep the existing promote/expand path instead of becoming Legal.
+      if (Subtarget.hasExperimentalYushuxinVfexp() &&
+          VT.getVectorElementType() != MVT::bf16)
+        setOperationAction(ISD::FEXP, VT, Legal);
 
       // Custom split nxv32[b]f16 since nxv32[b]f32 is not legal.
       if (getLMUL(VT) == RISCVVType::LMUL_8) {
         setOperationAction(ZvfhminZvfbfminPromoteOps, VT, Custom);
         setOperationAction(ZvfhminZvfbfminPromoteVPOps, VT, Custom);
+        if (VT.getVectorElementType() == MVT::bf16) {
+          setOperationAction(ISD::FEXP, VT, Custom);
+          if (Subtarget.hasExperimentalYushuxinVfexp())
+            setOperationAction(ISD::STRICT_FEXP, VT, Custom);
+        }
       } else {
         MVT F32VecVT = MVT::getVectorVT(MVT::f32, VT.getVectorElementCount());
         setOperationPromotedToType(ZvfhminZvfbfminPromoteOps, VT, F32VecVT);
         setOperationPromotedToType(ZvfhminZvfbfminPromoteVPOps, VT, F32VecVT);
+        if (VT.getVectorElementType() == MVT::bf16) {
+          setOperationPromotedToType(ISD::FEXP, VT, F32VecVT);
+          if (Subtarget.hasExperimentalYushuxinVfexp())
+            setOperationAction(ISD::STRICT_FEXP, VT, Custom);
+        }
       }
     };
 
@@ -1654,6 +1685,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
             continue;
           setOperationPromotedToType(ZvfhminZvfbfminPromoteOps, VT, F32VecVT);
           setOperationPromotedToType(ZvfhminZvfbfminPromoteVPOps, VT, F32VecVT);
+          setOperationAction(ISD::STRICT_FEXP, VT, Custom);
           continue;
         }
 
@@ -1685,8 +1717,11 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
           if (Subtarget.hasStdExtZvfbfa())
             setOperationPromotedToType(ZvfbfaPromoteOps, VT, F32VecVT);
-          else
+          else {
             setOperationPromotedToType(ZvfhminZvfbfminPromoteOps, VT, F32VecVT);
+            setOperationPromotedToType(ISD::FEXP, VT, F32VecVT);
+          }
+          setOperationAction(ISD::STRICT_FEXP, VT, Custom);
           setOperationPromotedToType(ZvfhminZvfbfminPromoteVPOps, VT, F32VecVT);
           continue;
         }
@@ -1700,6 +1735,9 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
                             ISD::FMINIMUMNUM, ISD::FMAXIMUMNUM, ISD::IS_FPCLASS,
                             ISD::FMAXIMUM, ISD::FMINIMUM},
                            VT, Custom);
+        if (Subtarget.hasExperimentalYushuxinVfexp()) {
+          setOperationAction(ISD::FEXP, VT, Custom);
+        }
 
         setOperationAction({ISD::FTRUNC, ISD::FCEIL, ISD::FFLOOR, ISD::FROUND,
                             ISD::FROUNDEVEN, ISD::FRINT, ISD::LRINT,
@@ -1850,6 +1888,9 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
          ISD::SREM,         ISD::UREM,         ISD::INSERT_VECTOR_ELT,
          ISD::ABS,          ISD::CTPOP,        ISD::VECTOR_SHUFFLE,
          ISD::FMA,          ISD::VSELECT,      ISD::VECREDUCE_ADD});
+
+  if (Subtarget.hasExperimentalYushuxinVfexp())
+    setTargetDAGCombine(ISD::FEXP2);
 
   if (Subtarget.hasVendorXTHeadMemPair())
     setTargetDAGCombine({ISD::LOAD, ISD::STORE});
@@ -7478,6 +7519,7 @@ static unsigned getRISCVVLOp(SDValue Op) {
   OP_CASE(FABS)
   OP_CASE(FCOPYSIGN)
   OP_CASE(FSQRT)
+  OP_CASE(FEXP)
   OP_CASE(SMIN)
   OP_CASE(SMAX)
   OP_CASE(UMIN)
@@ -7487,6 +7529,7 @@ static unsigned getRISCVVLOp(SDValue Op) {
   OP_CASE(STRICT_FMUL)
   OP_CASE(STRICT_FDIV)
   OP_CASE(STRICT_FSQRT)
+  OP_CASE(STRICT_FEXP)
   VP_CASE(ADD)        // VP_ADD
   VP_CASE(SUB)        // VP_SUB
   VP_CASE(MUL)        // VP_MUL
@@ -7707,6 +7750,45 @@ static SDValue SplitStrictFPVectorOp(SDValue Op, SelectionDAG &DAG) {
   return DAG.getMergeValues({V, HiRes.getValue(1)}, DL);
 }
 
+static bool isHalfOrBFloatStrictFEXPType(MVT VT) {
+  return VT == MVT::f16 || VT == MVT::bf16 ||
+         (VT.isFixedLengthVector() &&
+          (VT.getVectorElementType() == MVT::f16 ||
+           VT.getVectorElementType() == MVT::bf16));
+}
+
+static SDValue lowerHalfOrBFloatStrictFEXP(SDValue Op, SelectionDAG &DAG) {
+  MVT VT = Op.getSimpleValueType();
+  bool IsScalar = VT == MVT::f16 || VT == MVT::bf16;
+  MVT F32VT = IsScalar ? MVT::f32 : VT.changeVectorElementType(MVT::f32);
+  SDLoc DL(Op);
+  SDValue Ext =
+      DAG.getNode(ISD::STRICT_FP_EXTEND, DL, DAG.getVTList(F32VT, MVT::Other),
+                  Op.getOperand(0), Op.getOperand(1));
+  SDValue Exp =
+      DAG.getNode(ISD::STRICT_FEXP, DL, DAG.getVTList(F32VT, MVT::Other),
+                  Ext.getValue(1), Ext);
+  return DAG.getNode(ISD::STRICT_FP_ROUND, DL, DAG.getVTList(VT, MVT::Other),
+                     Exp.getValue(1), Exp,
+                     DAG.getIntPtrConstant(0, DL, /*isTarget=*/true));
+}
+
+static SDValue lowerStrictFEXP(SDValue Op, SelectionDAG &DAG) {
+  MVT VT = Op.getSimpleValueType();
+  if (VT.isScalableVector()) {
+    DAG.getContext()->emitError(
+        "strict scalable-vector exp is not supported by RISC-V");
+    return DAG.getMergeValues({DAG.getPOISON(VT), Op.getOperand(0)}, SDLoc(Op));
+  }
+
+  if (!isHalfOrBFloatStrictFEXPType(VT))
+    return SDValue();
+
+  SDLoc DL(Op);
+  SDValue Round = lowerHalfOrBFloatStrictFEXP(Op, DAG);
+  return DAG.getMergeValues({Round, Round.getValue(1)}, DL);
+}
+
 SDValue
 RISCVTargetLowering::lowerXAndesBfHCvtBFloat16Load(SDValue Op,
                                                    SelectionDAG &DAG) const {
@@ -7747,6 +7829,9 @@ RISCVTargetLowering::lowerXAndesBfHCvtBFloat16Store(SDValue Op,
       EVT::getIntegerVT(*DAG.getContext(), ST->getMemoryVT().getSizeInBits()),
       ST->getMemOperand());
 }
+
+static SDValue combineFastFEXP2ToFEXP(SDNode *N, SelectionDAG &DAG,
+                                      const RISCVSubtarget &Subtarget);
 
 SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
                                             SelectionDAG &DAG) const {
@@ -8201,19 +8286,27 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
   case ISD::FP_TO_SINT_SAT:
   case ISD::FP_TO_UINT_SAT:
     return lowerFP_TO_INT_SAT(Op, DAG, Subtarget);
+  case ISD::STRICT_FP_TO_BF16:
   case ISD::FP_TO_BF16: {
     // Custom lower to ensure the libcall return is passed in an FPR on hard
     // float ABIs.
     assert(!Subtarget.isSoftFPABI() && "Unexpected custom legalization");
     SDLoc DL(Op);
     MakeLibCallOptions CallOptions;
-    RTLIB::Libcall LC =
-        RTLIB::getFPROUND(Op.getOperand(0).getValueType(), MVT::bf16);
-    SDValue Res =
-        makeLibCall(DAG, LC, MVT::f32, Op.getOperand(0), CallOptions, DL).first;
-    if (Subtarget.is64Bit())
-      return DAG.getNode(RISCVISD::FMV_X_ANYEXTW_RV64, DL, MVT::i64, Res);
-    return DAG.getBitcast(MVT::i32, Res);
+    bool IsStrict = Op->isStrictFPOpcode();
+    SDValue Op0 = IsStrict ? Op.getOperand(1) : Op.getOperand(0);
+    SDValue Chain = IsStrict ? Op.getOperand(0) : SDValue();
+    RTLIB::Libcall LC = RTLIB::getFPROUND(Op0.getValueType(), MVT::bf16);
+    SDValue Res;
+    std::tie(Res, Chain) =
+        makeLibCall(DAG, LC, MVT::f32, Op0, CallOptions, DL, Chain);
+    SDValue Result =
+        Subtarget.is64Bit()
+            ? DAG.getNode(RISCVISD::FMV_X_ANYEXTW_RV64, DL, MVT::i64, Res)
+            : DAG.getBitcast(MVT::i32, IsStrict ? Res.getValue(0) : Res);
+    if (IsStrict)
+      return DAG.getMergeValues({Result, Chain}, DL);
+    return Result;
   }
   case ISD::BF16_TO_FP: {
     assert(Subtarget.hasStdExtFOrZfinx() && "Unexpected custom legalization");
@@ -8244,9 +8337,10 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     SDValue Res;
     std::tie(Res, Chain) =
         makeLibCall(DAG, LC, MVT::f32, Op0, CallOptions, DL, Chain);
-    if (Subtarget.is64Bit())
-      return DAG.getNode(RISCVISD::FMV_X_ANYEXTW_RV64, DL, MVT::i64, Res);
-    SDValue Result = DAG.getBitcast(MVT::i32, IsStrict ? Res.getValue(0) : Res);
+    SDValue Result =
+        Subtarget.is64Bit()
+            ? DAG.getNode(RISCVISD::FMV_X_ANYEXTW_RV64, DL, MVT::i64, Res)
+            : DAG.getBitcast(MVT::i32, IsStrict ? Res.getValue(0) : Res);
     if (IsStrict)
       return DAG.getMergeValues({Result, Chain}, DL);
     return Result;
@@ -8747,6 +8841,7 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
   case ISD::FMUL:
   case ISD::FDIV:
   case ISD::FSQRT:
+  case ISD::FEXP:
   case ISD::FMA:
   case ISD::FMINNUM:
   case ISD::FMAXNUM:
@@ -8807,6 +8902,12 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
   case ISD::STRICT_FDIV:
   case ISD::STRICT_FSQRT:
   case ISD::STRICT_FMA:
+    if (isPromotedOpNeedingSplit(Op, Subtarget))
+      return SplitStrictFPVectorOp(Op, DAG);
+    return lowerToScalableOp(Op, DAG);
+  case ISD::STRICT_FEXP:
+    if (SDValue Lowered = lowerStrictFEXP(Op, DAG))
+      return Lowered;
     if (isPromotedOpNeedingSplit(Op, Subtarget))
       return SplitStrictFPVectorOp(Op, DAG);
     return lowerToScalableOp(Op, DAG);
@@ -13664,7 +13765,9 @@ SDValue RISCVTargetLowering::lowerToScalableOp(SDValue Op,
   bool HasMask = TSInfo.hasMaskOp(NewOpc);
 
   MVT VT = Op.getSimpleValueType();
-  MVT ContainerVT = getContainerForFixedLengthVector(VT);
+  MVT ContainerVT = VT;
+  if (VT.isFixedLengthVector())
+    ContainerVT = getContainerForFixedLengthVector(VT);
 
   // Create list of operands by converting existing ones to scalable types.
   SmallVector<SDValue, 6> Ops;
@@ -13677,11 +13780,17 @@ SDValue RISCVTargetLowering::lowerToScalableOp(SDValue Op,
       continue;
     }
 
-    // "cast" fixed length vector to a scalable vector.
-    assert(useRVVForFixedLengthVectorVT(V.getSimpleValueType()) &&
+    // "cast" fixed length vector operands to scalable vectors. Scalable vector
+    // operands are already in the right form for the VL node.
+    if (!V.getValueType().isFixedLengthVector()) {
+      Ops.push_back(V);
+      continue;
+    }
+    MVT VVT = V.getSimpleValueType();
+    assert(useRVVForFixedLengthVectorVT(VVT) &&
            "Only fixed length vectors are supported!");
-    MVT VContainerVT = ContainerVT.changeVectorElementType(
-        V.getSimpleValueType().getVectorElementType());
+    MVT VContainerVT =
+        ContainerVT.changeVectorElementType(VVT.getVectorElementType());
     Ops.push_back(convertToScalableVector(VContainerVT, V, DAG, Subtarget));
   }
 
@@ -13699,12 +13808,16 @@ SDValue RISCVTargetLowering::lowerToScalableOp(SDValue Op,
     SDValue ScalableRes =
         DAG.getNode(NewOpc, DL, DAG.getVTList(ContainerVT, MVT::Other), Ops,
                     Op->getFlags());
+    if (!VT.isFixedLengthVector())
+      return DAG.getMergeValues({ScalableRes, ScalableRes.getValue(1)}, DL);
     SDValue SubVec = convertFromScalableVector(VT, ScalableRes, DAG, Subtarget);
     return DAG.getMergeValues({SubVec, ScalableRes.getValue(1)}, DL);
   }
 
   SDValue ScalableRes =
       DAG.getNode(NewOpc, DL, ContainerVT, Ops, Op->getFlags());
+  if (!VT.isFixedLengthVector())
+    return ScalableRes;
   return convertFromScalableVector(VT, ScalableRes, DAG, Subtarget);
 }
 
@@ -14829,6 +14942,15 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
   switch (N->getOpcode()) {
   default:
     llvm_unreachable("Don't know how to custom type legalize this operation!");
+  case ISD::STRICT_FEXP: {
+    SDValue Op(N, 0);
+    if (isHalfOrBFloatStrictFEXPType(Op.getSimpleValueType())) {
+      SDValue Round = lowerHalfOrBFloatStrictFEXP(Op, DAG);
+      Results.push_back(Round);
+      Results.push_back(Round.getValue(1));
+    }
+    return;
+  }
   case ISD::STRICT_FP_TO_SINT:
   case ISD::STRICT_FP_TO_UINT:
   case ISD::FP_TO_SINT:
@@ -20887,6 +21009,79 @@ static SDValue performSHLCombine(SDNode *N,
                      Passthru, Mask, VL);
 }
 
+static bool isLog2EFPConstant(SDValue V, unsigned Depth = 0) {
+  if (Depth > 4)
+    return false;
+
+  if (V.getOpcode() == ISD::VECTOR_SHUFFLE) {
+    auto *SV = cast<ShuffleVectorSDNode>(V);
+    EVT SourceVT = V.getOperand(0).getValueType();
+    if (!SV->isSplat() || SourceVT.isScalableVector())
+      return false;
+
+    unsigned LHSNumElts = SourceVT.getVectorNumElements();
+    unsigned SplatIdx = SV->getSplatIndex();
+    SDValue Source = SplatIdx < LHSNumElts ? V.getOperand(0)
+                                           : V.getOperand(1);
+    if (Source.isUndef())
+      return false;
+    return isLog2EFPConstant(Source, Depth + 1);
+  }
+
+  if (V.getOpcode() == ISD::INSERT_VECTOR_ELT &&
+      V.getOperand(0).isUndef() && isNullConstant(V.getOperand(2)))
+    return isLog2EFPConstant(V.getOperand(1), Depth + 1);
+
+  ConstantFPSDNode *C = isConstOrConstSplatFP(V, /*AllowUndefs=*/true);
+  if (!C)
+    return false;
+
+  APInt Bits = C->getValueAPF().bitcastToAPInt();
+  if (Bits.getBitWidth() == 32)
+    return Bits == APInt(32, 0x3fb8aa3b);
+  if (Bits.getBitWidth() == 64)
+    return Bits == APInt(64, 0x3ff71547652b82feULL);
+
+  APFloat Log2E(C->getValueAPF().getSemantics(),
+                "0x1.71547652b82fep+0");
+  return C->getValueAPF().compare(Log2E) == APFloat::cmpEqual;
+}
+
+static bool hasAllFastMathFlags(SDNodeFlags Flags) {
+  return Flags.hasNoNaNs() && Flags.hasNoInfs() &&
+         Flags.hasNoSignedZeros() && Flags.hasAllowReciprocal() &&
+         Flags.hasAllowContract() && Flags.hasApproximateFuncs() &&
+         Flags.hasAllowReassociation();
+}
+
+static SDValue combineFastFEXP2ToFEXP(SDNode *N, SelectionDAG &DAG,
+                                      const RISCVSubtarget &Subtarget) {
+  if (!Subtarget.hasExperimentalYushuxinVfexp())
+    return SDValue();
+
+  EVT VT = N->getValueType(0);
+  if (!VT.isVector() || VT.getVectorElementType() == MVT::bf16)
+    return SDValue();
+
+  SDValue Mul = N->getOperand(0);
+  if (Mul.getOpcode() != ISD::FMUL)
+    return SDValue();
+
+  if (!hasAllFastMathFlags(N->getFlags()) ||
+      !hasAllFastMathFlags(Mul->getFlags()))
+    return SDValue();
+
+  SDValue X = Mul.getOperand(0);
+  SDValue Log2E = Mul.getOperand(1);
+  if (!isLog2EFPConstant(Log2E)) {
+    std::swap(X, Log2E);
+    if (!isLog2EFPConstant(Log2E))
+      return SDValue();
+  }
+
+  return DAG.getNode(ISD::FEXP, SDLoc(N), VT, X, N->getFlags());
+}
+
 SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
                                                DAGCombinerInfo &DCI) const {
   SelectionDAG &DAG = DCI.DAG;
@@ -21145,6 +21340,8 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
     SDValue Fneg = DAG.getNode(ISD::FNEG, DL, VT, Splat);
     return DAG.getNode(ISD::FMA, DL, VT, Fneg, N1, N->getOperand(2));
   }
+  case ISD::FEXP2:
+    return combineFastFEXP2ToFEXP(N, DAG, Subtarget);
   case ISD::SETCC:
     return performSETCCCombine(N, DCI, Subtarget);
   case ISD::SIGN_EXTEND_INREG:

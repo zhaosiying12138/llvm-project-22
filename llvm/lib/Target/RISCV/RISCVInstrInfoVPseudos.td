@@ -6438,6 +6438,10 @@ defm PseudoVFWNMSAC : VPseudoVWMAC_VV_VF_RM;
 let mayRaiseFPException = true in
 defm PseudoVFSQRT : VPseudoVSQR_V_RM;
 
+// Experimental Yushuxin Vector Floating-Point Exponential Instruction.
+let Predicates = [HasExperimentalYushuxinVfexp], mayRaiseFPException = true in
+defm PseudoYUSHUXIN_VFEXP : VPseudoVSQR_V_RM;
+
 //===----------------------------------------------------------------------===//
 // 13.9. Vector Floating-Point Reciprocal Square-Root Estimate Instruction
 //===----------------------------------------------------------------------===//

@@ -1362,6 +1362,18 @@ def FeatureVendorXSfvfexpa64e
                      [FeatureVendorXSfvfexpa, FeatureStdExtZve64d]>;
 def HasVendorXSfvfexpa64e : Predicate<"Subtarget->hasVendorXSfvfexpa64e()">;
 
+def FeatureExperimentalYushuxinVfexp
+    : RISCVExperimentalExtension<0, 1,
+                     "Yushuxin experimental vector floating-point exponential instruction",
+                     [FeatureStdExtZve32f]> {
+  let Name = "experimental-yushuxin-vfexp";
+  let Desc = "'YushuxinVfexp' (Yushuxin experimental vector floating-point exponential instruction)";
+}
+def HasExperimentalYushuxinVfexp
+    : Predicate<"Subtarget->hasExperimentalYushuxinVfexp()">,
+      AssemblerPredicate<(all_of FeatureExperimentalYushuxinVfexp),
+                         "'experimental-yushuxin-vfexp' (Yushuxin experimental vector floating-point exponential instruction)">;
+
 def FeatureVendorXSiFivecdiscarddlone
     : RISCVExtension<1, 0,
                      "SiFive sf.cdiscard.d.l1 Instruction", []>;
@@ -1974,4 +1986,3 @@ def TuneSiFive7 : SubtargetFeature<"sifive7", "RISCVProcFamily", "SiFive7",
 
 def TuneVentanaVeyron : SubtargetFeature<"ventana-veyron", "RISCVProcFamily", "VentanaVeyron",
                                          "Ventana Veyron-Series processors">;
-
