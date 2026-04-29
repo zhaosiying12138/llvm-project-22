@@ -89,12 +89,13 @@ static bool hasUnsafeMemory(const MachineInstr &MI) {
 static bool hasUncleanRVVOpcode(const TargetInstrInfo &TII,
                                 const MachineInstr &MI) {
   StringRef Name = TII.getName(MI.getOpcode());
+  // VRGATHER is a register permute. Keep rejecting indexed memory operations
+  // below, but do not reject register-only gathers just because of the name.
   return Name.contains("VRED") || Name.contains("VFRED") ||
          Name.contains("VWRED") || Name.contains("_MASK") ||
          Name.contains("SEG") || Name.contains("VLUX") ||
          Name.contains("VLOX") || Name.contains("VSUX") ||
-         Name.contains("VSOX") || Name.contains("GATHER") ||
-         Name.contains("SCATTER");
+         Name.contains("VSOX") || Name.contains("SCATTER");
 }
 
 static bool isRVVReductionOpcode(const TargetInstrInfo &TII,
@@ -110,7 +111,7 @@ static bool hasUnsupportedRVVPressureOpcode(const TargetInstrInfo &TII,
   return Name.contains("_MASK") || Name.contains("SEG") ||
          Name.contains("VLUX") || Name.contains("VLOX") ||
          Name.contains("VSUX") || Name.contains("VSOX") ||
-         Name.contains("GATHER") || Name.contains("SCATTER");
+         Name.contains("SCATTER");
 }
 
 namespace {
@@ -386,6 +387,63 @@ static bool isRVVPureDefSU(const MachineRegisterInfo &MRI, const SUnit &SU) {
          });
 }
 
+static unsigned countDistinctRVVRegUses(const MachineRegisterInfo &MRI,
+                                        const MachineInstr &MI) {
+  SmallVector<Register, 4> Uses;
+  for (const MachineOperand &MO : MI.operands()) {
+    if (!MO.isReg() || !MO.isUse() || MO.isUndef())
+      continue;
+    Register Reg = MO.getReg();
+    if (isRVVReg(MRI, Reg) && !is_contained(Uses, Reg))
+      Uses.push_back(Reg);
+  }
+  return Uses.size();
+}
+
+static bool reachesRVVReduction(SUnit &SU, const TargetInstrInfo &TII) {
+  SmallVector<SUnit *, 16> Worklist;
+  SmallPtrSet<SUnit *, 32> Seen;
+  Worklist.push_back(&SU);
+  Seen.insert(&SU);
+  while (!Worklist.empty()) {
+    SUnit *Cur = Worklist.pop_back_val();
+    for (SDep &SuccDep : Cur->Succs) {
+      if (SuccDep.getKind() != SDep::Data)
+        continue;
+      SUnit *Succ = SuccDep.getSUnit();
+      if (!Succ || !Seen.insert(Succ).second)
+        continue;
+
+      const MachineInstr *MI = Succ->getInstr();
+      if (MI && isRVVReductionOpcode(TII, *MI))
+        return true;
+      Worklist.push_back(Succ);
+    }
+  }
+  return false;
+}
+
+static bool isRVVTransparentSliceDef(const MachineRegisterInfo &MRI,
+                                     const SUnit &SU, bool PreferReduction) {
+  if (!isRVVPureDefSU(MRI, SU))
+    return false;
+
+  if (!PreferReduction)
+    return true;
+
+  const MachineInstr *MI = SU.getInstr();
+  return MI && countDistinctRVVRegUses(MRI, *MI) == 1;
+}
+
+static bool isRVVReductionMergeBoundary(const MachineRegisterInfo &MRI,
+                                        const TargetInstrInfo &TII,
+                                        SUnit &SU) {
+  const MachineInstr *MI = SU.getInstr();
+  return MI && isRVVPureDefSU(MRI, SU) &&
+         countDistinctRVVRegUses(MRI, *MI) > 1 &&
+         reachesRVVReduction(SU, TII);
+}
+
 static SUnit *laterSUnit(SUnit *A, SUnit *B) {
   if (!A)
     return B;
@@ -424,7 +482,20 @@ static SUnit *findRVVSliceClose(SUnit &LoadSU, const MachineRegisterInfo &MRI,
         continue;
       }
 
-      if (isRVVPureDefSU(MRI, *Succ))
+      // A pressure slice follows the lifetime of a load-derived vector value,
+      // not the semantic result of the whole expression. In reduction trees,
+      // single-input elementwise ops preserve that leaf value, while the first
+      // multi-input pure RVV op that feeds a reduction merges several leaf
+      // slices into a new accumulator slice. Close the leaf slice at that merge
+      // boundary; otherwise all leaf slices close at the final reduction, the
+      // close-to-next-load deps tend to become cyclic, and the scheduler may
+      // open too many wide temporaries before starting the reduction tree.
+      if (PreferReduction && isRVVReductionMergeBoundary(MRI, TII, *Succ)) {
+        LatestClose = laterSUnit(LatestClose, Succ);
+        continue;
+      }
+
+      if (isRVVTransparentSliceDef(MRI, *Succ, PreferReduction))
         Worklist.push_back(Succ);
       else
         LatestClose = laterSUnit(LatestClose, Succ);

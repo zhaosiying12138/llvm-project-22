@@ -1,0 +1,114 @@
+# RUN: llc %s -mtriple=riscv64 -mattr=+v,+zvl1024b -run-pass=riscv-v-reg-pressure-remat -riscv-rvv-pressure-dag-sched -riscv-rvv-pressure-remat -o - | FileCheck %s
+
+# CHECK-LABEL: name: direct_reduction_not_recomputed
+# CHECK: [[LOAD:%[0-9]+]]:vrm4 = PseudoVLE32_V_M4
+# CHECK: [[RED:%[0-9]+]]:vr = nofpexcept PseudoVFREDOSUM_VS_M4_E32 $noreg, [[LOAD]]
+# CHECK: nofpexcept PseudoVFREDOSUM_VS_M1_E32 $noreg, [[RED]]
+# CHECK-NOT: PseudoVFREDOSUM_VS_M4_E32 $noreg, [[LOAD]]
+# CHECK: nofpexcept PseudoVFADD_VV_M1_E32 $noreg, [[RED]], [[RED]]
+
+# CHECK-LABEL: name: reduction_result_copy_not_recomputed
+# CHECK: [[RED:%[0-9]+]]:vr = nofpexcept PseudoVFREDOSUM_VS_M4_E32
+# CHECK: [[COPY:%[0-9]+]]:vr = PseudoVMV_V_V_M1 $noreg, [[RED]]
+# CHECK: nofpexcept PseudoVFREDOSUM_VS_M1_E32 $noreg, [[COPY]]
+# CHECK-NOT: PseudoVMV_V_V_M1 $noreg, [[RED]]
+# CHECK: nofpexcept PseudoVFADD_VV_M1_E32 $noreg, [[COPY]], [[COPY]]
+
+---
+name:            direct_reduction_not_recomputed
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: gpr }
+  - { id: 3, class: gprnox0 }
+  - { id: 4, class: vrm4 }
+  - { id: 5, class: vr }
+  - { id: 6, class: vr }
+  - { id: 8, class: vr }
+  - { id: 9, class: vr }
+  - { id: 10, class: vr }
+  - { id: 11, class: vr }
+  - { id: 12, class: vr }
+  - { id: 13, class: vr }
+  - { id: 14, class: vr }
+  - { id: 15, class: vr }
+  - { id: 16, class: vr }
+  - { id: 17, class: vr }
+  - { id: 18, class: vr }
+  - { id: 19, class: vr }
+  - { id: 20, class: vr }
+liveins:
+  - { reg: '$x10', virtual-reg: '%0' }
+body:             |
+  bb.0:
+    liveins: $x10
+
+    %0:gpr = COPY $x10
+    %3:gprnox0 = ADDI $x0, 128
+    %8:vr = PseudoVMV_S_X $noreg, $x0, %3, 5
+    %9:vr = PseudoVMV_S_X $noreg, $x0, %3, 5
+    %10:vr = PseudoVMV_S_X $noreg, $x0, %3, 5
+    %11:vr = PseudoVMV_S_X $noreg, $x0, %3, 5
+    %12:vr = PseudoVMV_S_X $noreg, $x0, %3, 5
+    %13:vr = PseudoVMV_S_X $noreg, $x0, %3, 5
+    %14:vr = PseudoVMV_S_X $noreg, $x0, %3, 5
+    %4:vrm4 = PseudoVLE32_V_M4 $noreg, %0, %3, 5, 2 :: (load (s4096))
+    %5:vr = PseudoVMV_S_X $noreg, $x0, %3, 5
+    %6:vr = nofpexcept PseudoVFREDOSUM_VS_M4_E32 $noreg, %4, killed %5, 7, %3, 5, 1, implicit $frm
+    %15:vr = PseudoVMV_S_X $noreg, $x0, %3, 5
+    %16:vr = PseudoVMV_S_X $noreg, $x0, %3, 5
+    %17:vr = nofpexcept PseudoVFREDOSUM_VS_M1_E32 $noreg, %6, killed %15, 7, %3, 5, 1, implicit $frm
+    %18:vr = PseudoVMV_S_X $noreg, $x0, %3, 5
+    %19:vr = PseudoVMV_S_X $noreg, $x0, %3, 5
+    %20:vr = nofpexcept PseudoVFADD_VV_M1_E32 $noreg, %6, %6, 7, %3, 5, 1, implicit $frm
+    PseudoRET
+...
+---
+name:            reduction_result_copy_not_recomputed
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: gpr }
+  - { id: 3, class: gprnox0 }
+  - { id: 4, class: vrm4 }
+  - { id: 5, class: vr }
+  - { id: 6, class: vr }
+  - { id: 7, class: vr }
+  - { id: 8, class: vr }
+  - { id: 9, class: vr }
+  - { id: 10, class: vr }
+  - { id: 11, class: vr }
+  - { id: 12, class: vr }
+  - { id: 13, class: vr }
+  - { id: 14, class: vr }
+  - { id: 15, class: vr }
+  - { id: 16, class: vr }
+  - { id: 17, class: vr }
+  - { id: 18, class: vr }
+  - { id: 19, class: vr }
+  - { id: 20, class: vr }
+liveins:
+  - { reg: '$x10', virtual-reg: '%0' }
+body:             |
+  bb.0:
+    liveins: $x10
+
+    %0:gpr = COPY $x10
+    %3:gprnox0 = ADDI $x0, 128
+    %8:vr = PseudoVMV_S_X $noreg, $x0, %3, 5
+    %9:vr = PseudoVMV_S_X $noreg, $x0, %3, 5
+    %10:vr = PseudoVMV_S_X $noreg, $x0, %3, 5
+    %11:vr = PseudoVMV_S_X $noreg, $x0, %3, 5
+    %12:vr = PseudoVMV_S_X $noreg, $x0, %3, 5
+    %13:vr = PseudoVMV_S_X $noreg, $x0, %3, 5
+    %14:vr = PseudoVMV_S_X $noreg, $x0, %3, 5
+    %4:vrm4 = PseudoVLE32_V_M4 $noreg, %0, %3, 5, 2 :: (load (s4096))
+    %5:vr = PseudoVMV_S_X $noreg, $x0, %3, 5
+    %6:vr = nofpexcept PseudoVFREDOSUM_VS_M4_E32 $noreg, %4, killed %5, 7, %3, 5, 1, implicit $frm
+    %7:vr = PseudoVMV_V_V_M1 $noreg, %6, %3, 5, 0
+    %15:vr = PseudoVMV_S_X $noreg, $x0, %3, 5
+    %16:vr = PseudoVMV_S_X $noreg, $x0, %3, 5
+    %17:vr = nofpexcept PseudoVFREDOSUM_VS_M1_E32 $noreg, %7, killed %15, 7, %3, 5, 1, implicit $frm
+    %18:vr = PseudoVMV_S_X $noreg, $x0, %3, 5
+    %19:vr = PseudoVMV_S_X $noreg, $x0, %3, 5
+    %20:vr = nofpexcept PseudoVFADD_VV_M1_E32 $noreg, %7, %7, 7, %3, 5, 1, implicit $frm
+    PseudoRET
+...

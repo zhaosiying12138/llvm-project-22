@@ -133,6 +133,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeRISCVTarget() {
   initializeRISCVExpandPseudoPass(*PR);
   initializeRISCVVectorPeepholePass(*PR);
   initializeRISCVVLOptimizerPass(*PR);
+  initializeRISCVVRegPressureRematPass(*PR);
   initializeRISCVVMV0EliminationPass(*PR);
   initializeRISCVInsertVSETVLIPass(*PR);
   initializeRISCVInsertReadWriteCSRPass(*PR);
@@ -391,6 +392,11 @@ public:
       : TargetPassConfig(TM, PM) {
     if (TM.getOptLevel() != CodeGenOptLevel::None)
       substitutePass(&PostRASchedulerID, &PostMachineSchedulerID);
+    if (TM.getOptLevel() != CodeGenOptLevel::None &&
+        (isRISCVRVVPressureDAGSchedEnabled() ||
+         isRISCVRVVPressureRematRequested()))
+      insertPass(&RenameIndependentSubregsID,
+                 createRISCVVRegPressureRematPass());
     setEnableSinkAndFold(EnableSinkFold);
     EnableLoopTermFold = true;
   }

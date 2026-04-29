@@ -68,6 +68,7 @@ add_llvm_target(RISCVCodeGen
   RISCVTargetMachine.cpp
   RISCVTargetObjectFile.cpp
   RISCVTargetTransformInfo.cpp
+  RISCVVRegPressureRemat.cpp
   RISCVVectorMaskDAGMutation.cpp
   RISCVVectorPeephole.cpp
   RISCVVLOptimizer.cpp
