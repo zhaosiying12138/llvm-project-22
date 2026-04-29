@@ -59,6 +59,7 @@ autoconf/autom4te.cache
 .gemini/
 AGENTS.md
 .codex/
+.humanize*
 # Cursor specific files
 .cursor
 .cursorignore
