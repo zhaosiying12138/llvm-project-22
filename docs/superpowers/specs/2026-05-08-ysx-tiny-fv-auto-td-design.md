@@ -363,7 +363,7 @@ The first required end-to-end proof slice is:
 - `vle32.v`
 - `vse32.v`
 - `vadd.vv`
-- `vfredsum.vs`
+- canonical `vfredusum.vs`, plus public alias `vfredsum.vs`
 
 These are the smoke tests for builtin-to-object correctness after the route-2
 schema is implemented.
@@ -498,7 +498,7 @@ The selected route is schema-first:
 1. Build schema, taxonomy, parser, emitter, coverage, and build integration.
 2. Statistically classify representative tiny-F/tiny-V instruction YAML.
 3. Bulk import the selected tiny-F/tiny-V set.
-4. Prove `vle32.v`, `vse32.v`, `vadd.vv`, and `vfredsum.vs` end to end.
+4. Prove `vle32.v`, `vse32.v`, `vadd.vv`, and canonical
+   `vfredusum.vs` plus alias `vfredsum.vs` end to end.
 5. Add and document `yushuxin.vfexp`.
 6. Extend to automatic vectorization tests.
-
