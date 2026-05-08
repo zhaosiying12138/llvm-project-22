@@ -1,3 +1,6 @@
+import yaml
+
+
 FORBIDDEN = (
     "raw_td",
     "def : Pat",
@@ -8,6 +11,7 @@ FORBIDDEN = (
     "let Inst{",
     "bits<",
 )
+FORBIDDEN_FIELDS = {"raw_cpp", "encoding", "fixed_bits"}
 ALLOWED_STATUS = {
     "auto_full",
     "auto_with_structured_override",
@@ -21,6 +25,11 @@ def validate_instruction_set(instructions):
         for token in FORBIDDEN:
             if token in text:
                 raise ValueError(f"{instruction.path}: forbidden token {token}")
+        data = yaml.safe_load(text)
+        if not isinstance(data, dict):
+            raise ValueError(f"{instruction.path}: expected YAML mapping")
+        for field in sorted(FORBIDDEN_FIELDS.intersection(data)):
+            raise ValueError(f"{instruction.path}: forbidden field {field}")
         if instruction.status not in ALLOWED_STATUS:
             raise ValueError(f"{instruction.path}: invalid status {instruction.status}")
         if (

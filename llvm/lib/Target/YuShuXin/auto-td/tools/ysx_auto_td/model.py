@@ -27,3 +27,4 @@ class InstructionRecord:
     spec_ref: str
     status: str = "auto_full"
     retained_owner_files: list[str] = field(default_factory=list)
+    coverage_path: str | None = None

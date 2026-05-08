@@ -20,6 +20,12 @@ def write_coverage(path, instructions):
         )
         lines.append(
             f"| {instruction.mnemonic} | {instruction.status} | {source} | "
-            f"{instruction.path.as_posix()} |"
+            f"{_coverage_path(instruction)} |"
         )
     path.write_text("\n".join(lines) + "\n")
+
+
+def _coverage_path(instruction) -> str:
+    if instruction.coverage_path:
+        return instruction.coverage_path
+    return instruction.path.as_posix()

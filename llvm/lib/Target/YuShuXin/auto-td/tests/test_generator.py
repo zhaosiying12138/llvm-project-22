@@ -1,7 +1,12 @@
+import os
 from pathlib import Path
 import subprocess
+import sys
 import tempfile
 import unittest
+
+TOOLS_DIR = Path(__file__).resolve().parents[1] / "tools"
+sys.path.insert(0, str(TOOLS_DIR))
 
 from ysx_auto_td.loader import load_instruction_set
 from ysx_auto_td.model import InstructionRecord, OpcodeRecord, OpcodeSource
@@ -12,7 +17,7 @@ from ysx_auto_td.validate import validate_instruction_set
 
 YSX_ROOT = Path(__file__).resolve().parents[2]
 REPO_ROOT = Path(__file__).resolve().parents[6]
-TOOL = YSX_ROOT / "auto-td" / "tools" / "ysx_auto_td_gen.py"
+TOOL = TOOLS_DIR / "ysx_auto_td_gen.py"
 STUBS = (
     "YSXGenAutoTinyFInstrInfo.inc",
     "YSXGenAutoTinyVInstrInfo.inc",
@@ -98,6 +103,62 @@ class GeneratorTest(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "forbidden token raw_td"):
                 validate_instruction_set([instruction])
 
+    def test_generator_cli_rejects_forbidden_raw_td_token(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            ysx_root = tmp / "YuShuXin"
+            self._write_opcode(tmp / "riscv-opcodes", "rv_v", "vadd.vv 31..26=0x00 vd")
+            self._write_instruction(
+                ysx_root,
+                "bad.yaml",
+                "mnemonic: vadd.vv\n"
+                "opcode_source: {repo: riscv-opcodes, extension: rv_v, key: vadd_vv}\n"
+                "spec_ref: test.bad\n"
+                "raw_td: def BAD\n",
+            )
+
+            result = subprocess.run(
+                [
+                    "python3",
+                    str(TOOL),
+                    "--ysx-root",
+                    str(ysx_root),
+                    "--riscv-opcodes",
+                    str(tmp / "riscv-opcodes"),
+                    "--ysx-opcodes",
+                    str(tmp / "ysx-opcodes"),
+                    "--out-dir",
+                    str(tmp / "out"),
+                    "--coverage",
+                    str(tmp / "coverage.md"),
+                ],
+                env=self._generator_env(),
+                stderr=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+                text=True,
+            )
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("forbidden token raw_td", result.stderr)
+
+    def test_validator_rejects_forbidden_yaml_fields(self):
+        for field in ("raw_cpp", "encoding", "fixed_bits"):
+            with self.subTest(field=field):
+                with tempfile.TemporaryDirectory() as tmpdir:
+                    path = Path(tmpdir) / "bad.yaml"
+                    path.write_text(
+                        "mnemonic: vadd.vv\n"
+                        "opcode_source: {repo: riscv-opcodes, extension: rv_v, key: vadd_vv}\n"
+                        "spec_ref: test.bad\n"
+                        f"{field}: copied fact\n"
+                    )
+                    instruction = self._instruction(path)
+
+                    with self.assertRaisesRegex(
+                        ValueError, f"forbidden field {field}"
+                    ):
+                        validate_instruction_set([instruction])
+
     def test_validator_rejects_invalid_status(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             path = Path(tmpdir) / "bad.yaml"
@@ -172,7 +233,8 @@ class GeneratorTest(unittest.TestCase):
                     str(out),
                     "--coverage",
                     str(coverage),
-                ]
+                ],
+                env=self._generator_env(),
             )
 
             for stub in STUBS:
@@ -185,6 +247,11 @@ class GeneratorTest(unittest.TestCase):
         for mnemonic in ("vle32.v", "vse32.v", "vadd.vv", "vfredusum.vs", "yushuxin.vfexp"):
             self.assertIn(mnemonic, text)
         self.assertIn("ysx-opcodes/rv_xtinyv/yushuxin_vfexp", text)
+        self.assertIn(
+            "llvm/lib/Target/YuShuXin/auto-td/instructions/tiny-v/yushuxin_vfexp.yaml",
+            text,
+        )
+        self.assertNotIn(str(YSX_ROOT), text)
 
     def _instruction(
         self,
@@ -220,6 +287,14 @@ class GeneratorTest(unittest.TestCase):
         path = root / "extensions" / extension
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(text + "\n")
+
+    def _generator_env(self):
+        env = os.environ.copy()
+        existing = env.get("PYTHONPATH")
+        env["PYTHONPATH"] = (
+            str(TOOLS_DIR) if not existing else str(TOOLS_DIR) + os.pathsep + existing
+        )
+        return env
 
 
 if __name__ == "__main__":

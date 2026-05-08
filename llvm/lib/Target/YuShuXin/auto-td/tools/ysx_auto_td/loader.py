@@ -34,6 +34,7 @@ def load_instruction_set(
                 spec_ref=_required_string(path, data, "spec_ref"),
                 status=data.get("status", "auto_full"),
                 retained_owner_files=list(data.get("retained_owner_files", [])),
+                coverage_path=_coverage_path(ysx_root, path),
             )
         )
     return records
@@ -62,3 +63,11 @@ def _required_string(path: Path, data: dict, key: str) -> str:
     if not isinstance(value, str) or not value:
         raise ValueError(f"{path}: missing required string field {key}")
     return value
+
+
+def _coverage_path(ysx_root: Path, path: Path) -> str:
+    try:
+        relative = path.relative_to(ysx_root)
+    except ValueError:
+        relative = path
+    return f"llvm/lib/Target/YuShuXin/{relative.as_posix()}"
