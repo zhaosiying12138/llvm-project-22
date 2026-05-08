@@ -39,6 +39,8 @@ class EffectSpec:
     may_load: bool = False
     may_store: bool = False
     has_side_effects: bool = False
+    implicit_uses: tuple[str, ...] = ()
+    implicit_defs: tuple[str, ...] = ()
 
 
 @dataclass

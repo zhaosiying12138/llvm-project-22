@@ -228,6 +228,17 @@ namespace clang {
   };
   } // namespace RISCV
 
+  /// YuShuXin builtins
+  namespace YSX {
+  enum {
+    LastTIBuiltin = clang::Builtin::FirstTSBuiltin - 1,
+#define GET_BUILTIN_ENUMERATORS
+#include "clang/Basic/BuiltinsYSX.inc"
+#undef GET_BUILTIN_ENUMERATORS
+    LastTSBuiltin
+  };
+  } // namespace YSX
+
   /// LoongArch builtins
   namespace LoongArch {
   enum {

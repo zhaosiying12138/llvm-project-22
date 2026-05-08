@@ -9,7 +9,11 @@ categories:
         - {role: lhs, field: vs2, reg_class: VR}
         - {role: rhs, field: vs1, reg_class: VR}
         - {role: mask_policy, field: vm, operand: VMaskOp}
-    effects: {may_load: false, may_store: false, has_side_effects: false}
+    effects:
+      may_load: false
+      may_store: false
+      has_side_effects: false
+      implicit_uses: [VL, VTYPE]
     sched: {semantic_class: vector_int_alu}
   custom_float_unary:
     domain: tinyv
@@ -20,5 +24,9 @@ categories:
       ins:
         - {role: value, field: vs2, reg_class: VR}
         - {role: mask_policy, field: vm, operand: VMaskOp}
-    effects: {may_load: false, may_store: false, has_side_effects: false}
+    effects:
+      may_load: false
+      may_store: false
+      has_side_effects: false
+      implicit_uses: [VL, VTYPE]
     sched: {semantic_class: vector_float_alu}

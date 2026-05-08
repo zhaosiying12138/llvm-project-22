@@ -11,5 +11,9 @@ categories:
         - {role: mask_policy, field: vm, operand: VMaskOp}
     aliases:
       - {mnemonic: vfredsum.vs, canonical: vfredusum.vs}
-    effects: {may_load: false, may_store: false, has_side_effects: false}
+    effects:
+      may_load: false
+      may_store: false
+      has_side_effects: false
+      implicit_uses: [VL, VTYPE]
     sched: {semantic_class: vector_reduce}

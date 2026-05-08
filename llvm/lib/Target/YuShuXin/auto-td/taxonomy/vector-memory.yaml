@@ -8,7 +8,11 @@ categories:
       ins:
         - {role: base, field: rs1, reg_class: GPR}
         - {role: mask_policy, field: vm, operand: VMaskOp}
-    effects: {may_load: true, may_store: false, has_side_effects: false}
+    effects:
+      may_load: true
+      may_store: false
+      has_side_effects: false
+      implicit_uses: [VL, VTYPE]
     sched: {semantic_class: vector_memory}
   unit_store_e32:
     domain: tinyv
@@ -20,5 +24,9 @@ categories:
         - {role: value, field: vs3, reg_class: VR}
         - {role: base, field: rs1, reg_class: GPR}
         - {role: mask_policy, field: vm, operand: VMaskOp}
-    effects: {may_load: false, may_store: true, has_side_effects: false}
+    effects:
+      may_load: false
+      may_store: true
+      has_side_effects: false
+      implicit_uses: [VL, VTYPE]
     sched: {semantic_class: vector_memory}

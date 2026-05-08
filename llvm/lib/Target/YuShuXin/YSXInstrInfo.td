@@ -259,6 +259,8 @@ def uimm2 : YSXUImmLeafOp<2>;
 def uimm3 : YSXUImmLeafOp<3>;
 def uimm4 : YSXUImmLeafOp<4>;
 def uimm5 : YSXUImmLeafOp<5>;
+def uimm10 : YSXUImmLeafOp<10>;
+def uimm11 : YSXUImmLeafOp<11>;
 def uimm6 : YSXUImmLeafOp<6>;
 def uimm7_opcode : YSXUImmOp<7> {
   let ParserMatchClass = InsnDirectiveOpcode;

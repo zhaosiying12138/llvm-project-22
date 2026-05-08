@@ -1227,7 +1227,7 @@ ParseStatus YSXAsmParser::parseInsnDirectiveOpcode(OperandVector &Operands) {
   }
 
   return generateImmOutOfRangeError(S, 0, 127,
-                                    "opcode must be a retained rv64ima major "
+                                    "opcode must be a retained YSX major "
                                     "opcode name or value in the range");
 }
 
@@ -2166,7 +2166,7 @@ bool YSXAsmParser::parseDirectiveInsn(SMLoc L) {
     if (!isRetainedRawInsnEncoding(Value))
       return Error(
           ErrorLoc,
-          "raw instruction encoding must use a retained rv64ima major opcode");
+          "raw instruction encoding must use a retained YSX major opcode");
 
     if (getParser().parseEOL("invalid operand for instruction")) {
       getParser().eatToEndOfStatement();

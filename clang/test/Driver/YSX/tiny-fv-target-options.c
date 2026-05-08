@@ -6,7 +6,7 @@
 // RUN: not %clang --target=ysx64 -march=rv64imav -c %s 2>&1 | FileCheck %s --check-prefix=ERR
 // RUN: not %clang --target=ysx64 -march=rv64imac -c %s 2>&1 | FileCheck %s --check-prefix=ERR
 // RUN: not %clang --target=ysx64 -march=rv64gc -c %s 2>&1 | FileCheck %s --check-prefix=ERR
-// RUN: %clang --target=ysx64 -march=rv64ima_xtinyf -dM -E -x c /dev/null | FileCheck %s --check-prefix=DEFS-TINYF --implicit-check-not=__riscv_f --implicit-check-not=__riscv_d --implicit-check-not=__riscv_vector --implicit-check-not=__riscv_v_intrinsic
+// RUN: %clang --target=ysx64 -march=rv64ima_xtinyf -dM -E -x c /dev/null | FileCheck %s --check-prefix=DEFS-TINYF --implicit-check-not=__riscv_vector --implicit-check-not=__riscv_v_intrinsic
 // RUN: %clang --target=ysx64 -march=rv64ima_xtinyv_zvl128b -dM -E -x c /dev/null | FileCheck %s --check-prefix=DEFS-TINYV --implicit-check-not=__riscv_vector --implicit-check-not=__riscv_v_intrinsic
 // RUN: printf 'void f(void) __attribute__((target("arch=rv64ima_xtinyf"))); void f(void){}\n' | %clang --target=ysx64-unknown-elf -S -emit-llvm -x c - -o - | FileCheck %s --check-prefix=ATTR-TINYF --implicit-check-not="+f" --implicit-check-not="+d" --implicit-check-not="+v" --implicit-check-not="+zve"
 // RUN: printf 'void f(void) __attribute__((target("arch=rv64ima_xtinyv_zvl128b"))); void f(void){}\n' | %clang --target=ysx64-unknown-elf -S -emit-llvm -x c - -o - | FileCheck %s --check-prefix=ATTR-TINYV --implicit-check-not="+f" --implicit-check-not="+d" --implicit-check-not="+v" --implicit-check-not="+zve"
@@ -29,6 +29,8 @@
 
 // ERR: YuShuXin only supports -march=rv64ima
 
+// DEFS-TINYF-NOT: {{^#define __riscv_f[[:space:]]}}
+// DEFS-TINYF-NOT: {{^#define __riscv_d[[:space:]]}}
 // DEFS-TINYF-DAG: #define __riscv_xtinyf 1000000
 
 // DEFS-TINYV-DAG: #define __riscv_xtinyv 1000000

@@ -29,7 +29,7 @@ class ClangTinyVBuiltinSupportTest(unittest.TestCase):
         self.assertIn("ysx_vector.h", riscv_list)
 
     def test_builtin_is_declared_as_ysx_prefixed_target_builtin(self):
-        builtins = REPO_ROOT / "clang" / "include" / "clang" / "Basic" / "BuiltinsRISCV.td"
+        builtins = REPO_ROOT / "clang" / "include" / "clang" / "Basic" / "BuiltinsYSX.td"
         text = builtins.read_text()
 
         self.assertIn("class YSXBuiltin", text)
@@ -37,11 +37,20 @@ class ClangTinyVBuiltinSupportTest(unittest.TestCase):
         self.assertIn("def vadd_vv_i32m1", text)
         self.assertIn("def vfexp_v_f32m1", text)
         self.assertIn(
-            '"_ExtVector<4, int>(_ExtVector<4, int>, _ExtVector<4, int>, unsigned long)"',
+            '"_ExtVector<4, int>(_ExtVector<4, int>, _ExtVector<4, int>, unsigned long int)"',
             text,
         )
-        self.assertIn('"_ExtVector<4, float>(_ExtVector<4, float>, unsigned long)"', text)
+        self.assertIn(
+            '"_ExtVector<4, float>(_ExtVector<4, float>, unsigned long int)"',
+            text,
+        )
         self.assertIn('"xtinyv,zvl128b"', text)
+
+        riscv_builtins = (
+            REPO_ROOT / "clang" / "include" / "clang" / "Basic" / "BuiltinsRISCV.td"
+        ).read_text()
+        self.assertNotIn("__builtin_ysx_", riscv_builtins)
+        self.assertNotIn("YSXBuiltin", riscv_builtins)
 
     def test_ysx_target_defines_private_vector_header_guard_macro(self):
         target = REPO_ROOT / "clang" / "lib" / "Basic" / "Targets" / "RISCV.cpp"
@@ -87,12 +96,40 @@ class ClangTinyVBuiltinSupportTest(unittest.TestCase):
         text = codegen.read_text()
 
         self.assertIn('#include "llvm/IR/IntrinsicsYSX.h"', text)
-        self.assertIn("case RISCV::BI__builtin_ysx_vadd_vv_i32m1:", text)
-        self.assertIn("case RISCV::BI__builtin_ysx_vfexp_v_f32m1:", text)
+        self.assertIn("getTarget().getTriple().isYSX64()", text)
+        self.assertIn("case YSX::BI__builtin_ysx_vadd_vv_i32m1:", text)
+        self.assertIn("case YSX::BI__builtin_ysx_vfexp_v_f32m1:", text)
         self.assertIn("Intrinsic::ysx_vadd", text)
         self.assertIn("Intrinsic::ysx_vfexp", text)
         self.assertIn("CGM.getIntrinsic(Intrinsic::ysx_vadd", text)
         self.assertIn("CGM.getIntrinsic(Intrinsic::ysx_vfexp", text)
+
+    def test_ysx_has_separate_builtin_shard_without_rvv_shards(self):
+        target_builtins = REPO_ROOT / "clang" / "include" / "clang" / "Basic" / "TargetBuiltins.h"
+        target_builtins_text = target_builtins.read_text()
+        self.assertIn("namespace YSX", target_builtins_text)
+        self.assertIn('#include "clang/Basic/BuiltinsYSX.inc"', target_builtins_text)
+
+        targets = REPO_ROOT / "clang" / "lib" / "Basic" / "Targets" / "RISCV.cpp"
+        targets_text = targets.read_text()
+        ysx_get_builtins = targets_text[
+            targets_text.index("YSX64TargetInfo::getTargetBuiltins()")
+            : targets_text.index("void YSX64TargetInfo::getTargetDefines")
+        ]
+        self.assertIn("YSXBuiltins::BuiltinStrings", ysx_get_builtins)
+        self.assertIn("YSXBuiltins::BuiltinInfos", ysx_get_builtins)
+        self.assertNotIn("RVV::BuiltinInfos", ysx_get_builtins)
+
+    def test_ysx_triple_uses_riscv_builtin_codegen_dispatch(self):
+        dispatch = REPO_ROOT / "clang" / "lib" / "CodeGen" / "CGBuiltin.cpp"
+        text = dispatch.read_text()
+
+        riscv_dispatch = text[
+            text.index("case llvm::Triple::riscv32:")
+            : text.index("case llvm::Triple::spirv32:")
+        ]
+        self.assertIn("case llvm::Triple::ysx64:", riscv_dispatch)
+        self.assertIn("EmitRISCVBuiltinExpr", riscv_dispatch)
 
     def test_lit_test_covers_header_builtin_and_ir_intrinsic(self):
         lit = REPO_ROOT / "clang" / "test" / "CodeGen" / "YSX" / "tinyv-builtins.c"

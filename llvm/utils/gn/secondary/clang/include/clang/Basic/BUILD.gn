@@ -160,6 +160,10 @@ clang_tablegen("BuiltinsRISCV") {
   args = [ "-gen-clang-builtins" ]
 }
 
+clang_tablegen("BuiltinsYSX") {
+  args = [ "-gen-clang-builtins" ]
+}
+
 clang_tablegen("BuiltinsSPIRVCommon") {
   args = [ "-gen-clang-builtins" ]
 }

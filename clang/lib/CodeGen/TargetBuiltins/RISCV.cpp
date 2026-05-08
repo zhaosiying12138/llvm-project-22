@@ -1117,6 +1117,23 @@ Value *CodeGenFunction::EmitRISCVBuiltinExpr(unsigned BuiltinID,
     Ops.push_back(EmitScalarOrConstFoldImmArg(ICEArguments, i, E));
   }
 
+  if (getTarget().getTriple().isYSX64()) {
+    switch (BuiltinID) {
+    default:
+      llvm_unreachable("unexpected YSX builtin ID");
+    case YSX::BI__builtin_ysx_vadd_vv_i32m1: {
+      llvm::Function *Fn = CGM.getIntrinsic(Intrinsic::ysx_vadd,
+                                            {ResultType, Ops[2]->getType()});
+      return Builder.CreateCall(Fn, Ops, "");
+    }
+    case YSX::BI__builtin_ysx_vfexp_v_f32m1: {
+      llvm::Function *Fn = CGM.getIntrinsic(Intrinsic::ysx_vfexp,
+                                            {ResultType, Ops[1]->getType()});
+      return Builder.CreateCall(Fn, Ops, "");
+    }
+    }
+  }
+
   Intrinsic::ID ID = Intrinsic::not_intrinsic;
   int PolicyAttrs = 0;
   bool IsMasked = false;
@@ -1297,18 +1314,6 @@ Value *CodeGenFunction::EmitRISCVBuiltinExpr(unsigned BuiltinID,
   case RISCV::BI__builtin_riscv_pause: {
     llvm::Function *Fn = CGM.getIntrinsic(llvm::Intrinsic::riscv_pause);
     return Builder.CreateCall(Fn, {});
-  }
-
-  // YuShuXin tiny-vector proof builtins.
-  case RISCV::BI__builtin_ysx_vadd_vv_i32m1: {
-    llvm::Function *Fn =
-        CGM.getIntrinsic(Intrinsic::ysx_vadd, {ResultType, Ops[2]->getType()});
-    return Builder.CreateCall(Fn, Ops, "");
-  }
-  case RISCV::BI__builtin_ysx_vfexp_v_f32m1: {
-    llvm::Function *Fn = CGM.getIntrinsic(Intrinsic::ysx_vfexp,
-                                          {ResultType, Ops[1]->getType()});
-    return Builder.CreateCall(Fn, Ops, "");
   }
 
   // XCValu

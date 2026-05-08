@@ -42,6 +42,9 @@ using namespace llvm;
 
 #define DEBUG_TYPE "ysx-instr-info"
 
+static constexpr int64_t YSXTinyVFixedVL = 4;
+static constexpr int64_t YSXTinyVE32M1TAMA = 0xd0;
+
 static cl::opt<MachineTraceStrategy> ForceMachineCombinerStrategy(
     "ysx-force-machine-combiner-strategy", cl::Hidden,
     cl::desc("Force machine combiner to use a specific strategy for machine "
@@ -148,6 +151,12 @@ void YSXInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
   const TargetRegisterInfo *TRI = STI.getRegisterInfo();
   unsigned KillFlag = getKillRegState(KillSrc);
 
+  if (YSX::VRRegClass.contains(DstReg, SrcReg)) {
+    BuildMI(MBB, MBBI, DL, get(YSX::YSX_AUTO_VMV1R_V), DstReg)
+        .addReg(SrcReg, KillFlag | getRenamableRegState(RenamableSrc));
+    return;
+  }
+
   if (YSX::GPRRegClass.contains(DstReg, SrcReg)) {
     BuildMI(MBB, MBBI, DL, get(YSX::ADDI), DstReg)
         .addReg(SrcReg, KillFlag | getRenamableRegState(RenamableSrc))
@@ -179,6 +188,26 @@ void YSXInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
   llvm_unreachable("Impossible reg-to-reg copy");
 }
 
+static Register buildTinyVStackBase(MachineBasicBlock &MBB,
+                                    MachineBasicBlock::iterator I,
+                                    const DebugLoc &DL,
+                                    const YSXInstrInfo &TII, int FI) {
+  MachineRegisterInfo &MRI = MBB.getParent()->getRegInfo();
+  Register Base = MRI.createVirtualRegister(&YSX::GPRRegClass);
+  BuildMI(MBB, I, DL, TII.get(YSX::ADDI), Base).addFrameIndex(FI).addImm(0);
+  return Base;
+}
+
+static void buildTinyVSetIVLI(MachineBasicBlock &MBB,
+                              MachineBasicBlock::iterator I,
+                              const DebugLoc &DL, const YSXInstrInfo &TII) {
+  MachineRegisterInfo &MRI = MBB.getParent()->getRegInfo();
+  Register DeadVL = MRI.createVirtualRegister(&YSX::GPRRegClass);
+  BuildMI(MBB, I, DL, TII.get(YSX::YSX_AUTO_VSETIVLI), DeadVL)
+      .addImm(YSXTinyVFixedVL)
+      .addImm(YSXTinyVE32M1TAMA);
+}
+
 void YSXInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
                                        MachineBasicBlock::iterator I,
                                        Register SrcReg, bool IsKill, int FI,
@@ -188,6 +217,22 @@ void YSXInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
   MachineFunction *MF = MBB.getParent();
   MachineFrameInfo &MFI = MF->getFrameInfo();
   Align Alignment = MFI.getObjectAlign(FI);
+
+  if (YSX::VRRegClass.hasSubClassEq(RC)) {
+    MachineMemOperand *MMO = MF->getMachineMemOperand(
+        MachinePointerInfo::getFixedStack(*MF, FI), MachineMemOperand::MOStore,
+        MFI.getObjectSize(FI), Alignment);
+    DebugLoc DL = MBB.findDebugLoc(I);
+    buildTinyVSetIVLI(MBB, I, DL, *this);
+    Register Base = buildTinyVStackBase(MBB, I, DL, *this, FI);
+    BuildMI(MBB, I, DL, get(YSX::YSX_AUTO_VSE32_V))
+        .addReg(SrcReg, getKillRegState(IsKill))
+        .addReg(Base, RegState::Kill)
+        .addReg(YSX::NoRegister)
+        .addMemOperand(MMO)
+        .setMIFlag(Flags);
+    return;
+  }
 
   if (!YSX::GPRRegClass.hasSubClassEq(RC))
     llvm_unreachable("Can't store this register to stack slot");
@@ -216,6 +261,20 @@ void YSXInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
   Align Alignment = MFI.getObjectAlign(FI);
   DebugLoc DL =
       Flags & MachineInstr::FrameDestroy ? MBB.findDebugLoc(I) : DebugLoc();
+
+  if (YSX::VRRegClass.hasSubClassEq(RC)) {
+    MachineMemOperand *MMO = MF->getMachineMemOperand(
+        MachinePointerInfo::getFixedStack(*MF, FI), MachineMemOperand::MOLoad,
+        MFI.getObjectSize(FI), Alignment);
+    buildTinyVSetIVLI(MBB, I, DL, *this);
+    Register Base = buildTinyVStackBase(MBB, I, DL, *this, FI);
+    BuildMI(MBB, I, DL, get(YSX::YSX_AUTO_VLE32_V), DstReg)
+        .addReg(Base, RegState::Kill)
+        .addReg(YSX::NoRegister)
+        .addMemOperand(MMO)
+        .setMIFlag(Flags);
+    return;
+  }
 
   if (!YSX::GPRRegClass.hasSubClassEq(RC))
     llvm_unreachable("Can't load this register from stack slot");

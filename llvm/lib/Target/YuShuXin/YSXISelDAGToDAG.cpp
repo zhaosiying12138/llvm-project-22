@@ -19,6 +19,7 @@
 #include "YSXSelectionDAGInfo.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/SDPatternMatch.h"
+#include "llvm/IR/IntrinsicsYSX.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/MathExtras.h"
@@ -37,6 +38,54 @@ static cl::opt<bool> UsePseudoMovImm(
 
 #define GET_DAGISEL_BODY YSXDAGToDAGISel
 #include "YSXGenDAGISel.inc"
+
+static bool isYSXTinyVFixedVT(MVT VT) {
+  return VT == MVT::v4i32 || VT == MVT::v4f32;
+}
+
+static constexpr int64_t YSXTinyVFixedVL = 4;
+static constexpr int64_t YSXTinyVE32M1TAMA = 0xd0;
+
+static bool isZeroTargetOffset(SDValue Offset) {
+  if (auto *C = dyn_cast<ConstantSDNode>(Offset))
+    return C->isZero();
+  return false;
+}
+
+static SDValue materializeZeroOffsetVectorBase(SelectionDAG *CurDAG,
+                                               const YSXSubtarget *Subtarget,
+                                               const SDLoc &DL, SDValue Base,
+                                               SDValue Offset) {
+  if (!isZeroTargetOffset(Offset))
+    return SDValue();
+  if (Base.getOpcode() != ISD::TargetFrameIndex)
+    return Base;
+  return SDValue(CurDAG->getMachineNode(YSX::ADDI, DL, Subtarget->getXLenVT(),
+                                        Base, Offset),
+                 0);
+}
+
+static SDValue emitTinyVSetIVLI(SelectionDAG *CurDAG,
+                                const YSXSubtarget *Subtarget,
+                                const SDLoc &DL) {
+  MVT XLenVT = Subtarget->getXLenVT();
+  SDValue AVL = CurDAG->getTargetConstant(YSXTinyVFixedVL, DL, XLenVT);
+  SDValue VType = CurDAG->getTargetConstant(YSXTinyVE32M1TAMA, DL, XLenVT);
+  return SDValue(CurDAG->getMachineNode(YSX::YSX_AUTO_VSETIVLI, DL, XLenVT,
+                                        MVT::Glue, AVL, VType),
+                 1);
+}
+
+static SDValue emitTinyVSetVLI(SelectionDAG *CurDAG,
+                               const YSXSubtarget *Subtarget, const SDLoc &DL,
+                               SDValue AVL) {
+  SDValue VType =
+      CurDAG->getTargetConstant(YSXTinyVE32M1TAMA, DL, Subtarget->getXLenVT());
+  return SDValue(CurDAG->getMachineNode(YSX::YSX_AUTO_VSETVLI, DL,
+                                        Subtarget->getXLenVT(), MVT::Glue, AVL,
+                                        VType),
+                 1);
+}
 
 void YSXDAGToDAGISel::PreprocessISelDAG() {}
 
@@ -244,6 +293,32 @@ void YSXDAGToDAGISel::Select(SDNode *Node) {
   MVT VT = Node->getSimpleValueType(0);
 
   switch (Opcode) {
+  case ISD::STORE: {
+    if (Subtarget->hasStdExtXTinyV()) {
+      auto *Store = cast<StoreSDNode>(Node);
+      MVT StoreVT = Store->getValue().getSimpleValueType();
+      if (isYSXTinyVFixedVT(StoreVT) && !Store->isTruncatingStore()) {
+        SDValue Base, Offset;
+        if (!SelectAddrRegImm(Store->getBasePtr(), Base, Offset))
+          break;
+        Base = materializeZeroOffsetVectorBase(CurDAG, Subtarget, DL, Base,
+                                               Offset);
+        if (!Base)
+          break;
+
+        SDValue Glue = emitTinyVSetIVLI(CurDAG, Subtarget, DL);
+        SDValue Mask = CurDAG->getRegister(YSX::NoRegister, StoreVT);
+        SDValue Ops[] = {Store->getValue(), Base, Mask, Store->getChain(),
+                         Glue};
+        MachineSDNode *New = CurDAG->getMachineNode(
+            YSX::YSX_AUTO_VSE32_V, DL, MVT::Other, Ops);
+        CurDAG->setNodeMemRefs(New, {Store->getMemOperand()});
+        ReplaceNode(Node, New);
+        return;
+      }
+    }
+    break;
+  }
   case ISD::Constant: {
     assert(VT == Subtarget->getXLenVT() && "Unexpected VT");
     auto *ConstNode = cast<ConstantSDNode>(Node);
@@ -783,6 +858,29 @@ void YSXDAGToDAGISel::Select(SDNode *Node) {
     return;
   }
   case ISD::LOAD: {
+    if (Subtarget->hasStdExtXTinyV()) {
+      auto *Load = cast<LoadSDNode>(Node);
+      MVT LoadVT = Load->getSimpleValueType(0);
+      if (isYSXTinyVFixedVT(LoadVT) &&
+          Load->getExtensionType() == ISD::NON_EXTLOAD) {
+        SDValue Base, Offset;
+        if (!SelectAddrRegImm(Load->getBasePtr(), Base, Offset))
+          break;
+        Base = materializeZeroOffsetVectorBase(CurDAG, Subtarget, DL, Base,
+                                               Offset);
+        if (!Base)
+          break;
+
+        SDValue Glue = emitTinyVSetIVLI(CurDAG, Subtarget, DL);
+        SDValue Mask = CurDAG->getRegister(YSX::NoRegister, LoadVT);
+        SDValue Ops[] = {Base, Mask, Load->getChain(), Glue};
+        MachineSDNode *New = CurDAG->getMachineNode(
+            YSX::YSX_AUTO_VLE32_V, DL, LoadVT, MVT::Other, Ops);
+        CurDAG->setNodeMemRefs(New, {Load->getMemOperand()});
+        ReplaceNode(Node, New);
+        return;
+      }
+    }
     if (tryIndexedLoad(Node))
       return;
     break;
@@ -791,6 +889,32 @@ void YSXDAGToDAGISel::Select(SDNode *Node) {
     unsigned IntNo = Node->getConstantOperandVal(0);
     switch (IntNo) {
       // By default we do not custom select any intrinsic.
+    case Intrinsic::ysx_vadd: {
+      if (!Subtarget->hasStdExtXTinyV() || !isYSXTinyVFixedVT(VT))
+        break;
+
+      SDValue Glue =
+          emitTinyVSetVLI(CurDAG, Subtarget, DL, Node->getOperand(3));
+      SDValue Mask = CurDAG->getRegister(YSX::NoRegister, VT);
+      SDValue Ops[] = {Node->getOperand(1), Node->getOperand(2), Mask, Glue};
+      MachineSDNode *New =
+          CurDAG->getMachineNode(YSX::YSX_AUTO_VADD_VV, DL, VT, Ops);
+      ReplaceNode(Node, New);
+      return;
+    }
+    case Intrinsic::ysx_vfexp: {
+      if (!Subtarget->hasStdExtXTinyV() || VT != MVT::v4f32)
+        break;
+
+      SDValue Glue =
+          emitTinyVSetVLI(CurDAG, Subtarget, DL, Node->getOperand(2));
+      SDValue Mask = CurDAG->getRegister(YSX::NoRegister, VT);
+      SDValue Ops[] = {Node->getOperand(1), Mask, Glue};
+      MachineSDNode *New =
+          CurDAG->getMachineNode(YSX::YSX_AUTO_YUSHUXIN_VFEXP, DL, VT, Ops);
+      ReplaceNode(Node, New);
+      return;
+    }
     default:
       break;
     }

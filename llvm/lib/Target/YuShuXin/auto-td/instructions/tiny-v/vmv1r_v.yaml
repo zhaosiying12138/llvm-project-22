@@ -1,0 +1,5 @@
+mnemonic: vmv1r.v
+opcode_source: {repo: riscv-opcodes, extension: rv_v, key: vmv1r_v}
+spec_ref: tinyv.vector-config.whole_reg_move_m1
+features: {required: [xtinyv]}
+status: auto_full

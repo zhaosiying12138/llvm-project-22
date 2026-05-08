@@ -81,6 +81,10 @@ YSXTargetLowering::YSXTargetLowering(const TargetMachine &TM,
 
   // Set up the register classes.
   addRegisterClass(XLenVT, &YSX::GPRRegClass);
+  if (Subtarget.hasStdExtXTinyV()) {
+    addRegisterClass(MVT::v4i32, &YSX::VRRegClass);
+    addRegisterClass(MVT::v4f32, &YSX::VRRegClass);
+  }
 
   // Compute derived properties from the register classes.
   computeRegisterProperties(STI.getRegisterInfo());

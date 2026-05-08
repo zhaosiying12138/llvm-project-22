@@ -110,6 +110,10 @@ clang_tablegen(BuiltinsRISCV.inc -gen-clang-builtins
   SOURCE BuiltinsRISCV.td
   TARGET ClangBuiltinsRISCV)
 
+clang_tablegen(BuiltinsYSX.inc -gen-clang-builtins
+  SOURCE BuiltinsYSX.td
+  TARGET ClangBuiltinsYSX)
+
 clang_tablegen(BuiltinsSPIRVCommon.inc -gen-clang-builtins
   SOURCE BuiltinsSPIRVCommon.td
   TARGET ClangBuiltinsSPIRVCommon)

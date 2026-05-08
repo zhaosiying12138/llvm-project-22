@@ -1,0 +1,41 @@
+categories:
+  setvl_reg_e32m1:
+    domain: tinyv
+    operation: set_vector_length
+    default_surfaces: [mc_def, decoder, sched, coverage]
+    operands:
+      outs: [{role: dest, field: rd, reg_class: GPR}]
+      ins:
+        - {role: avl, field: rs1, reg_class: GPR}
+        - {role: vtype, field: zimm11, operand: UImm11}
+    effects:
+      may_load: false
+      may_store: false
+      has_side_effects: true
+      implicit_defs: [VL, VTYPE]
+    sched: {semantic_class: vector_config}
+  setvl_imm_e32m1:
+    domain: tinyv
+    operation: set_vector_length_immediate
+    default_surfaces: [mc_def, decoder, sched, coverage]
+    operands:
+      outs: [{role: dest, field: rd, reg_class: GPR}]
+      ins:
+        - {role: avl, field: zimm5, operand: UImm5}
+        - {role: vtype, field: zimm10, operand: UImm10}
+    effects:
+      may_load: false
+      may_store: false
+      has_side_effects: true
+      implicit_defs: [VL, VTYPE]
+    sched: {semantic_class: vector_config}
+  whole_reg_move_m1:
+    domain: tinyv
+    operation: whole_register_move
+    default_surfaces: [mc_def, decoder, sched, coverage]
+    operands:
+      outs: [{role: dest, field: vd, reg_class: VR}]
+      ins:
+        - {role: value, field: vs2, reg_class: VR}
+    effects: {may_load: false, may_store: false, has_side_effects: false}
+    sched: {semantic_class: vector_move}

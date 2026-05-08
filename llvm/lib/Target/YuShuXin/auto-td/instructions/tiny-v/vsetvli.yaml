@@ -1,0 +1,5 @@
+mnemonic: vsetvli
+opcode_source: {repo: riscv-opcodes, extension: rv_v, key: vsetvli}
+spec_ref: tinyv.vector-config.setvl_reg_e32m1
+features: {required: [xtinyv]}
+status: auto_full

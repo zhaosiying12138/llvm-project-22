@@ -45,17 +45,13 @@
 # RUN: printf "hfence.vvma\n" | not llvm-mc -triple=ysx64 - 2>&1 | FileCheck %s --check-prefix=UNSUP-INST
 # RUN: printf ".insn 0x2, 0x0001\n" | not llvm-mc -triple=ysx64 - 2>&1 | FileCheck %s --check-prefix=INSN16
 # RUN: printf ".insn 0x33\n.insn 4, 0x00000033\n" | llvm-mc -triple=ysx64 -filetype=obj -o /dev/null -
-# RUN: printf ".insn 0x53\n" | not llvm-mc -triple=ysx64 - 2>&1 | FileCheck %s --check-prefix=INSN-RAW-OPCODE
-# RUN: printf ".insn 4, 0x53\n" | not llvm-mc -triple=ysx64 - 2>&1 | FileCheck %s --check-prefix=INSN-RAW-OPCODE
+# RUN: printf ".insn 0x5b\n" | not llvm-mc -triple=ysx64 - 2>&1 | FileCheck %s --check-prefix=INSN-RAW-OPCODE
+# RUN: printf ".insn 4, 0x5b\n" | not llvm-mc -triple=ysx64 - 2>&1 | FileCheck %s --check-prefix=INSN-RAW-OPCODE
 # RUN: printf ".insn 6, 0x1f\n" | not llvm-mc -triple=ysx64 - 2>&1 | FileCheck %s --check-prefix=INSN-RAW-LENGTH
-# RUN: printf ".insn r OP_FP, 0, 0, x1, x2, x3\n" | not llvm-mc -triple=ysx64 - 2>&1 | FileCheck %s --check-prefix=INSN-OPCODE
-# RUN: printf ".insn r OP_V, 0, 0, x1, x2, x3\n" | not llvm-mc -triple=ysx64 - 2>&1 | FileCheck %s --check-prefix=INSN-OPCODE
+# RUN: printf ".insn r OP_FP, 0, 0, x1, x2, x3\n.insn r OP_V, 0, 0, x1, x2, x3\n.insn r CUSTOM_0, 0, 0, x1, x2, x3\n.insn r 83, 0, 0, x1, x2, x3\n.insn r 87, 0, 0, x1, x2, x3\n.insn r 11, 0, 0, x1, x2, x3\n" | llvm-mc -triple=ysx64 -filetype=obj -o /dev/null -
 # RUN: printf ".insn r MADD, 0, 0, x1, x2, x3\n" | not llvm-mc -triple=ysx64 - 2>&1 | FileCheck %s --check-prefix=INSN-OPCODE
-# RUN: printf ".insn r CUSTOM_0, 0, 0, x1, x2, x3\n" | not llvm-mc -triple=ysx64 - 2>&1 | FileCheck %s --check-prefix=INSN-OPCODE
-# RUN: printf ".insn r 83, 0, 0, x1, x2, x3\n" | not llvm-mc -triple=ysx64 - 2>&1 | FileCheck %s --check-prefix=INSN-OPCODE
-# RUN: printf ".insn r 87, 0, 0, x1, x2, x3\n" | not llvm-mc -triple=ysx64 - 2>&1 | FileCheck %s --check-prefix=INSN-OPCODE
 # RUN: printf ".insn r 67, 0, 0, x1, x2, x3\n" | not llvm-mc -triple=ysx64 - 2>&1 | FileCheck %s --check-prefix=INSN-OPCODE
-# RUN: printf ".insn r 11, 0, 0, x1, x2, x3\n" | not llvm-mc -triple=ysx64 - 2>&1 | FileCheck %s --check-prefix=INSN-OPCODE
+# RUN: printf ".insn r 91, 0, 0, x1, x2, x3\n" | not llvm-mc -triple=ysx64 - 2>&1 | FileCheck %s --check-prefix=INSN-OPCODE
 # RUN: printf ".insn r4 MADD, 0, 0, x1, x2, x3, x4\n" | not llvm-mc -triple=ysx64 - 2>&1 | FileCheck %s --check-prefix=INSN-FORMAT
 # RUN: printf ".reloc ., R_RISCV_RVC_BRANCH, sym\n" | not llvm-mc -triple=ysx64 -filetype=obj -o /dev/null - 2>&1 | FileCheck %s --check-prefix=RELOC
 # RUN: printf ".reloc ., R_RISCV_RVC_JUMP, sym\n" | not llvm-mc -triple=ysx64 -filetype=obj -o /dev/null - 2>&1 | FileCheck %s --check-prefix=RELOC
@@ -74,8 +70,8 @@
 # UNSUP-INST: error: unrecognized instruction mnemonic
 # INSN16: error: 16-bit instruction encodings are not allowed
 # INSN-RAW-LENGTH: error: YSX only supports 32-bit raw instruction encodings
-# INSN-RAW-OPCODE: error: raw instruction encoding must use a retained rv64ima major opcode
-# INSN-OPCODE: error: opcode must be a retained rv64ima major opcode name or value in the range
+# INSN-RAW-OPCODE: error: raw instruction encoding must use a retained YSX major opcode
+# INSN-OPCODE: error: opcode must be a retained YSX major opcode name or value in the range
 # INSN-FORMAT: error: invalid instruction format
 # RELOC: error: unknown relocation name
 # HELP: Available features for this target:

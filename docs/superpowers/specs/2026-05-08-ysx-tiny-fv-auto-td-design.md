@@ -18,9 +18,9 @@ acts as a mandatory acceptance gate after the schema exists.
 
 ## Current Branch Status
 
-This worktree implements the schema-first foundation and proof slice, but does
-not yet complete the full planned bulk tiny-F/tiny-V import, object-code
-end-to-end proof, or automatic vectorization proof.
+This worktree implements the schema-first foundation and a C builtin to object
+code proof slice. It does not yet complete the full planned bulk tiny-F/tiny-V
+import or automatic vectorization proof.
 
 Completed in this branch:
 
@@ -29,7 +29,8 @@ Completed in this branch:
 - structured YAML schema, taxonomy, validation, coverage reporting, and
   build-tree generated TableGen outputs
 - real generated tiny-v MC records for `vadd.vv`, `vle32.v`, `vse32.v`,
-  `vfredusum.vs`, the `vfredsum.vs` alias, and custom `yushuxin.vfexp`
+  `vfredusum.vs`, the `vfredsum.vs` alias, `vsetvli`, `vsetivli`,
+  `vmv1r.v`, and custom `yushuxin.vfexp`
 - YSX feature plumbing for `xtinyf`, `xtinyv`, and `zvl128b`
 - minimal FPR/VR/register/mask scaffolding and MC glue for generated tiny-v
   asm, encoding, disassembly, and optional `v0.t`
@@ -38,15 +39,25 @@ Completed in this branch:
 - Clang target builtins `__builtin_ysx_vadd_vv_i32m1` and
   `__builtin_ysx_vfexp_v_f32m1`, lowered to `llvm.ysx.vadd` and
   `llvm.ysx.vfexp` IR intrinsics
+- a separate Clang `BuiltinsYSX.td` shard so YSX builtins do not inherit the
+  RISCV/RVV builtin declaration table
+- minimal backend selection for the proof path: fixed 128-bit `v4i32` and
+  `v4f32` values select to generated `vle32.v`, `vse32.v`, `vsetvli`,
+  `vsetivli`, `vadd.vv`, and `yushuxin.vfexp` instruction records
+- basic VR copy/spill and O0 frame-index support for the fixed-width proof
+  path through generated `vmv1r.v`, `vsetivli`, `vle32.v`, and `vse32.v`
+- targeted C-to-object lit proof plus directory-level YSX MC/CodeGen/Driver and
+  Clang CodeGen lit validation
 
 Known remaining work:
 
-- generate or hand off pseudo/pattern lowering far enough for C builtin output
-  to select `vadd.vv` / `yushuxin.vfexp` into object code
 - bulk import the broader tiny-F and tiny-V instruction set
 - enable and validate automatic vectorization smoke tests
-- run real `llvm-lit` build tests after the worktree has enough disk space to
-  build `clang`, `llvm-lit`, `llvm-mc`, `llvm-objdump`, and generated headers
+- broaden backend lowering beyond the fixed-width proof vector types and
+  zero-offset proof loads/stores
+- direct C ABI passing/returning of tiny-v vector values; the proven C path
+  keeps vector values inside explicit builtin functions and stores results to
+  memory
 
 ## Workspace
 
@@ -147,6 +158,13 @@ restricted to:
 - i32
 - f32
 - i1 mask
+
+Implementation note: the first proof C API intentionally uses fixed 128-bit
+Clang extended vectors (`<4 x i32>` and `<4 x float>`) inside store-shaped
+functions so the branch can prove YSX-owned builtins, instruction selection,
+assembly, and object emission without exposing the standard RVV frontend type
+system or committing to a vector C ABI. The scalable-vector design remains the
+direction for the broader tiny-v import.
 
 Initial tiny-V memory operations:
 
@@ -394,11 +412,15 @@ The first required end-to-end proof slice is:
 
 - `vle32.v`
 - `vse32.v`
+- `vsetivli` / `vsetvli` inserted around proof memory and ALU operations
 - `vadd.vv`
 - canonical `vfredusum.vs`, plus public alias `vfredsum.vs`
+- custom `yushuxin.vfexp`
 
-These are the smoke tests for builtin-to-object correctness after the route-2
-schema is implemented.
+The C-to-object smoke tests cover the store-shaped `ysx_vadd_vv_i32m1` and
+`ysx_vfexp_v_f32m1` proof APIs. `vfredusum.vs` is currently covered at the
+generated MC assembly/object layer and remains future work for a C builtin
+proof.
 
 ## Automatic Vectorization
 
@@ -536,7 +558,8 @@ The selected route is schema-first:
 1. Build schema, taxonomy, parser, emitter, coverage, and build integration.
 2. Statistically classify representative tiny-F/tiny-V instruction YAML.
 3. Bulk import the selected tiny-F/tiny-V set.
-4. Prove `vle32.v`, `vse32.v`, `vadd.vv`, and canonical
-   `vfredusum.vs` plus alias `vfredsum.vs` end to end.
-5. Add and document `yushuxin.vfexp`.
+4. Prove `vle32.v`, `vse32.v`, `vsetivli`, `vsetvli`, and `vadd.vv`
+   through explicit C builtins to assembly/object, and prove canonical
+   `vfredusum.vs` plus alias `vfredsum.vs` at the generated MC layer.
+5. Add and document `yushuxin.vfexp` through the same C-to-object proof path.
 6. Extend to automatic vectorization tests.

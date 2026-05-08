@@ -303,6 +303,8 @@ static constexpr int NumRISCVBuiltins =
     RISCV::LastTSBuiltin - RISCVVector::FirstTSBuiltin;
 static constexpr int NumBuiltins =
     RISCV::LastTSBuiltin - Builtin::FirstTSBuiltin;
+static constexpr int NumYSXBuiltins =
+    YSX::LastTSBuiltin - Builtin::FirstTSBuiltin;
 static_assert(NumBuiltins == (NumRVVBuiltins + NumRVVSiFiveBuiltins +
                               NumRVVAndesBuiltins + NumRISCVBuiltins));
 
@@ -356,6 +358,19 @@ static constexpr Builtin::Info BuiltinInfos[] = {
 };
 static_assert(std::size(BuiltinInfos) == NumRISCVBuiltins);
 
+namespace YSXBuiltins {
+#define GET_BUILTIN_STR_TABLE
+#include "clang/Basic/BuiltinsYSX.inc"
+#undef GET_BUILTIN_STR_TABLE
+
+static constexpr Builtin::Info BuiltinInfos[] = {
+#define GET_BUILTIN_INFOS
+#include "clang/Basic/BuiltinsYSX.inc"
+#undef GET_BUILTIN_INFOS
+};
+static_assert(std::size(BuiltinInfos) == NumYSXBuiltins);
+} // namespace YSXBuiltins
+
 llvm::SmallVector<Builtin::InfosShard>
 RISCVTargetInfo::getTargetBuiltins() const {
   return {
@@ -368,7 +383,7 @@ RISCVTargetInfo::getTargetBuiltins() const {
 
 llvm::SmallVector<Builtin::InfosShard>
 YSX64TargetInfo::getTargetBuiltins() const {
-  return {{&BuiltinStrings, BuiltinInfos}};
+  return {{&YSXBuiltins::BuiltinStrings, YSXBuiltins::BuiltinInfos}};
 }
 
 void YSX64TargetInfo::getTargetDefines(const LangOptions &Opts,

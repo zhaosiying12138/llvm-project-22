@@ -92,19 +92,23 @@ def _emit_instruction(instruction) -> list[str]:
     outs, ins, asm_operands = _operand_dags(instruction)
     assignments = _assignments(instruction)
     declarations = _field_declarations(assignments)
+    inst_format = _inst_format(instruction)
 
     lines = [
         f"// opcode-source: {_opcode_source_name(instruction)}",
         f"def {record_name} : RVInst<{outs}, {ins}, "
-        f'"{instruction.mnemonic}", "{asm_operands}", [], InstFormatR> {{',
+        f'"{instruction.mnemonic}", "{asm_operands}", [], {inst_format}> {{',
         "  let Predicates = [HasStdExtXTinyV];",
         "  let hasSideEffects = "
         f"{1 if instruction.effects.has_side_effects else 0};",
         f"  let mayLoad = {1 if instruction.effects.may_load else 0};",
         f"  let mayStore = {1 if instruction.effects.may_store else 0};",
         "  let hasNoSchedulingInfo = 1;",
-        "  let Uses = [VL, VTYPE];",
     ]
+    if instruction.effects.implicit_uses:
+        lines.append(f"  let Uses = [{_implicit_reg_list(instruction.effects.implicit_uses)}];")
+    if instruction.effects.implicit_defs:
+        lines.append(f"  let Defs = [{_implicit_reg_list(instruction.effects.implicit_defs)}];")
     for declaration in declarations:
         lines.append(f"  {declaration}")
     for assignment in assignments:
@@ -112,6 +116,16 @@ def _emit_instruction(instruction) -> list[str]:
         lines.append(f"  let {inst_range} = {assignment.expr};")
     lines.append("}")
     return lines
+
+
+def _inst_format(instruction) -> str:
+    if instruction.mnemonic in {"vsetvli", "vsetivli"}:
+        return "InstFormatI"
+    return "InstFormatR"
+
+
+def _implicit_reg_list(registers: tuple[str, ...]) -> str:
+    return ", ".join(registers)
 
 
 def _operand_dags(instruction) -> tuple[str, str, str]:
@@ -141,6 +155,12 @@ def _td_operand(operand) -> str:
         raise ValueError(f"operand {operand.role} is missing an encoding field")
     if operand.operand == "VMaskOp":
         return f"YSXAutoVMaskOp:${operand.field}"
+    if operand.operand == "UImm5":
+        return f"uimm5:${operand.field}"
+    if operand.operand == "UImm10":
+        return f"uimm10:${operand.field}"
+    if operand.operand == "UImm11":
+        return f"uimm11:${operand.field}"
     if operand.reg_class == "VR":
         return f"VR:${operand.field}"
     if operand.reg_class == "GPR" and operand.role == "base":

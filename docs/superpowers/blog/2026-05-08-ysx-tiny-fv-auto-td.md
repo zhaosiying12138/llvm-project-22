@@ -17,17 +17,25 @@ build-tree TableGen includes for the YSX target.
 - `xtinyf`, `xtinyv`, and `zvl128b` feature plumbing for YSX.
 - Build-tree auto-td generation wired into `llvm/lib/Target/YuShuXin/CMakeLists.txt`.
 - Real generated MC records for `vadd.vv`, `vle32.v`, `vse32.v`,
-  `vfredusum.vs`, `vfredsum.vs`, and `yushuxin.vfexp`.
+  `vsetivli`, `vsetvli`, `vmv1r.v`, `vfredusum.vs`, `vfredsum.vs`, and
+  `yushuxin.vfexp`.
 - Minimal vector register, mask, printer, encoder, and decoder glue for the
   generated tiny-v instructions.
 - `ysx_vector.h` proof APIs for `ysx_vadd_vv_i32m1` and
   `ysx_vfexp_v_f32m1`.
 - YSX-prefixed Clang builtins lowered to `llvm.ysx.vadd` and `llvm.ysx.vfexp`.
+- A separate Clang `BuiltinsYSX.td` shard, so YSX does not inherit the RISCV/RVV
+  builtin namespace.
+- A fixed 128-bit proof backend path from C builtins through assembly and object
+  disassembly for `vsetivli`, `vsetvli`, `vle32.v`, `vse32.v`, `vadd.vv`, and
+  `yushuxin.vfexp`.
+- Basic O0 frame-index and VR copy/spill support for the proof vector type via
+  generated `vsetivli`, `vle32.v`, `vse32.v`, and `vmv1r.v`.
 
 This is a proof slice, not the complete tiny-F/tiny-V import. The current
-worktree could not build full Clang because the local filesystem ran out of
-space during the baseline link, so object-code lit proof is recorded as a
-remaining validation step.
+branch proves the framework and two explicit builtins; broader tiny-F/tiny-V
+coverage, automatic vectorization, and direct C vector ABI passing/returning
+remain future work.
 
 ## Why Auto TD
 
@@ -80,14 +88,32 @@ source as `ysx-opcodes/rv_xtinyv/yushuxin_vfexp`.
 4. Add shared glue only where the schema cannot own behavior.
 
 For this proof, the reusable C++ glue is mask parsing/printing/encoding and
-vector register decode. The per-instruction facts remain in YAML and opcode
-source files.
+vector register decode, plus narrow SelectionDAG and frame-index handling for
+the fixed 128-bit proof path. The per-instruction facts remain in YAML and
+opcode source files.
 
 5. Expose the proof C API.
 
 `ysx_vfexp_v_f32m1` in `ysx_vector.h` calls
 `__builtin_ysx_vfexp_v_f32m1`, which lowers to the `llvm.ysx.vfexp` IR
-intrinsic.
+intrinsic. The proof backend then selects that intrinsic to the generated
+`YSX_AUTO_YUSHUXIN_VFEXP` record, inserts generated `vsetvli` for the requested
+`vl`, and validates the final object with `llvm-objdump`.
+
+## Verification
+
+The final checks passed in the isolated worktree:
+
+- `ninja -C build clang llc llvm-mc llvm-objdump FileCheck opt llvm-readelf`
+- `python3 -m unittest discover -s llvm/lib/Target/YuShuXin/auto-td/tests -p 'test_*.py' -v`
+- `python3 llvm/lib/Target/YuShuXin/auto-td/tools/ysx_auto_td_gen.py ... --out-dir build/ysx-auto-td-final7`
+- `python3 build/bin/llvm-lit -sv llvm/test/MC/YSX/tinyv-auto-td.s clang/test/CodeGen/YSX/tinyv-builtins.c clang/test/CodeGen/YSX/yushuxin-vfexp.c llvm/test/CodeGen/YSX/tinyv-builtins-isel.ll clang/test/CodeGen/YSX/tinyv-builtins-asm.c`
+- `python3 build/bin/llvm-lit -sv llvm/test/MC/YSX llvm/test/CodeGen/YSX clang/test/Driver/YSX clang/test/CodeGen/YSX`
+- `git diff --check`
+
+The directory-level lit run discovered 146 YSX tests and passed all 146.
+The final generator coverage reports 8 `auto_full` instructions and 0 retained
+schema gaps.
 
 ## Legacy Contrast
 
@@ -105,7 +131,9 @@ that is genuinely algorithmic.
 
 ## Current Boundary
 
-The branch proves the framework and two Clang-to-IR builtins. It does not yet
-claim complete C-to-object lowering or automatic vectorization. Those need the
-next layer of pseudo/pattern lowering plus a successful local build with enough
-disk space to run `llvm-lit` against `clang`, `llvm-mc`, and `llvm-objdump`.
+The branch proves the framework and a narrow C-to-object path for explicit
+`ysx_vector.h` builtins. It does not yet claim the complete tiny-F/tiny-V import
+or automatic vectorization. It also does not claim direct C ABI passing or
+returning of vector values; the proven C path keeps vectors inside builtin
+functions and stores results to memory. Those next layers need broader generated
+instruction coverage, legal type support, and lowering rules.

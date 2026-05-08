@@ -5,10 +5,13 @@
 - Spec approved: docs/superpowers/specs/2026-05-08-ysx-tiny-fv-auto-td-design.md
 - `xtinyf`, `xtinyv`, and `zvl128b` feature parsing and frontend/TargetParser/MC plumbing.
 - `xtinyv` implies `zvl128b` on the YSX path.
-- Generated tiny-v MC definitions for `vadd.vv`, `vle32.v`, `vse32.v`, `vfredusum.vs`, `vfredsum.vs` alias, and `yushuxin.vfexp`.
+- Generated tiny-v MC definitions for `vadd.vv`, `vle32.v`, `vse32.v`, `vsetivli`, `vsetvli`, `vmv1r.v`, `vfredusum.vs`, `vfredsum.vs` alias, and `yushuxin.vfexp`.
 - YSX custom opcode source for `yushuxin.vfexp` in `third_party/ysx-opcodes`.
 - `ysx_vector.h` typed proof API for `ysx_vadd_vv_i32m1` and `ysx_vfexp_v_f32m1`.
 - `__builtin_ysx_vadd_vv_i32m1` and `__builtin_ysx_vfexp_v_f32m1` Clang proof builtins lowered to `llvm.ysx.vadd` and `llvm.ysx.vfexp`.
+- Fixed 128-bit proof backend path for `<4 x i32>` and `<4 x float>` tiny-v values: C builtin loads/stores select generated `vsetivli`, `vsetvli`, `vle32.v`, `vse32.v`, `vadd.vv`, and `yushuxin.vfexp` records.
+- O0 proof path handles vector frame-index loads/stores and basic VR copies/spills with generated `vsetivli`, `vle32.v`, `vse32.v`, and `vmv1r.v`.
+- Separate Clang `BuiltinsYSX.td` shard for YSX builtins, avoiding accidental reuse of the much larger RISCV/RVV builtin ID table.
 - No generic RVV frontend exposure for YSX: no `riscv_vector.h`, `__riscv_vector`, or `__riscv_v_intrinsic` surface is enabled by `xtinyv`.
 
 ## Generated Surfaces
@@ -17,9 +20,10 @@
 - Task 6 hooks auto-td generation into the YSX LLVM target CMake as build-tree outputs under the target binary directory's `auto-td` subdirectory.
 - Task 6 wires the generated target TableGen fragments into `YSXInstrInfo.td`: `YSXGenAutoTinyFInstrInfo.inc`, `YSXGenAutoTinyVInstrInfo.inc`, `YSXGenAutoTinyVPseudos.inc`, and `YSXGenAutoTinyVPatterns.inc`.
 - Task 6 generates `YSXGenAutoTinyVBuiltins.inc` as a build output/dependency only; it is intentionally not included by LLVM target TableGen yet.
-- Task 7 emits real tiny-v MC instruction records for `vadd.vv`, `vle32.v`, `vse32.v`, `vfredusum.vs`, and `yushuxin.vfexp` from YAML plus opcode-source fixed bits and `riscv-opcodes/arg_lut.csv` operand field ranges, including the `vfredsum.vs` mnemonic alias.
+- Task 7 emits real tiny-v MC instruction records for `vadd.vv`, `vle32.v`, `vse32.v`, `vfredusum.vs`, `vsetivli`, `vsetvli`, `vmv1r.v`, and `yushuxin.vfexp` from YAML plus opcode-source fixed bits and `riscv-opcodes/arg_lut.csv` operand field ranges, including the `vfredsum.vs` mnemonic alias.
 - Task 7 review fix makes the emitter consume taxonomy operand/effect records instead of inferring assembly operand shape from field-name heuristics.
 - Task 7 generated mask asm strings intentionally follow the upstream RISCV `$operand$vm` convention; `printVMaskReg` emits the leading comma for explicit `v0.t`.
+- Final review fix models `VL`/`VTYPE` explicitly in auto-td taxonomy/effects: generated vector memory/ALU/reduce/custom records use `[VL, VTYPE]`, and generated `vsetvli`/`vsetivli` define them.
 
 ## Vendor Evidence
 
@@ -39,6 +43,10 @@
 - Task 8 added the first Clang tiny-v builtin proof path: `clang/lib/Headers/ysx_vector.h`, YSX-prefixed builtin declaration `__builtin_ysx_vadd_vv_i32m1`, private frontend macro `__YSX_TINY_VECTOR__`, and LLVM IR intrinsic `llvm.ysx.vadd`.
 - Task 8 intentionally models the proof vector type with fixed 128-bit Clang extended vectors (`_ExtVector<4, int>`) instead of standard RVV frontend types, so YSX still does not expose generic RVV resource-header types or macros.
 - Task 11 added the matching Clang IR proof path for the custom tiny-v instruction `yushuxin.vfexp`: `ysx_vfexp_v_f32m1` in `ysx_vector.h`, YSX-prefixed builtin declaration `__builtin_ysx_vfexp_v_f32m1`, and LLVM IR intrinsic `llvm.ysx.vfexp`.
+- Final proof fix routes `ysx64` target builtins through `EmitRISCVBuiltinExpr` while registering only the YSX builtin shard, so YSX can reuse the RISCV builtin lowering function without importing RISCV/RVV builtin declarations.
+- Final backend proof fix makes `v4i32` and `v4f32` legal in the YSX vector register class and manually selects the proof intrinsic/load/store DAG nodes to generated auto-td instruction records.
+- Final review fix inserts `vsetivli` for fixed 4-lane proof vector memory operations and `vsetvli` for builtin operations using the user-supplied `vl`.
+- Final review fix materializes frame-index vector memory bases through a GPR scratch and adds basic VR `copyPhysReg`, `loadRegFromStackSlot`, and `storeRegToStackSlot` support with generated `vmv1r.v`, `vle32.v`, and `vse32.v`.
 
 ## Validation Evidence
 
@@ -83,7 +91,7 @@
 - Task 7 auto-td unittest command: `python3 -m unittest discover -s llvm/lib/Target/YuShuXin/auto-td/tests -p 'test_*.py' -v`
 - Task 7 auto-td unittest result: passed, `Ran 24 tests in 0.212s`, `OK`.
 - Task 7 generator smoke command: `python3 llvm/lib/Target/YuShuXin/auto-td/tools/ysx_auto_td_gen.py --ysx-root llvm/lib/Target/YuShuXin --riscv-opcodes third_party/riscv-opcodes --ysx-opcodes third_party/ysx-opcodes --out-dir build/ysx-auto-td-task7 --coverage build/ysx-auto-td-task7/coverage.md`
-- Task 7 generator smoke result: passed with no stdout/stderr; generated real tiny-v TableGen records and coverage for the five proof instructions under ignored `build/ysx-auto-td-task7`.
+- Task 7 generator smoke result: passed with no stdout/stderr; generated real tiny-v TableGen records and coverage for the original five proof instructions under ignored `build/ysx-auto-td-task7`.
 - Task 7 MC lit proof file: `llvm/test/MC/YSX/tinyv-auto-td.s`.
 - Task 7 MC lit command: `python3 build/bin/llvm-lit -sv llvm/test/MC/YSX/tinyv-auto-td.s`
 - Task 7 MC lit result: not runnable in this worktree because `build/bin/llvm-lit`, `build/bin/llvm-mc`, and `build/bin/llvm-objdump` are absent after the earlier disk-space-limited build cleanup; current `df -h . build /tmp` still reports `/dev/sde` at `100%` with about `1.2G` available.
@@ -114,17 +122,34 @@
 - Task 11 custom encoding smoke result: passed; coverage reports `yushuxin.vfexp` from `ysx-opcodes/rv_xtinyv/yushuxin_vfexp`, and generated TD contains `YSX_AUTO_YUSHUXIN_VFEXP`.
 - Task 11 Clang lit command: `python3 build/bin/llvm-lit -sv clang/test/CodeGen/YSX/yushuxin-vfexp.c`
 - Task 11 Clang lit result: not runnable in this worktree because `build/bin/llvm-lit` is absent.
+- Post-cleanup build command: `ninja -C build clang llc llvm-mc llvm-objdump FileCheck`
+- Post-cleanup build result: passed; the required YSX and Clang tools were produced in this worktree's `build/bin`.
+- Final build command: `ninja -C build clang llc llvm-mc llvm-objdump FileCheck opt llvm-readelf`
+- Final build result: passed; fresh final run exited 0 with `ninja: no work to do`.
+- Final auto-td unittest command: `python3 -m unittest discover -s llvm/lib/Target/YuShuXin/auto-td/tests -p 'test_*.py' -v`
+- Final auto-td unittest result: passed, `Ran 33 tests`, `OK`.
+- Final generator smoke command: `python3 llvm/lib/Target/YuShuXin/auto-td/tools/ysx_auto_td_gen.py --ysx-root llvm/lib/Target/YuShuXin --riscv-opcodes third_party/riscv-opcodes --ysx-opcodes third_party/ysx-opcodes --out-dir build/ysx-auto-td-final7 --coverage build/ysx-auto-td-final7/coverage.md`
+- Final generator smoke result: passed with no stdout/stderr; coverage reports `auto_full: 8`, `auto_with_structured_override: 0`, and `retained_schema_gap: 0`.
+- Final targeted lit command: `python3 build/bin/llvm-lit -sv llvm/test/MC/YSX/tinyv-auto-td.s clang/test/CodeGen/YSX/tinyv-builtins.c clang/test/CodeGen/YSX/yushuxin-vfexp.c llvm/test/CodeGen/YSX/tinyv-builtins-isel.ll clang/test/CodeGen/YSX/tinyv-builtins-asm.c`
+- Final targeted lit result: passed, `Total Discovered Tests: 5`, `Passed: 5 (100.00%)`.
+- Final directory lit command: `python3 build/bin/llvm-lit -sv llvm/test/MC/YSX llvm/test/CodeGen/YSX clang/test/Driver/YSX clang/test/CodeGen/YSX`
+- Final directory lit result: passed, `Total Discovered Tests: 146`, `Passed: 146 (100.00%)`.
+- Final C-to-object proof file: `clang/test/CodeGen/YSX/tinyv-builtins-asm.c`; it checks Clang `-S`, Clang `-emit-obj`, and `llvm-objdump` output for `vsetivli`, `vsetvli`, `vle32.v`, `vadd.vv`, `yushuxin.vfexp`, and `vse32.v`.
+- Final backend ISel proof file: `llvm/test/CodeGen/YSX/tinyv-builtins-isel.ll`; it checks that `llvm.ysx.vadd` and `llvm.ysx.vfexp` select to `YSX_AUTO_VSETIVLI`, `YSX_AUTO_VSETVLI`, `YSX_AUTO_VADD_VV`, and `YSX_AUTO_YUSHUXIN_VFEXP`.
+- Final whitespace check command: `git diff --check`
+- Final whitespace check result: passed with no output.
 
 ## Retained Schema Gaps
 
 - No retained schema gaps recorded yet.
 
-## Known Verification Gaps
+## Known Remaining Scope
 
-- Full `llvm-lit` validation is blocked in this worktree because the baseline build failed linking `clang` with `No space left on device`, and the cleaned build tree no longer has `build/bin/clang`, `build/bin/llvm-lit`, `build/bin/llvm-mc`, `build/bin/llvm-objdump`, or generated headers.
-- The current Clang proof reaches LLVM IR intrinsics for `vadd` and `vfexp`; selecting those intrinsics to final object code remains future work.
-- Bulk tiny-F/tiny-V import and automatic vectorization smoke tests remain future work.
+- Bulk tiny-F/tiny-V import remains future work; the implemented no-gap generated instruction slice is `vle32.v`, `vse32.v`, `vsetivli`, `vsetvli`, `vmv1r.v`, `vadd.vv`, `vfredusum.vs`/`vfredsum.vs`, and `yushuxin.vfexp`.
+- Automatic vectorization smoke tests remain future work; this branch proves explicit `ysx_vector.h` / `__builtin_ysx_*` use.
+- Broader backend lowering remains intentionally narrow: the current object proof covers fixed 128-bit `<4 x i32>` and `<4 x float>` values plus zero-offset proof loads/stores.
+- Direct C ABI passing/returning of tiny-v vector values remains future work; the current C-to-object proof stores builtin results to memory.
 
 ## Blog Notes
 
-- The standalone final blog at `docs/superpowers/blog/2026-05-08-ysx-tiny-fv-auto-td.md` should describe auto-td-gen, tiny-F/tiny-V, builtin proof, automatic vectorization, and yushuxin.vfexp.
+- The standalone final blog at `docs/superpowers/blog/2026-05-08-ysx-tiny-fv-auto-td.md` describes auto-td-gen, tiny-F/tiny-V, builtin proof, automatic-vectorization boundary, and yushuxin.vfexp.

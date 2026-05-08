@@ -146,10 +146,19 @@ class GeneratorTest(unittest.TestCase):
         self.assertEqual(vadd.operands_in[-1].operand, "VMaskOp")
         self.assertFalse(vadd.effects.may_load)
         self.assertFalse(vadd.effects.may_store)
+        self.assertEqual(vadd.effects.implicit_uses, ("VL", "VTYPE"))
 
         vse = by_name["vse32.v"]
         self.assertEqual([operand.role for operand in vse.operands_in], ["value", "base", "mask_policy"])
         self.assertTrue(vse.effects.may_store)
+
+        vsetvli = by_name["vsetvli"]
+        self.assertEqual([operand.field for operand in vsetvli.operands_out], ["rd"])
+        self.assertEqual([operand.field for operand in vsetvli.operands_in], ["rs1", "zimm11"])
+        self.assertEqual(vsetvli.operands_in[0].reg_class, "GPR")
+        self.assertEqual(vsetvli.operands_in[1].operand, "UImm11")
+        self.assertTrue(vsetvli.effects.has_side_effects)
+        self.assertEqual(vsetvli.effects.implicit_defs, ("VL", "VTYPE"))
 
     def test_validator_rejects_forbidden_raw_td_token(self):
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -320,6 +329,17 @@ class GeneratorTest(unittest.TestCase):
         self.assertIn("def YSX_AUTO_VSE32_V", tinyv)
         self.assertIn("def YSX_AUTO_VFREDUSUM_VS", tinyv)
         self.assertIn('def : MnemonicAlias<"vfredsum.vs", "vfredusum.vs">;', tinyv)
+        self.assertIn("def YSX_AUTO_VSETIVLI", tinyv)
+        self.assertIn('RVInst<(outs GPR:$rd), (ins uimm5:$zimm5, uimm10:$zimm10), "vsetivli"', tinyv)
+        self.assertIn("let Defs = [VL, VTYPE];", tinyv)
+        self.assertIn("bits<10> zimm10;", tinyv)
+        self.assertIn("let Inst{31} = 0b1;", tinyv)
+        self.assertIn("def YSX_AUTO_VSETVLI", tinyv)
+        self.assertIn('RVInst<(outs GPR:$rd), (ins GPR:$rs1, uimm11:$zimm11), "vsetvli"', tinyv)
+        self.assertIn("bits<11> zimm11;", tinyv)
+        self.assertIn("def YSX_AUTO_VMV1R_V", tinyv)
+        self.assertIn('RVInst<(outs VR:$vd), (ins VR:$vs2), "vmv1r.v"', tinyv)
+        self.assertIn("let Inst{31-26} = 0b100111;", tinyv)
         self.assertIn("def YSX_AUTO_YUSHUXIN_VFEXP", tinyv)
         self.assertIn('RVInst<(outs VR:$vd), (ins VR:$vs2, YSXAutoVMaskOp:$vm), "yushuxin.vfexp"', tinyv)
         self.assertIn("let Inst{31-26} = 0b101010;", tinyv)
@@ -332,7 +352,16 @@ class GeneratorTest(unittest.TestCase):
         self.assertNotIn("VUnitStrideLoad", tinyv)
         self.assertNotIn("VPseudo", tinyv)
 
-        for mnemonic in ("vle32.v", "vse32.v", "vadd.vv", "vfredusum.vs", "yushuxin.vfexp"):
+        for mnemonic in (
+            "vle32.v",
+            "vse32.v",
+            "vadd.vv",
+            "vfredusum.vs",
+            "vsetivli",
+            "vsetvli",
+            "vmv1r.v",
+            "yushuxin.vfexp",
+        ):
             self.assertIn(mnemonic, text)
         self.assertIn("ysx-opcodes/rv_xtinyv/yushuxin_vfexp", text)
         self.assertIn(

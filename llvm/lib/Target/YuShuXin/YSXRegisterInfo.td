@@ -372,15 +372,15 @@ foreach Index = !range(0, 32, 1) in
 def VTYPE : YSXReg<0, "vtype">;
 def VL    : YSXReg<0, "vl">;
 
-defvar YSXVecM1VTs = [nxv2i32, nxv2f32];
+defvar YSXVecM1VTs = [nxv2i32, nxv2f32, v4i32, v4f32];
 defvar YSXVecMaskVTs = [nxv2i1];
 
 class VReg<list<ValueType> regTypes, dag regList>
-    : YSXRegisterClass<regTypes, 64, regList> {
+    : YSXRegisterClass<regTypes, 128, regList> {
   let IsVRegClass = 1;
   let VLMul = 1;
   let NF = 1;
-  let Size = 64;
+  let Size = 128;
   let CopyCost = 1;
 }
 

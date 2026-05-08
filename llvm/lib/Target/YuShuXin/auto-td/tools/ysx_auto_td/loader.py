@@ -136,7 +136,15 @@ def _load_effects(category: dict) -> EffectSpec:
         may_load=bool(effects.get("may_load", False)),
         may_store=bool(effects.get("may_store", False)),
         has_side_effects=bool(effects.get("has_side_effects", False)),
+        implicit_uses=_load_string_list(effects.get("implicit_uses", [])),
+        implicit_defs=_load_string_list(effects.get("implicit_defs", [])),
     )
+
+
+def _load_string_list(value) -> tuple[str, ...]:
+    if not isinstance(value, list):
+        return ()
+    return tuple(item for item in value if isinstance(item, str) and item)
 
 
 def _coverage_path(ysx_root: Path, path: Path) -> str:
