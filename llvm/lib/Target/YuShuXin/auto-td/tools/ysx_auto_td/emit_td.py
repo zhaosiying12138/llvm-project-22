@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from pathlib import Path
+import re
 
 from .opcodes import source_key_from_mnemonic
 
@@ -23,6 +24,11 @@ class Assignment:
 
 def write_td_outputs(out_dir: Path, instructions) -> None:
     out_dir.mkdir(parents=True, exist_ok=True)
+    tiny_f = [
+        instruction
+        for instruction in instructions
+        if instruction.path.parent.name == "tiny-f"
+    ]
     tiny_v = [
         instruction
         for instruction in instructions
@@ -30,7 +36,7 @@ def write_td_outputs(out_dir: Path, instructions) -> None:
     ]
 
     content = {
-        "YSXGenAutoTinyFInstrInfo.inc": _empty_file("tiny-f instrinfo"),
+        "YSXGenAutoTinyFInstrInfo.inc": _emit_tiny_f_instrinfo(tiny_f),
         "YSXGenAutoTinyVInstrInfo.inc": _emit_tiny_v_instrinfo(tiny_v),
         "YSXGenAutoTinyVPseudos.inc": _empty_file("tiny-v pseudos"),
         "YSXGenAutoTinyVPatterns.inc": _empty_file("tiny-v patterns"),
@@ -43,6 +49,12 @@ def write_td_outputs(out_dir: Path, instructions) -> None:
 
 def _empty_file(name: str) -> str:
     return f"{GENERATED_HEADER}// {name}: no generated records yet\n"
+
+
+def _emit_tiny_f_instrinfo(instructions) -> str:
+    if not instructions:
+        return _empty_file("tiny-f instrinfo")
+    return _emit_instrinfo(instructions).rstrip() + "\n"
 
 
 def _emit_tiny_v_instrinfo(instructions) -> str:
@@ -87,6 +99,14 @@ def _emit_tiny_v_instrinfo(instructions) -> str:
     return "\n".join(lines).rstrip() + "\n"
 
 
+def _emit_instrinfo(instructions) -> str:
+    lines = [GENERATED_HEADER.rstrip()]
+    for instruction in sorted(instructions, key=lambda record: record.mnemonic):
+        lines.append("")
+        lines.extend(_emit_instruction(instruction))
+    return "\n".join(lines).rstrip() + "\n"
+
+
 def _emit_instruction(instruction) -> list[str]:
     record_name = "YSX_AUTO_" + source_key_from_mnemonic(instruction.mnemonic).upper()
     outs, ins, asm_operands = _operand_dags(instruction)
@@ -98,7 +118,7 @@ def _emit_instruction(instruction) -> list[str]:
         f"// opcode-source: {_opcode_source_name(instruction)}",
         f"def {record_name} : RVInst<{outs}, {ins}, "
         f'"{instruction.mnemonic}", "{asm_operands}", [], {inst_format}> {{',
-        "  let Predicates = [HasStdExtXTinyV];",
+        f"  let Predicates = [{_predicate(instruction)}];",
         "  let hasSideEffects = "
         f"{1 if instruction.effects.has_side_effects else 0};",
         f"  let mayLoad = {1 if instruction.effects.may_load else 0};",
@@ -118,7 +138,18 @@ def _emit_instruction(instruction) -> list[str]:
     return lines
 
 
+def _predicate(instruction) -> str:
+    if instruction.path.parent.name == "tiny-f":
+        return "HasStdExtXTinyF"
+    return "HasStdExtXTinyV"
+
+
 def _inst_format(instruction) -> str:
+    fields = set(instruction.opcode.fields)
+    if {"imm12hi", "imm12lo"}.issubset(fields):
+        return "InstFormatS"
+    if "imm12" in fields:
+        return "InstFormatI"
     if instruction.mnemonic in {"vsetvli", "vsetivli"}:
         return "InstFormatI"
     return "InstFormatR"
@@ -139,11 +170,21 @@ def _operand_dags(instruction) -> tuple[str, str, str]:
 
 def _asm_operands(instruction) -> str:
     mask = any(operand.operand == "VMaskOp" for operand in instruction.operands_in)
+    base = next(
+        (operand for operand in instruction.operands_in if operand.role == "base"),
+        None,
+    )
+    offset = next(
+        (operand for operand in instruction.operands_in if operand.role == "offset"),
+        None,
+    )
     operands = [
         _asm_operand(operand)
         for operand in (*instruction.operands_out, *instruction.operands_in)
-        if operand.operand != "VMaskOp"
+        if operand.operand != "VMaskOp" and operand is not base and operand is not offset
     ]
+    if base and offset:
+        operands.append("${" + offset.field + "}(${" + base.field + "})")
     asm = ", ".join(operands)
     if mask:
         asm += "$vm"
@@ -155,14 +196,22 @@ def _td_operand(operand) -> str:
         raise ValueError(f"operand {operand.role} is missing an encoding field")
     if operand.operand == "VMaskOp":
         return f"YSXAutoVMaskOp:${operand.field}"
+    if operand.operand == "UImm3":
+        return f"uimm3:${operand.field}"
     if operand.operand == "UImm5":
         return f"uimm5:${operand.field}"
     if operand.operand == "UImm10":
         return f"uimm10:${operand.field}"
     if operand.operand == "UImm11":
         return f"uimm11:${operand.field}"
+    if operand.operand == "SImm12":
+        return f"simm12_lo:${operand.field}"
+    if operand.operand == "GPRMem":
+        return f"GPRMem:${operand.field}"
     if operand.reg_class == "VR":
         return f"VR:${operand.field}"
+    if operand.reg_class == "FPR32":
+        return f"FPR32:${operand.field}"
     if operand.reg_class == "GPR" and operand.role == "base":
         return f"GPRMemZeroOffset:${operand.field}"
     if operand.reg_class == "GPR":
@@ -197,6 +246,14 @@ def _assignments(instruction) -> list[Assignment]:
             msb, lsb = _field_range(instruction, ranges, field)
             assignments.append(Assignment(msb, lsb, _binary(0, msb - lsb + 1)))
             continue
+        if field == "imm12hi":
+            msb, lsb = _field_range(instruction, ranges, field)
+            assignments.append(Assignment(msb, lsb, "imm12{11-5}"))
+            continue
+        if field == "imm12lo":
+            msb, lsb = _field_range(instruction, ranges, field)
+            assignments.append(Assignment(msb, lsb, "imm12{4-0}"))
+            continue
         msb, lsb = _field_range(instruction, ranges, field)
         assignments.append(Assignment(msb, lsb, field))
 
@@ -216,18 +273,34 @@ def _field_range(instruction, ranges: dict[str, tuple[int, int]], field: str):
 
 
 def _field_declarations(assignments: list[Assignment]) -> list[str]:
-    declarations: list[str] = []
-    seen: set[str] = set()
+    widths: dict[str, int] = {}
     for assignment in assignments:
-        if not assignment.expr.isidentifier() or assignment.expr in seen:
+        name, width = _declaration_for_expr(assignment)
+        if name is None:
             continue
-        seen.add(assignment.expr)
-        width = assignment.msb - assignment.lsb + 1
+        widths[name] = max(widths.get(name, 0), width)
+
+    declarations: list[str] = []
+    for name, width in widths.items():
         if width == 1:
-            declarations.append(f"bit {assignment.expr};")
+            declarations.append(f"bit {name};")
         else:
-            declarations.append(f"bits<{width}> {assignment.expr};")
+            declarations.append(f"bits<{width}> {name};")
     return declarations
+
+
+def _declaration_for_expr(assignment: Assignment) -> tuple[str | None, int]:
+    if assignment.expr.isidentifier():
+        return assignment.expr, assignment.msb - assignment.lsb + 1
+    match = re.fullmatch(r"([A-Za-z_][A-Za-z0-9_]*)\{(\d+)-(\d+)\}", assignment.expr)
+    if not match:
+        return None, 0
+    root, msb_text, lsb_text = match.groups()
+    msb = int(msb_text)
+    lsb = int(lsb_text)
+    if msb < lsb:
+        raise ValueError(f"invalid field slice expression {assignment.expr}")
+    return root, msb + 1
 
 
 def _parse_fixed_bits(instruction, token: str) -> tuple[int, int, int]:

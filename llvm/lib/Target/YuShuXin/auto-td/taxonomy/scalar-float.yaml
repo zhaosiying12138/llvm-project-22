@@ -1,0 +1,69 @@
+categories:
+  f32_binary:
+    domain: tinyf
+    operation: scalar_f32_binary
+    default_surfaces: [mc_def, decoder, sched, pattern, coverage]
+    operands:
+      outs: [{role: dest, field: rd, reg_class: FPR32}]
+      ins:
+        - {role: lhs, field: rs1, reg_class: FPR32}
+        - {role: rhs, field: rs2, reg_class: FPR32}
+        - {role: rounding_mode, field: rm, operand: UImm3}
+    effects: {may_load: false, may_store: false, has_side_effects: false}
+    sched: {semantic_class: scalar_float_alu}
+  f32_compare:
+    domain: tinyf
+    operation: scalar_f32_compare
+    default_surfaces: [mc_def, decoder, sched, pattern, coverage]
+    operands:
+      outs: [{role: dest, field: rd, reg_class: GPR}]
+      ins:
+        - {role: lhs, field: rs1, reg_class: FPR32}
+        - {role: rhs, field: rs2, reg_class: FPR32}
+    effects: {may_load: false, may_store: false, has_side_effects: false}
+    sched: {semantic_class: scalar_float_compare}
+  f32_to_i32:
+    domain: tinyf
+    operation: scalar_f32_to_i32
+    default_surfaces: [mc_def, decoder, sched, pattern, coverage]
+    operands:
+      outs: [{role: dest, field: rd, reg_class: GPR}]
+      ins:
+        - {role: value, field: rs1, reg_class: FPR32}
+        - {role: rounding_mode, field: rm, operand: UImm3}
+    effects: {may_load: false, may_store: false, has_side_effects: false}
+    sched: {semantic_class: scalar_float_convert}
+  i32_to_f32:
+    domain: tinyf
+    operation: scalar_i32_to_f32
+    default_surfaces: [mc_def, decoder, sched, pattern, coverage]
+    operands:
+      outs: [{role: dest, field: rd, reg_class: FPR32}]
+      ins:
+        - {role: value, field: rs1, reg_class: GPR}
+        - {role: rounding_mode, field: rm, operand: UImm3}
+    effects: {may_load: false, may_store: false, has_side_effects: false}
+    sched: {semantic_class: scalar_float_convert}
+  f32_load:
+    domain: tinyf
+    operation: scalar_f32_load
+    default_surfaces: [mc_def, decoder, sched, pattern, coverage]
+    operands:
+      outs: [{role: dest, field: rd, reg_class: FPR32}]
+      ins:
+        - {role: base, field: rs1, reg_class: GPR, operand: GPRMem}
+        - {role: offset, field: imm12, operand: SImm12}
+    effects: {may_load: true, may_store: false, has_side_effects: false}
+    sched: {semantic_class: scalar_float_load}
+  f32_store:
+    domain: tinyf
+    operation: scalar_f32_store
+    default_surfaces: [mc_def, decoder, sched, pattern, coverage]
+    operands:
+      outs: []
+      ins:
+        - {role: value, field: rs2, reg_class: FPR32}
+        - {role: base, field: rs1, reg_class: GPR, operand: GPRMem}
+        - {role: offset, field: imm12, operand: SImm12}
+    effects: {may_load: false, may_store: true, has_side_effects: false}
+    sched: {semantic_class: scalar_float_store}

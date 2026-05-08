@@ -1,0 +1,5 @@
+mnemonic: fcvt.wu.s
+opcode_source: {repo: riscv-opcodes, extension: rv_f, key: fcvt_wu_s}
+spec_ref: tinyf.scalar-float.f32_to_i32
+features: {required: [xtinyf]}
+status: auto_full

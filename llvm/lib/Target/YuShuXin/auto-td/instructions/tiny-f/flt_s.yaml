@@ -1,0 +1,5 @@
+mnemonic: flt.s
+opcode_source: {repo: riscv-opcodes, extension: rv_f, key: flt_s}
+spec_ref: tinyf.scalar-float.f32_compare
+features: {required: [xtinyf]}
+status: auto_full

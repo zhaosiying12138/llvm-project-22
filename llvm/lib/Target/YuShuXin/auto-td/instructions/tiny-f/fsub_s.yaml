@@ -1,0 +1,5 @@
+mnemonic: fsub.s
+opcode_source: {repo: riscv-opcodes, extension: rv_f, key: fsub_s}
+spec_ref: tinyf.scalar-float.f32_binary
+features: {required: [xtinyf]}
+status: auto_full

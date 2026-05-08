@@ -56,8 +56,12 @@ def load_opcode_repo(
     if not extensions.is_dir():
         return records
     for path in sorted(extensions.glob("*")):
-        if not path.is_file():
+        if not _is_opcode_source_file(path):
             continue
         for key, record in parse_opcode_file(path, arg_lut).items():
             records[(path.name, key)] = record
     return records
+
+
+def _is_opcode_source_file(path: Path) -> bool:
+    return path.is_file() and not path.name.startswith(".")

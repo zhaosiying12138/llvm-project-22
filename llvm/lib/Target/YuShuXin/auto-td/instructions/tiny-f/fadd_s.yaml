@@ -1,0 +1,5 @@
+mnemonic: fadd.s
+opcode_source: {repo: riscv-opcodes, extension: rv_f, key: fadd_s}
+spec_ref: tinyf.scalar-float.f32_binary
+features: {required: [xtinyf]}
+status: auto_full

@@ -17,6 +17,7 @@ from ysx_auto_td.model import (
 )
 from ysx_auto_td.opcodes import (
     load_arg_lut,
+    load_opcode_repo,
     parse_opcode_file,
     source_key_from_mnemonic,
 )
@@ -81,6 +82,19 @@ class GeneratorTest(unittest.TestCase):
                 OpcodeFieldRange("vd", 11, 7),
             ),
         )
+
+    def test_load_opcode_repo_ignores_editor_temp_files(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            extensions = tmp / "extensions"
+            extensions.mkdir(parents=True)
+            (extensions / ".rv_v.swp").write_bytes(b"b0VIM 9.0\x00\xed")
+            (extensions / "rv_v").write_text("vadd.vv 31..26=0x00 vd 6..0=0x57\n")
+
+            records = load_opcode_repo(tmp)
+
+        self.assertIn(("rv_v", "vadd_vv"), records)
+        self.assertNotIn((".rv_v.swp", "vadd_vv"), records)
 
     def test_loader_reports_missing_opcode_repo(self):
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -369,6 +383,81 @@ class GeneratorTest(unittest.TestCase):
             text,
         )
         self.assertNotIn(str(YSX_ROOT), text)
+
+    def test_generator_writes_real_tinyf_instrinfo_from_opcode_sources(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            out = tmp / "out"
+            coverage = tmp / "coverage.md"
+
+            subprocess.check_call(
+                [
+                    "python3",
+                    str(TOOL),
+                    "--ysx-root",
+                    str(YSX_ROOT),
+                    "--riscv-opcodes",
+                    str(REPO_ROOT / "third_party" / "riscv-opcodes"),
+                    "--ysx-opcodes",
+                    str(REPO_ROOT / "third_party" / "ysx-opcodes"),
+                    "--out-dir",
+                    str(out),
+                    "--coverage",
+                    str(coverage),
+                ],
+                env=self._generator_env(),
+            )
+
+            tinyf = (out / "YSXGenAutoTinyFInstrInfo.inc").read_text()
+            text = coverage.read_text()
+
+        self.assertIn("def YSX_AUTO_FADD_S", tinyf)
+        self.assertIn('RVInst<(outs FPR32:$rd), (ins FPR32:$rs1, FPR32:$rs2, uimm3:$rm), "fadd.s"', tinyf)
+        self.assertIn("def YSX_AUTO_FSUB_S", tinyf)
+        self.assertIn("def YSX_AUTO_FMUL_S", tinyf)
+        self.assertIn("def YSX_AUTO_FEQ_S", tinyf)
+        self.assertIn('RVInst<(outs GPR:$rd), (ins FPR32:$rs1, FPR32:$rs2), "feq.s"', tinyf)
+        self.assertIn("def YSX_AUTO_FLT_S", tinyf)
+        self.assertIn("def YSX_AUTO_FLE_S", tinyf)
+        self.assertIn("def YSX_AUTO_FCVT_W_S", tinyf)
+        self.assertIn('RVInst<(outs GPR:$rd), (ins FPR32:$rs1, uimm3:$rm), "fcvt.w.s"', tinyf)
+        self.assertIn("def YSX_AUTO_FCVT_WU_S", tinyf)
+        self.assertIn("def YSX_AUTO_FCVT_S_W", tinyf)
+        self.assertIn('RVInst<(outs FPR32:$rd), (ins GPR:$rs1, uimm3:$rm), "fcvt.s.w"', tinyf)
+        self.assertIn("def YSX_AUTO_FCVT_S_WU", tinyf)
+        self.assertIn("def YSX_AUTO_FLW", tinyf)
+        self.assertIn('RVInst<(outs FPR32:$rd), (ins GPRMem:$rs1, simm12_lo:$imm12), "flw"', tinyf)
+        self.assertIn('"$rd, ${imm12}(${rs1})"', tinyf)
+        self.assertIn("let mayLoad = 1;", tinyf)
+        self.assertIn("let Inst{31-20} = imm12;", tinyf)
+        self.assertIn("def YSX_AUTO_FSW", tinyf)
+        self.assertIn('RVInst<(outs), (ins FPR32:$rs2, GPRMem:$rs1, simm12_lo:$imm12), "fsw"', tinyf)
+        self.assertIn('"$rs2, ${imm12}(${rs1})"', tinyf)
+        self.assertIn("let mayStore = 1;", tinyf)
+        self.assertIn("let Inst{31-25} = imm12{11-5};", tinyf)
+        self.assertIn("let Inst{11-7} = imm12{4-0};", tinyf)
+        self.assertIn("let Predicates = [HasStdExtXTinyF];", tinyf)
+        self.assertIn("let Inst{14-12} = rm;", tinyf)
+        self.assertIn("// opcode-source: riscv-opcodes/rv_f/fadd_s", tinyf)
+        self.assertIn("// opcode-source: riscv-opcodes/rv_f/flw", tinyf)
+        self.assertNotIn("FPALU_rr_frm_m", tinyf)
+        self.assertNotIn("FPCmp_rr_m", tinyf)
+
+        for mnemonic in (
+            "fadd.s",
+            "fsub.s",
+            "fmul.s",
+            "feq.s",
+            "flt.s",
+            "fle.s",
+            "fcvt.w.s",
+            "fcvt.wu.s",
+            "fcvt.s.w",
+            "fcvt.s.wu",
+            "flw",
+            "fsw",
+        ):
+            self.assertIn(mnemonic, text)
 
     def _instruction(
         self,
