@@ -405,8 +405,14 @@ The instruction is implemented through the same auto-td-gen path:
 5. Add the minimal C++ lowering glue only if the operation needs custom lowering.
 6. Add `ysx_vector.h` API and end-to-end tests.
 
-The final blog must include a dedicated section showing this process step by
-step and comparing it with the legacy handwritten TableGen workflow.
+The final blog must be written as a new standalone document:
+
+```text
+docs/superpowers/blog/2026-05-08-ysx-tiny-fv-auto-td.md
+```
+
+It must include a dedicated section showing this process step by step and
+comparing it with the legacy handwritten TableGen workflow.
 
 ## Documentation Requirements
 
@@ -422,7 +428,7 @@ writing. The final checklist should distinguish:
 - tests passed
 - known retained schema gaps
 
-The final `blog.md` update should be high-level and concise, with a separate
+The standalone blog document should be high-level and concise, with a separate
 section for `yushuxin.vfexp` and the auto-td-gen extension workflow. It should
 argue concretely that this framework:
 

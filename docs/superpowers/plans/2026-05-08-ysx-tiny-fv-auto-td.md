@@ -36,7 +36,7 @@ Create these new files and directories:
 - `llvm/test/MC/YSX/tinyv-auto-td.s`: generated tiny-V MC encoding tests.
 - `llvm/test/CodeGen/YSX/tinyv-builtins.ll`: backend lowering tests.
 - `llvm/test/CodeGen/YSX/tinyv-autovec.ll`: automatic vectorization smoke tests.
-- `third_party/ysx_compile_bench/blog.md`: final concise blog update.
+- `docs/superpowers/blog/2026-05-08-ysx-tiny-fv-auto-td.md`: standalone final concise blog.
 - `docs/superpowers/implementation/ysx-tiny-fv-feature-checklist.md`: implementation checklist for blog reuse.
 
 Modify these existing files:
@@ -222,7 +222,7 @@ Create `docs/superpowers/implementation/ysx-tiny-fv-feature-checklist.md`:
 
 ## Blog Notes
 
-- The final blog should describe auto-td-gen, tiny-F/tiny-V, builtin proof, automatic vectorization, and yushuxin.vfexp.
+- The standalone final blog at `docs/superpowers/blog/2026-05-08-ysx-tiny-fv-auto-td.md` should describe auto-td-gen, tiny-F/tiny-V, builtin proof, automatic vectorization, and yushuxin.vfexp.
 ```
 
 - [ ] **Step 2: Configure the YSX-only build inside the worktree**
@@ -1525,7 +1525,7 @@ git commit -m "feat: import YSX tiny FV auto TD instructions"
 - Modify: `llvm/lib/Target/YuShuXin/auto-td/instructions/tiny-v/yushuxin_vfexp.yaml`
 - Modify: `clang/lib/Headers/ysx_vector.h`
 - Test: `clang/test/CodeGen/YSX/yushuxin-vfexp.c`
-- Modify: `third_party/ysx_compile_bench/blog.md`
+- Create: `docs/superpowers/blog/2026-05-08-ysx-tiny-fv-auto-td.md`
 
 - [ ] **Step 1: Add failing custom builtin test**
 
@@ -1650,7 +1650,7 @@ git commit -m "feat: enable YSX tiny vector autovec smoke"
 **Files:**
 - Modify: `docs/superpowers/specs/2026-05-08-ysx-tiny-fv-auto-td-design.md`
 - Modify: `docs/superpowers/implementation/ysx-tiny-fv-feature-checklist.md`
-- Modify: `third_party/ysx_compile_bench/blog.md`
+- Create: `docs/superpowers/blog/2026-05-08-ysx-tiny-fv-auto-td.md`
 
 - [ ] **Step 1: Update feature checklist**
 
@@ -1693,9 +1693,9 @@ Update the checklist with concrete entries:
 - Copy the exact retained-schema-gap rows from `build/ysx-auto-td/coverage.md`, including instruction name, missing schema ability, and retained owner file.
 ```
 
-- [ ] **Step 2: Update blog**
+- [ ] **Step 2: Create the standalone blog**
 
-Add a concise section to `third_party/ysx_compile_bench/blog.md`:
+Create `docs/superpowers/blog/2026-05-08-ysx-tiny-fv-auto-td.md`:
 
 ```markdown
 ## YSX tiny-F/tiny-V and auto-td-gen
@@ -1745,7 +1745,7 @@ Expected: focused YSX tests pass.
 Run:
 
 ```bash
-git add docs/superpowers/specs/2026-05-08-ysx-tiny-fv-auto-td-design.md docs/superpowers/implementation/ysx-tiny-fv-feature-checklist.md third_party/ysx_compile_bench/blog.md
+git add docs/superpowers/specs/2026-05-08-ysx-tiny-fv-auto-td-design.md docs/superpowers/implementation/ysx-tiny-fv-feature-checklist.md docs/superpowers/blog/2026-05-08-ysx-tiny-fv-auto-td.md
 git commit -m "docs: describe YSX tiny FV auto TD workflow"
 ```
 
