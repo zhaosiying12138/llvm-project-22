@@ -3,6 +3,13 @@
 ## Implemented Features
 
 - Spec approved: docs/superpowers/specs/2026-05-08-ysx-tiny-fv-auto-td-design.md
+- `xtinyf`, `xtinyv`, and `zvl128b` feature parsing and frontend/TargetParser/MC plumbing.
+- `xtinyv` implies `zvl128b` on the YSX path.
+- Generated tiny-v MC definitions for `vadd.vv`, `vle32.v`, `vse32.v`, `vfredusum.vs`, `vfredsum.vs` alias, and `yushuxin.vfexp`.
+- YSX custom opcode source for `yushuxin.vfexp` in `third_party/ysx-opcodes`.
+- `ysx_vector.h` typed proof API for `ysx_vadd_vv_i32m1` and `ysx_vfexp_v_f32m1`.
+- `__builtin_ysx_vadd_vv_i32m1` and `__builtin_ysx_vfexp_v_f32m1` Clang proof builtins lowered to `llvm.ysx.vadd` and `llvm.ysx.vfexp`.
+- No generic RVV frontend exposure for YSX: no `riscv_vector.h`, `__riscv_vector`, or `__riscv_v_intrinsic` surface is enabled by `xtinyv`.
 
 ## Generated Surfaces
 
@@ -111,6 +118,12 @@
 ## Retained Schema Gaps
 
 - No retained schema gaps recorded yet.
+
+## Known Verification Gaps
+
+- Full `llvm-lit` validation is blocked in this worktree because the baseline build failed linking `clang` with `No space left on device`, and the cleaned build tree no longer has `build/bin/clang`, `build/bin/llvm-lit`, `build/bin/llvm-mc`, `build/bin/llvm-objdump`, or generated headers.
+- The current Clang proof reaches LLVM IR intrinsics for `vadd` and `vfexp`; selecting those intrinsics to final object code remains future work.
+- Bulk tiny-F/tiny-V import and automatic vectorization smoke tests remain future work.
 
 ## Blog Notes
 

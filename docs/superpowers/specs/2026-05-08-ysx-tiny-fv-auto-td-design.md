@@ -16,6 +16,38 @@ taxonomy, pseudo, pattern, and builtin generation support before bulk importing
 the selected tiny-F/tiny-V instruction set. A small end-to-end proof slice still
 acts as a mandatory acceptance gate after the schema exists.
 
+## Current Branch Status
+
+This worktree implements the schema-first foundation and proof slice, but does
+not yet complete the full planned bulk tiny-F/tiny-V import, object-code
+end-to-end proof, or automatic vectorization proof.
+
+Completed in this branch:
+
+- pinned `riscv-opcodes` and `riscv-isa-manual` snapshots plus YSX-owned
+  `third_party/ysx-opcodes`
+- structured YAML schema, taxonomy, validation, coverage reporting, and
+  build-tree generated TableGen outputs
+- real generated tiny-v MC records for `vadd.vv`, `vle32.v`, `vse32.v`,
+  `vfredusum.vs`, the `vfredsum.vs` alias, and custom `yushuxin.vfexp`
+- YSX feature plumbing for `xtinyf`, `xtinyv`, and `zvl128b`
+- minimal FPR/VR/register/mask scaffolding and MC glue for generated tiny-v
+  asm, encoding, disassembly, and optional `v0.t`
+- `ysx_vector.h` proof APIs for `ysx_vadd_vv_i32m1` and
+  `ysx_vfexp_v_f32m1`
+- Clang target builtins `__builtin_ysx_vadd_vv_i32m1` and
+  `__builtin_ysx_vfexp_v_f32m1`, lowered to `llvm.ysx.vadd` and
+  `llvm.ysx.vfexp` IR intrinsics
+
+Known remaining work:
+
+- generate or hand off pseudo/pattern lowering far enough for C builtin output
+  to select `vadd.vv` / `yushuxin.vfexp` into object code
+- bulk import the broader tiny-F and tiny-V instruction set
+- enable and validate automatic vectorization smoke tests
+- run real `llvm-lit` build tests after the worktree has enough disk space to
+  build `clang`, `llvm-lit`, `llvm-mc`, `llvm-objdump`, and generated headers
+
 ## Workspace
 
 Work is isolated in this worktree:
