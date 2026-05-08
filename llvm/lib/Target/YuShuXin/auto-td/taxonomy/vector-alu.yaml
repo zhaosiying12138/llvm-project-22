@@ -1,0 +1,24 @@
+categories:
+  int_add:
+    domain: tinyv
+    operation: add
+    default_surfaces: [mc_def, decoder, sched, pseudo, pattern, builtin, coverage]
+    operands:
+      outs: [{role: dest, field: vd, reg_class: VR}]
+      ins:
+        - {role: lhs, field: vs2, reg_class: VR}
+        - {role: rhs, field: vs1, reg_class: VR}
+        - {role: mask_policy, field: vm, operand: VMaskOp}
+    effects: {may_load: false, may_store: false, has_side_effects: false}
+    sched: {semantic_class: vector_int_alu}
+  custom_float_unary:
+    domain: tinyv
+    operation: fexp
+    default_surfaces: [mc_def, decoder, sched, pseudo, pattern, builtin, coverage]
+    operands:
+      outs: [{role: dest, field: vd, reg_class: VR}]
+      ins:
+        - {role: value, field: vs2, reg_class: VR}
+        - {role: mask_policy, field: vm, operand: VMaskOp}
+    effects: {may_load: false, may_store: false, has_side_effects: false}
+    sched: {semantic_class: vector_float_alu}

@@ -1,0 +1,14 @@
+mnemonic: vfredusum.vs
+opcode_source: {repo: riscv-opcodes, extension: rv_v, key: vfredusum_vs}
+spec_ref: tinyv.vector-reduce.float_sum
+features: {required: [xtinyv]}
+aliases:
+  - {mnemonic: vfredsum.vs}
+pseudos:
+  matrix: {element_types: [f32], lmuls: standard, masked: true, policy: llvm_default}
+patterns:
+  - {kind: intrinsic_to_pseudo, intrinsic: ysx.vfredsum, operation: freduce_sum}
+builtin:
+  header: ysx_vector.h
+  names: [ysx_vfredsum_vs_f32m1]
+  overloaded: false

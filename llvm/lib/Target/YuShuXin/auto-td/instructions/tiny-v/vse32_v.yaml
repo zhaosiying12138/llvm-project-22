@@ -1,0 +1,12 @@
+mnemonic: vse32.v
+opcode_source: {repo: riscv-opcodes, extension: rv_v, key: vse32_v}
+spec_ref: tinyv.vector-memory.unit_store_e32
+features: {required: [xtinyv]}
+pseudos:
+  matrix: {element_types: [i32, f32], lmuls: standard, masked: true, policy: llvm_default}
+patterns:
+  - {kind: intrinsic_to_pseudo, intrinsic: ysx.vse32, operation: store}
+builtin:
+  header: ysx_vector.h
+  names: [ysx_vse32_v_i32m1, ysx_vse32_v_f32m1]
+  overloaded: false

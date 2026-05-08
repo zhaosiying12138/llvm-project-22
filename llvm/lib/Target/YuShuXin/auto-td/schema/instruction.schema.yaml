@@ -1,0 +1,33 @@
+required_fields:
+  - mnemonic
+  - opcode_source
+  - spec_ref
+allowed_fields:
+  - mnemonic
+  - opcode_source
+  - spec_ref
+  - features
+  - operands
+  - effects
+  - sched
+  - aliases
+  - pseudos
+  - patterns
+  - builtin
+  - status
+  - reason
+  - missing_schema
+  - retained_owner_files
+forbidden_strings:
+  - "raw\u005ftd"
+  - "def : \u0050at"
+  - "RV\u0049nst"
+  - "VUnitStride\u004coad"
+  - "VRED\u005f"
+  - "V\u0050seudo"
+  - "let Inst\u007b"
+  - "bits\u003c"
+status_values:
+  - auto_full
+  - auto_with_structured_override
+  - retained_schema_gap

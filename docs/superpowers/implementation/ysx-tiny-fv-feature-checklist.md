@@ -7,6 +7,7 @@
 ## Generated Surfaces
 
 - No generated surfaces implemented yet.
+- Task 3 added auto-td schemas, taxonomy YAML, and proof instruction YAML; no generated build-tree TD exists yet.
 
 ## Vendor Evidence
 

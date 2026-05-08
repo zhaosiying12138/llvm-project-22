@@ -1,0 +1,12 @@
+mnemonic: yushuxin.vfexp
+opcode_source: {repo: ysx-opcodes, extension: rv_xtinyv, key: yushuxin_vfexp}
+spec_ref: tinyv.vector-alu.custom_float_unary
+features: {required: [xtinyv]}
+pseudos:
+  matrix: {element_types: [f32], lmuls: standard, masked: true, policy: llvm_default}
+patterns:
+  - {kind: intrinsic_to_pseudo, intrinsic: ysx.vfexp, operation: fexp}
+builtin:
+  header: ysx_vector.h
+  names: [ysx_vfexp_v_f32m1]
+  overloaded: false

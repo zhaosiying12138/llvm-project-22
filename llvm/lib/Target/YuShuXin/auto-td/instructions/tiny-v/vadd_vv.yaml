@@ -1,0 +1,12 @@
+mnemonic: vadd.vv
+opcode_source: {repo: riscv-opcodes, extension: rv_v, key: vadd_vv}
+spec_ref: tinyv.vector-alu.int_add
+features: {required: [xtinyv]}
+pseudos:
+  matrix: {element_types: [i32], lmuls: standard, masked: true, policy: llvm_default}
+patterns:
+  - {kind: intrinsic_to_pseudo, intrinsic: ysx.vadd, operation: add}
+builtin:
+  header: ysx_vector.h
+  names: [ysx_vadd_vv_i32m1]
+  overloaded: false

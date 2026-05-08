@@ -1,0 +1,15 @@
+categories:
+  float_sum:
+    domain: tinyv
+    operation: freduce_sum
+    default_surfaces: [mc_def, decoder, sched, pseudo, pattern, builtin, coverage]
+    operands:
+      outs: [{role: dest, field: vd, reg_class: VR}]
+      ins:
+        - {role: vector, field: vs2, reg_class: VR}
+        - {role: scalar_seed, field: vs1, reg_class: VR}
+        - {role: mask_policy, field: vm, operand: VMaskOp}
+    aliases:
+      - {mnemonic: vfredsum.vs, canonical: vfredusum.vs}
+    effects: {may_load: false, may_store: false, has_side_effects: false}
+    sched: {semantic_class: vector_reduce}

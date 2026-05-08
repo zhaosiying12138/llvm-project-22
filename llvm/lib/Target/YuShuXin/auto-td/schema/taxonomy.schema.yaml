@@ -1,0 +1,18 @@
+required_fields:
+  - categories
+allowed_category_fields:
+  - domain
+  - operation
+  - default_surfaces
+  - operands
+  - effects
+  - sched
+  - pseudos
+  - patterns
+  - builtin
+  - aliases
+forbidden_fields:
+  - encoding
+  - fixed_bits
+  - "raw\u005ftd"
+  - "raw\u005fcpp"
