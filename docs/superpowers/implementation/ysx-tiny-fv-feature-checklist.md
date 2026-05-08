@@ -8,6 +8,11 @@
 
 - No generated surfaces implemented yet.
 
+## Vendor Evidence
+
+- Task 2 snapshots: `third_party/riscv-opcodes` at upstream `ef103b65c682e7cb705cff67898c515f5c63175c` and `third_party/riscv-isa-manual` at upstream `2d034e16e3edeaa631aeb863adf8ef3a0b743aad`; both were copied from shallow clones and their upstream `.git` directories were removed.
+- Task 2 custom opcode: `third_party/ysx-opcodes/extensions/rv_xtinyv`.
+
 ## Handwritten Glue
 
 - No handwritten glue implemented yet.
