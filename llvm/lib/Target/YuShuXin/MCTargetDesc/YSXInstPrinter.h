@@ -38,6 +38,8 @@ public:
                      const MCSubtargetInfo &STI, raw_ostream &O);
   void printZeroOffsetMemOp(const MCInst *MI, unsigned OpNo,
                             const MCSubtargetInfo &STI, raw_ostream &O);
+  void printVMaskReg(const MCInst *MI, unsigned OpNo,
+                     const MCSubtargetInfo &STI, raw_ostream &O);
   void printImm(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
                 raw_ostream &O);
   void printRegReg(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,

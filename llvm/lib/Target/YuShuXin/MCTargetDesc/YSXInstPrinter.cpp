@@ -145,6 +145,19 @@ void YSXInstPrinter::printZeroOffsetMemOp(const MCInst *MI, unsigned OpNo,
   O << ")";
 }
 
+void YSXInstPrinter::printVMaskReg(const MCInst *MI, unsigned OpNo,
+                                   const MCSubtargetInfo &STI,
+                                   raw_ostream &O) {
+  const MCOperand &MO = MI->getOperand(OpNo);
+
+  assert(MO.isReg() && "printVMaskReg can only print register operands");
+  if (MO.getReg() == YSX::NoRegister)
+    return;
+  O << ", ";
+  printRegName(O, MO.getReg());
+  O << ".t";
+}
+
 void YSXInstPrinter::printRegReg(const MCInst *MI, unsigned OpNo,
                                    const MCSubtargetInfo &STI, raw_ostream &O) {
   const MCOperand &OffsetMO = MI->getOperand(OpNo + 1);

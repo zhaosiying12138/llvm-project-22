@@ -93,6 +93,9 @@ public:
                          SmallVectorImpl<MCFixup> &Fixups,
                          const MCSubtargetInfo &STI) const;
 
+  unsigned getVMaskReg(const MCInst &MI, unsigned OpNo,
+                       SmallVectorImpl<MCFixup> &Fixups,
+                       const MCSubtargetInfo &STI) const;
 };
 } // end anonymous namespace
 
@@ -355,6 +358,22 @@ YSXMCCodeEmitter::getMachineOpValue(const MCInst &MI, const MCOperand &MO,
 
   llvm_unreachable("Unhandled expression!");
   return 0;
+}
+
+unsigned YSXMCCodeEmitter::getVMaskReg(const MCInst &MI, unsigned OpNo,
+                                       SmallVectorImpl<MCFixup> &Fixups,
+                                       const MCSubtargetInfo &STI) const {
+  MCOperand MO = MI.getOperand(OpNo);
+  assert(MO.isReg() && "Expected a register.");
+
+  switch (MO.getReg().id()) {
+  default:
+    llvm_unreachable("Invalid mask register.");
+  case YSX::V0:
+    return 0;
+  case YSX::NoRegister:
+    return 1;
+  }
 }
 
 uint64_t

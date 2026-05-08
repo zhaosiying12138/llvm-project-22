@@ -177,6 +177,7 @@ class YSXAsmParser : public MCTargetAsmParser {
   ParseStatus parseRegister(OperandVector &Operands, bool AllowParens = false);
   ParseStatus parseMemOpBaseReg(OperandVector &Operands);
   ParseStatus parseZeroOffsetMemOp(OperandVector &Operands);
+  ParseStatus parseVMaskReg(OperandVector &Operands);
   ParseStatus parseOperandWithSpecifier(OperandVector &Operands);
   ParseStatus parseBareSymbol(OperandVector &Operands);
   ParseStatus parseCallSymbol(OperandVector &Operands);
@@ -239,6 +240,8 @@ class YSXAsmParser : public MCTargetAsmParser {
 
     return false;
   }
+
+  std::unique_ptr<YSXOperand> defaultMaskRegOp() const;
 
 public:
   enum YSXMatchResultTy : unsigned {
@@ -342,7 +345,9 @@ public:
   bool isToken() const override { return Kind == KindTy::Token; }
   bool isReg() const override { return Kind == KindTy::Register; }
   bool isExpr() const { return Kind == KindTy::Expression; }
-  bool isV0Reg() const { return false; }
+  bool isV0Reg() const {
+    return Kind == KindTy::Register && Reg.Reg == YSX::V0;
+  }
   bool isAnyReg() const {
     return Kind == KindTy::Register &&
            YSXMCRegisterClasses[YSX::GPRRegClassID].contains(Reg.Reg);
@@ -1144,15 +1149,20 @@ ParseStatus YSXAsmParser::parseRegister(OperandVector &Operands,
 static bool isRetainedInsnOpcode(int64_t Opcode) {
   switch (Opcode) {
   case 0b0000011: // LOAD
+  case 0b0000111: // LOAD_FP
   case 0b0001111: // MISC_MEM
+  case 0b0001011: // CUSTOM_0
   case 0b0010011: // OP_IMM
   case 0b0010111: // AUIPC
   case 0b0011011: // OP_IMM_32
   case 0b0100011: // STORE
+  case 0b0100111: // STORE_FP
   case 0b0101111: // AMO
   case 0b0110011: // OP
   case 0b0110111: // LUI
   case 0b0111011: // OP_32
+  case 0b1010011: // OP_FP
+  case 0b1010111: // OP_V
   case 0b1100011: // BRANCH
   case 0b1100111: // JALR
   case 0b1101111: // JAL
@@ -1580,6 +1590,27 @@ ParseStatus YSXAsmParser::parseZeroOffsetMemOp(OperandVector &Operands) {
   return ParseStatus::Success;
 }
 
+ParseStatus YSXAsmParser::parseVMaskReg(OperandVector &Operands) {
+  if (getLexer().isNot(AsmToken::Identifier))
+    return ParseStatus::NoMatch;
+
+  StringRef Name = getLexer().getTok().getIdentifier();
+  if (!Name.consume_back(".t"))
+    return Error(getLoc(), "expected '.t' suffix");
+  MCRegister Reg = matchRegisterNameHelper(Name);
+
+  if (!Reg)
+    return ParseStatus::NoMatch;
+  if (Reg != YSX::V0)
+    return ParseStatus::NoMatch;
+
+  SMLoc S = getLoc();
+  SMLoc E = getTok().getEndLoc();
+  getLexer().Lex();
+  Operands.push_back(YSXOperand::createReg(Reg, S, E));
+  return ParseStatus::Success;
+}
+
 ParseStatus YSXAsmParser::parseRegReg(OperandVector &Operands) {
   // RR : a2(a1)
   if (getLexer().getKind() != AsmToken::Identifier)
@@ -1699,6 +1730,10 @@ bool YSXAsmParser::isSymbolDiff(const MCExpr *Expr) {
            Res.getSubSym();
   }
   return false;
+}
+
+std::unique_ptr<YSXOperand> YSXAsmParser::defaultMaskRegOp() const {
+  return YSXOperand::createReg(MCRegister(), llvm::SMLoc(), llvm::SMLoc());
 }
 
 ParseStatus YSXAsmParser::parseDirective(AsmToken DirectiveID) {

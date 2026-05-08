@@ -2,16 +2,18 @@ from pathlib import Path
 
 import yaml
 
-from .model import InstructionRecord, OpcodeSource
-from .opcodes import load_opcode_repo
+from .model import EffectSpec, InstructionRecord, OpcodeSource, OperandSpec
+from .opcodes import load_arg_lut, load_opcode_repo
 
 
 def load_instruction_set(
     ysx_root: Path, riscv_opcodes: Path, ysx_opcodes: Path
 ) -> list[InstructionRecord]:
+    riscv_arg_lut = load_arg_lut(riscv_opcodes)
+    taxonomy = _load_taxonomy(ysx_root / "auto-td" / "taxonomy")
     opcode_repos = {
         "riscv-opcodes": load_opcode_repo(riscv_opcodes),
-        "ysx-opcodes": load_opcode_repo(ysx_opcodes),
+        "ysx-opcodes": load_opcode_repo(ysx_opcodes, riscv_arg_lut),
     }
     records: list[InstructionRecord] = []
     instructions_root = ysx_root / "auto-td" / "instructions"
@@ -25,14 +27,20 @@ def load_instruction_set(
         if opcode is None:
             source_name = f"{source.repo}/{source.extension}/{source.key}"
             raise ValueError(f"{path}: missing opcode source {source_name}")
+        spec_ref = _required_string(path, data, "spec_ref")
+        category = taxonomy.get(_category_key(spec_ref), {})
         records.append(
             InstructionRecord(
                 path=path,
                 mnemonic=_required_string(path, data, "mnemonic"),
                 opcode_source=source,
                 opcode=opcode,
-                spec_ref=_required_string(path, data, "spec_ref"),
+                spec_ref=spec_ref,
                 status=data.get("status", "auto_full"),
+                aliases=_load_aliases(path, data),
+                operands_out=_load_operand_specs(category, "outs"),
+                operands_in=_load_operand_specs(category, "ins"),
+                effects=_load_effects(category),
                 retained_owner_files=list(data.get("retained_owner_files", [])),
                 coverage_path=_coverage_path(ysx_root, path),
             )
@@ -63,6 +71,72 @@ def _required_string(path: Path, data: dict, key: str) -> str:
     if not isinstance(value, str) or not value:
         raise ValueError(f"{path}: missing required string field {key}")
     return value
+
+
+def _load_aliases(path: Path, data: dict) -> tuple[str, ...]:
+    aliases = data.get("aliases", [])
+    if not aliases:
+        return ()
+    if not isinstance(aliases, list):
+        raise ValueError(f"{path}: aliases must be a list")
+    result: list[str] = []
+    for index, alias in enumerate(aliases):
+        if not isinstance(alias, dict) or not isinstance(alias.get("mnemonic"), str):
+            raise ValueError(f"{path}: aliases[{index}] must define mnemonic")
+        result.append(alias["mnemonic"])
+    return tuple(result)
+
+
+def _load_taxonomy(root: Path) -> dict[str, dict]:
+    categories: dict[str, dict] = {}
+    if not root.is_dir():
+        return categories
+    for path in sorted(root.glob("*.yaml")):
+        data = _load_yaml_mapping(path)
+        file_categories = data.get("categories", {})
+        if not isinstance(file_categories, dict):
+            raise ValueError(f"{path}: categories must be a mapping")
+        for name, category in file_categories.items():
+            if not isinstance(category, dict):
+                raise ValueError(f"{path}: category {name} must be a mapping")
+            categories[name] = category
+    return categories
+
+
+def _category_key(spec_ref: str) -> str:
+    return spec_ref.rsplit(".", 1)[-1]
+
+
+def _load_operand_specs(category: dict, direction: str) -> tuple[OperandSpec, ...]:
+    operands = category.get("operands", {})
+    if not isinstance(operands, dict):
+        return ()
+    specs = operands.get(direction, [])
+    if not isinstance(specs, list):
+        return ()
+    return tuple(_load_operand_spec(spec) for spec in specs)
+
+
+def _load_operand_spec(spec: dict) -> OperandSpec:
+    if not isinstance(spec, dict):
+        return OperandSpec(role="")
+    return OperandSpec(
+        role=str(spec.get("role", "")),
+        field=spec.get("field"),
+        reg_class=spec.get("reg_class"),
+        operand=spec.get("operand"),
+    )
+
+
+def _load_effects(category: dict) -> EffectSpec:
+    effects = category.get("effects", {})
+    if not isinstance(effects, dict):
+        return EffectSpec()
+    return EffectSpec(
+        may_load=bool(effects.get("may_load", False)),
+        may_store=bool(effects.get("may_store", False)),
+        has_side_effects=bool(effects.get("has_side_effects", False)),
+    )
 
 
 def _coverage_path(ysx_root: Path, path: Path) -> str:

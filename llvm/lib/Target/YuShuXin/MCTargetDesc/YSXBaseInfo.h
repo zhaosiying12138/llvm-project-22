@@ -152,6 +152,8 @@ enum OperandType : unsigned {
 
   OPERAND_BARE_SIMM32,
 
+  OPERAND_VMASK,
+
 };
 } // namespace YSXOp
 

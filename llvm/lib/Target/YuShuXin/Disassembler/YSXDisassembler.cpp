@@ -89,6 +89,38 @@ static DecodeStatus DecodeGPRRegisterClass(MCInst &Inst, uint32_t RegNo,
   return MCDisassembler::Success;
 }
 
+static DecodeStatus DecodeVRRegisterClass(MCInst &Inst, uint32_t RegNo,
+                                          uint64_t Address,
+                                          const MCDisassembler *Decoder) {
+  if (RegNo >= 32)
+    return MCDisassembler::Fail;
+
+  MCRegister Reg = YSX::V0 + RegNo;
+  Inst.addOperand(MCOperand::createReg(Reg));
+  return MCDisassembler::Success;
+}
+
+static DecodeStatus DecodeVMV0RegisterClass(MCInst &Inst, uint32_t RegNo,
+                                            uint64_t Address,
+                                            const MCDisassembler *Decoder) {
+  if (RegNo != 0)
+    return MCDisassembler::Fail;
+
+  Inst.addOperand(MCOperand::createReg(YSX::V0));
+  return MCDisassembler::Success;
+}
+
+static DecodeStatus decodeVMaskReg(MCInst &Inst, uint32_t RegNo,
+                                   uint64_t Address,
+                                   const MCDisassembler *Decoder) {
+  if (RegNo >= 2)
+    return MCDisassembler::Fail;
+
+  MCRegister Reg = (RegNo == 0) ? YSX::V0 : YSX::NoRegister;
+  Inst.addOperand(MCOperand::createReg(Reg));
+  return MCDisassembler::Success;
+}
+
 template <unsigned N>
 static DecodeStatus decodeUImmOperand(MCInst &Inst, uint32_t Imm,
                                       int64_t Address,
