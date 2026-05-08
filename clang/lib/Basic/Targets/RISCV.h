@@ -233,6 +233,10 @@ public:
 };
 
 class LLVM_LIBRARY_VISIBILITY YSX64TargetInfo : public RISCV64TargetInfo {
+  bool HasXTinyF = false;
+  bool HasXTinyV = false;
+  bool HasZvl128b = false;
+
 public:
   YSX64TargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
       : RISCV64TargetInfo(Triple, Opts) {
@@ -248,6 +252,8 @@ public:
   }
 
   llvm::SmallVector<Builtin::InfosShard> getTargetBuiltins() const override;
+  void getTargetDefines(const LangOptions &Opts,
+                        MacroBuilder &Builder) const override;
 
   bool validateAsmConstraint(const char *&Name,
                              TargetInfo::ConstraintInfo &Info) const override;
@@ -265,6 +271,7 @@ public:
 
   ParsedTargetAttr parseTargetAttr(StringRef Str) const override;
   bool isValidFeatureName(StringRef Name) const override;
+  bool hasFeature(StringRef Feature) const override;
 
   CallingConvCheckResult checkCallingConvention(CallingConv CC) const override {
     return CC == CC_C ? CCCR_OK : CCCR_Warning;

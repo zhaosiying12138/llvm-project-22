@@ -54,7 +54,9 @@ static bool isYSXReserveXFeature(StringRef Feature) {
 
 static bool isRetainedYSXFeature(StringRef Feature) {
   return isRequiredYSXFeature(Feature) || Feature == "relax" ||
-         Feature == "exact-asm" || isYSXReserveXFeature(Feature);
+         Feature == "exact-asm" || Feature == "xtinyf" ||
+         Feature == "xtinyv" || Feature == "zvl128b" ||
+         isYSXReserveXFeature(Feature);
 }
 
 static std::string filterYSXFeatureString(StringRef FS) {

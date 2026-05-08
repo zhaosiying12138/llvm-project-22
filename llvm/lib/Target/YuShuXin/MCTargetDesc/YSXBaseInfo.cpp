@@ -60,7 +60,8 @@ bool isValidYSXISAInfo(const YSXISAInfo &ISAInfo) {
     StringRef Ext = Feature;
     Ext.consume_front("+");
     if (Ext != "i" && Ext != "m" && Ext != "a" && Ext != "zmmul" &&
-        Ext != "zaamo" && Ext != "zalrsc")
+        Ext != "zaamo" && Ext != "zalrsc" && Ext != "xtinyf" &&
+        Ext != "xtinyv" && Ext != "zvl128b")
       return false;
   }
 

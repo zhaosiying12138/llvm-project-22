@@ -17,6 +17,7 @@
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/RISCVTargetParser.h"
+#include "llvm/TargetParser/YSXISAInfo.h"
 #include <optional>
 
 using namespace clang;
@@ -370,6 +371,17 @@ YSX64TargetInfo::getTargetBuiltins() const {
   return {{&BuiltinStrings, BuiltinInfos}};
 }
 
+void YSX64TargetInfo::getTargetDefines(const LangOptions &Opts,
+                                       MacroBuilder &Builder) const {
+  RISCVTargetInfo::getTargetDefines(Opts, Builder);
+  if (HasXTinyF)
+    Builder.defineMacro("__riscv_xtinyf", Twine(getVersionValue(1, 0)));
+  if (HasXTinyV)
+    Builder.defineMacro("__riscv_xtinyv", Twine(getVersionValue(1, 0)));
+  if (HasZvl128b)
+    Builder.defineMacro("__riscv_zvl128b", Twine(getVersionValue(1, 0)));
+}
+
 static constexpr const char *YSXUnsupportedFeatureMsg =
     "YSX only supports the rv64ima ISA";
 static constexpr const char *YSXRequiredFeatureMsg =
@@ -392,6 +404,8 @@ static bool isYSXReservedGPRFeature(StringRef Feature) {
 
 static bool isYSXAllowedFeatureName(StringRef Feature) {
   return isYSXRequiredFeatureName(Feature) || Feature == "relax" ||
+         Feature == "xtinyf" || Feature == "xtinyv" ||
+         Feature == "zvl128b" ||
          isYSXReservedGPRFeature(Feature);
 }
 
@@ -445,6 +459,8 @@ static bool appendNormalizedYSXFeature(StringRef RawFeature,
   NormalizedFeature.push_back(Enable ? '+' : '-');
   NormalizedFeature += LowerFeature;
   Features.push_back(std::move(NormalizedFeature));
+  if (Enable && Feature == "xtinyv")
+    Features.push_back("+zvl128b");
   return true;
 }
 
@@ -504,6 +520,26 @@ bool YSX64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
   if (!buildYSXFeatureList(Features, YSXFeatures, Diags))
     return false;
 
+  HasXTinyF = false;
+  HasXTinyV = false;
+  HasZvl128b = false;
+  for (StringRef Feature : YSXFeatures) {
+    bool Enabled = true;
+    if (Feature.consume_front("+"))
+      Enabled = true;
+    else if (Feature.consume_front("-"))
+      Enabled = false;
+
+    if (Feature == "xtinyf")
+      HasXTinyF = Enabled;
+    else if (Feature == "xtinyv")
+      HasXTinyV = Enabled;
+    else if (Feature == "zvl128b")
+      HasZvl128b = Enabled;
+  }
+  if (HasXTinyV)
+    HasZvl128b = true;
+
   std::vector<std::string> ISAFeatures;
   appendYSXDefaultFeatures(ISAFeatures);
   auto ParseResult = llvm::RISCVISAInfo::parseFeatures(64, ISAFeatures);
@@ -548,6 +584,8 @@ static void handleYSXArchExtension(StringRef AttrString,
     Feature.push_back(Sign);
     Feature += TargetFeature;
     Features.push_back(std::move(Feature));
+    if (Sign == '+' && TargetFeature == "xtinyv")
+      Features.push_back("+zvl128b");
   }
 }
 
@@ -572,12 +610,18 @@ ParsedTargetAttr YSX64TargetInfo::parseTargetAttr(StringRef Features) const {
 
       if (AttrString.starts_with("+") || AttrString.starts_with("-")) {
         handleYSXArchExtension(AttrString, Ret.Features);
-      } else if (AttrString.lower() == "rv64ima") {
-        appendYSXDefaultFeatures(Ret.Features);
       } else {
-        std::string InvalidArch = "+";
-        InvalidArch += AttrString.lower();
-        Ret.Features.push_back(std::move(InvalidArch));
+        auto ISAInfo = llvm::YSXISAInfo::parseArchString(
+            AttrString, /*EnableExperimentalExtension=*/false);
+        if (ISAInfo) {
+          for (const std::string &Feature : (*ISAInfo)->toFeatures())
+            Ret.Features.push_back(Feature);
+        } else {
+          llvm::consumeError(ISAInfo.takeError());
+          std::string InvalidArch = "+";
+          InvalidArch += AttrString.lower();
+          Ret.Features.push_back(std::move(InvalidArch));
+        }
       }
     } else if (Feature.starts_with("cpu=")) {
       if (!Ret.CPU.empty())
@@ -599,6 +643,14 @@ ParsedTargetAttr YSX64TargetInfo::parseTargetAttr(StringRef Features) const {
 bool YSX64TargetInfo::isValidFeatureName(StringRef Name) const {
   std::string LowerName = Name.lower();
   return isYSXAllowedUserFeatureName(LowerName);
+}
+
+bool YSX64TargetInfo::hasFeature(StringRef Feature) const {
+  return llvm::StringSwitch<bool>(Feature)
+      .Case("xtinyf", HasXTinyF)
+      .Case("xtinyv", HasXTinyV)
+      .Case("zvl128b", HasZvl128b)
+      .Default(RISCVTargetInfo::hasFeature(Feature));
 }
 
 bool RISCVTargetInfo::initFeatureMap(

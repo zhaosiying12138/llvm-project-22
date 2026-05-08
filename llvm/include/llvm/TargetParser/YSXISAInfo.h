@@ -10,6 +10,7 @@
 #define LLVM_TARGETPARSER_YSXISAINFO_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
 #include "llvm/TargetParser/RISCVTargetParser.h"
@@ -76,7 +77,14 @@ public:
   }
 
   std::string toRISCVAttributeString() const {
-    return getRISCVAttributeString().str();
+    std::string Attr = getRISCVAttributeString().str();
+    if (hasExtension("xtinyf"))
+      Attr += "_xtinyf1p0";
+    if (hasExtension("xtinyv"))
+      Attr += "_xtinyv1p0";
+    if (hasExtension("zvl128b"))
+      Attr += "_zvl128b1p0";
+    return Attr;
   }
 
   StringRef computeDefaultABI() const { return "lp64"; }
@@ -84,7 +92,8 @@ public:
   static bool isSupportedExtensionFeature(StringRef Feature) {
     return Feature == "i" || Feature == "m" || Feature == "a" ||
            Feature == "zmmul" || Feature == "zaamo" ||
-           Feature == "zalrsc";
+           Feature == "zalrsc" || Feature == "xtinyf" ||
+           Feature == "xtinyv" || Feature == "zvl128b";
   }
 
   static std::string getTargetFeatureForExtension(StringRef Ext) {
@@ -101,6 +110,33 @@ public:
     Info->addExtension("zaamo", 1, 0);
     Info->addExtension("zalrsc", 1, 0);
     return Info;
+  }
+
+  static Error addOptionalExtension(YSXISAInfo &Info, StringRef Ext) {
+    if (Ext == "xtinyf") {
+      Info.addExtension("xtinyf", 1, 0);
+      return Error::success();
+    }
+    if (Ext == "xtinyv") {
+      Info.addExtension("xtinyv", 1, 0);
+      Info.addExtension("zvl128b", 1, 0);
+      return Error::success();
+    }
+    if (Ext == "zvl128b") {
+      Info.addExtension("zvl128b", 1, 0);
+      return Error::success();
+    }
+    return unsupportedArch(Ext);
+  }
+
+  void updateArchString() {
+    ArchString = "rv64ima";
+    if (hasExtension("xtinyf"))
+      ArchString += "_xtinyf";
+    if (hasExtension("xtinyv"))
+      ArchString += "_xtinyv";
+    if (hasExtension("zvl128b"))
+      ArchString += "_zvl128b";
   }
 
   static Expected<std::unique_ptr<YSXISAInfo>>
@@ -138,6 +174,10 @@ public:
         Info->addExtension("zaamo", 1, 0);
       } else if (Feature == "zalrsc") {
         Info->addExtension("zalrsc", 1, 0);
+      } else if (Feature == "xtinyf" || Feature == "xtinyv" ||
+                 Feature == "zvl128b") {
+        if (Error Err = addOptionalExtension(*Info, Feature))
+          return std::move(Err);
       } else {
         return unsupportedArch(Feature);
       }
@@ -147,6 +187,7 @@ public:
         !Info->hasExtension("a"))
       return unsupportedArch("rv64ima");
 
+    Info->updateArchString();
     return Info;
   }
 
@@ -155,9 +196,21 @@ public:
                   bool ExperimentalExtensionVersionCheck = true) {
     std::string Lower = Arch.lower();
     StringRef LowerArch(Lower);
-    if (LowerArch != "rv64ima" && LowerArch != getRISCVAttributeString())
+    auto Info = createRV64IMAInfo();
+    if (LowerArch == "rv64ima" || LowerArch == getRISCVAttributeString())
+      return Info;
+
+    if (!LowerArch.consume_front("rv64ima_"))
       return unsupportedArch(Arch);
-    return createRV64IMAInfo();
+
+    SmallVector<StringRef, 4> Exts;
+    LowerArch.split(Exts, "_", /*MaxSplit=*/-1, /*KeepEmpty=*/false);
+    for (StringRef Ext : Exts)
+      if (Error Err = addOptionalExtension(*Info, Ext))
+        return std::move(Err);
+
+    Info->updateArchString();
+    return Info;
   }
 };
 

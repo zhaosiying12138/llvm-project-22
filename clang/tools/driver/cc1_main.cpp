@@ -154,6 +154,9 @@ static void PrintYSXSupportedExtensions(
   PrintYSXExtension("zmmul", "1.0", DescMap);
   PrintYSXExtension("zaamo", "1.0", DescMap);
   PrintYSXExtension("zalrsc", "1.0", DescMap);
+  PrintYSXExtension("xtinyf", "1.0", DescMap);
+  PrintYSXExtension("xtinyv", "1.0", DescMap);
+  PrintYSXExtension("zvl128b", "1.0", DescMap);
 }
 
 static void PrintYSXEnabledExtensions(
@@ -173,6 +176,12 @@ static void PrintYSXEnabledExtensions(
     PrintYSXExtension("zaamo", "1.0", DescMap);
   if (EnabledFeatureNames.count("zalrsc"))
     PrintYSXExtension("zalrsc", "1.0", DescMap);
+  if (EnabledFeatureNames.count("xtinyf"))
+    PrintYSXExtension("xtinyf", "1.0", DescMap);
+  if (EnabledFeatureNames.count("xtinyv"))
+    PrintYSXExtension("xtinyv", "1.0", DescMap);
+  if (EnabledFeatureNames.count("zvl128b"))
+    PrintYSXExtension("zvl128b", "1.0", DescMap);
 }
 
 static int PrintSupportedExtensions(std::string TargetStr) {

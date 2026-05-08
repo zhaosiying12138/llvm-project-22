@@ -145,7 +145,7 @@ public:
     return 64;
   }
   unsigned getFLen() const {
-    return 0;
+    return hasStdExtXTinyF() ? 32 : 0;
   }
 
   YSXABI::ABI getTargetABI() const { return TargetABI; }

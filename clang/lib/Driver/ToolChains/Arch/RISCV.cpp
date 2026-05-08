@@ -16,6 +16,7 @@
 #include "llvm/TargetParser/Host.h"
 #include "llvm/TargetParser/RISCVISAInfo.h"
 #include "llvm/TargetParser/RISCVTargetParser.h"
+#include "llvm/TargetParser/YSXISAInfo.h"
 
 using namespace clang::driver;
 using namespace clang::driver::tools;
@@ -49,13 +50,20 @@ static bool getArchFeatures(const Driver &D, StringRef Arch,
   return true;
 }
 
-static void addYSXArchFeatures(std::vector<StringRef> &Features) {
+static void addYSXArchFeatures(std::vector<StringRef> &Features,
+                               const llvm::YSXISAInfo &ISAInfo) {
   Features.push_back("+i");
   Features.push_back("+m");
   Features.push_back("+a");
   Features.push_back("+zmmul");
   Features.push_back("+zaamo");
   Features.push_back("+zalrsc");
+  if (ISAInfo.hasExtension("xtinyf"))
+    Features.push_back("+xtinyf");
+  if (ISAInfo.hasExtension("xtinyv"))
+    Features.push_back("+xtinyv");
+  if (ISAInfo.hasExtension("zvl128b"))
+    Features.push_back("+zvl128b");
 }
 
 static void addReservedRegisterFeatures(const ArgList &Args,
@@ -127,14 +135,17 @@ void riscv::getRISCVTargetFeatures(const Driver &D, const llvm::Triple &Triple,
                                    std::vector<StringRef> &Features) {
   std::string MArch = getRISCVArch(Args, Triple);
 
-  if (Triple.isYSX64() && MArch != "rv64ima") {
-    D.Diag(diag::err_drv_invalid_riscv_arch_name)
-        << MArch << "YuShuXin only supports -march=rv64ima";
-    return;
-  }
-
   if (Triple.isYSX64()) {
-    addYSXArchFeatures(Features);
+    auto ISAInfo = llvm::YSXISAInfo::parseArchString(
+        MArch, Args.hasArg(options::OPT_menable_experimental_extensions));
+    if (!ISAInfo) {
+      llvm::consumeError(ISAInfo.takeError());
+      D.Diag(diag::err_drv_invalid_riscv_arch_name)
+          << MArch << "YuShuXin only supports -march=rv64ima";
+      return;
+    }
+
+    addYSXArchFeatures(Features, **ISAInfo);
 
     if (Arg *A = Args.getLastArg(options::OPT_mcpu_EQ)) {
       StringRef CPU = A->getValue();

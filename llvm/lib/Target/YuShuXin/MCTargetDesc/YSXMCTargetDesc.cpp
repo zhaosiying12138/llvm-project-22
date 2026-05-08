@@ -72,7 +72,9 @@ static bool isYSXReserveXFeature(StringRef Feature) {
 
 static bool isRetainedYSXFeature(StringRef Feature) {
   return isRequiredYSXFeature(Feature) || Feature == "relax" ||
-         Feature == "exact-asm" || isYSXReserveXFeature(Feature);
+         Feature == "exact-asm" || Feature == "xtinyf" ||
+         Feature == "xtinyv" || Feature == "zvl128b" ||
+         isYSXReserveXFeature(Feature);
 }
 
 static std::string filterYSXFeatureString(StringRef FS) {
@@ -157,8 +159,9 @@ static ArrayRef<SubtargetFeatureKV> getYSXHelpFeatures() {
       findYSXFeature("64bit"),    findYSXFeature("a"),
       findYSXFeature("exact-asm"), findYSXFeature("i"),
       findYSXFeature("m"),        findYSXFeature("relax"),
+      findYSXFeature("xtinyf"),   findYSXFeature("xtinyv"),
       findYSXFeature("zaamo"),    findYSXFeature("zalrsc"),
-      findYSXFeature("zmmul")};
+      findYSXFeature("zmmul"),    findYSXFeature("zvl128b")};
   return Features;
 }
 

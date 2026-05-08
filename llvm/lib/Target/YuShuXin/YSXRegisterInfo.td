@@ -171,7 +171,15 @@ defvar XLenPairVT = untyped;
 def XLenRI : RegInfoByHwMode<[DefaultMode], [RegInfo<64,64,64>]>;
 
 class YSXRegisterClass<list<ValueType> regTypes, int align, dag regList>
-    : RegisterClass<"YSX", regTypes, align, regList>;
+    : RegisterClass<"YSX", regTypes, align, regList> {
+  bit IsVRegClass = 0;
+  int VLMul = 1;
+  int NF = 1;
+
+  let TSFlags{0} = IsVRegClass;
+  let TSFlags{2-1} = !logtwo(VLMul);
+  let TSFlags{5-3} = !sub(NF, 1);
+}
 
 class GPRRegisterClass<dag regList>
     : YSXRegisterClass<[XLenVT, i32], 32, regList> {
@@ -305,3 +313,86 @@ def GPRPairC : YSXRegisterClass<[XLenPairVT], 64, (add
   X10_X11, X12_X13, X14_X15, X8_X9
 )>;
 } // let RegInfos = XLenPairRI, CopyCost = 2
+
+//===----------------------------------------------------------------------===//
+// Floating-Point Registers
+//===----------------------------------------------------------------------===//
+
+let RegAltNameIndices = [ABIRegAltName] in {
+  def F0_F  : YSXReg<0,  "f0",  ["ft0"]>,  DwarfRegNum<[32]>;
+  def F1_F  : YSXReg<1,  "f1",  ["ft1"]>,  DwarfRegNum<[33]>;
+  def F2_F  : YSXReg<2,  "f2",  ["ft2"]>,  DwarfRegNum<[34]>;
+  def F3_F  : YSXReg<3,  "f3",  ["ft3"]>,  DwarfRegNum<[35]>;
+  def F4_F  : YSXReg<4,  "f4",  ["ft4"]>,  DwarfRegNum<[36]>;
+  def F5_F  : YSXReg<5,  "f5",  ["ft5"]>,  DwarfRegNum<[37]>;
+  def F6_F  : YSXReg<6,  "f6",  ["ft6"]>,  DwarfRegNum<[38]>;
+  def F7_F  : YSXReg<7,  "f7",  ["ft7"]>,  DwarfRegNum<[39]>;
+  def F8_F  : YSXReg<8,  "f8",  ["fs0"]>,  DwarfRegNum<[40]>;
+  def F9_F  : YSXReg<9,  "f9",  ["fs1"]>,  DwarfRegNum<[41]>;
+  def F10_F : YSXReg<10, "f10", ["fa0"]>,  DwarfRegNum<[42]>;
+  def F11_F : YSXReg<11, "f11", ["fa1"]>,  DwarfRegNum<[43]>;
+  def F12_F : YSXReg<12, "f12", ["fa2"]>,  DwarfRegNum<[44]>;
+  def F13_F : YSXReg<13, "f13", ["fa3"]>,  DwarfRegNum<[45]>;
+  def F14_F : YSXReg<14, "f14", ["fa4"]>,  DwarfRegNum<[46]>;
+  def F15_F : YSXReg<15, "f15", ["fa5"]>,  DwarfRegNum<[47]>;
+  def F16_F : YSXReg<16, "f16", ["fa6"]>,  DwarfRegNum<[48]>;
+  def F17_F : YSXReg<17, "f17", ["fa7"]>,  DwarfRegNum<[49]>;
+  def F18_F : YSXReg<18, "f18", ["fs2"]>,  DwarfRegNum<[50]>;
+  def F19_F : YSXReg<19, "f19", ["fs3"]>,  DwarfRegNum<[51]>;
+  def F20_F : YSXReg<20, "f20", ["fs4"]>,  DwarfRegNum<[52]>;
+  def F21_F : YSXReg<21, "f21", ["fs5"]>,  DwarfRegNum<[53]>;
+  def F22_F : YSXReg<22, "f22", ["fs6"]>,  DwarfRegNum<[54]>;
+  def F23_F : YSXReg<23, "f23", ["fs7"]>,  DwarfRegNum<[55]>;
+  def F24_F : YSXReg<24, "f24", ["fs8"]>,  DwarfRegNum<[56]>;
+  def F25_F : YSXReg<25, "f25", ["fs9"]>,  DwarfRegNum<[57]>;
+  def F26_F : YSXReg<26, "f26", ["fs10"]>, DwarfRegNum<[58]>;
+  def F27_F : YSXReg<27, "f27", ["fs11"]>, DwarfRegNum<[59]>;
+  def F28_F : YSXReg<28, "f28", ["ft8"]>,  DwarfRegNum<[60]>;
+  def F29_F : YSXReg<29, "f29", ["ft9"]>,  DwarfRegNum<[61]>;
+  def F30_F : YSXReg<30, "f30", ["ft10"]>, DwarfRegNum<[62]>;
+  def F31_F : YSXReg<31, "f31", ["ft11"]>, DwarfRegNum<[63]>;
+}
+
+def FPR32 : YSXRegisterClass<[f32], 32, (add
+    (sequence "F%u_F", 15, 10),
+    (sequence "F%u_F", 0, 7),
+    (sequence "F%u_F", 16, 17),
+    (sequence "F%u_F", 28, 31),
+    (sequence "F%u_F", 8, 9),
+    (sequence "F%u_F", 18, 27)
+)>;
+
+//===----------------------------------------------------------------------===//
+// Tiny Vector Registers
+//===----------------------------------------------------------------------===//
+
+foreach Index = !range(0, 32, 1) in
+  def V#Index : YSXReg<Index, "v"#Index>, DwarfRegNum<[!add(Index, 96)]>;
+
+def VTYPE : YSXReg<0, "vtype">;
+def VL    : YSXReg<0, "vl">;
+
+defvar YSXVecM1VTs = [nxv2i32, nxv2f32];
+defvar YSXVecMaskVTs = [nxv2i1];
+
+class VReg<list<ValueType> regTypes, dag regList>
+    : YSXRegisterClass<regTypes, 64, regList> {
+  let IsVRegClass = 1;
+  let VLMul = 1;
+  let NF = 1;
+  let Size = 64;
+  let CopyCost = 1;
+}
+
+def VR : VReg<!listconcat(YSXVecM1VTs, YSXVecMaskVTs),
+              (add (sequence "V%u", 8, 31),
+                   (sequence "V%u", 7, 0))>;
+
+def VRNoV0 : VReg<!listconcat(YSXVecM1VTs, YSXVecMaskVTs), (sub VR, V0)>;
+
+def VMV0 : VReg<YSXVecMaskVTs, (add V0)>;
+
+def VCSR : YSXRegisterClass<[XLenVT], 32, (add VTYPE, VL)> {
+  let RegInfos = XLenRI;
+  let isAllocatable = 0;
+}

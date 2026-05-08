@@ -81,6 +81,34 @@ def HasStdExtA : Predicate<"Subtarget->hasStdExtA()">,
                                     "'A' (Atomic Instructions)">;
 
 //===----------------------------------------------------------------------===//
+// YSX optional tiny-F/tiny-V ISA surface
+//===----------------------------------------------------------------------===//
+
+def FeatureStdExtXTinyF
+    : YSXExtension<1, 0, "YSX tiny single-precision floating-point extension">,
+      YSXExtensionBitmask<0, 39>;
+def HasStdExtXTinyF
+    : Predicate<"Subtarget->hasStdExtXTinyF()">,
+      AssemblerPredicate<(all_of FeatureStdExtXTinyF),
+                         "'XTinyF' (YSX tiny single-precision floating-point extension)">;
+
+def FeatureStdExtZvl128b
+    : YSXExtension<1, 0, "Minimum 128-bit vector length">,
+      YSXExtensionBitmask<0, 40>;
+def HasStdExtZvl128b
+    : Predicate<"Subtarget->hasStdExtZvl128b()">,
+      AssemblerPredicate<(all_of FeatureStdExtZvl128b),
+                         "'Zvl128b' (Minimum 128-bit vector length)">;
+
+def FeatureStdExtXTinyV
+    : YSXExtension<1, 0, "YSX tiny vector extension", [FeatureStdExtZvl128b]>,
+      YSXExtensionBitmask<0, 41>;
+def HasStdExtXTinyV
+    : Predicate<"Subtarget->hasStdExtXTinyV()">,
+      AssemblerPredicate<(all_of FeatureStdExtXTinyV),
+                         "'XTinyV' (YSX tiny vector extension)">;
+
+//===----------------------------------------------------------------------===//
 // Target width and generic assembler controls
 //===----------------------------------------------------------------------===//
 
