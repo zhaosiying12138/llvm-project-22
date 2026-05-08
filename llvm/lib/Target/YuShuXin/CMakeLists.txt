@@ -2,6 +2,64 @@ add_llvm_component_group(YSX)
 
 set(LLVM_TARGET_DEFINITIONS YSX.td)
 
+set(YSX_AUTO_TD_OUT_DIR ${CMAKE_CURRENT_BINARY_DIR}/auto-td)
+set(YSX_AUTO_TD_TINYF_INSTRINFO ${YSX_AUTO_TD_OUT_DIR}/YSXGenAutoTinyFInstrInfo.inc)
+set(YSX_AUTO_TD_TINYV_INSTRINFO ${YSX_AUTO_TD_OUT_DIR}/YSXGenAutoTinyVInstrInfo.inc)
+set(YSX_AUTO_TD_TINYV_PSEUDOS ${YSX_AUTO_TD_OUT_DIR}/YSXGenAutoTinyVPseudos.inc)
+set(YSX_AUTO_TD_TINYV_PATTERNS ${YSX_AUTO_TD_OUT_DIR}/YSXGenAutoTinyVPatterns.inc)
+set(YSX_AUTO_TD_TINYV_BUILTINS ${YSX_AUTO_TD_OUT_DIR}/YSXGenAutoTinyVBuiltins.inc)
+set(YSX_AUTO_TD_COVERAGE ${YSX_AUTO_TD_OUT_DIR}/coverage.md)
+
+set(YSX_AUTO_TD_OUTPUTS
+  ${YSX_AUTO_TD_TINYF_INSTRINFO}
+  ${YSX_AUTO_TD_TINYV_INSTRINFO}
+  ${YSX_AUTO_TD_TINYV_PSEUDOS}
+  ${YSX_AUTO_TD_TINYV_PATTERNS}
+  ${YSX_AUTO_TD_TINYV_BUILTINS}
+  )
+
+file(GLOB_RECURSE YSX_AUTO_TD_PY_DEPS CONFIGURE_DEPENDS
+  ${CMAKE_CURRENT_SOURCE_DIR}/auto-td/tools/*.py
+  ${CMAKE_CURRENT_SOURCE_DIR}/auto-td/tools/*/*.py
+  )
+file(GLOB_RECURSE YSX_AUTO_TD_YAML_DEPS CONFIGURE_DEPENDS
+  ${CMAKE_CURRENT_SOURCE_DIR}/auto-td/instructions/*.yaml
+  ${CMAKE_CURRENT_SOURCE_DIR}/auto-td/instructions/*/*.yaml
+  ${CMAKE_CURRENT_SOURCE_DIR}/auto-td/schema/*.yaml
+  ${CMAKE_CURRENT_SOURCE_DIR}/auto-td/taxonomy/*.yaml
+  )
+file(GLOB YSX_AUTO_TD_OPCODE_DEPS CONFIGURE_DEPENDS
+  ${LLVM_MAIN_SRC_DIR}/../third_party/riscv-opcodes/extensions/*
+  ${LLVM_MAIN_SRC_DIR}/../third_party/ysx-opcodes/extensions/*
+  )
+
+add_custom_command(
+  OUTPUT ${YSX_AUTO_TD_OUTPUTS} ${YSX_AUTO_TD_COVERAGE}
+  COMMAND ${Python3_EXECUTABLE}
+          ${CMAKE_CURRENT_SOURCE_DIR}/auto-td/tools/ysx_auto_td_gen.py
+          --ysx-root ${CMAKE_CURRENT_SOURCE_DIR}
+          --riscv-opcodes ${LLVM_MAIN_SRC_DIR}/../third_party/riscv-opcodes
+          --ysx-opcodes ${LLVM_MAIN_SRC_DIR}/../third_party/ysx-opcodes
+          --out-dir ${YSX_AUTO_TD_OUT_DIR}
+          --coverage ${YSX_AUTO_TD_COVERAGE}
+  DEPENDS
+          ${YSX_AUTO_TD_PY_DEPS}
+          ${YSX_AUTO_TD_YAML_DEPS}
+          ${YSX_AUTO_TD_OPCODE_DEPS}
+  VERBATIM
+  COMMENT "Generating YSX auto TableGen fragments"
+  )
+
+include_directories(${YSX_AUTO_TD_OUT_DIR})
+
+list(APPEND LLVM_TARGET_DEPENDS
+  ${YSX_AUTO_TD_OUT_DIR}/YSXGenAutoTinyFInstrInfo.inc
+  ${YSX_AUTO_TD_OUT_DIR}/YSXGenAutoTinyVInstrInfo.inc
+  ${YSX_AUTO_TD_OUT_DIR}/YSXGenAutoTinyVPseudos.inc
+  ${YSX_AUTO_TD_OUT_DIR}/YSXGenAutoTinyVPatterns.inc
+  ${YSX_AUTO_TD_OUT_DIR}/YSXGenAutoTinyVBuiltins.inc
+  )
+
 tablegen(LLVM YSXGenAsmMatcher.inc -gen-asm-matcher)
 tablegen(LLVM YSXGenAsmWriter.inc -gen-asm-writer)
 tablegen(LLVM YSXGenMacroFusion.inc -gen-macro-fusion-pred)

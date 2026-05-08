@@ -6,8 +6,10 @@
 
 ## Generated Surfaces
 
-- No generated surfaces implemented yet.
-- Task 3 added auto-td schemas, taxonomy YAML, and proof instruction YAML; no generated build-tree TD exists yet.
+- Task 3 added auto-td schemas, taxonomy YAML, and proof instruction YAML.
+- Task 6 hooks auto-td generation into the YSX LLVM target CMake as build-tree outputs under the target binary directory's `auto-td` subdirectory.
+- Task 6 wires the generated target TableGen fragments into `YSXInstrInfo.td`: `YSXGenAutoTinyFInstrInfo.inc`, `YSXGenAutoTinyVInstrInfo.inc`, `YSXGenAutoTinyVPseudos.inc`, and `YSXGenAutoTinyVPatterns.inc`.
+- Task 6 generates `YSXGenAutoTinyVBuiltins.inc` as a build output/dependency only; it is intentionally not included by LLVM target TableGen yet.
 
 ## Vendor Evidence
 
@@ -21,6 +23,7 @@
 - Task 5 added frontend macro support for `__riscv_xtinyf`, `__riscv_xtinyv`, and `__riscv_zvl128b` without enabling generic RVV builtins/types or `__riscv_vector` / `__riscv_v_intrinsic` for YSX.
 - Task 5 added FPR32, tiny vector M1, mask, and minimal `vl`/`vtype` register scaffolding, plus minimal future instruction format/opcode metadata for `LOAD_FP`, `STORE_FP`, `OP_FP`, `OP_V`, `CUSTOM_0`, and R4 format.
 - Task 5 review fix made YSX ISA parsing accept emitted versioned tiny extension forms (`xtinyf1p0`, `xtinyv1p0`, `zvl128b1p0`) and made `.attribute arch` re-emit the parsed canonical arch attribute so tiny features are preserved.
+- Task 6 added CMake dependency tracking for the auto-td generator Python files, instruction/schema/taxonomy YAML files, and opcode extension source files from `third_party/riscv-opcodes` and `third_party/ysx-opcodes`.
 
 ## Validation Evidence
 
@@ -50,6 +53,15 @@
 - Task 5 review-fix tblgen smoke result: not valid for this tree; LLVM 19 `llvm-tblgen` failed on LLVM 22 TableGen syntax with `llvm/include/llvm/IR/Intrinsics.td:687:23: error: Unknown operator` for `!listflatten`.
 - Task 5 review-fix whitespace check command: `git diff --check`
 - Task 5 review-fix whitespace check result: passed with no output.
+- Task 6 source-level test-first file: `llvm/lib/Target/YuShuXin/auto-td/tests/test_cmake_integration.py`.
+- Task 6 RED command: `python3 llvm/lib/Target/YuShuXin/auto-td/tests/test_cmake_integration.py -q`
+- Task 6 RED result: failed as expected before production edits, `Ran 5 tests in 0.001s`, `FAILED (failures=5)`, with failures for missing build-tree output definitions, generator command wiring, dependency glob coverage, `LLVM_TARGET_DEPENDS`, and generated TD includes.
+- Task 6 source-level regression command: `python3 llvm/lib/Target/YuShuXin/auto-td/tests/test_cmake_integration.py -q`
+- Task 6 source-level regression result: passed, `Ran 5 tests in 0.001s`, `OK`.
+- Task 6 auto-td unittest command: `python3 -m unittest discover -s llvm/lib/Target/YuShuXin/auto-td/tests -p 'test_*.py' -v`
+- Task 6 auto-td unittest result: passed, `Ran 16 tests in 0.181s`, `OK`.
+- Task 6 generator smoke command: `python3 llvm/lib/Target/YuShuXin/auto-td/tools/ysx_auto_td_gen.py --ysx-root llvm/lib/Target/YuShuXin --riscv-opcodes third_party/riscv-opcodes --ysx-opcodes third_party/ysx-opcodes --out-dir build/ysx-auto-td-task6 --coverage build/ysx-auto-td-task6/coverage.md`
+- Task 6 generator smoke result: passed with no stdout/stderr; generated five TD stubs and `coverage.md` under ignored `build/ysx-auto-td-task6`.
 
 ## Retained Schema Gaps
 

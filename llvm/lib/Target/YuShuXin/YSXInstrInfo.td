@@ -1745,3 +1745,9 @@ include "YSXInstrInfoM.td"
 
 // Atomic
 include "YSXInstrInfoA.td"
+
+// Auto-generated YSX tiny extension fragments.
+include "YSXGenAutoTinyFInstrInfo.inc"
+include "YSXGenAutoTinyVInstrInfo.inc"
+include "YSXGenAutoTinyVPseudos.inc"
+include "YSXGenAutoTinyVPatterns.inc"
