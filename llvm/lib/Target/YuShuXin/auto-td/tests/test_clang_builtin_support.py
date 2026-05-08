@@ -15,7 +15,9 @@ class ClangTinyVBuiltinSupportTest(unittest.TestCase):
         self.assertIn("__attribute__((ext_vector_type(4)))", text)
         self.assertIn("typedef int ysx_vint32m1_t", text)
         self.assertIn("__builtin_ysx_vadd_vv_i32m1", text)
+        self.assertIn("__builtin_ysx_vfexp_v_f32m1", text)
         self.assertIn("ysx_vadd_vv_i32m1", text)
+        self.assertIn("ysx_vfexp_v_f32m1", text)
         self.assertNotIn("__rvv_int32m1_t", text)
         self.assertNotIn("__riscv_vector", text)
 
@@ -33,10 +35,12 @@ class ClangTinyVBuiltinSupportTest(unittest.TestCase):
         self.assertIn("class YSXBuiltin", text)
         self.assertIn('__builtin_ysx_" # NAME', text)
         self.assertIn("def vadd_vv_i32m1", text)
+        self.assertIn("def vfexp_v_f32m1", text)
         self.assertIn(
             '"_ExtVector<4, int>(_ExtVector<4, int>, _ExtVector<4, int>, unsigned long)"',
             text,
         )
+        self.assertIn('"_ExtVector<4, float>(_ExtVector<4, float>, unsigned long)"', text)
         self.assertIn('"xtinyv,zvl128b"', text)
 
     def test_ysx_target_defines_private_vector_header_guard_macro(self):
@@ -54,6 +58,7 @@ class ClangTinyVBuiltinSupportTest(unittest.TestCase):
 
         self.assertIn('TargetPrefix = "ysx"', text)
         self.assertIn("def int_ysx_vadd", text)
+        self.assertIn("def int_ysx_vfexp", text)
         self.assertIn("llvm_anyvector_ty", text)
         self.assertIn("IntrNoMem", text)
 
@@ -83,8 +88,11 @@ class ClangTinyVBuiltinSupportTest(unittest.TestCase):
 
         self.assertIn('#include "llvm/IR/IntrinsicsYSX.h"', text)
         self.assertIn("case RISCV::BI__builtin_ysx_vadd_vv_i32m1:", text)
+        self.assertIn("case RISCV::BI__builtin_ysx_vfexp_v_f32m1:", text)
         self.assertIn("Intrinsic::ysx_vadd", text)
+        self.assertIn("Intrinsic::ysx_vfexp", text)
         self.assertIn("CGM.getIntrinsic(Intrinsic::ysx_vadd", text)
+        self.assertIn("CGM.getIntrinsic(Intrinsic::ysx_vfexp", text)
 
     def test_lit_test_covers_header_builtin_and_ir_intrinsic(self):
         lit = REPO_ROOT / "clang" / "test" / "CodeGen" / "YSX" / "tinyv-builtins.c"
@@ -96,6 +104,12 @@ class ClangTinyVBuiltinSupportTest(unittest.TestCase):
         self.assertIn("@llvm.ysx.vadd", text)
         self.assertIn("YSX-NOT: __riscv_vector", text)
         self.assertIn("YSX-NOT: __riscv_v_intrinsic", text)
+
+        custom = REPO_ROOT / "clang" / "test" / "CodeGen" / "YSX" / "yushuxin-vfexp.c"
+        self.assertTrue(custom.exists(), "missing custom YSX vfexp lit test")
+        custom_text = custom.read_text()
+        self.assertIn("ysx_vfexp_v_f32m1", custom_text)
+        self.assertIn("@llvm.ysx.vfexp", custom_text)
 
 
 if __name__ == "__main__":

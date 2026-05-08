@@ -12,4 +12,8 @@ let TargetPrefix = "ysx" in {
                               [LLVMMatchType<0>, LLVMMatchType<0>,
                                llvm_anyint_ty],
                               [IntrNoMem, IntrSpeculatable]>;
+  def int_ysx_vfexp
+      : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                              [LLVMMatchType<0>, llvm_anyint_ty],
+                              [IntrNoMem, IntrSpeculatable]>;
 }

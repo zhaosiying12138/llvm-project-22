@@ -31,6 +31,7 @@
 - Task 7 review fix adds a target operand type for generated vector masks (`YSXOp::OPERAND_VMASK`) and rejects malformed alias entries instead of silently dropping them.
 - Task 8 added the first Clang tiny-v builtin proof path: `clang/lib/Headers/ysx_vector.h`, YSX-prefixed builtin declaration `__builtin_ysx_vadd_vv_i32m1`, private frontend macro `__YSX_TINY_VECTOR__`, and LLVM IR intrinsic `llvm.ysx.vadd`.
 - Task 8 intentionally models the proof vector type with fixed 128-bit Clang extended vectors (`_ExtVector<4, int>`) instead of standard RVV frontend types, so YSX still does not expose generic RVV resource-header types or macros.
+- Task 11 added the matching Clang IR proof path for the custom tiny-v instruction `yushuxin.vfexp`: `ysx_vfexp_v_f32m1` in `ysx_vector.h`, YSX-prefixed builtin declaration `__builtin_ysx_vfexp_v_f32m1`, and LLVM IR intrinsic `llvm.ysx.vfexp`.
 
 ## Validation Evidence
 
@@ -97,6 +98,15 @@
 - Task 8 Clang lit proof file: `clang/test/CodeGen/YSX/tinyv-builtins.c`.
 - Task 8 Clang lit command: `python3 build/bin/llvm-lit -sv clang/test/CodeGen/YSX/tinyv-builtins.c`
 - Task 8 Clang lit result: not runnable in this worktree for the same disk-space-limited build reason as Task 7; `build/bin/llvm-lit`, `build/bin/clang`, and generated TableGen headers such as `build/include/llvm/IR/IntrinsicsYSX.h` are absent.
+- Task 11 custom builtin test-first file: `clang/test/CodeGen/YSX/yushuxin-vfexp.c`.
+- Task 11 RED command: `python3 -m unittest llvm/lib/Target/YuShuXin/auto-td/tests/test_clang_builtin_support.py -v`
+- Task 11 RED result: failed as expected before production edits; failures reported missing `__builtin_ysx_vfexp_v_f32m1`, missing `def vfexp_v_f32m1`, missing `int_ysx_vfexp`, and missing CodeGen lowering case.
+- Task 11 auto-td unittest command: `python3 -m unittest discover -s llvm/lib/Target/YuShuXin/auto-td/tests -p 'test_*.py' -v`
+- Task 11 auto-td unittest result: passed, `Ran 31 tests in 0.285s`, `OK`.
+- Task 11 custom encoding smoke command: `python3 llvm/lib/Target/YuShuXin/auto-td/tools/ysx_auto_td_gen.py --ysx-root llvm/lib/Target/YuShuXin --riscv-opcodes third_party/riscv-opcodes --ysx-opcodes third_party/ysx-opcodes --out-dir build/ysx-auto-td-vfexp --coverage build/ysx-auto-td-vfexp/coverage.md` and `rg -n "yushuxin.vfexp|ysx-opcodes/rv_xtinyv/yushuxin_vfexp" build/ysx-auto-td-vfexp/coverage.md build/ysx-auto-td-vfexp/YSXGenAutoTinyVInstrInfo.inc`
+- Task 11 custom encoding smoke result: passed; coverage reports `yushuxin.vfexp` from `ysx-opcodes/rv_xtinyv/yushuxin_vfexp`, and generated TD contains `YSX_AUTO_YUSHUXIN_VFEXP`.
+- Task 11 Clang lit command: `python3 build/bin/llvm-lit -sv clang/test/CodeGen/YSX/yushuxin-vfexp.c`
+- Task 11 Clang lit result: not runnable in this worktree because `build/bin/llvm-lit` is absent.
 
 ## Retained Schema Gaps
 

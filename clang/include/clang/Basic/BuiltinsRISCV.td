@@ -152,6 +152,9 @@ let Attributes = [NoThrow, Const] in {
 def vadd_vv_i32m1
     : YSXBuiltin<"_ExtVector<4, int>(_ExtVector<4, int>, _ExtVector<4, int>, unsigned long)",
                  "xtinyv,zvl128b">;
+def vfexp_v_f32m1
+    : YSXBuiltin<"_ExtVector<4, float>(_ExtVector<4, float>, unsigned long)",
+                 "xtinyv,zvl128b">;
 } // Attributes = [Const, NoThrow]
 
 //===----------------------------------------------------------------------===//

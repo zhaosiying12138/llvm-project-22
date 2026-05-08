@@ -23,4 +23,10 @@ ysx_vadd_vv_i32m1(ysx_vint32m1_t __a, ysx_vint32m1_t __b,
   return __builtin_ysx_vadd_vv_i32m1(__a, __b, __vl);
 }
 
+static __inline__ ysx_vfloat32m1_t __attribute__((__always_inline__,
+                                                  __nodebug__))
+ysx_vfexp_v_f32m1(ysx_vfloat32m1_t __x, unsigned long __vl) {
+  return __builtin_ysx_vfexp_v_f32m1(__x, __vl);
+}
+
 #endif /* __YSX_VECTOR_H */

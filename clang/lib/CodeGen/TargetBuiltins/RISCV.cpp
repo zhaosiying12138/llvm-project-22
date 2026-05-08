@@ -1305,6 +1305,11 @@ Value *CodeGenFunction::EmitRISCVBuiltinExpr(unsigned BuiltinID,
         CGM.getIntrinsic(Intrinsic::ysx_vadd, {ResultType, Ops[2]->getType()});
     return Builder.CreateCall(Fn, Ops, "");
   }
+  case RISCV::BI__builtin_ysx_vfexp_v_f32m1: {
+    llvm::Function *Fn = CGM.getIntrinsic(Intrinsic::ysx_vfexp,
+                                          {ResultType, Ops[1]->getType()});
+    return Builder.CreateCall(Fn, Ops, "");
+  }
 
   // XCValu
   case RISCV::BI__builtin_riscv_cv_alu_addN:
