@@ -36,6 +36,7 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/RISCVAttributes.h"
 #include "llvm/TargetParser/YSXISAInfo.h"
@@ -2050,9 +2051,15 @@ bool YSXAsmParser::parseDirectiveAttribute() {
     if (resetToArch(StringValue, ValueExprLoc, Result))
       return true;
 
+    auto ISAInfo = YSXISAInfo::parseArchString(
+        Result, /*EnableExperimentalExtension=*/true,
+        /*ExperimentalExtensionVersionCheck=*/true);
+    if (!ISAInfo)
+      report_fatal_error(ISAInfo.takeError());
+
     // Emit a canonical attribute string that RISC-V ELF consumers can parse.
-    getTargetStreamer().emitTextAttribute(
-        Tag, YSXISAInfo::getRISCVAttributeString());
+    getTargetStreamer().emitTextAttribute(Tag,
+                                          (*ISAInfo)->toRISCVAttributeString());
   }
 
   return false;

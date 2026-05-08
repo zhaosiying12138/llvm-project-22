@@ -112,7 +112,18 @@ public:
     return Info;
   }
 
+  static StringRef normalizeOptionalExtension(StringRef Ext) {
+    if (Ext == "xtinyf1p0")
+      return "xtinyf";
+    if (Ext == "xtinyv1p0")
+      return "xtinyv";
+    if (Ext == "zvl128b1p0")
+      return "zvl128b";
+    return Ext;
+  }
+
   static Error addOptionalExtension(YSXISAInfo &Info, StringRef Ext) {
+    Ext = normalizeOptionalExtension(Ext);
     if (Ext == "xtinyf") {
       Info.addExtension("xtinyf", 1, 0);
       return Error::success();
@@ -200,8 +211,12 @@ public:
     if (LowerArch == "rv64ima" || LowerArch == getRISCVAttributeString())
       return Info;
 
-    if (!LowerArch.consume_front("rv64ima_"))
-      return unsupportedArch(Arch);
+    if (!LowerArch.consume_front("rv64ima_")) {
+      if (!LowerArch.consume_front(getRISCVAttributeString()))
+        return unsupportedArch(Arch);
+      if (!LowerArch.consume_front("_"))
+        return unsupportedArch(Arch);
+    }
 
     SmallVector<StringRef, 4> Exts;
     LowerArch.split(Exts, "_", /*MaxSplit=*/-1, /*KeepEmpty=*/false);

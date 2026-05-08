@@ -20,6 +20,7 @@
 - Task 5 kept default YSX at rv64ima/lp64 and retained the full F/V/C rejection filters while allowing the new YSX-specific optional feature names through Clang driver/frontend, TargetParser, MC, and Subtarget filters.
 - Task 5 added frontend macro support for `__riscv_xtinyf`, `__riscv_xtinyv`, and `__riscv_zvl128b` without enabling generic RVV builtins/types or `__riscv_vector` / `__riscv_v_intrinsic` for YSX.
 - Task 5 added FPR32, tiny vector M1, mask, and minimal `vl`/`vtype` register scaffolding, plus minimal future instruction format/opcode metadata for `LOAD_FP`, `STORE_FP`, `OP_FP`, `OP_V`, `CUSTOM_0`, and R4 format.
+- Task 5 review fix made YSX ISA parsing accept emitted versioned tiny extension forms (`xtinyf1p0`, `xtinyv1p0`, `zvl128b1p0`) and made `.attribute arch` re-emit the parsed canonical arch attribute so tiny features are preserved.
 
 ## Validation Evidence
 
@@ -40,6 +41,15 @@
 - Task 5 cheap regression result: passed, latest run reported `Ran 11 tests in 0.173s`, `OK`.
 - Task 5 whitespace check command: `git diff --check`
 - Task 5 whitespace check result: passed with no output.
+- Task 5 review-fix test-first file: `llvm/test/MC/YSX/tiny-fv-attributes.s`.
+- Task 5 review-fix RED attempt: `build/bin/llvm-lit -sv llvm/test/MC/YSX/tiny-fv-attributes.s`
+- Task 5 review-fix RED result: not runnable; `/bin/bash: line 1: build/bin/llvm-lit: No such file or directory`.
+- Task 5 review-fix cheap regression command: `python3 -m unittest discover -s llvm/lib/Target/YuShuXin/auto-td/tests`
+- Task 5 review-fix cheap regression result: passed, `Ran 11 tests in 0.122s`, `OK`.
+- Task 5 review-fix tblgen smoke attempt: `/home/zhaosiying/codebase/software/LLVM-19.1.3-Linux-X64/bin/llvm-tblgen -gen-register-info -I llvm/lib/Target/YuShuXin -I llvm/include llvm/lib/Target/YuShuXin/YSX.td -o /tmp/ysx-reginfo-review-fix.inc`
+- Task 5 review-fix tblgen smoke result: not valid for this tree; LLVM 19 `llvm-tblgen` failed on LLVM 22 TableGen syntax with `llvm/include/llvm/IR/Intrinsics.td:687:23: error: Unknown operator` for `!listflatten`.
+- Task 5 review-fix whitespace check command: `git diff --check`
+- Task 5 review-fix whitespace check result: passed with no output.
 
 ## Retained Schema Gaps
 
