@@ -18,6 +18,12 @@ class RISCVBuiltin<string prototype, string features = ""> : TargetBuiltin {
   let Features = features;
 }
 
+class YSXBuiltin<string prototype, string features = ""> : TargetBuiltin {
+  let Spellings = ["__builtin_ysx_" # NAME];
+  let Prototype = prototype;
+  let Features = features;
+}
+
 let Attributes = [NoThrow, Const] in {
 //===----------------------------------------------------------------------===//
 // Zbb extension.
@@ -137,6 +143,15 @@ def sm3p0 : RISCVBuiltin<"unsigned int(unsigned int)">;
 def sm3p1 : RISCVBuiltin<"unsigned int(unsigned int)">;
 } // Features = "zksh"
 
+} // Attributes = [Const, NoThrow]
+
+//===----------------------------------------------------------------------===//
+// YuShuXin tiny-vector proof builtins.
+//===----------------------------------------------------------------------===//
+let Attributes = [NoThrow, Const] in {
+def vadd_vv_i32m1
+    : YSXBuiltin<"_ExtVector<4, int>(_ExtVector<4, int>, _ExtVector<4, int>, unsigned long)",
+                 "xtinyv,zvl128b">;
 } // Attributes = [Const, NoThrow]
 
 //===----------------------------------------------------------------------===//

@@ -13,6 +13,7 @@
 #include "CodeGenFunction.h"
 #include "clang/Basic/TargetBuiltins.h"
 #include "llvm/IR/IntrinsicsRISCV.h"
+#include "llvm/IR/IntrinsicsYSX.h"
 #include "llvm/TargetParser/RISCVISAInfo.h"
 #include "llvm/TargetParser/RISCVTargetParser.h"
 
@@ -1296,6 +1297,13 @@ Value *CodeGenFunction::EmitRISCVBuiltinExpr(unsigned BuiltinID,
   case RISCV::BI__builtin_riscv_pause: {
     llvm::Function *Fn = CGM.getIntrinsic(llvm::Intrinsic::riscv_pause);
     return Builder.CreateCall(Fn, {});
+  }
+
+  // YuShuXin tiny-vector proof builtins.
+  case RISCV::BI__builtin_ysx_vadd_vv_i32m1: {
+    llvm::Function *Fn =
+        CGM.getIntrinsic(Intrinsic::ysx_vadd, {ResultType, Ops[2]->getType()});
+    return Builder.CreateCall(Fn, Ops, "");
   }
 
   // XCValu

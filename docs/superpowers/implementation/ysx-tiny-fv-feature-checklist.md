@@ -29,6 +29,8 @@
 - Task 6 added CMake dependency tracking for the auto-td generator Python files, instruction/schema/taxonomy YAML files, and opcode extension source files from `third_party/riscv-opcodes` and `third_party/ysx-opcodes`.
 - Task 7 added the minimal YSX MC glue required by generated tiny-v instructions: optional `v0.t` mask parsing/defaulting, mask printing and encoding, vector register disassembly decode helpers, and `.insn` major-opcode retention for `LOAD_FP`, `STORE_FP`, `OP_FP`, `OP_V`, and `CUSTOM_0`.
 - Task 7 review fix adds a target operand type for generated vector masks (`YSXOp::OPERAND_VMASK`) and rejects malformed alias entries instead of silently dropping them.
+- Task 8 added the first Clang tiny-v builtin proof path: `clang/lib/Headers/ysx_vector.h`, YSX-prefixed builtin declaration `__builtin_ysx_vadd_vv_i32m1`, private frontend macro `__YSX_TINY_VECTOR__`, and LLVM IR intrinsic `llvm.ysx.vadd`.
+- Task 8 intentionally models the proof vector type with fixed 128-bit Clang extended vectors (`_ExtVector<4, int>`) instead of standard RVV frontend types, so YSX still does not expose generic RVV resource-header types or macros.
 
 ## Validation Evidence
 
@@ -81,6 +83,20 @@
 - Task 7 Python compile result: passed with no output.
 - Task 7 whitespace check command: `git diff --check`
 - Task 7 whitespace check result: passed with no output.
+- Task 8 test-first files: `llvm/lib/Target/YuShuXin/auto-td/tests/test_clang_builtin_support.py` and `clang/test/CodeGen/YSX/tinyv-builtins.c`.
+- Task 8 RED command: `python3 -m unittest llvm/lib/Target/YuShuXin/auto-td/tests/test_clang_builtin_support.py -v`
+- Task 8 RED result: failed as expected before production edits; failures reported missing `ysx_vector.h`, missing YSX builtin declaration, missing `IntrinsicsYSX.td`, missing `IntrinsicsYSX.h` CodeGen include, and missing private vector header guard macro.
+- Task 8 auto-td unittest command: `python3 -m unittest discover -s llvm/lib/Target/YuShuXin/auto-td/tests -p 'test_*.py' -v`
+- Task 8 auto-td unittest result: passed, `Ran 31 tests in 0.179s`, `OK`.
+- Task 8 generator smoke command: `python3 llvm/lib/Target/YuShuXin/auto-td/tools/ysx_auto_td_gen.py --ysx-root llvm/lib/Target/YuShuXin --riscv-opcodes third_party/riscv-opcodes --ysx-opcodes third_party/ysx-opcodes --out-dir build/ysx-auto-td-task8 --coverage build/ysx-auto-td-task8/coverage.md`
+- Task 8 generator smoke result: passed with no stdout/stderr.
+- Task 8 Python compile command: `python3 -m compileall -q llvm/lib/Target/YuShuXin/auto-td/tools llvm/lib/Target/YuShuXin/auto-td/tests`
+- Task 8 Python compile result: passed with no output.
+- Task 8 whitespace check command: `git diff --check`
+- Task 8 whitespace check result: passed with no output.
+- Task 8 Clang lit proof file: `clang/test/CodeGen/YSX/tinyv-builtins.c`.
+- Task 8 Clang lit command: `python3 build/bin/llvm-lit -sv clang/test/CodeGen/YSX/tinyv-builtins.c`
+- Task 8 Clang lit result: not runnable in this worktree for the same disk-space-limited build reason as Task 7; `build/bin/llvm-lit`, `build/bin/clang`, and generated TableGen headers such as `build/include/llvm/IR/IntrinsicsYSX.h` are absent.
 
 ## Retained Schema Gaps
 

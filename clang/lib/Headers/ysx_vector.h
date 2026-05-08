@@ -1,0 +1,26 @@
+/*===---- ysx_vector.h - YuShuXin tiny vector intrinsics ------------------===
+ *
+ * Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+ * See https://llvm.org/LICENSE.txt for license information.
+ * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+ *
+ *===-----------------------------------------------------------------------===
+ */
+
+#ifndef __YSX_VECTOR_H
+#define __YSX_VECTOR_H
+
+#ifndef __YSX_TINY_VECTOR__
+#error "YSX tiny vector intrinsics require xtinyv and zvl128b"
+#endif
+
+typedef int ysx_vint32m1_t __attribute__((ext_vector_type(4)));
+typedef float ysx_vfloat32m1_t __attribute__((ext_vector_type(4)));
+
+static __inline__ ysx_vint32m1_t __attribute__((__always_inline__, __nodebug__))
+ysx_vadd_vv_i32m1(ysx_vint32m1_t __a, ysx_vint32m1_t __b,
+                  unsigned long __vl) {
+  return __builtin_ysx_vadd_vv_i32m1(__a, __b, __vl);
+}
+
+#endif /* __YSX_VECTOR_H */

@@ -380,6 +380,8 @@ void YSX64TargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__riscv_xtinyv", Twine(getVersionValue(1, 0)));
   if (HasZvl128b)
     Builder.defineMacro("__riscv_zvl128b", Twine(getVersionValue(1, 0)));
+  if (HasXTinyV && HasZvl128b)
+    Builder.defineMacro("__YSX_TINY_VECTOR__", "1");
 }
 
 static constexpr const char *YSXUnsupportedFeatureMsg =
