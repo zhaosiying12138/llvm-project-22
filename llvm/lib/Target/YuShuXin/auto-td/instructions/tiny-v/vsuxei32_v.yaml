@@ -1,0 +1,5 @@
+mnemonic: vsuxei32.v
+opcode_source: {repo: riscv-opcodes, extension: rv_v, key: vsuxei32_v}
+spec_ref: tinyv.vector-memory.indexed_unordered_store_e32
+features: {required: [xtinyv]}
+status: auto_full

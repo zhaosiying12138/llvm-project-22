@@ -30,3 +30,69 @@ categories:
       has_side_effects: false
       implicit_uses: [VL, VTYPE]
     sched: {semantic_class: vector_memory}
+  strided_load_e32:
+    domain: tinyv
+    operation: vector_strided_load
+    default_surfaces: [mc_def, decoder, sched, pseudo, pattern, builtin, coverage]
+    operands:
+      outs: [{role: dest, field: vd, reg_class: VR}]
+      ins:
+        - {role: base, field: rs1, reg_class: GPR}
+        - {role: stride, field: rs2, reg_class: GPR}
+        - {role: mask_policy, field: vm, operand: VMaskOp}
+    effects:
+      may_load: true
+      may_store: false
+      has_side_effects: false
+      implicit_uses: [VL, VTYPE]
+    sched: {semantic_class: vector_memory}
+  strided_store_e32:
+    domain: tinyv
+    operation: vector_strided_store
+    default_surfaces: [mc_def, decoder, sched, pseudo, pattern, builtin, coverage]
+    operands:
+      outs: []
+      ins:
+        - {role: value, field: vs3, reg_class: VR}
+        - {role: base, field: rs1, reg_class: GPR}
+        - {role: stride, field: rs2, reg_class: GPR}
+        - {role: mask_policy, field: vm, operand: VMaskOp}
+    effects:
+      may_load: false
+      may_store: true
+      has_side_effects: false
+      implicit_uses: [VL, VTYPE]
+    sched: {semantic_class: vector_memory}
+  indexed_unordered_load_e32:
+    domain: tinyv
+    operation: vector_indexed_unordered_load
+    default_surfaces: [mc_def, decoder, sched, pseudo, pattern, builtin, coverage]
+    operands:
+      outs: [{role: dest, field: vd, reg_class: VR}]
+      ins:
+        - {role: base, field: rs1, reg_class: GPR}
+        - {role: indices, field: vs2, reg_class: VR}
+        - {role: mask_policy, field: vm, operand: VMaskOp}
+    effects:
+      may_load: true
+      may_store: false
+      has_side_effects: false
+      implicit_uses: [VL, VTYPE]
+    sched: {semantic_class: vector_memory}
+  indexed_unordered_store_e32:
+    domain: tinyv
+    operation: vector_indexed_unordered_store
+    default_surfaces: [mc_def, decoder, sched, pseudo, pattern, builtin, coverage]
+    operands:
+      outs: []
+      ins:
+        - {role: value, field: vs3, reg_class: VR}
+        - {role: base, field: rs1, reg_class: GPR}
+        - {role: indices, field: vs2, reg_class: VR}
+        - {role: mask_policy, field: vm, operand: VMaskOp}
+    effects:
+      may_load: false
+      may_store: true
+      has_side_effects: false
+      implicit_uses: [VL, VTYPE]
+    sched: {semantic_class: vector_memory}

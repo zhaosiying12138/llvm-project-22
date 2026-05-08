@@ -28,6 +28,18 @@ fsub.s ft5, ft6, ft7, 1
 # CHECK-ASM: encoding: [0x53,0xa5,0xc5,0x10]
 fmul.s fa0, fa1, fa2, 2
 
+# CHECK-ASM-AND-OBJ: fsgnj.s ft6, ft7, ft7
+# CHECK-ASM: encoding: [0x53,0x83,0x73,0x20]
+fsgnj.s ft6, ft7, ft7
+
+# CHECK-ASM-AND-OBJ: fmv.x.w a0, ft0
+# CHECK-ASM: encoding: [0x53,0x05,0x00,0xe0]
+fmv.x.w a0, ft0
+
+# CHECK-ASM-AND-OBJ: fmv.w.x ft1, a6
+# CHECK-ASM: encoding: [0xd3,0x00,0x08,0xf0]
+fmv.w.x ft1, a6
+
 # CHECK-ASM-AND-OBJ: feq.s a0, fa3, fa4
 # CHECK-ASM: encoding: [0x53,0xa5,0xe6,0xa0]
 feq.s a0, fa3, fa4

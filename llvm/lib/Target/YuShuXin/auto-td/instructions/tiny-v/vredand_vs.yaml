@@ -1,0 +1,5 @@
+mnemonic: vredand.vs
+opcode_source: {repo: riscv-opcodes, extension: rv_v, key: vredand_vs}
+spec_ref: tinyv.vector-reduce.int_reduce
+features: {required: [xtinyv]}
+status: auto_full

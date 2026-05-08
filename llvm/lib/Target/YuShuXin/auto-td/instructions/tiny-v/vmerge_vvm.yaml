@@ -1,0 +1,5 @@
+mnemonic: vmerge.vvm
+opcode_source: {repo: riscv-opcodes, extension: rv_v, key: vmerge_vvm}
+spec_ref: tinyv.vector-alu.int_merge_vvm
+features: {required: [xtinyv]}
+status: auto_full

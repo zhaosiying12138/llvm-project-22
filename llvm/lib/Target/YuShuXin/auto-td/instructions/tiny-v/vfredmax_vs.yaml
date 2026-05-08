@@ -1,0 +1,5 @@
+mnemonic: vfredmax.vs
+opcode_source: {repo: riscv-opcodes, extension: rv_v, key: vfredmax_vs}
+spec_ref: tinyv.vector-reduce.float_minmax
+features: {required: [xtinyv]}
+status: auto_full

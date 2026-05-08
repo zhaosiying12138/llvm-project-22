@@ -1,0 +1,5 @@
+mnemonic: fmv.x.w
+opcode_source: {repo: riscv-opcodes, extension: rv_f, key: fmv_x_w}
+spec_ref: tinyf.scalar-float.f32_to_gpr_bits
+required_features: [xtinyf]
+status: auto_full

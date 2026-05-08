@@ -1,0 +1,5 @@
+mnemonic: vlse32.v
+opcode_source: {repo: riscv-opcodes, extension: rv_v, key: vlse32_v}
+spec_ref: tinyv.vector-memory.strided_load_e32
+features: {required: [xtinyv]}
+status: auto_full

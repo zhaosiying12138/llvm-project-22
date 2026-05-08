@@ -1,51 +1,61 @@
 categories:
-  float_sum:
+  slide_vx:
     domain: tinyv
-    operation: freduce_sum
+    operation: vector_slide_scalar
     default_surfaces: [mc_def, decoder, sched, pseudo, pattern, builtin, coverage]
     operands:
       outs: [{role: dest, field: vd, reg_class: VR}]
       ins:
         - {role: vector, field: vs2, reg_class: VR}
-        - {role: scalar_seed, field: vs1, reg_class: VR}
-        - {role: mask_policy, field: vm, operand: VMaskOp}
-    aliases:
-      - {mnemonic: vfredsum.vs, canonical: vfredusum.vs}
-    effects:
-      may_load: false
-      may_store: false
-      has_side_effects: false
-      implicit_uses: [VL, VTYPE]
-    sched: {semantic_class: vector_reduce}
-  int_reduce:
-    domain: tinyv
-    operation: vector_int_reduce
-    default_surfaces: [mc_def, decoder, sched, pseudo, pattern, builtin, coverage]
-    operands:
-      outs: [{role: dest, field: vd, reg_class: VR}]
-      ins:
-        - {role: vector, field: vs2, reg_class: VR}
-        - {role: scalar_seed, field: vs1, reg_class: VR}
+        - {role: offset, field: rs1, reg_class: GPR}
         - {role: mask_policy, field: vm, operand: VMaskOp}
     effects:
       may_load: false
       may_store: false
       has_side_effects: false
       implicit_uses: [VL, VTYPE]
-    sched: {semantic_class: vector_reduce}
-  float_minmax:
+    sched: {semantic_class: vector_shuffle}
+  gather_vv:
     domain: tinyv
-    operation: freduce_minmax
+    operation: vector_gather
     default_surfaces: [mc_def, decoder, sched, pseudo, pattern, builtin, coverage]
     operands:
       outs: [{role: dest, field: vd, reg_class: VR}]
       ins:
         - {role: vector, field: vs2, reg_class: VR}
-        - {role: scalar_seed, field: vs1, reg_class: VR}
+        - {role: indices, field: vs1, reg_class: VR}
         - {role: mask_policy, field: vm, operand: VMaskOp}
     effects:
       may_load: false
       may_store: false
       has_side_effects: false
       implicit_uses: [VL, VTYPE]
-    sched: {semantic_class: vector_reduce}
+    sched: {semantic_class: vector_shuffle}
+  scalar_splat_x:
+    domain: tinyv
+    operation: vector_scalar_splat
+    default_surfaces: [mc_def, decoder, sched, pseudo, pattern, builtin, coverage]
+    operands:
+      outs: [{role: dest, field: vd, reg_class: VR}]
+      ins:
+        - {role: value, field: rs1, reg_class: GPR}
+    effects:
+      may_load: false
+      may_store: false
+      has_side_effects: false
+      implicit_uses: [VL, VTYPE]
+    sched: {semantic_class: vector_move}
+  vector_move_v:
+    domain: tinyv
+    operation: vector_move
+    default_surfaces: [mc_def, decoder, sched, pseudo, pattern, builtin, coverage]
+    operands:
+      outs: [{role: dest, field: vd, reg_class: VR}]
+      ins:
+        - {role: value, field: vs1, reg_class: VR}
+    effects:
+      may_load: false
+      may_store: false
+      has_side_effects: false
+      implicit_uses: [VL, VTYPE]
+    sched: {semantic_class: vector_move}

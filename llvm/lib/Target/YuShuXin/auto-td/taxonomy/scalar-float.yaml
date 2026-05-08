@@ -22,6 +22,37 @@ categories:
         - {role: rhs, field: rs2, reg_class: FPR32}
     effects: {may_load: false, may_store: false, has_side_effects: false}
     sched: {semantic_class: scalar_float_compare}
+  f32_binary_no_rm:
+    domain: tinyf
+    operation: scalar_f32_binary_no_rm
+    default_surfaces: [mc_def, decoder, sched, pattern, coverage]
+    operands:
+      outs: [{role: dest, field: rd, reg_class: FPR32}]
+      ins:
+        - {role: lhs, field: rs1, reg_class: FPR32}
+        - {role: rhs, field: rs2, reg_class: FPR32}
+    effects: {may_load: false, may_store: false, has_side_effects: false}
+    sched: {semantic_class: scalar_float_alu}
+  f32_to_gpr_bits:
+    domain: tinyf
+    operation: scalar_f32_to_gpr_bits
+    default_surfaces: [mc_def, decoder, sched, pattern, coverage]
+    operands:
+      outs: [{role: dest, field: rd, reg_class: GPR}]
+      ins:
+        - {role: value, field: rs1, reg_class: FPR32}
+    effects: {may_load: false, may_store: false, has_side_effects: false}
+    sched: {semantic_class: scalar_float_move}
+  gpr_to_f32_bits:
+    domain: tinyf
+    operation: scalar_gpr_to_f32_bits
+    default_surfaces: [mc_def, decoder, sched, pattern, coverage]
+    operands:
+      outs: [{role: dest, field: rd, reg_class: FPR32}]
+      ins:
+        - {role: value, field: rs1, reg_class: GPR}
+    effects: {may_load: false, may_store: false, has_side_effects: false}
+    sched: {semantic_class: scalar_float_move}
   f32_to_i32:
     domain: tinyf
     operation: scalar_f32_to_i32

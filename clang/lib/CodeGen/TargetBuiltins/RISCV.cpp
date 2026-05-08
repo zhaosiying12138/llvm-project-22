@@ -1126,9 +1126,40 @@ Value *CodeGenFunction::EmitRISCVBuiltinExpr(unsigned BuiltinID,
                                             {ResultType, Ops[2]->getType()});
       return Builder.CreateCall(Fn, Ops, "");
     }
+    case YSX::BI__builtin_ysx_vsub_vv_i32m1: {
+      llvm::Function *Fn = CGM.getIntrinsic(Intrinsic::ysx_vsub,
+                                            {ResultType, Ops[2]->getType()});
+      return Builder.CreateCall(Fn, Ops, "");
+    }
+    case YSX::BI__builtin_ysx_vmul_vv_i32m1: {
+      llvm::Function *Fn = CGM.getIntrinsic(Intrinsic::ysx_vmul,
+                                            {ResultType, Ops[2]->getType()});
+      return Builder.CreateCall(Fn, Ops, "");
+    }
+    case YSX::BI__builtin_ysx_vredsum_vs_i32m1: {
+      llvm::Function *Fn = CGM.getIntrinsic(Intrinsic::ysx_vredsum,
+                                            {ResultType, Ops[2]->getType()});
+      return Builder.CreateCall(Fn, Ops, "");
+    }
     case YSX::BI__builtin_ysx_vfexp_v_f32m1: {
       llvm::Function *Fn = CGM.getIntrinsic(Intrinsic::ysx_vfexp,
                                             {ResultType, Ops[1]->getType()});
+      return Builder.CreateCall(Fn, Ops, "");
+    }
+    case YSX::BI__builtin_ysx_vfredsum_vs_f32m1: {
+      llvm::Function *Fn = CGM.getIntrinsic(Intrinsic::ysx_vfredsum,
+                                            {ResultType, Ops[2]->getType()});
+      return Builder.CreateCall(Fn, Ops, "");
+    }
+    case YSX::BI__builtin_ysx_vrgather_vv_i32m1: {
+      llvm::Function *Fn = CGM.getIntrinsic(Intrinsic::ysx_vrgather,
+                                            {ResultType, Ops[2]->getType()});
+      return Builder.CreateCall(Fn, Ops, "");
+    }
+    case YSX::BI__builtin_ysx_vslideup_vx_i32m1: {
+      llvm::Function *Fn = CGM.getIntrinsic(
+          Intrinsic::ysx_vslideup,
+          {ResultType, Ops[1]->getType(), Ops[2]->getType()});
       return Builder.CreateCall(Fn, Ops, "");
     }
     }

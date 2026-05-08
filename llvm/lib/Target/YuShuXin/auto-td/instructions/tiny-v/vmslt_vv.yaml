@@ -1,0 +1,5 @@
+mnemonic: vmslt.vv
+opcode_source: {repo: riscv-opcodes, extension: rv_v, key: vmslt_vv}
+spec_ref: tinyv.vector-alu.int_compare_vv
+features: {required: [xtinyv]}
+status: auto_full

@@ -22,6 +22,7 @@
 #include "llvm/IR/IntrinsicsYSX.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -45,6 +46,8 @@ static bool isYSXTinyVFixedVT(MVT VT) {
 
 static constexpr int64_t YSXTinyVFixedVL = 4;
 static constexpr int64_t YSXTinyVE32M1TAMA = 0xd0;
+static constexpr int64_t YSXTinyFRMDyn = 7;
+static constexpr int64_t YSXTinyFRMRTZ = 1;
 
 static bool isZeroTargetOffset(SDValue Offset) {
   if (auto *C = dyn_cast<ConstantSDNode>(Offset))
@@ -85,6 +88,64 @@ static SDValue emitTinyVSetVLI(SelectionDAG *CurDAG,
                                         Subtarget->getXLenVT(), MVT::Glue, AVL,
                                         VType),
                  1);
+}
+
+static SDValue getTinyFRoundingMode(SelectionDAG *CurDAG,
+                                    const YSXSubtarget *Subtarget,
+                                    const SDLoc &DL, int64_t RoundingMode) {
+  return CurDAG->getTargetConstant(RoundingMode, DL, Subtarget->getXLenVT());
+}
+
+static bool isI32VTAssert(SDNode *Node, unsigned Opcode) {
+  if (Node->getOpcode() != Opcode)
+    return false;
+  auto *AssertVT = dyn_cast<VTSDNode>(Node->getOperand(1));
+  return AssertVT && AssertVT->getVT() == MVT::i32;
+}
+
+static bool isSignExtendedI32Value(SDValue Value, MVT XLenVT) {
+  if (Value.getSimpleValueType() == MVT::i32)
+    return true;
+  if (Value.getSimpleValueType() != XLenVT)
+    return false;
+  if (isI32VTAssert(Value.getNode(), ISD::AssertSext))
+    return true;
+  if (Value.getOpcode() != ISD::SIGN_EXTEND_INREG)
+    return false;
+  auto *ExtVT = dyn_cast<VTSDNode>(Value.getOperand(1));
+  return ExtVT && ExtVT->getVT() == MVT::i32;
+}
+
+static bool isUInt32Mask(SDValue Value) {
+  auto *C = dyn_cast<ConstantSDNode>(Value);
+  return C && C->getZExtValue() == UINT64_C(0xffffffff);
+}
+
+static bool isZeroExtendedI32Value(SDValue Value, MVT XLenVT) {
+  if (Value.getSimpleValueType() == MVT::i32)
+    return true;
+  if (Value.getSimpleValueType() != XLenVT)
+    return false;
+  if (isI32VTAssert(Value.getNode(), ISD::AssertZext))
+    return true;
+  return Value.getOpcode() == ISD::AND &&
+         (isUInt32Mask(Value.getOperand(0)) || isUInt32Mask(Value.getOperand(1)));
+}
+
+static void reportUnsupportedTinyF(StringRef What) {
+  report_fatal_error(Twine("YSX tiny-F unsupported operation: ") + What,
+                     false);
+}
+
+static MachineSDNode *selectTinyVVectorOp(SelectionDAG *CurDAG,
+                                          const YSXSubtarget *Subtarget,
+                                          const SDLoc &DL, MVT VT,
+                                          unsigned MachineOpcode, SDValue LHS,
+                                          SDValue RHS, SDValue AVL) {
+  SDValue Glue = emitTinyVSetVLI(CurDAG, Subtarget, DL, AVL);
+  SDValue Mask = CurDAG->getRegister(YSX::NoRegister, VT);
+  SDValue Ops[] = {LHS, RHS, Mask, Glue};
+  return CurDAG->getMachineNode(MachineOpcode, DL, VT, Ops);
 }
 
 void YSXDAGToDAGISel::PreprocessISelDAG() {}
@@ -294,6 +355,23 @@ void YSXDAGToDAGISel::Select(SDNode *Node) {
 
   switch (Opcode) {
   case ISD::STORE: {
+    if (Subtarget->hasStdExtXTinyF()) {
+      auto *Store = cast<StoreSDNode>(Node);
+      MVT StoreVT = Store->getValue().getSimpleValueType();
+      if (StoreVT == MVT::f32 && !Store->isTruncatingStore()) {
+        SDValue Base, Offset;
+        if (!SelectAddrRegImm(Store->getBasePtr(), Base, Offset))
+          break;
+
+        SDValue Ops[] = {Store->getValue(), Base, Offset, Store->getChain()};
+        MachineSDNode *New =
+            CurDAG->getMachineNode(YSX::YSX_AUTO_FSW, DL, MVT::Other, Ops);
+        CurDAG->setNodeMemRefs(New, {Store->getMemOperand()});
+        ReplaceNode(Node, New);
+        return;
+      }
+    }
+
     if (Subtarget->hasStdExtXTinyV()) {
       auto *Store = cast<StoreSDNode>(Node);
       MVT StoreVT = Store->getValue().getSimpleValueType();
@@ -318,6 +396,152 @@ void YSXDAGToDAGISel::Select(SDNode *Node) {
       }
     }
     break;
+  }
+  case ISD::FADD:
+  case ISD::FSUB:
+  case ISD::FMUL: {
+    if (!Subtarget->hasStdExtXTinyF() || VT != MVT::f32)
+      break;
+
+    unsigned MachineOpcode;
+    switch (Opcode) {
+    default:
+      llvm_unreachable("unexpected tiny-f arithmetic opcode");
+    case ISD::FADD:
+      MachineOpcode = YSX::YSX_AUTO_FADD_S;
+      break;
+    case ISD::FSUB:
+      MachineOpcode = YSX::YSX_AUTO_FSUB_S;
+      break;
+    case ISD::FMUL:
+      MachineOpcode = YSX::YSX_AUTO_FMUL_S;
+      break;
+    }
+
+    SDValue RM = getTinyFRoundingMode(CurDAG, Subtarget, DL, YSXTinyFRMDyn);
+    MachineSDNode *New = CurDAG->getMachineNode(
+        MachineOpcode, DL, VT, Node->getOperand(0), Node->getOperand(1), RM);
+    ReplaceNode(Node, New);
+    return;
+  }
+  case ISD::AssertSext:
+  case ISD::AssertZext: {
+    if (!Subtarget->hasStdExtXTinyF() || !isI32VTAssert(Node, Opcode))
+      break;
+    SDValue Convert = Node->getOperand(0);
+    unsigned ConvertOpcode = Convert.getOpcode();
+    if (Opcode == ISD::AssertSext && ConvertOpcode != ISD::FP_TO_SINT)
+      break;
+    if (Opcode == ISD::AssertZext && ConvertOpcode != ISD::FP_TO_UINT)
+      break;
+    if (Convert.getSimpleValueType() != Subtarget->getXLenVT() ||
+        Convert.getOperand(0).getSimpleValueType() != MVT::f32)
+      break;
+
+    unsigned MachineOpcode =
+        ConvertOpcode == ISD::FP_TO_SINT ? YSX::YSX_AUTO_FCVT_W_S
+                                         : YSX::YSX_AUTO_FCVT_WU_S;
+    SDValue RM = getTinyFRoundingMode(CurDAG, Subtarget, DL, YSXTinyFRMRTZ);
+    MachineSDNode *ConvertNode = CurDAG->getMachineNode(
+        MachineOpcode, DL, VT, Convert.getOperand(0), RM);
+    if (Opcode == ISD::AssertZext && Subtarget->is64Bit()) {
+      SDValue ShiftAmount = CurDAG->getTargetConstant(32, DL, VT);
+      SDNode *SLLI = CurDAG->getMachineNode(
+          YSX::SLLI, DL, VT, SDValue(ConvertNode, 0), ShiftAmount);
+      SDNode *SRLI = CurDAG->getMachineNode(YSX::SRLI, DL, VT,
+                                           SDValue(SLLI, 0), ShiftAmount);
+      ReplaceNode(Node, SRLI);
+      return;
+    }
+    ReplaceNode(Node, ConvertNode);
+    return;
+  }
+  case ISD::FP_TO_SINT:
+  case ISD::FP_TO_UINT: {
+    if (!Subtarget->hasStdExtXTinyF() ||
+        Node->getOperand(0).getSimpleValueType() != MVT::f32)
+      break;
+    if (VT != MVT::i32 && VT != Subtarget->getXLenVT())
+      break;
+    if (VT == Subtarget->getXLenVT())
+      reportUnsupportedTinyF("i64 result conversion from f32");
+
+    unsigned MachineOpcode =
+        Opcode == ISD::FP_TO_SINT ? YSX::YSX_AUTO_FCVT_W_S
+                                  : YSX::YSX_AUTO_FCVT_WU_S;
+    SDValue RM = getTinyFRoundingMode(CurDAG, Subtarget, DL, YSXTinyFRMRTZ);
+    MachineSDNode *New =
+        CurDAG->getMachineNode(MachineOpcode, DL, VT, Node->getOperand(0), RM);
+    ReplaceNode(Node, New);
+    return;
+  }
+  case ISD::SINT_TO_FP:
+  case ISD::UINT_TO_FP: {
+    if (!Subtarget->hasStdExtXTinyF() || VT != MVT::f32)
+      break;
+    MVT OperandVT = Node->getOperand(0).getSimpleValueType();
+    if (OperandVT != MVT::i32 && OperandVT != Subtarget->getXLenVT())
+      break;
+    if (Opcode == ISD::SINT_TO_FP &&
+        !isSignExtendedI32Value(Node->getOperand(0), Subtarget->getXLenVT()))
+      reportUnsupportedTinyF("i64 signed conversion to f32");
+    if (Opcode == ISD::UINT_TO_FP &&
+        !isZeroExtendedI32Value(Node->getOperand(0), Subtarget->getXLenVT()))
+      reportUnsupportedTinyF("i64 unsigned conversion to f32");
+
+    unsigned MachineOpcode =
+        Opcode == ISD::SINT_TO_FP ? YSX::YSX_AUTO_FCVT_S_W
+                                  : YSX::YSX_AUTO_FCVT_S_WU;
+    SDValue RM = getTinyFRoundingMode(CurDAG, Subtarget, DL, YSXTinyFRMDyn);
+    MachineSDNode *New =
+        CurDAG->getMachineNode(MachineOpcode, DL, VT, Node->getOperand(0), RM);
+    ReplaceNode(Node, New);
+    return;
+  }
+  case ISD::SETCC: {
+    if (!Subtarget->hasStdExtXTinyF() ||
+        Node->getOperand(0).getSimpleValueType() != MVT::f32)
+      break;
+
+    SDValue LHS = Node->getOperand(0);
+    SDValue RHS = Node->getOperand(1);
+    ISD::CondCode CCVal = cast<CondCodeSDNode>(Node->getOperand(2))->get();
+    unsigned MachineOpcode;
+    switch (CCVal) {
+    default:
+      reportUnsupportedTinyF(
+          "f32 compare outside ordered eq/lt/le/gt/ge subset");
+      break;
+    case ISD::SETEQ:
+    case ISD::SETOEQ:
+      MachineOpcode = YSX::YSX_AUTO_FEQ_S;
+      goto SelectTinyFCmp;
+    case ISD::SETLT:
+    case ISD::SETOLT:
+      MachineOpcode = YSX::YSX_AUTO_FLT_S;
+      goto SelectTinyFCmp;
+    case ISD::SETLE:
+    case ISD::SETOLE:
+      MachineOpcode = YSX::YSX_AUTO_FLE_S;
+      goto SelectTinyFCmp;
+    case ISD::SETGT:
+    case ISD::SETOGT:
+      MachineOpcode = YSX::YSX_AUTO_FLT_S;
+      std::swap(LHS, RHS);
+      goto SelectTinyFCmp;
+    case ISD::SETGE:
+    case ISD::SETOGE:
+      MachineOpcode = YSX::YSX_AUTO_FLE_S;
+      std::swap(LHS, RHS);
+      goto SelectTinyFCmp;
+    }
+    break;
+
+  SelectTinyFCmp:
+    MachineSDNode *New =
+        CurDAG->getMachineNode(MachineOpcode, DL, VT, LHS, RHS);
+    ReplaceNode(Node, New);
+    return;
   }
   case ISD::Constant: {
     assert(VT == Subtarget->getXLenVT() && "Unexpected VT");
@@ -858,6 +1082,23 @@ void YSXDAGToDAGISel::Select(SDNode *Node) {
     return;
   }
   case ISD::LOAD: {
+    if (Subtarget->hasStdExtXTinyF()) {
+      auto *Load = cast<LoadSDNode>(Node);
+      MVT LoadVT = Load->getSimpleValueType(0);
+      if (LoadVT == MVT::f32 && Load->getExtensionType() == ISD::NON_EXTLOAD) {
+        SDValue Base, Offset;
+        if (!SelectAddrRegImm(Load->getBasePtr(), Base, Offset))
+          break;
+
+        SDValue Ops[] = {Base, Offset, Load->getChain()};
+        MachineSDNode *New = CurDAG->getMachineNode(
+            YSX::YSX_AUTO_FLW, DL, LoadVT, MVT::Other, Ops);
+        CurDAG->setNodeMemRefs(New, {Load->getMemOperand()});
+        ReplaceNode(Node, New);
+        return;
+      }
+    }
+
     if (Subtarget->hasStdExtXTinyV()) {
       auto *Load = cast<LoadSDNode>(Node);
       MVT LoadVT = Load->getSimpleValueType(0);
@@ -893,12 +1134,60 @@ void YSXDAGToDAGISel::Select(SDNode *Node) {
       if (!Subtarget->hasStdExtXTinyV() || !isYSXTinyVFixedVT(VT))
         break;
 
-      SDValue Glue =
-          emitTinyVSetVLI(CurDAG, Subtarget, DL, Node->getOperand(3));
-      SDValue Mask = CurDAG->getRegister(YSX::NoRegister, VT);
-      SDValue Ops[] = {Node->getOperand(1), Node->getOperand(2), Mask, Glue};
-      MachineSDNode *New =
-          CurDAG->getMachineNode(YSX::YSX_AUTO_VADD_VV, DL, VT, Ops);
+      MachineSDNode *New = selectTinyVVectorOp(
+          CurDAG, Subtarget, DL, VT, YSX::YSX_AUTO_VADD_VV,
+          Node->getOperand(1), Node->getOperand(2), Node->getOperand(3));
+      ReplaceNode(Node, New);
+      return;
+    }
+    case Intrinsic::ysx_vsub:
+    case Intrinsic::ysx_vmul:
+    case Intrinsic::ysx_vredsum:
+    case Intrinsic::ysx_vfredsum:
+    case Intrinsic::ysx_vrgather: {
+      if (!Subtarget->hasStdExtXTinyV())
+        break;
+      if (IntNo == Intrinsic::ysx_vfredsum) {
+        if (VT != MVT::v4f32)
+          break;
+      } else if (VT != MVT::v4i32) {
+        break;
+      }
+
+      unsigned MachineOpcode;
+      switch (IntNo) {
+      default:
+        llvm_unreachable("unexpected tiny-v intrinsic");
+      case Intrinsic::ysx_vsub:
+        MachineOpcode = YSX::YSX_AUTO_VSUB_VV;
+        break;
+      case Intrinsic::ysx_vmul:
+        MachineOpcode = YSX::YSX_AUTO_VMUL_VV;
+        break;
+      case Intrinsic::ysx_vredsum:
+        MachineOpcode = YSX::YSX_AUTO_VREDSUM_VS;
+        break;
+      case Intrinsic::ysx_vfredsum:
+        MachineOpcode = YSX::YSX_AUTO_VFREDUSUM_VS;
+        break;
+      case Intrinsic::ysx_vrgather:
+        MachineOpcode = YSX::YSX_AUTO_VRGATHER_VV;
+        break;
+      }
+
+      MachineSDNode *New = selectTinyVVectorOp(
+          CurDAG, Subtarget, DL, VT, MachineOpcode, Node->getOperand(1),
+          Node->getOperand(2), Node->getOperand(3));
+      ReplaceNode(Node, New);
+      return;
+    }
+    case Intrinsic::ysx_vslideup: {
+      if (!Subtarget->hasStdExtXTinyV() || VT != MVT::v4i32)
+        break;
+
+      MachineSDNode *New = selectTinyVVectorOp(
+          CurDAG, Subtarget, DL, VT, YSX::YSX_AUTO_VSLIDEUP_VX,
+          Node->getOperand(1), Node->getOperand(2), Node->getOperand(3));
       ReplaceNode(Node, New);
       return;
     }

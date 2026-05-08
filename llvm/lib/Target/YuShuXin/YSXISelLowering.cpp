@@ -85,6 +85,8 @@ YSXTargetLowering::YSXTargetLowering(const TargetMachine &TM,
     addRegisterClass(MVT::v4i32, &YSX::VRRegClass);
     addRegisterClass(MVT::v4f32, &YSX::VRRegClass);
   }
+  if (Subtarget.hasStdExtXTinyF())
+    addRegisterClass(MVT::f32, &YSX::FPR32RegClass);
 
   // Compute derived properties from the register classes.
   computeRegisterProperties(STI.getRegisterInfo());
@@ -99,6 +101,14 @@ YSXTargetLowering::YSXTargetLowering(const TargetMachine &TM,
 
   // TODO: add all necessary setOperationAction calls.
   setOperationAction(ISD::DYNAMIC_STACKALLOC, XLenVT, Custom);
+
+  if (Subtarget.hasStdExtXTinyF()) {
+    setOperationAction({ISD::FADD, ISD::FSUB, ISD::FMUL}, MVT::f32, Legal);
+    setOperationAction({ISD::SINT_TO_FP, ISD::UINT_TO_FP}, MVT::f32, Legal);
+    setOperationAction({ISD::FP_TO_SINT, ISD::FP_TO_UINT}, MVT::i32, Legal);
+    setCondCodeAction({ISD::SETGT, ISD::SETGE, ISD::SETOGT, ISD::SETOGE},
+                      MVT::f32, Legal);
+  }
 
   setOperationAction(ISD::BR_JT, MVT::Other, Expand);
   setOperationAction(ISD::BR_CC, XLenVT, Expand);

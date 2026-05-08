@@ -82,6 +82,20 @@ def _emit_tiny_v_instrinfo(instructions) -> str:
         '  let OperandType = "OPERAND_VMASK";',
         "}",
         "",
+        "def YSXAutoVMaskCarryInAsmOperand : AsmOperandClass {",
+        '  let Name = "YSXAutoVMaskCarryInRegOpOperand";',
+        '  let RenderMethod = "addRegOperands";',
+        '  let PredicateMethod = "isV0Reg";',
+        '  let DiagnosticType = "InvalidYSXAutoVMaskCarryInRegister";',
+        '  let DiagnosticString = "operand must be v0";',
+        "}",
+        "",
+        "def YSXAutoVMaskCarryInOp : RegisterOperand<VMV0> {",
+        "  let ParserMatchClass = YSXAutoVMaskCarryInAsmOperand;",
+        '  let EncoderMethod = "getVMaskReg";',
+        '  let DecoderMethod = "decodeVMaskCarryInReg";',
+        "}",
+        "",
     ]
 
     for instruction in sorted(instructions, key=lambda record: record.mnemonic):
@@ -178,12 +192,15 @@ def _asm_operands(instruction) -> str:
         (operand for operand in instruction.operands_in if operand.role == "offset"),
         None,
     )
+    folded_offset_mem = base and offset
     operands = [
         _asm_operand(operand)
         for operand in (*instruction.operands_out, *instruction.operands_in)
-        if operand.operand != "VMaskOp" and operand is not base and operand is not offset
+        if operand.operand != "VMaskOp"
+        and not (folded_offset_mem and operand is base)
+        and not (folded_offset_mem and operand is offset)
     ]
-    if base and offset:
+    if folded_offset_mem:
         operands.append("${" + offset.field + "}(${" + base.field + "})")
     asm = ", ".join(operands)
     if mask:
@@ -196,6 +213,8 @@ def _td_operand(operand) -> str:
         raise ValueError(f"operand {operand.role} is missing an encoding field")
     if operand.operand == "VMaskOp":
         return f"YSXAutoVMaskOp:${operand.field}"
+    if operand.operand == "VMaskCarryInOp":
+        return f"YSXAutoVMaskCarryInOp:${operand.field}"
     if operand.operand == "UImm3":
         return f"uimm3:${operand.field}"
     if operand.operand == "UImm5":
@@ -224,8 +243,6 @@ def _td_operand(operand) -> str:
 def _asm_operand(operand) -> str:
     if not operand.field:
         raise ValueError(f"operand {operand.role} is missing an encoding field")
-    if operand.reg_class == "GPR" and operand.role == "base":
-        return "${" + operand.field + "}"
     return f"${operand.field}"
 
 
@@ -241,6 +258,7 @@ def _assignments(instruction) -> list[Assignment]:
         field_range.name: (field_range.msb, field_range.lsb)
         for field_range in instruction.opcode.field_ranges
     }
+    carry_in_mask = _carry_in_mask_field(instruction)
     for field in instruction.opcode.fields:
         if field == "nf":
             msb, lsb = _field_range(instruction, ranges, field)
@@ -259,9 +277,23 @@ def _assignments(instruction) -> list[Assignment]:
 
     for fixed in instruction.opcode.fixed_bits:
         msb, lsb, value = _parse_fixed_bits(instruction, fixed)
+        if carry_in_mask and msb == lsb == 25 and value == 0:
+            assignments.append(Assignment(msb, lsb, carry_in_mask))
+            continue
         assignments.append(Assignment(msb, lsb, _binary(value, msb - lsb + 1)))
 
     return sorted(assignments, key=lambda item: (-item.msb, -item.lsb))
+
+
+def _carry_in_mask_field(instruction) -> str | None:
+    return next(
+        (
+            operand.field
+            for operand in instruction.operands_in
+            if operand.operand == "VMaskCarryInOp" and operand.field
+        ),
+        None,
+    )
 
 
 def _field_range(instruction, ranges: dict[str, tuple[int, int]], field: str):

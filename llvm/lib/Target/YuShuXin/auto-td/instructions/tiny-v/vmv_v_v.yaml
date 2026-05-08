@@ -1,0 +1,5 @@
+mnemonic: vmv.v.v
+opcode_source: {repo: riscv-opcodes, extension: rv_v, key: vmv_v_v}
+spec_ref: tinyv.vector-shuffle.vector_move_v
+features: {required: [xtinyv]}
+status: auto_full

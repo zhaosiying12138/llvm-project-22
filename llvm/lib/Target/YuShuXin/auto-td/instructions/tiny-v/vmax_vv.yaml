@@ -1,0 +1,5 @@
+mnemonic: vmax.vv
+opcode_source: {repo: riscv-opcodes, extension: rv_v, key: vmax_vv}
+spec_ref: tinyv.vector-alu.int_binary_vv
+features: {required: [xtinyv]}
+status: auto_full

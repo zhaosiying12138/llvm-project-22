@@ -1,0 +1,5 @@
+mnemonic: vslidedown.vx
+opcode_source: {repo: riscv-opcodes, extension: rv_v, key: vslidedown_vx}
+spec_ref: tinyv.vector-shuffle.slide_vx
+features: {required: [xtinyv]}
+status: auto_full

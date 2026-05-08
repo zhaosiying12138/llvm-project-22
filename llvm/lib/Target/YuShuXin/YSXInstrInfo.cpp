@@ -157,6 +157,27 @@ void YSXInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     return;
   }
 
+  if (YSX::FPR32RegClass.contains(DstReg, SrcReg)) {
+    BuildMI(MBB, MBBI, DL, get(YSX::YSX_AUTO_FSGNJ_S), DstReg)
+        .addReg(SrcReg, KillFlag | getRenamableRegState(RenamableSrc))
+        .addReg(SrcReg, KillFlag | getRenamableRegState(RenamableSrc));
+    return;
+  }
+
+  if (YSX::GPRRegClass.contains(DstReg) &&
+      YSX::FPR32RegClass.contains(SrcReg)) {
+    BuildMI(MBB, MBBI, DL, get(YSX::YSX_AUTO_FMV_X_W), DstReg)
+        .addReg(SrcReg, KillFlag | getRenamableRegState(RenamableSrc));
+    return;
+  }
+
+  if (YSX::FPR32RegClass.contains(DstReg) &&
+      YSX::GPRRegClass.contains(SrcReg)) {
+    BuildMI(MBB, MBBI, DL, get(YSX::YSX_AUTO_FMV_W_X), DstReg)
+        .addReg(SrcReg, KillFlag | getRenamableRegState(RenamableSrc));
+    return;
+  }
+
   if (YSX::GPRRegClass.contains(DstReg, SrcReg)) {
     BuildMI(MBB, MBBI, DL, get(YSX::ADDI), DstReg)
         .addReg(SrcReg, KillFlag | getRenamableRegState(RenamableSrc))
@@ -234,6 +255,21 @@ void YSXInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
     return;
   }
 
+  if (YSX::FPR32RegClass.hasSubClassEq(RC)) {
+    unsigned Opcode = YSX::YSX_AUTO_FSW;
+    MachineMemOperand *MMO = MF->getMachineMemOperand(
+        MachinePointerInfo::getFixedStack(*MF, FI), MachineMemOperand::MOStore,
+        MFI.getObjectSize(FI), Alignment);
+
+    BuildMI(MBB, I, DebugLoc(), get(Opcode))
+        .addReg(SrcReg, getKillRegState(IsKill))
+        .addFrameIndex(FI)
+        .addImm(0)
+        .addMemOperand(MMO)
+        .setMIFlag(Flags);
+    return;
+  }
+
   if (!YSX::GPRRegClass.hasSubClassEq(RC))
     llvm_unreachable("Can't store this register to stack slot");
 
@@ -271,6 +307,20 @@ void YSXInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
     BuildMI(MBB, I, DL, get(YSX::YSX_AUTO_VLE32_V), DstReg)
         .addReg(Base, RegState::Kill)
         .addReg(YSX::NoRegister)
+        .addMemOperand(MMO)
+        .setMIFlag(Flags);
+    return;
+  }
+
+  if (YSX::FPR32RegClass.hasSubClassEq(RC)) {
+    unsigned Opcode = YSX::YSX_AUTO_FLW;
+    MachineMemOperand *MMO = MF->getMachineMemOperand(
+        MachinePointerInfo::getFixedStack(*MF, FI), MachineMemOperand::MOLoad,
+        MFI.getObjectSize(FI), Alignment);
+
+    BuildMI(MBB, I, DL, get(Opcode), DstReg)
+        .addFrameIndex(FI)
+        .addImm(0)
         .addMemOperand(MMO)
         .setMIFlag(Flags);
     return;

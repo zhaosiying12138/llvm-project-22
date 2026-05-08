@@ -18,9 +18,9 @@ acts as a mandatory acceptance gate after the schema exists.
 
 ## Current Branch Status
 
-This worktree implements the schema-first foundation and a C builtin to object
-code proof slice. It does not yet complete the full planned bulk tiny-F/tiny-V
-import or automatic vectorization proof.
+This worktree implements the schema-first foundation, a bulk generated tiny-F
+and tiny-V MC surface, and a selected C builtin to object-code proof slice. It
+does not yet complete automatic vectorization or a general tiny-V C ABI.
 
 Completed in this branch:
 
@@ -28,22 +28,27 @@ Completed in this branch:
   `third_party/ysx-opcodes`
 - structured YAML schema, taxonomy, validation, coverage reporting, and
   build-tree generated TableGen outputs
-- real generated tiny-v MC records for `vadd.vv`, `vle32.v`, `vse32.v`,
-  `vfredusum.vs`, the `vfredsum.vs` alias, `vsetvli`, `vsetivli`,
-  `vmv1r.v`, and custom `yushuxin.vfexp`
+- real generated tiny-F MC records for the selected 32-bit scalar FP load,
+  store, add/sub/mul, compare, convert, sign-inject copy, and GPR/FPR bit-move
+  instructions
+- real generated tiny-V MC records for 35 selected e32 memory, integer ALU,
+  reduction, shuffle/move, `vset*`, and custom `yushuxin.vfexp` instructions
 - YSX feature plumbing for `xtinyf`, `xtinyv`, and `zvl128b`
 - minimal FPR/VR/register/mask scaffolding and MC glue for generated tiny-v
   asm, encoding, disassembly, and optional `v0.t`
-- `ysx_vector.h` proof APIs for `ysx_vadd_vv_i32m1` and
-  `ysx_vfexp_v_f32m1`
-- Clang target builtins `__builtin_ysx_vadd_vv_i32m1` and
-  `__builtin_ysx_vfexp_v_f32m1`, lowered to `llvm.ysx.vadd` and
-  `llvm.ysx.vfexp` IR intrinsics
+- `ysx_vector.h` proof APIs and Clang target builtins for `vadd`, `vsub`,
+  `vmul`, integer `vredsum`, float `vfredsum`, `vrgather`, `vslideup`, and
+  custom `vfexp`
 - a separate Clang `BuiltinsYSX.td` shard so YSX builtins do not inherit the
   RISCV/RVV builtin declaration table
 - minimal backend selection for the proof path: fixed 128-bit `v4i32` and
   `v4f32` values select to generated `vle32.v`, `vse32.v`, `vsetvli`,
-  `vsetivli`, `vadd.vv`, and `yushuxin.vfexp` instruction records
+  `vsetivli`, `vadd.vv`, `vsub.vv`, `vmul.vv`, `vredsum.vs`,
+  `vfredusum.vs`, `vrgather.vv`, `vslideup.vx`, and `yushuxin.vfexp`
+  instruction records
+- tiny-F CodeGen for f32 load/store, add/sub/mul, ordered eq/lt/le/gt/ge
+  comparisons, i32/f32 conversions, stack spill/reload, and soft-float ABI
+  GPR/FPR moves through generated `fmv.x.w` and `fmv.w.x`
 - basic VR copy/spill and O0 frame-index support for the fixed-width proof
   path through generated `vmv1r.v`, `vsetivli`, `vle32.v`, and `vse32.v`
 - targeted C-to-object lit proof plus directory-level YSX MC/CodeGen/Driver and
@@ -51,13 +56,14 @@ Completed in this branch:
 
 Known remaining work:
 
-- bulk import the broader tiny-F and tiny-V instruction set
 - enable and validate automatic vectorization smoke tests
-- broaden backend lowering beyond the fixed-width proof vector types and
-  zero-offset proof loads/stores
+- broaden backend lowering beyond the fixed-width proof vector types, selected
+  builtins, and zero-offset proof vector loads/stores
 - direct C ABI passing/returning of tiny-v vector values; the proven C path
   keeps vector values inside explicit builtin functions and stores results to
   memory
+- full unordered f32 compares and true i64/f32 conversions; the current tiny-F
+  subset rejects those cases instead of selecting incorrect 32-bit operations
 
 ## Workspace
 
@@ -119,7 +125,7 @@ YSX does not claim support for full standard `f` or `v`.
 
 Standard F/V instruction encodings are read from upstream `riscv-opcodes`
 entries such as `rv_f` and `rv_v`, then mapped to YSX feature predicates such as
-`HasExtXTinyF` and `HasExtXTinyV`.
+`HasStdExtXTinyF` and `HasStdExtXTinyV`.
 
 Custom YSX instruction encodings are read from a separate
 `third_party/ysx-opcodes` repository snapshot that uses a `riscv-opcodes`
@@ -139,8 +145,16 @@ Initial tiny-F operations:
 - `fadd.s`
 - `fsub.s`
 - `fmul.s`
-- f32 compare instructions needed for C/IR comparisons
-- i32/f32 conversion instructions such as `fcvt.w.s` and `fcvt.s.w`
+- `feq.s`
+- `flt.s`
+- `fle.s`
+- `fcvt.w.s`
+- `fcvt.wu.s`
+- `fcvt.s.w`
+- `fcvt.s.wu`
+- `fsgnj.s`
+- `fmv.x.w`
+- `fmv.w.x`
 
 Explicitly out of scope for the first stage:
 
@@ -148,6 +162,8 @@ Explicitly out of scope for the first stage:
 - div/sqrt
 - FMA
 - `lp64f` or `lp64d`
+- unordered compare lowering that requires NaN classification
+- true i64/f32 conversions
 
 ### Tiny-V
 
@@ -170,7 +186,7 @@ Initial tiny-V memory operations:
 
 - e32 unit-stride load/store
 - e32 strided load/store
-- e32 indexed gather/scatter
+- e32 unordered indexed gather/scatter
 - masked and unmasked forms
 
 Initial tiny-V ALU operations:
@@ -192,13 +208,14 @@ Initial tiny-V reductions:
 - and
 - or
 - xor
+- unordered f32 sum/min/max at the MC layer
 
 Initial tiny-V shuffle/permute operations:
 
 - slide
 - splat/broadcast
-- scalar insert/extract
 - `vrgather`
+- register moves
 
 Mask/tail policy generation is limited to the LLVM codegen default policy
 surface needed by this implementation. The first stage does not attempt a full
@@ -408,19 +425,40 @@ ysx_vadd_vv_i32m1
 The project must not expose `riscv_vector.h` or define `__riscv_vector` for
 this tiny-V surface.
 
-The first required end-to-end proof slice is:
+The first required MC/generated proof slice is:
 
 - `vle32.v`
 - `vse32.v`
+- `vlse32.v`
+- `vsse32.v`
+- `vluxei32.v`
+- `vsuxei32.v`
 - `vsetivli` / `vsetvli` inserted around proof memory and ALU operations
 - `vadd.vv`
+- `vsub.vv`
+- `vmul.vv`
+- `vmin.vv`
+- `vmax.vv`
+- `vand.vv`
+- `vor.vv`
+- `vxor.vv`
+- `vmseq.vv`
+- `vmslt.vv`
+- `vmerge.vvm`
 - canonical `vfredusum.vs`, plus public alias `vfredsum.vs`
+- integer reductions `vredsum/min/max/and/or/xor.vs`
+- float reductions `vfredmin/max.vs`
+- `vrgather.vv`
+- `vslideup.vx`
+- `vslidedown.vx`
+- `vmv.v.x`
+- `vmv.v.v`
 - custom `yushuxin.vfexp`
 
-The C-to-object smoke tests cover the store-shaped `ysx_vadd_vv_i32m1` and
-`ysx_vfexp_v_f32m1` proof APIs. `vfredusum.vs` is currently covered at the
-generated MC assembly/object layer and remains future work for a C builtin
-proof.
+The C-to-object smoke tests cover store-shaped `ysx_vadd_vv_i32m1`,
+`ysx_vsub_vv_i32m1`, `ysx_vmul_vv_i32m1`, `ysx_vredsum_vs_i32m1`,
+`ysx_vfredsum_vs_f32m1`, `ysx_vrgather_vv_i32m1`,
+`ysx_vslideup_vx_i32m1`, and `ysx_vfexp_v_f32m1` proof APIs.
 
 ## Automatic Vectorization
 
@@ -557,9 +595,10 @@ The selected route is schema-first:
 
 1. Build schema, taxonomy, parser, emitter, coverage, and build integration.
 2. Statistically classify representative tiny-F/tiny-V instruction YAML.
-3. Bulk import the selected tiny-F/tiny-V set.
-4. Prove `vle32.v`, `vse32.v`, `vsetivli`, `vsetvli`, and `vadd.vv`
-   through explicit C builtins to assembly/object, and prove canonical
-   `vfredusum.vs` plus alias `vfredsum.vs` at the generated MC layer.
-5. Add and document `yushuxin.vfexp` through the same C-to-object proof path.
-6. Extend to automatic vectorization tests.
+3. Bulk import the selected tiny-F/tiny-V MC set.
+4. Prove scalar tiny-F load/store/arithmetic/compare/conversion and soft-float
+   ABI moves through LLVM CodeGen.
+5. Prove selected tiny-V instructions through explicit C builtins to
+   assembly/object, including `vadd`, `vsub`, `vmul`, reductions, shuffle, and
+   custom `yushuxin.vfexp`.
+6. Extend to automatic vectorization tests in a later stage.

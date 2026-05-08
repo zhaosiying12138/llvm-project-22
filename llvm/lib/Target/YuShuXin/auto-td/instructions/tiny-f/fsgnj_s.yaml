@@ -1,0 +1,5 @@
+mnemonic: fsgnj.s
+opcode_source: {repo: riscv-opcodes, extension: rv_f, key: fsgnj_s}
+spec_ref: tinyf.scalar-float.f32_binary_no_rm
+required_features: [xtinyf]
+status: auto_full

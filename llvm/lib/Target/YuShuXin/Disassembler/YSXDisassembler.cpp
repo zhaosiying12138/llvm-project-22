@@ -132,6 +132,16 @@ static DecodeStatus decodeVMaskReg(MCInst &Inst, uint32_t RegNo,
   return MCDisassembler::Success;
 }
 
+static DecodeStatus decodeVMaskCarryInReg(MCInst &Inst, uint32_t RegNo,
+                                          uint64_t Address,
+                                          const MCDisassembler *Decoder) {
+  if (RegNo != 0)
+    return MCDisassembler::Fail;
+
+  Inst.addOperand(MCOperand::createReg(YSX::V0));
+  return MCDisassembler::Success;
+}
+
 template <unsigned N>
 static DecodeStatus decodeUImmOperand(MCInst &Inst, uint32_t Imm,
                                       int64_t Address,

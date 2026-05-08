@@ -166,6 +166,34 @@ class GeneratorTest(unittest.TestCase):
         self.assertEqual([operand.role for operand in vse.operands_in], ["value", "base", "mask_policy"])
         self.assertTrue(vse.effects.may_store)
 
+        vlse = by_name["vlse32.v"]
+        self.assertEqual([operand.role for operand in vlse.operands_in], ["base", "stride", "mask_policy"])
+        self.assertEqual(vlse.operands_in[1].field, "rs2")
+        self.assertEqual(vlse.operands_in[1].reg_class, "GPR")
+        self.assertTrue(vlse.effects.may_load)
+
+        vluxei = by_name["vluxei32.v"]
+        self.assertEqual([operand.role for operand in vluxei.operands_in], ["base", "indices", "mask_policy"])
+        self.assertEqual(vluxei.operands_in[1].field, "vs2")
+        self.assertEqual(vluxei.operands_in[1].reg_class, "VR")
+        self.assertTrue(vluxei.effects.may_load)
+
+        vmerge = by_name["vmerge.vvm"]
+        self.assertEqual([operand.field for operand in vmerge.operands_in], ["vs2", "vs1", "vm"])
+        self.assertEqual(vmerge.operands_in[-1].operand, "VMaskCarryInOp")
+
+        vmseq = by_name["vmseq.vv"]
+        self.assertEqual(vmseq.operands_out[0].role, "mask_dest")
+        self.assertEqual([operand.field for operand in vmseq.operands_in], ["vs2", "vs1", "vm"])
+
+        vslideup = by_name["vslideup.vx"]
+        self.assertEqual([operand.field for operand in vslideup.operands_in], ["vs2", "rs1", "vm"])
+        self.assertEqual(vslideup.operands_in[1].reg_class, "GPR")
+
+        vmv_x = by_name["vmv.v.x"]
+        self.assertEqual([operand.field for operand in vmv_x.operands_in], ["rs1"])
+        self.assertEqual(vmv_x.operands_in[0].reg_class, "GPR")
+
         vsetvli = by_name["vsetvli"]
         self.assertEqual([operand.field for operand in vsetvli.operands_out], ["rd"])
         self.assertEqual([operand.field for operand in vsetvli.operands_in], ["rs1", "zimm11"])
@@ -329,6 +357,9 @@ class GeneratorTest(unittest.TestCase):
 
         self.assertIn("def YSXAutoVMaskAsmOperand", tinyv)
         self.assertIn("def YSXAutoVMaskOp", tinyv)
+        self.assertIn("def YSXAutoVMaskCarryInAsmOperand", tinyv)
+        self.assertIn("def YSXAutoVMaskCarryInOp", tinyv)
+        self.assertIn('let DecoderMethod = "decodeVMaskCarryInReg";', tinyv)
         self.assertIn('let OperandNamespace = "YSXOp";', tinyv)
         self.assertIn('let OperandType = "OPERAND_VMASK";', tinyv)
         self.assertIn("def YSX_AUTO_VADD_VV", tinyv)
@@ -337,10 +368,49 @@ class GeneratorTest(unittest.TestCase):
         self.assertIn("let Inst{25} = vm;", tinyv)
         self.assertIn("let Inst{6-0} = 0b1010111;", tinyv)
         self.assertIn("def YSX_AUTO_VLE32_V", tinyv)
-        self.assertIn('RVInst<(outs VR:$vd), (ins GPRMemZeroOffset:$rs1, YSXAutoVMaskOp:$vm), "vle32.v"', tinyv)
+        self.assertIn('RVInst<(outs VR:$vd), (ins GPRMemZeroOffset:$rs1, YSXAutoVMaskOp:$vm), "vle32.v", "$vd, $rs1$vm"', tinyv)
         self.assertIn("let Inst{31-29} = 0b000;", tinyv)
         self.assertIn("let Inst{24-20} = 0b00000;", tinyv)
         self.assertIn("def YSX_AUTO_VSE32_V", tinyv)
+        self.assertIn('RVInst<(outs), (ins VR:$vs3, GPRMemZeroOffset:$rs1, YSXAutoVMaskOp:$vm), "vse32.v", "$vs3, $rs1$vm"', tinyv)
+        self.assertIn("def YSX_AUTO_VLSE32_V", tinyv)
+        self.assertIn('RVInst<(outs VR:$vd), (ins GPRMemZeroOffset:$rs1, GPR:$rs2, YSXAutoVMaskOp:$vm), "vlse32.v", "$vd, $rs1, $rs2$vm"', tinyv)
+        self.assertIn("def YSX_AUTO_VSSE32_V", tinyv)
+        self.assertIn('RVInst<(outs), (ins VR:$vs3, GPRMemZeroOffset:$rs1, GPR:$rs2, YSXAutoVMaskOp:$vm), "vsse32.v", "$vs3, $rs1, $rs2$vm"', tinyv)
+        self.assertIn("def YSX_AUTO_VLUXEI32_V", tinyv)
+        self.assertIn('RVInst<(outs VR:$vd), (ins GPRMemZeroOffset:$rs1, VR:$vs2, YSXAutoVMaskOp:$vm), "vluxei32.v", "$vd, $rs1, $vs2$vm"', tinyv)
+        self.assertIn("def YSX_AUTO_VSUXEI32_V", tinyv)
+        self.assertIn('RVInst<(outs), (ins VR:$vs3, GPRMemZeroOffset:$rs1, VR:$vs2, YSXAutoVMaskOp:$vm), "vsuxei32.v", "$vs3, $rs1, $vs2$vm"', tinyv)
+        for record in (
+            "YSX_AUTO_VSUB_VV",
+            "YSX_AUTO_VMUL_VV",
+            "YSX_AUTO_VMIN_VV",
+            "YSX_AUTO_VMAX_VV",
+            "YSX_AUTO_VAND_VV",
+            "YSX_AUTO_VOR_VV",
+            "YSX_AUTO_VXOR_VV",
+            "YSX_AUTO_VMSEQ_VV",
+            "YSX_AUTO_VMSLT_VV",
+        ):
+            self.assertIn(f"def {record}", tinyv)
+        self.assertIn("def YSX_AUTO_VMERGE_VVM", tinyv)
+        self.assertIn('RVInst<(outs VR:$vd), (ins VR:$vs2, VR:$vs1, YSXAutoVMaskCarryInOp:$vm), "vmerge.vvm", "$vd, $vs2, $vs1, $vm"', tinyv)
+        self.assertIn("def YSX_AUTO_VREDSUM_VS", tinyv)
+        self.assertIn("def YSX_AUTO_VREDMIN_VS", tinyv)
+        self.assertIn("def YSX_AUTO_VREDMAX_VS", tinyv)
+        self.assertIn("def YSX_AUTO_VREDAND_VS", tinyv)
+        self.assertIn("def YSX_AUTO_VREDOR_VS", tinyv)
+        self.assertIn("def YSX_AUTO_VREDXOR_VS", tinyv)
+        self.assertIn("def YSX_AUTO_VFREDMIN_VS", tinyv)
+        self.assertIn("def YSX_AUTO_VFREDMAX_VS", tinyv)
+        self.assertIn("def YSX_AUTO_VSLIDEUP_VX", tinyv)
+        self.assertIn('RVInst<(outs VR:$vd), (ins VR:$vs2, GPR:$rs1, YSXAutoVMaskOp:$vm), "vslideup.vx", "$vd, $vs2, $rs1$vm"', tinyv)
+        self.assertIn("def YSX_AUTO_VSLIDEDOWN_VX", tinyv)
+        self.assertIn("def YSX_AUTO_VRGATHER_VV", tinyv)
+        self.assertIn("def YSX_AUTO_VMV_V_X", tinyv)
+        self.assertIn('RVInst<(outs VR:$vd), (ins GPR:$rs1), "vmv.v.x", "$vd, $rs1"', tinyv)
+        self.assertIn("def YSX_AUTO_VMV_V_V", tinyv)
+        self.assertIn('RVInst<(outs VR:$vd), (ins VR:$vs1), "vmv.v.v", "$vd, $vs1"', tinyv)
         self.assertIn("def YSX_AUTO_VFREDUSUM_VS", tinyv)
         self.assertIn('def : MnemonicAlias<"vfredsum.vs", "vfredusum.vs">;', tinyv)
         self.assertIn("def YSX_AUTO_VSETIVLI", tinyv)
@@ -375,6 +445,33 @@ class GeneratorTest(unittest.TestCase):
             "vsetvli",
             "vmv1r.v",
             "yushuxin.vfexp",
+            "vlse32.v",
+            "vsse32.v",
+            "vluxei32.v",
+            "vsuxei32.v",
+            "vsub.vv",
+            "vmul.vv",
+            "vmin.vv",
+            "vmax.vv",
+            "vand.vv",
+            "vor.vv",
+            "vxor.vv",
+            "vmseq.vv",
+            "vmslt.vv",
+            "vmerge.vvm",
+            "vredsum.vs",
+            "vredmin.vs",
+            "vredmax.vs",
+            "vredand.vs",
+            "vredor.vs",
+            "vredxor.vs",
+            "vfredmin.vs",
+            "vfredmax.vs",
+            "vslideup.vx",
+            "vslidedown.vx",
+            "vrgather.vv",
+            "vmv.v.x",
+            "vmv.v.v",
         ):
             self.assertIn(mnemonic, text)
         self.assertIn("ysx-opcodes/rv_xtinyv/yushuxin_vfexp", text)
@@ -425,6 +522,12 @@ class GeneratorTest(unittest.TestCase):
         self.assertIn("def YSX_AUTO_FCVT_S_W", tinyf)
         self.assertIn('RVInst<(outs FPR32:$rd), (ins GPR:$rs1, uimm3:$rm), "fcvt.s.w"', tinyf)
         self.assertIn("def YSX_AUTO_FCVT_S_WU", tinyf)
+        self.assertIn("def YSX_AUTO_FSGNJ_S", tinyf)
+        self.assertIn('RVInst<(outs FPR32:$rd), (ins FPR32:$rs1, FPR32:$rs2), "fsgnj.s"', tinyf)
+        self.assertIn("def YSX_AUTO_FMV_X_W", tinyf)
+        self.assertIn('RVInst<(outs GPR:$rd), (ins FPR32:$rs1), "fmv.x.w"', tinyf)
+        self.assertIn("def YSX_AUTO_FMV_W_X", tinyf)
+        self.assertIn('RVInst<(outs FPR32:$rd), (ins GPR:$rs1), "fmv.w.x"', tinyf)
         self.assertIn("def YSX_AUTO_FLW", tinyf)
         self.assertIn('RVInst<(outs FPR32:$rd), (ins GPRMem:$rs1, simm12_lo:$imm12), "flw"', tinyf)
         self.assertIn('"$rd, ${imm12}(${rs1})"', tinyf)
@@ -454,6 +557,9 @@ class GeneratorTest(unittest.TestCase):
             "fcvt.wu.s",
             "fcvt.s.w",
             "fcvt.s.wu",
+            "fsgnj.s",
+            "fmv.x.w",
+            "fmv.w.x",
             "flw",
             "fsw",
         ):
