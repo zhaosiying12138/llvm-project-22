@@ -15,6 +15,14 @@ GENERATED_OUTPUTS = (
     "YSXGenAutoTinyVBuiltins.inc",
 )
 
+GENERATED_OUTPUT_VARS = (
+    "YSX_AUTO_TD_TINYF_INSTRINFO",
+    "YSX_AUTO_TD_TINYV_INSTRINFO",
+    "YSX_AUTO_TD_TINYV_PSEUDOS",
+    "YSX_AUTO_TD_TINYV_PATTERNS",
+    "YSX_AUTO_TD_TINYV_BUILTINS",
+)
+
 LLVM_TARGET_INCLUDES = GENERATED_OUTPUTS[:-1]
 
 
@@ -49,6 +57,21 @@ class CMakeIntegrationTest(unittest.TestCase):
             self.assertIn(arg, text)
         self.assertIn("${LLVM_MAIN_SRC_DIR}/../third_party/riscv-opcodes", text)
         self.assertIn("${LLVM_MAIN_SRC_DIR}/../third_party/ysx-opcodes", text)
+
+    def test_custom_command_outputs_generated_fragments_and_coverage(self):
+        text = CMAKE.read_text()
+        outputs_list = self._cmake_call(text, "set", "YSX_AUTO_TD_OUTPUTS")
+        custom_command = self._cmake_call(text, "add_custom_command")
+        output_section = self._cmake_section(
+            custom_command,
+            "OUTPUT",
+            ("COMMAND", "DEPENDS", "VERBATIM", "COMMENT"),
+        )
+
+        self.assertIn("${YSX_AUTO_TD_OUTPUTS}", output_section)
+        self.assertIn("${YSX_AUTO_TD_COVERAGE}", output_section)
+        for var in GENERATED_OUTPUT_VARS:
+            self.assertIn(f"${{{var}}}", outputs_list)
 
     def test_cmake_tracks_generator_yaml_and_opcode_dependencies(self):
         text = CMAKE.read_text()
@@ -92,6 +115,36 @@ class CMakeIntegrationTest(unittest.TestCase):
         for include in LLVM_TARGET_INCLUDES:
             self.assertIn(f'include "{include}"', text)
         self.assertNotIn('include "YSXGenAutoTinyVBuiltins.inc"', text)
+
+    def _cmake_call(self, text, name, first_arg=None):
+        if first_arg is None:
+            pattern = rf"\b{re.escape(name)}\s*\("
+        else:
+            pattern = rf"\b{re.escape(name)}\s*\(\s*{re.escape(first_arg)}\b"
+        match = re.search(pattern, text)
+        self.assertIsNotNone(match, f"missing CMake call {name}({first_arg or ''}")
+        start = match.start()
+        depth = 0
+        for index in range(start, len(text)):
+            char = text[index]
+            if char == "(":
+                depth += 1
+            elif char == ")":
+                depth -= 1
+                if depth == 0:
+                    return text[start : index + 1]
+        self.fail(f"unterminated CMake call {name}({first_arg or ''}")
+
+    def _cmake_section(self, call, section, terminators):
+        section_match = re.search(rf"\b{re.escape(section)}\b", call)
+        self.assertIsNotNone(section_match, f"missing CMake section {section}")
+        start = section_match.end()
+        end = len(call)
+        for terminator in terminators:
+            terminator_match = re.search(rf"\b{re.escape(terminator)}\b", call[start:])
+            if terminator_match:
+                end = min(end, start + terminator_match.start())
+        return call[start:end]
 
 
 if __name__ == "__main__":
