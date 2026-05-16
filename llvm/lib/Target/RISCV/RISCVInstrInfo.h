@@ -87,6 +87,8 @@ public:
   const RISCVRegisterInfo &getRegisterInfo() const { return RegInfo; }
 
   MCInst getNop() const override;
+  void insertNoop(MachineBasicBlock &MBB,
+                  MachineBasicBlock::iterator MI) const override;
 
   Register isLoadFromStackSlot(const MachineInstr &MI,
                                int &FrameIndex) const override;

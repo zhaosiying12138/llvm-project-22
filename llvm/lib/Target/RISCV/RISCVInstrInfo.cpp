@@ -98,6 +98,18 @@ MCInst RISCVInstrInfo::getNop() const {
       .addImm(0);
 }
 
+void RISCVInstrInfo::insertNoop(MachineBasicBlock &MBB,
+                                MachineBasicBlock::iterator MI) const {
+  DebugLoc DL;
+  if (STI.hasStdExtZca()) {
+    BuildMI(MBB, MI, DL, get(RISCV::C_NOP));
+    return;
+  }
+  BuildMI(MBB, MI, DL, get(RISCV::ADDI), RISCV::X0)
+      .addReg(RISCV::X0)
+      .addImm(0);
+}
+
 Register RISCVInstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
                                              int &FrameIndex) const {
   TypeSize Dummy = TypeSize::getZero();

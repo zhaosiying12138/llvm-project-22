@@ -1,0 +1,114 @@
+# RUN: llc -mtriple=riscv64 -mcpu=riscv-wb-bank-poc -mattr=+v,+f \
+# RUN:   -run-pass=riscv-wb-bank-scheduler -riscv-wb-bank-scheduler \
+# RUN:   -simplify-mir %s -o - | FileCheck %s
+# RUN: llc -mtriple=riscv64 -mcpu=riscv-wb-bank-poc -mattr=+v,+f \
+# RUN:   -run-pass=riscv-wb-bank-scheduler -riscv-wb-bank-scheduler \
+# RUN:   -riscv-wb-bank-disable-rename -simplify-mir %s -o - \
+# RUN:   | FileCheck %s --check-prefix=DISABLE-RENAME
+# RUN: llc -mtriple=riscv64 -mcpu=riscv-wb-bank-poc -mattr=+v,+f,+zca \
+# RUN:   -run-pass=riscv-wb-bank-scheduler -riscv-wb-bank-scheduler \
+# RUN:   -simplify-mir %s -o - | FileCheck %s --check-prefix=ZCA-NOP
+
+---
+name: reorder_independent_rvv
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $v8, $v9, $v10, $v11, $f0_f, $vl, $vtype
+
+    ; CHECK-LABEL: name: reorder_independent_rvv
+    ; CHECK: renamable $v4 = PseudoVFMACC_VFPR32_M1_E32 undef renamable $v4, renamable $f0_f, renamable $v10, 0, -1, 5 /* e32 */, 3 /* ta, ma */, implicit $vl, implicit $vtype
+    ; CHECK-NEXT: renamable $v1 = PseudoVADD_VV_M1 undef renamable $v1, renamable $v8, renamable $v9, -1, 5 /* e32 */, 3 /* ta, ma */, implicit $vl, implicit $vtype
+    ; CHECK-NEXT: renamable $v2 = PseudoVMV_V_V_M1 undef renamable $v2, renamable $v11, -1, 5 /* e32 */, 3 /* ta, ma */, implicit $vl, implicit $vtype
+    ; CHECK-NEXT: $x0 = ADDI $x0, 0
+    ; CHECK-NEXT: PseudoRET
+    renamable $v2 = PseudoVMV_V_V_M1 undef renamable $v2, renamable $v11, -1, 5 /* e32 */, 3 /* ta, ma */, implicit $vl, implicit $vtype
+    renamable $v1 = PseudoVADD_VV_M1 undef renamable $v1, renamable $v8, renamable $v9, -1, 5 /* e32 */, 3 /* ta, ma */, implicit $vl, implicit $vtype
+    renamable $v4 = PseudoVFMACC_VFPR32_M1_E32 undef renamable $v4, renamable $f0_f, renamable $v10, 0, -1, 5 /* e32 */, 3 /* ta, ma */, implicit $vl, implicit $vtype
+    PseudoRET
+...
+---
+name: rename_destination_vr_bank
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $v8, $v10, $v12, $f0_f, $f1_f, $vl, $vtype
+
+    ; CHECK-LABEL: name: rename_destination_vr_bank
+    ; CHECK: renamable $v1 = PseudoVFMACC_VFPR32_M1_E32 undef renamable $v1, renamable $f0_f, renamable $v10, 0, -1, 5 /* e32 */, 3 /* ta, ma */, implicit $vl, implicit $vtype
+    ; CHECK-NEXT: $v0 = PseudoVFADD_VFPR32_M1_E32 undef $v0, renamable $v12, renamable $f1_f, 0, -1, 5 /* e32 */, 3 /* ta, ma */, implicit $vl, implicit $vtype
+    ; CHECK-NEXT: $x0 = ADDI $x0, 0
+    ; CHECK-NEXT: $x0 = ADDI $x0, 0
+    ; CHECK-NEXT: renamable $v6 = PseudoVMV_V_V_M1 undef renamable $v6, $v0, -1, 5 /* e32 */, 3 /* ta, ma */, implicit $vl, implicit $vtype
+    ; CHECK-NEXT: PseudoRET implicit $v6
+    renamable $v1 = PseudoVFMACC_VFPR32_M1_E32 undef renamable $v1, renamable $f0_f, renamable $v10, 0, -1, 5 /* e32 */, 3 /* ta, ma */, implicit $vl, implicit $vtype
+    renamable $v3 = PseudoVFADD_VFPR32_M1_E32 undef renamable $v3, renamable $v12, renamable $f1_f, 0, -1, 5 /* e32 */, 3 /* ta, ma */, implicit $vl, implicit $vtype
+    renamable $v6 = PseudoVMV_V_V_M1 undef renamable $v6, renamable $v3, -1, 5 /* e32 */, 3 /* ta, ma */, implicit $vl, implicit $vtype
+    PseudoRET implicit $v6
+...
+---
+name: stale_same_physreg_writeback_rvv
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $v8, $v10, $v12, $f0_f, $vl, $vtype
+
+    ; CHECK-LABEL: name: stale_same_physreg_writeback_rvv
+    ; CHECK: renamable $v1 = PseudoVFMACC_VFPR32_M1_E32 undef renamable $v1, renamable $f0_f, renamable $v10, 0, -1, 5 /* e32 */, 3 /* ta, ma */, implicit $vl, implicit $vtype
+    ; CHECK-NEXT: $x0 = ADDI $x0, 0
+    ; CHECK-NEXT: $x0 = ADDI $x0, 0
+    ; CHECK-NEXT: $x0 = ADDI $x0, 0
+    ; CHECK-NEXT: $v1 = PseudoVMV_V_V_M1 undef $v1, renamable $v12, -1, 5 /* e32 */, 3 /* ta, ma */, implicit $vl, implicit $vtype
+    ; CHECK-NEXT: PseudoRET implicit $v1
+    ; ZCA-NOP-LABEL: name: stale_same_physreg_writeback_rvv
+    ; ZCA-NOP: renamable $v1 = PseudoVFMACC_VFPR32_M1_E32 undef renamable $v1, renamable $f0_f, renamable $v10, 0, -1, 5 /* e32 */, 3 /* ta, ma */, implicit $vl, implicit $vtype
+    ; ZCA-NOP-NEXT: C_NOP
+    ; ZCA-NOP-NEXT: C_NOP
+    ; ZCA-NOP-NEXT: C_NOP
+    ; ZCA-NOP-NEXT: $v1 = PseudoVMV_V_V_M1 undef $v1, renamable $v12, -1, 5 /* e32 */, 3 /* ta, ma */, implicit $vl, implicit $vtype
+    renamable $v1 = PseudoVFMACC_VFPR32_M1_E32 undef renamable $v1, renamable $f0_f, renamable $v10, 0, -1, 5 /* e32 */, 3 /* ta, ma */, implicit $vl, implicit $vtype
+    $v1 = PseudoVMV_V_V_M1 undef $v1, renamable $v12, -1, 5 /* e32 */, 3 /* ta, ma */, implicit $vl, implicit $vtype
+    PseudoRET implicit $v1
+...
+---
+name: nop_fallback_when_rename_disabled_rvv
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $v10, $v12, $f0_f, $f1_f, $vl, $vtype
+
+    ; DISABLE-RENAME-LABEL: name: nop_fallback_when_rename_disabled_rvv
+    ; DISABLE-RENAME: renamable $v1 = PseudoVFMACC_VFPR32_M1_E32 undef renamable $v1, renamable $f0_f, renamable $v10, 0, -1, 5 /* e32 */, 3 /* ta, ma */, implicit $vl, implicit $vtype
+    ; DISABLE-RENAME-NEXT: $x0 = ADDI $x0, 0
+    ; DISABLE-RENAME-NEXT: renamable $v3 = PseudoVFADD_VFPR32_M1_E32 undef renamable $v3, renamable $v12, renamable $f1_f, 0, -1, 5 /* e32 */, 3 /* ta, ma */, implicit $vl, implicit $vtype
+    ; DISABLE-RENAME-NEXT: $x0 = ADDI $x0, 0
+    ; DISABLE-RENAME-NEXT: $x0 = ADDI $x0, 0
+    ; DISABLE-RENAME-NEXT: PseudoRET
+    renamable $v1 = PseudoVFMACC_VFPR32_M1_E32 undef renamable $v1, renamable $f0_f, renamable $v10, 0, -1, 5 /* e32 */, 3 /* ta, ma */, implicit $vl, implicit $vtype
+    renamable $v3 = PseudoVFADD_VFPR32_M1_E32 undef renamable $v3, renamable $v12, renamable $f1_f, 0, -1, 5 /* e32 */, 3 /* ta, ma */, implicit $vl, implicit $vtype
+    PseudoRET
+...
+---
+name: integrated_reorder_rename_nop_rvv
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $v8, $v10, $v12, $v13, $v16, $v18, $v20, $f0_f, $f1_f, $vl, $vtype
+
+    ; CHECK-LABEL: name: integrated_reorder_rename_nop_rvv
+    ; CHECK: renamable $v5 = PseudoVFMACC_VFPR32_M1_E32 undef renamable $v5, renamable $f0_f, renamable $v8, 0, -1, 5 /* e32 */, 3 /* ta, ma */, implicit $vl, implicit $vtype
+    ; CHECK-NEXT: renamable $v6 = PseudoVADD_VV_M1 undef renamable $v6, renamable $v12, renamable $v13, -1, 5 /* e32 */, 3 /* ta, ma */, implicit $vl, implicit $vtype
+    ; CHECK-NEXT: renamable $v7 = PseudoVFADD_VFPR32_M1_E32 undef renamable $v7, renamable $v10, renamable $f1_f, 0, -1, 5 /* e32 */, 3 /* ta, ma */, implicit $vl, implicit $vtype
+    ; CHECK-NEXT: $v0 = PseudoVADD_VV_M1 undef $v0, renamable $v16, renamable $v18, -1, 5 /* e32 */, 3 /* ta, ma */, implicit $vl, implicit $vtype
+    ; CHECK-NEXT: $x0 = ADDI $x0, 0
+    ; CHECK-NEXT: $v11 = PseudoVMV_V_V_M1 undef $v11, renamable $v20, -1, 5 /* e32 */, 3 /* ta, ma */, implicit $vl, implicit $vtype
+    ; CHECK-NEXT: $v14 = PseudoVMV_V_V_M1 undef $v14, $v0, -1, 5 /* e32 */, 3 /* ta, ma */, implicit $vl, implicit $vtype
+    ; CHECK-NEXT: PseudoRET implicit $v14
+    renamable $v5 = PseudoVFMACC_VFPR32_M1_E32 undef renamable $v5, renamable $f0_f, renamable $v8, 0, -1, 5 /* e32 */, 3 /* ta, ma */, implicit $vl, implicit $vtype
+    renamable $v7 = PseudoVFADD_VFPR32_M1_E32 undef renamable $v7, renamable $v10, renamable $f1_f, 0, -1, 5 /* e32 */, 3 /* ta, ma */, implicit $vl, implicit $vtype
+    renamable $v6 = PseudoVADD_VV_M1 undef renamable $v6, renamable $v12, renamable $v13, -1, 5 /* e32 */, 3 /* ta, ma */, implicit $vl, implicit $vtype
+    renamable $v9 = PseudoVADD_VV_M1 undef renamable $v9, renamable $v16, renamable $v18, -1, 5 /* e32 */, 3 /* ta, ma */, implicit $vl, implicit $vtype
+    $v11 = PseudoVMV_V_V_M1 undef $v11, renamable $v20, -1, 5 /* e32 */, 3 /* ta, ma */, implicit $vl, implicit $vtype
+    $v14 = PseudoVMV_V_V_M1 undef $v14, renamable $v9, -1, 5 /* e32 */, 3 /* ta, ma */, implicit $vl, implicit $vtype
+    PseudoRET implicit $v14
+...
