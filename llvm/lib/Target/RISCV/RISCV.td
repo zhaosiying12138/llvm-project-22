@@ -65,6 +65,7 @@ include "RISCVSchedSyntacoreSCR1.td"
 include "RISCVSchedSyntacoreSCR345.td"
 include "RISCVSchedSyntacoreSCR7.td"
 include "RISCVSchedTTAscalonD8.td"
+include "RISCVSchedWritebackBankPOC.td"
 include "RISCVSchedXiangShanNanHu.td"
 
 //===----------------------------------------------------------------------===//

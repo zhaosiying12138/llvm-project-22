@@ -15,10 +15,14 @@
 #include "MCTargetDesc/RISCVMCTargetDesc.h"
 #include "RISCV.h"
 #include "TargetInfo/RISCVTargetInfo.h"
+#include "llvm/ADT/Twine.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/DebugLog.h"
+#include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/raw_ostream.h"
+#include <optional>
 
 #define DEBUG_TYPE "llvm-mca-riscv-custombehaviour"
 
@@ -37,6 +41,13 @@ struct VXMemOpInfo {
 
 namespace llvm {
 namespace mca {
+
+static const StringRef RISCVBankedWritebackCPU = "riscv-wb-bank-poc";
+
+static bool isBankedWritebackCPU(const MCSubtargetInfo &STI) {
+  return STI.getCPU() == RISCVBankedWritebackCPU ||
+         STI.getTuneCPU() == RISCVBankedWritebackCPU;
+}
 
 const llvm::StringRef RISCVLMULInstrument::DESC_NAME = "RISCV-LMUL";
 
@@ -333,6 +344,83 @@ unsigned RISCVInstrumentManager::getSchedClassID(
   return MCII.get(*VPOpcode).getSchedClass();
 }
 
+RISCVCustomBehaviour::RISCVCustomBehaviour(const MCSubtargetInfo &STI,
+                                           const mca::SourceMgr &SrcMgr,
+                                           const MCInstrInfo &MCII)
+    : CustomBehaviour(STI, SrcMgr, MCII),
+      EnableBankedWritebackCheck(isBankedWritebackCPU(STI)) {}
+
+static std::optional<unsigned> getVRNumber(MCPhysReg Reg) {
+  static_assert(RISCV::V31 - RISCV::V0 == 31,
+                "RISC-V vector registers are no longer contiguous");
+  if (Reg < RISCV::V0 || Reg > RISCV::V31)
+    return std::nullopt;
+  return Reg - RISCV::V0;
+}
+
+static std::optional<unsigned> getWritebackBank(MCPhysReg Reg) {
+  std::optional<unsigned> VRNumber = getVRNumber(Reg);
+  if (!VRNumber)
+    return std::nullopt;
+
+  return (*VRNumber & 1) ? 0 : 1;
+}
+
+static std::string getVRName(MCPhysReg Reg) {
+  if (std::optional<unsigned> VRNumber = getVRNumber(Reg))
+    return (Twine("v") + Twine(*VRNumber)).str();
+  return (Twine("reg") + Twine(Reg)).str();
+}
+
+static void reportBankConflict(const InstRef &IR, const WriteState &Def,
+                               unsigned ConflictingSourceIndex,
+                               unsigned ConflictingReg, unsigned Bank,
+                               unsigned WritebackCycle) {
+  std::string Message;
+  raw_string_ostream OS(Message);
+  OS << "RISC-V banked VRF writeback conflict: bank " << Bank
+     << " has multiple vector writes at static writeback cycle "
+     << WritebackCycle << "; instruction #" << IR.getSourceIndex()
+     << " writes "
+     << getVRName(Def.getRegisterID()) << ", conflicting with instruction #"
+     << ConflictingSourceIndex << " writing "
+     << getVRName(ConflictingReg);
+  report_fatal_error(StringRef(OS.str()), false);
+}
+
+unsigned RISCVCustomBehaviour::checkCustomHazard(
+    ArrayRef<InstRef> /*IssuedInst*/, const InstRef &IR) {
+  if (!EnableBankedWritebackCheck)
+    return 0;
+
+  unsigned SourceIndex = IR.getSourceIndex();
+  for (const BankedWritebackEvent &Event : BankedWritebackEvents)
+    if (Event.SourceIndex == SourceIndex)
+      return 0;
+
+  SmallVector<BankedWritebackEvent, 2> NewEvents;
+  for (const WriteState &Def : IR.getInstruction()->getDefs()) {
+    std::optional<unsigned> Bank = getWritebackBank(Def.getRegisterID());
+    if (!Bank)
+      continue;
+
+    unsigned WritebackCycle = SourceIndex + Def.getLatency();
+    for (const BankedWritebackEvent &Event : BankedWritebackEvents) {
+      if (Event.WritebackCycle != WritebackCycle || Event.Bank != *Bank)
+        continue;
+
+      reportBankConflict(IR, Def, Event.SourceIndex, Event.Reg, *Bank,
+                         WritebackCycle);
+    }
+
+    NewEvents.push_back(
+        {SourceIndex, WritebackCycle, *Bank, Def.getRegisterID()});
+  }
+
+  BankedWritebackEvents.append(NewEvents);
+  return 0;
+}
+
 } // namespace mca
 } // namespace llvm
 
@@ -345,6 +433,13 @@ createRISCVInstrumentManager(const MCSubtargetInfo &STI,
   return new RISCVInstrumentManager(STI, MCII);
 }
 
+static CustomBehaviour *
+createRISCVCustomBehaviour(const MCSubtargetInfo &STI,
+                           const mca::SourceMgr &SrcMgr,
+                           const MCInstrInfo &MCII) {
+  return new RISCVCustomBehaviour(STI, SrcMgr, MCII);
+}
+
 /// Extern function to initialize the targets for the RISC-V backend
 extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
 LLVMInitializeRISCVTargetMCA() {
@@ -352,4 +447,8 @@ LLVMInitializeRISCVTargetMCA() {
                                             createRISCVInstrumentManager);
   TargetRegistry::RegisterInstrumentManager(getTheRISCV64Target(),
                                             createRISCVInstrumentManager);
+  TargetRegistry::RegisterCustomBehaviour(getTheRISCV32Target(),
+                                          createRISCVCustomBehaviour);
+  TargetRegistry::RegisterCustomBehaviour(getTheRISCV64Target(),
+                                          createRISCVCustomBehaviour);
 }

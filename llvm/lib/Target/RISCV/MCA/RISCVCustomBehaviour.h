@@ -70,6 +70,25 @@ public:
                   const SmallVector<Instrument *> &IVec) const override;
 };
 
+class RISCVCustomBehaviour : public CustomBehaviour {
+  struct BankedWritebackEvent {
+    unsigned SourceIndex;
+    unsigned WritebackCycle;
+    unsigned Bank;
+    unsigned Reg;
+  };
+
+  bool EnableBankedWritebackCheck;
+  SmallVector<BankedWritebackEvent, 16> BankedWritebackEvents;
+
+public:
+  RISCVCustomBehaviour(const MCSubtargetInfo &STI,
+                       const mca::SourceMgr &SrcMgr, const MCInstrInfo &MCII);
+
+  unsigned checkCustomHazard(ArrayRef<InstRef> IssuedInst,
+                             const InstRef &IR) override;
+};
+
 } // namespace mca
 } // namespace llvm
 

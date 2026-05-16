@@ -106,6 +106,16 @@ def GENERIC : RISCVTuneProcessorModel<"generic", NoSchedModel>, GenericTuneInfo;
 def GENERIC_OOO : RISCVTuneProcessorModel<"generic-ooo", GenericOOOModel>,
                   GenericTuneInfo;
 
+def RISCV_WB_BANK_POC : RISCVProcessorModel<"riscv-wb-bank-poc",
+                                            WritebackBankPOCModel,
+                                            [Feature64Bit,
+                                             FeatureStdExtI,
+                                             FeatureStdExtM,
+                                             FeatureStdExtF,
+                                             FeatureStdExtV,
+                                             FeatureStdExtZvl128b]>,
+                         GenericTuneInfo;
+
 def MIPS_P8700 : RISCVProcessorModel<"mips-p8700",
                                      MIPSP8700Model,
                                      [Feature64Bit,
