@@ -62,12 +62,28 @@ operands/effects, and emits the `YSX_AUTO_*` record consumed by MC asm,
 encoding, disassembly, and backend selection.
 
 The generator also emits manifest lines for YAML-declared pseudo, pattern, and
-builtin facts. That is an intentional guard: if an instruction says it has a C
-API or intrinsic mapping, the generated files and unit tests show that fact. For
-the selected proof APIs, `builtin.codegen: true` additionally generates the
-Clang builtin declaration, LLVM intrinsic declaration, and CGBuiltin
-builtin-to-intrinsic dispatch. Public `ysx_vector.h` wrappers and broader
-backend selector automation stay intentionally bounded.
+builtin facts. These pseudo/pattern manifests are comment-only audit lines, not
+TableGen DAG patterns: the real intrinsic-to-machine lowering for the proof APIs
+is still bounded hand-written C++ (see the boundary note below). The manifests
+are an intentional guard: if an instruction says it has a C API or intrinsic
+mapping, the generated files and unit tests show that fact. For the selected
+proof APIs, `builtin.codegen: true` additionally generates the Clang builtin
+declaration, LLVM intrinsic declaration, and CGBuiltin builtin-to-intrinsic
+dispatch. Public `ysx_vector.h` wrappers and broader backend selector automation
+stay intentionally bounded.
+
+### Enforcing The Promise
+
+The "no hand-authored instruction record" rule is no longer convention-only. A
+source-side guard, `auto-td/tests/test_no_handwritten_instruction_td.py`, scans
+the committed backend TableGen and fails if any tiny-F/tiny-V instruction record
+is defined outside the generated includes, which are fenced by
+`// YSX-AUTO-TD-BEGIN`/`// YSX-AUTO-TD-END` in `YSXInstrInfo.td`. The whole
+auto-td test suite (that guard plus the per-YAML manifest round-trip and the
+`auto_full`/`retained_schema_gap` coverage invariants) is registered both as a
+lit test (`llvm/test/CodeGen/YSX/auto-td-guards.test`, so `check-llvm`/CI fail on
+a violation) and as a build-time step (`YSXAutoTdGuards`, a dependency of
+`YSXCommonTableGen`, so a plain `ninja` build fails too).
 
 ## Custom Instruction: yushuxin.vfexp
 
@@ -178,6 +194,14 @@ This branch does not claim full standard `F` or `V`. It claims YSX-owned
 does not expose generic RVV frontend types or a direct scalable-vector C ABI;
 the proven C path uses fixed 128-bit `ysx_vector.h` builtin functions and
 stores results to memory.
+
+For the `yushuxin.vfexp` proof specifically, only the unmasked `m1` `v4f32`
+shape is selectable end to end: the backend selector is hard-gated to that type
+in `YSXISelDAGToDAG.cpp`, so the `masked: true` and standard-LMUL pseudo matrix
+declared in `yushuxin_vfexp.yaml` are aspirational, not yet lowered. The
+generated instruction record, MC encoding, intrinsic, and Clang builtin for
+`vfexp` are real and tested; the remaining `vsetvli` insertion and intrinsic
+selection are the bounded hand-written C++ pieces.
 
 Automatic vectorization is also left for the next layer. The current work gives
 that future work a generated instruction base, explicit builtin proof paths,

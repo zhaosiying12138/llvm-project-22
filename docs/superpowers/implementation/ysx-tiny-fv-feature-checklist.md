@@ -171,6 +171,45 @@
 - Generated Clang/LLVM focused lit command: `python3 build/bin/llvm-lit -sv llvm/test/MC/YSX/tinyf-auto-td.s llvm/test/MC/YSX/tinyv-auto-td.s llvm/test/MC/YSX/tinyv-invalid-disassemble.s llvm/test/CodeGen/YSX/tinyv-builtins-isel.ll clang/test/CodeGen/YSX/tinyv-builtins.c clang/test/CodeGen/YSX/tinyv-builtins-asm.c clang/test/CodeGen/YSX/yushuxin-vfexp.c`
 - Generated Clang/LLVM focused lit result: passed, `Total Discovered Tests: 7`, `Passed: 7 (100.00%)`.
 
+## Auto-TD Guards (source-side enforcement)
+
+- New source-side guard `auto-td/tests/test_no_handwritten_instruction_td.py`:
+  scans the committed YSX backend `.td` and fails if any tiny-F/tiny-V
+  instruction record (`def ... : RVInst*`) carries `HasStdExtXTinyF/XTinyV` or a
+  tiny-FV mnemonic outside the generated includes. Converts the headline
+  "no hand-authored instruction record" promise from convention into an enforced
+  invariant. Includes a generated-record/declared-YAML bijection check (catches a
+  hand-written bypass and a silently dropped instruction).
+- Sentinels `// YSX-AUTO-TD-BEGIN` / `// YSX-AUTO-TD-END` fence the generated
+  includes in `YSXInstrInfo.td`; the guard asserts no `def` appears inside.
+- Coverage invariant test (in `test_generator.py`): `auto_full` equals the
+  instruction-YAML count, with `retained_schema_gap == 0` and
+  `auto_with_structured_override == 0`. Per-YAML manifest round-trip test asserts
+  every declared pseudo/pattern/builtin fact appears in the generated manifest.
+- Registration so the guards actually gate: lit test
+  `llvm/test/CodeGen/YSX/auto-td-guards.test` (fails `check-llvm`/CI) plus a
+  build-time target `YSXAutoTdGuards` that `YSXCommonTableGen` depends on (fails a
+  plain `ninja` build). Previously the suite ran only on manual `unittest`.
+- Investigated taxonomy/generator for human knowledge that merely duplicates
+  `riscv-opcodes`: none found. The instruction YAML carries zero encoding (the
+  validator forbids `encoding`/`fixed_bits`/`let Inst{`); the taxonomy references
+  opcode field *names* (`vd`/`vs1`/`vs2`/`vm`) only as join keys into
+  opcode-derived bit ranges, never restating bit positions. The taxonomy `sched:`
+  field is currently informational (the generator always sets
+  `hasNoSchedulingInfo = 1`) and is a future-work consumer, not duplication.
+
+## Honesty Notes (auto-td boundary)
+
+- `YSXGenAutoTinyV{Pseudos,Patterns}.inc` are comment-only audit manifests, not
+  TableGen DAG patterns. The real intrinsic-to-machine lowering for the proof
+  APIs is bounded hand-written C++ in `YSXISelDAGToDAG.cpp`.
+- `yushuxin.vfexp` is selectable end to end only for the unmasked `m1` `v4f32`
+  shape (the selector is hard-gated to that VT); the `masked: true` and standard
+  LMUL pseudo matrix in `yushuxin_vfexp.yaml` are aspirational, not yet lowered.
+- `YSXGenAutoTinyVBuiltins.inc` is an audit manifest, intentionally generated but
+  not `#include`d by `YSXInstrInfo.td`; the real Clang builtin surface is the
+  separate `--clang-builtins-td` / `--clang-builtin-cg-inc` output.
+
 ## Retained Schema Gaps
 
 - No retained schema gaps recorded yet.
