@@ -1,0 +1,9 @@
+# Gate `check-llvm` (and CI) on the YSX auto-td guard suite, so the
+# "no hand-written instruction TableGen" promise, the manifest round-trip, the
+# coverage invariant, and the CMake-integration contract are enforced rather than
+# only checked by a manual `python -m unittest`.
+#
+# This directory's lit.local.cfg marks the suite unsupported unless the YSX
+# target is registered, so no explicit REQUIRES line is needed here.
+#
+# RUN: %ysx-run-auto-td-guards

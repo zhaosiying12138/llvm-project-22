@@ -116,6 +116,19 @@ class CMakeIntegrationTest(unittest.TestCase):
             self.assertIn(f'include "{include}"', text)
         self.assertNotIn('include "YSXGenAutoTinyVBuiltins.inc"', text)
 
+    def test_cmake_registers_auto_td_guard_verify_step(self):
+        text = CMAKE.read_text()
+
+        # A build-time target runs the auto-td guard suite so a plain build gates
+        # on the no-handwritten-instruction-TD promise, not just `check-llvm`.
+        self.assertIn("add_custom_target(YSXAutoTdGuards", text)
+        self.assertIn("add_dependencies(YSXCommonTableGen YSXAutoTdGuards)", text)
+        self.assertRegex(text, r"(?s)-m\s+unittest\s+discover\s+.*auto-td/tests")
+
+        # The guard re-runs when the tests, generator, YAML, or backend .td change.
+        self.assertIn("YSX_AUTO_TD_GUARD_TEST_DEPS", text)
+        self.assertIn("YSX_AUTO_TD_SOURCE_TD_DEPS", text)
+
     def _cmake_call(self, text, name, first_arg=None):
         if first_arg is None:
             pattern = rf"\b{re.escape(name)}\s*\("

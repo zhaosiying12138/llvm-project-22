@@ -7,6 +7,11 @@ set(YSX_AUTO_TD_TINYF_INSTRINFO ${YSX_AUTO_TD_OUT_DIR}/YSXGenAutoTinyFInstrInfo.
 set(YSX_AUTO_TD_TINYV_INSTRINFO ${YSX_AUTO_TD_OUT_DIR}/YSXGenAutoTinyVInstrInfo.inc)
 set(YSX_AUTO_TD_TINYV_PSEUDOS ${YSX_AUTO_TD_OUT_DIR}/YSXGenAutoTinyVPseudos.inc)
 set(YSX_AUTO_TD_TINYV_PATTERNS ${YSX_AUTO_TD_OUT_DIR}/YSXGenAutoTinyVPatterns.inc)
+# Builtins.inc is the tiny-V builtin AUDIT MANIFEST (comment-only). It is emitted
+# for guard visibility (auto-td tests assert it is non-empty), but it is
+# intentionally NOT included by YSXInstrInfo.td: the real Clang builtin surface is
+# generated separately into clang's build tree via --clang-builtins-td /
+# --clang-builtin-cg-inc (see clang/include/clang/Basic/CMakeLists.txt).
 set(YSX_AUTO_TD_TINYV_BUILTINS ${YSX_AUTO_TD_OUT_DIR}/YSXGenAutoTinyVBuiltins.inc)
 set(YSX_AUTO_TD_COVERAGE ${YSX_AUTO_TD_OUT_DIR}/coverage.md)
 
@@ -80,6 +85,38 @@ tablegen(LLVM YSXGenSubtargetInfo.inc -gen-subtarget)
 tablegen(LLVM YSXGenSDNodeInfo.inc -gen-sd-node-info)
 
 add_public_tablegen_target(YSXCommonTableGen)
+
+# Source-side auto-td guard. Mirrors the lit gate
+# (llvm/test/CodeGen/YSX/auto-td-guards.test) so a plain `ninja` build -- not just
+# `check-llvm` -- fails if any tiny-F/tiny-V instruction TableGen record is
+# hand-authored instead of generated, if a declared manifest fact is dropped, or
+# if the coverage invariant regresses. The suite needs only Python3 + PyYAML,
+# which the generator step above already requires.
+set(YSX_AUTO_TD_GUARD_STAMP ${YSX_AUTO_TD_OUT_DIR}/auto-td-guards.stamp)
+file(GLOB YSX_AUTO_TD_GUARD_TEST_DEPS CONFIGURE_DEPENDS
+  ${CMAKE_CURRENT_SOURCE_DIR}/auto-td/tests/*.py
+  )
+file(GLOB YSX_AUTO_TD_SOURCE_TD_DEPS CONFIGURE_DEPENDS
+  ${CMAKE_CURRENT_SOURCE_DIR}/*.td
+  )
+add_custom_command(
+  OUTPUT ${YSX_AUTO_TD_GUARD_STAMP}
+  COMMAND ${Python3_EXECUTABLE} -m unittest discover
+          -s ${CMAKE_CURRENT_SOURCE_DIR}/auto-td/tests -p "test_*.py"
+  COMMAND ${CMAKE_COMMAND} -E touch ${YSX_AUTO_TD_GUARD_STAMP}
+  DEPENDS
+          ${YSX_AUTO_TD_OUTPUTS}
+          ${YSX_AUTO_TD_PY_DEPS}
+          ${YSX_AUTO_TD_YAML_DEPS}
+          ${YSX_AUTO_TD_OPCODE_DEPS}
+          ${YSX_AUTO_TD_ARG_LUT_DEPS}
+          ${YSX_AUTO_TD_GUARD_TEST_DEPS}
+          ${YSX_AUTO_TD_SOURCE_TD_DEPS}
+  COMMENT "Verifying YSX auto-td guards"
+  VERBATIM
+  )
+add_custom_target(YSXAutoTdGuards ALL DEPENDS ${YSX_AUTO_TD_GUARD_STAMP})
+add_dependencies(YSXCommonTableGen YSXAutoTdGuards)
 
 add_llvm_target(YSXCodeGen
   YSXAsmPrinter.cpp

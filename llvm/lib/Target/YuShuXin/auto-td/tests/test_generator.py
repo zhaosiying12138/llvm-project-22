@@ -1,3 +1,4 @@
+from collections import Counter
 import os
 from pathlib import Path
 import subprocess
@@ -8,6 +9,7 @@ import unittest
 TOOLS_DIR = Path(__file__).resolve().parents[1] / "tools"
 sys.path.insert(0, str(TOOLS_DIR))
 
+from ysx_auto_td.emit_td import write_td_outputs
 from ysx_auto_td.loader import load_instruction_set
 from ysx_auto_td.model import (
     InstructionRecord,
@@ -786,6 +788,45 @@ class GeneratorTest(unittest.TestCase):
             "fsw",
         ):
             self.assertIn(mnemonic, text)
+
+    def test_instruction_set_is_fully_auto_with_no_schema_gap(self):
+        instructions = load_instruction_set(
+            YSX_ROOT,
+            REPO_ROOT / "third_party" / "riscv-opcodes",
+            REPO_ROOT / "third_party" / "ysx-opcodes",
+        )
+        yaml_count = len(
+            list((YSX_ROOT / "auto-td" / "instructions").glob("*/*.yaml"))
+        )
+        statuses = Counter(instruction.status for instruction in instructions)
+
+        self.assertEqual(len(instructions), yaml_count)
+        self.assertEqual(statuses["auto_full"], yaml_count)
+        self.assertEqual(statuses.get("retained_schema_gap", 0), 0)
+        self.assertEqual(statuses.get("auto_with_structured_override", 0), 0)
+
+    def test_every_declared_manifest_fact_round_trips_into_generated_output(self):
+        instructions = load_instruction_set(
+            YSX_ROOT,
+            REPO_ROOT / "third_party" / "riscv-opcodes",
+            REPO_ROOT / "third_party" / "ysx-opcodes",
+        )
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            out = Path(tmpdir)
+            write_td_outputs(out, instructions)
+            pseudos = (out / "YSXGenAutoTinyVPseudos.inc").read_text()
+            patterns = (out / "YSXGenAutoTinyVPatterns.inc").read_text()
+            builtins = (out / "YSXGenAutoTinyVBuiltins.inc").read_text()
+
+        for instruction in instructions:
+            mnemonic = instruction.mnemonic
+            if instruction.pseudos:
+                self.assertIn(f"// auto-td-pseudo: {mnemonic} ", pseudos, mnemonic)
+            if instruction.patterns:
+                self.assertIn(f"// auto-td-pattern: {mnemonic} ", patterns, mnemonic)
+            if instruction.builtin:
+                self.assertIn(f"// auto-td-builtin: {mnemonic} ", builtins, mnemonic)
 
     def _instruction(
         self,
