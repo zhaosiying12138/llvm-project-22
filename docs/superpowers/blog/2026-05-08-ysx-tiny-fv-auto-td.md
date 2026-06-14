@@ -29,8 +29,8 @@ TableGen includes consumed by the YSX target.
   `<4 x float>` builtins, emitting generated `vset*`, `vle32.v`, `vse32.v`,
   ALU/reduce/shuffle records, and `yushuxin.vfexp`.
 - Generated pseudo, pattern, and builtin manifests for YAML-declared tiny-V
-  facts, so C API intent is visible to tests even before Clang builtin and LLVM
-  intrinsic definitions are fully generated.
+  facts, plus generated Clang builtin TD, LLVM intrinsic TD, and CGBuiltin
+  dispatch for entries marked `builtin.codegen: true`.
 - Strict decoder handling for `vmerge.vvm` carry-in masks, so invalid mask
   encodings are rejected instead of decoded as `NoRegister`.
 
@@ -63,11 +63,11 @@ encoding, disassembly, and backend selection.
 
 The generator also emits manifest lines for YAML-declared pseudo, pattern, and
 builtin facts. That is an intentional guard: if an instruction says it has a C
-API or intrinsic mapping, the generated files and unit tests show that fact.
-The final Clang builtin declaration, LLVM intrinsic declaration, and CGBuiltin
-lowering are still bounded handwritten glue in this branch. They are now
-isolated as the next automation step instead of being mixed with instruction
-encoding TableGen.
+API or intrinsic mapping, the generated files and unit tests show that fact. For
+the selected proof APIs, `builtin.codegen: true` additionally generates the
+Clang builtin declaration, LLVM intrinsic declaration, and CGBuiltin
+builtin-to-intrinsic dispatch. Public `ysx_vector.h` wrappers and broader
+backend selector automation stay intentionally bounded.
 
 ## Custom Instruction: yushuxin.vfexp
 
@@ -106,19 +106,23 @@ builtin:
   header: ysx_vector.h
   names: [ysx_vfexp_v_f32m1]
   overloaded: false
+  codegen: true
 ```
 
 The generator records those facts in `YSXGenAutoTinyVPatterns.inc` and
-`YSXGenAutoTinyVBuiltins.inc`. Unit tests require those manifests to be
-non-empty for instructions that declare the fields.
+`YSXGenAutoTinyVBuiltins.inc`, and emits `vfexp_v_f32m1`,
+`int_ysx_vfexp`, and the `Intrinsic::ysx_vfexp` CGBuiltin dispatch fragment.
+Unit tests require those generated outputs to stay non-empty for instructions
+that declare the fields.
 
-5. Add only bounded C++/Clang glue.
+5. Add only bounded remaining glue.
 
-For this proof, the handwritten pieces are reusable or currently not generated:
-vector register decode, mask parse/print/encode, fixed-width vector
-SelectionDAG handling, frame-index memory handling, Clang builtin declaration,
-LLVM intrinsic declaration, and builtin-to-intrinsic lowering. The instruction's
-encoding, operand facts, and C API intent stay in YAML and opcode source.
+For this proof, the remaining handwritten pieces are reusable or intentionally
+bounded: vector register decode, mask parse/print/encode, fixed-width vector
+SelectionDAG handling, frame-index memory handling, public `ysx_vector.h`
+wrappers, and backend selector glue. The instruction's encoding, operand facts,
+intrinsic mapping, and generated builtin declarations stay in YAML and opcode
+source.
 
 6. Expose and test the C API.
 
@@ -138,13 +142,13 @@ For a future `yushuxin.vexp`-style instruction:
 3. Point `opcode_source` at `ysx-opcodes/rv_xtinyv/yushuxin_vexp`, set the
    feature requirement, and choose or add the taxonomy category.
 4. If the instruction has a C API, put the builtin name and intrinsic/pattern
-   intent in the YAML.
+   intent in the YAML, and set `builtin.codegen: true` only for a supported
+   one-to-one lowering shape.
 5. Run `ysx_auto_td_gen.py` and check the generated `YSX_AUTO_YUSHUXIN_VEXP`
    instruction plus the pseudo/pattern/builtin manifests.
 6. Add MC asm/object tests for the generated instruction.
-7. Add the smallest C API glue and a C-to-ASM/object smoke only when the
-   instruction needs a C API before generated Clang/LLVM builtin consumption is
-   implemented.
+7. Add only the public header wrapper and backend selector smoke still needed
+   around the generated Clang/LLVM builtin consumption.
 
 The important improvement is that adding the instruction no longer starts by
 choosing a TableGen inheritance stack or copying bit slices. That complexity is
@@ -171,12 +175,13 @@ The generator coverage reports `auto_full: 50`,
 
 This branch does not claim full standard `F` or `V`. It claims YSX-owned
 `xtinyf` and `xtinyv` subsets. Tiny-F keeps the `lp64` soft-float ABI. Tiny-V
-does not yet expose generic RVV frontend types or direct C vector ABI
-passing/returning; the proven C path keeps vector values inside explicit
-`ysx_vector.h` builtin functions and stores results to memory.
+does not expose generic RVV frontend types or a direct scalable-vector C ABI;
+the proven C path uses fixed 128-bit `ysx_vector.h` builtin functions and
+stores results to memory.
 
 Automatic vectorization is also left for the next layer. The current work gives
 that future work a generated instruction base, explicit builtin proof paths,
 and locked-down tests for the boundaries that are not supported yet. Any vector
 smoke added in this branch should stay at the level of one-to-one mapping from
-C API or IR to generated instructions, not a full RVV autovec claim.
+fixed C API or fixed-width IR to generated instructions, not a vscale frontend
+ABI or full RVV autovec claim.

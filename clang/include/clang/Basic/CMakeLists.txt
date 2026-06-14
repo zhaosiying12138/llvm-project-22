@@ -110,9 +110,69 @@ clang_tablegen(BuiltinsRISCV.inc -gen-clang-builtins
   SOURCE BuiltinsRISCV.td
   TARGET ClangBuiltinsRISCV)
 
+set(YSX_AUTO_TD_ROOT ${LLVM_MAIN_SRC_DIR}/lib/Target/YuShuXin)
+set(YSX_AUTO_TD_CLANG_OUT_DIR ${CMAKE_CURRENT_BINARY_DIR}/ysx-auto-td)
+set(YSX_AUTO_TD_CLANG_BUILTINS_TD
+  ${CMAKE_CURRENT_BINARY_DIR}/YSXGenAutoTinyVClangBuiltins.td)
+set(YSX_AUTO_TD_CLANG_BUILTIN_CG_INC
+  ${CMAKE_CURRENT_BINARY_DIR}/YSXGenAutoTinyVBuiltinCG.inc)
+set(YSX_AUTO_TD_CLANG_COVERAGE
+  ${YSX_AUTO_TD_CLANG_OUT_DIR}/coverage.md)
+
+file(GLOB_RECURSE YSX_AUTO_TD_CLANG_PY_DEPS CONFIGURE_DEPENDS
+  ${YSX_AUTO_TD_ROOT}/auto-td/tools/*.py
+  ${YSX_AUTO_TD_ROOT}/auto-td/tools/*/*.py
+  )
+file(GLOB_RECURSE YSX_AUTO_TD_CLANG_YAML_DEPS CONFIGURE_DEPENDS
+  ${YSX_AUTO_TD_ROOT}/auto-td/instructions/*.yaml
+  ${YSX_AUTO_TD_ROOT}/auto-td/instructions/*/*.yaml
+  ${YSX_AUTO_TD_ROOT}/auto-td/schema/*.yaml
+  ${YSX_AUTO_TD_ROOT}/auto-td/taxonomy/*.yaml
+  )
+file(GLOB YSX_AUTO_TD_CLANG_OPCODE_DEPS CONFIGURE_DEPENDS
+  ${LLVM_MAIN_SRC_DIR}/../third_party/riscv-opcodes/extensions/*
+  ${LLVM_MAIN_SRC_DIR}/../third_party/ysx-opcodes/extensions/*
+  )
+file(GLOB YSX_AUTO_TD_CLANG_ARG_LUT_DEPS CONFIGURE_DEPENDS
+  ${LLVM_MAIN_SRC_DIR}/../third_party/riscv-opcodes/arg_lut.csv
+  ${LLVM_MAIN_SRC_DIR}/../third_party/ysx-opcodes/arg_lut.csv
+  )
+
+add_custom_command(
+  OUTPUT
+    ${YSX_AUTO_TD_CLANG_BUILTINS_TD}
+    ${YSX_AUTO_TD_CLANG_BUILTIN_CG_INC}
+    ${YSX_AUTO_TD_CLANG_COVERAGE}
+  COMMAND ${Python3_EXECUTABLE}
+          ${YSX_AUTO_TD_ROOT}/auto-td/tools/ysx_auto_td_gen.py
+          --ysx-root ${YSX_AUTO_TD_ROOT}
+          --riscv-opcodes ${LLVM_MAIN_SRC_DIR}/../third_party/riscv-opcodes
+          --ysx-opcodes ${LLVM_MAIN_SRC_DIR}/../third_party/ysx-opcodes
+          --out-dir ${YSX_AUTO_TD_CLANG_OUT_DIR}
+          --coverage ${YSX_AUTO_TD_CLANG_COVERAGE}
+          --clang-builtins-td ${YSX_AUTO_TD_CLANG_BUILTINS_TD}
+          --clang-builtin-cg-inc ${YSX_AUTO_TD_CLANG_BUILTIN_CG_INC}
+  DEPENDS
+          ${YSX_AUTO_TD_CLANG_PY_DEPS}
+          ${YSX_AUTO_TD_CLANG_YAML_DEPS}
+          ${YSX_AUTO_TD_CLANG_OPCODE_DEPS}
+          ${YSX_AUTO_TD_CLANG_ARG_LUT_DEPS}
+  VERBATIM
+  COMMENT "Generating YSX Clang auto-td builtin fragments"
+  )
+
+add_custom_target(ClangYSXAutoTDGen
+  DEPENDS
+    ${YSX_AUTO_TD_CLANG_BUILTINS_TD}
+    ${YSX_AUTO_TD_CLANG_BUILTIN_CG_INC}
+    ${YSX_AUTO_TD_CLANG_COVERAGE}
+  )
+
+list(APPEND LLVM_TARGET_DEPENDS ${YSX_AUTO_TD_CLANG_BUILTINS_TD})
 clang_tablegen(BuiltinsYSX.inc -gen-clang-builtins
   SOURCE BuiltinsYSX.td
   TARGET ClangBuiltinsYSX)
+list(REMOVE_ITEM LLVM_TARGET_DEPENDS ${YSX_AUTO_TD_CLANG_BUILTINS_TD})
 
 clang_tablegen(BuiltinsSPIRVCommon.inc -gen-clang-builtins
   SOURCE BuiltinsSPIRVCommon.td

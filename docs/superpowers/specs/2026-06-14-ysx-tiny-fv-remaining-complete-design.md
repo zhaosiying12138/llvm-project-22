@@ -67,17 +67,20 @@ The strict contract for this completion pass is:
 - YAML-declared `pseudos`, `patterns`, and `builtin` facts must not disappear.
   The generator emits stable manifests in `YSXGenAutoTinyVPseudos.inc`,
   `YSXGenAutoTinyVPatterns.inc`, and `YSXGenAutoTinyVBuiltins.inc`.
-- Current C-to-ASM/object support for selected builtins remains implemented by
-  bounded Clang/LLVM glue. The manifest is the guard and migration point for a
-  future generated Clang builtin/intrinsic integration. Documentation must not
-  claim that this last Clang/intrinsic layer is already fully generated.
+- Current C-to-ASM/object support for selected builtins uses generated Clang
+  builtin TD, generated LLVM intrinsic TD, and generated CGBuiltin dispatch for
+  YAML entries that opt in with `builtin.codegen: true`. Documentation must
+  keep this claim limited to the proof slice and must not imply that public
+  header wrappers, all selector paths, or a full RVV ABI are generated.
 
 ## Vector And ABI Boundary
 
 The vectorization target is intentionally minimal. It is enough to prove that
-the existing YSX C API and fixed-width IR smoke map to generated instructions
-such as `vadd.vv`, `vredsum.vs`, `vle32.v`, `vse32.v`, `vsetivli`,
-`vsetvli`, and `yushuxin.vfexp`.
+the existing fixed 128-bit YSX C API and fixed-width IR smoke map to generated
+instructions such as `vadd.vv`, `vredsum.vs`, `vle32.v`, `vse32.v`,
+`vsetivli`, `vsetvli`, and `yushuxin.vfexp`. vscale/scalable-vector frontend
+work is outside this completion pass and must be planned separately before any
+implementation.
 
 This pass does not spend time on full direct vector ABI support, full RVV
 automatic vectorization, scalable-vector frontend APIs, gather/scatter autovec,
@@ -185,8 +188,8 @@ tests.
   YAML, not handwritten nested instruction TableGen.
 - YAML-declared pseudo/pattern/builtin facts generate tested manifests instead
   of empty placeholder files.
-- Minimal vector smoke stays limited to C API or fixed-width IR mapping to legal
-  YSX tiny-V instruction paths.
+- Minimal vector smoke stays limited to fixed 128-bit C API and fixed-width IR
+  mapping to legal YSX tiny-V instruction paths.
 - No generic RVV frontend exposure is introduced for YSX.
 - Auto-td generator tests pass.
 - Generator coverage still reports 50 `auto_full` instructions and 0 retained
@@ -195,4 +198,5 @@ tests.
   validation set.
 - Spec, checklist, blog, and remaining plan describe the final state without
   overclaiming full F/V, full RVV, full vector ABI, full automatic
-  vectorization, or fully generated Clang builtin/intrinsic integration.
+  vectorization, or generated coverage beyond the explicit
+  `builtin.codegen: true` proof slice.

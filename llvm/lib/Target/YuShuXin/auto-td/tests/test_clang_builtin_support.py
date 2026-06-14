@@ -34,17 +34,9 @@ class ClangTinyVBuiltinSupportTest(unittest.TestCase):
 
         self.assertIn("class YSXBuiltin", text)
         self.assertIn('__builtin_ysx_" # NAME', text)
-        self.assertIn("def vadd_vv_i32m1", text)
-        self.assertIn("def vfexp_v_f32m1", text)
-        self.assertIn(
-            '"_ExtVector<4, int>(_ExtVector<4, int>, _ExtVector<4, int>, unsigned long int)"',
-            text,
-        )
-        self.assertIn(
-            '"_ExtVector<4, float>(_ExtVector<4, float>, unsigned long int)"',
-            text,
-        )
-        self.assertIn('"xtinyv,zvl128b"', text)
+        self.assertIn('include "clang/Basic/YSXGenAutoTinyVClangBuiltins.td"', text)
+        self.assertNotIn("def vadd_vv_i32m1", text)
+        self.assertNotIn("def vfexp_v_f32m1", text)
 
         riscv_builtins = (
             REPO_ROOT / "clang" / "include" / "clang" / "Basic" / "BuiltinsRISCV.td"
@@ -66,10 +58,9 @@ class ClangTinyVBuiltinSupportTest(unittest.TestCase):
         text = intrinsics.read_text()
 
         self.assertIn('TargetPrefix = "ysx"', text)
-        self.assertIn("def int_ysx_vadd", text)
-        self.assertIn("def int_ysx_vfexp", text)
-        self.assertIn("llvm_anyvector_ty", text)
-        self.assertIn("IntrNoMem", text)
+        self.assertIn('include "llvm/IR/YSXGenAutoTinyVIntrinsics.td"', text)
+        self.assertNotIn("def int_ysx_vadd", text)
+        self.assertNotIn("def int_ysx_vfexp", text)
 
         cmake = (REPO_ROOT / "llvm" / "include" / "llvm" / "IR" / "CMakeLists.txt").read_text()
         gn = (
@@ -97,12 +88,28 @@ class ClangTinyVBuiltinSupportTest(unittest.TestCase):
 
         self.assertIn('#include "llvm/IR/IntrinsicsYSX.h"', text)
         self.assertIn("getTarget().getTriple().isYSX64()", text)
-        self.assertIn("case YSX::BI__builtin_ysx_vadd_vv_i32m1:", text)
-        self.assertIn("case YSX::BI__builtin_ysx_vfexp_v_f32m1:", text)
-        self.assertIn("Intrinsic::ysx_vadd", text)
-        self.assertIn("Intrinsic::ysx_vfexp", text)
-        self.assertIn("CGM.getIntrinsic(Intrinsic::ysx_vadd", text)
-        self.assertIn("CGM.getIntrinsic(Intrinsic::ysx_vfexp", text)
+        self.assertIn('#include "clang/Basic/YSXGenAutoTinyVBuiltinCG.inc"', text)
+        self.assertNotIn("case YSX::BI__builtin_ysx_vadd_vv_i32m1:", text)
+        self.assertNotIn("case YSX::BI__builtin_ysx_vfexp_v_f32m1:", text)
+
+    def test_global_tablegen_consumes_auto_td_outputs(self):
+        clang_basic = (
+            REPO_ROOT / "clang" / "include" / "clang" / "Basic" / "CMakeLists.txt"
+        ).read_text()
+        clang_codegen = (REPO_ROOT / "clang" / "lib" / "CodeGen" / "CMakeLists.txt").read_text()
+        llvm_ir = (REPO_ROOT / "llvm" / "include" / "llvm" / "IR" / "CMakeLists.txt").read_text()
+
+        self.assertIn("YSXGenAutoTinyVClangBuiltins.td", clang_basic)
+        self.assertIn("YSXGenAutoTinyVBuiltinCG.inc", clang_basic)
+        self.assertIn("ClangYSXAutoTDGen", clang_basic)
+        self.assertIn("arg_lut.csv", clang_basic)
+        self.assertIn("ClangYSXAutoTDGen", clang_codegen)
+        self.assertIn("YSXGenAutoTinyVIntrinsics.td", llvm_ir)
+        self.assertIn("LLVMYSXAutoTDIntrinsics", llvm_ir)
+        self.assertIn("arg_lut.csv", llvm_ir)
+
+        backend = (REPO_ROOT / "llvm" / "lib" / "Target" / "YuShuXin" / "CMakeLists.txt").read_text()
+        self.assertIn("arg_lut.csv", backend)
 
     def test_ysx_has_separate_builtin_shard_without_rvv_shards(self):
         target_builtins = REPO_ROOT / "clang" / "include" / "clang" / "Basic" / "TargetBuiltins.h"

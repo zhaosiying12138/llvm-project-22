@@ -13,10 +13,10 @@ smoke that maps one-to-one onto already generated instructions.
 
 **Architecture:** Opcode files own encoding bits. YAML owns the instruction
 identity, feature, taxonomy, pseudo, pattern, and builtin facts. The generator
-owns real instruction TableGen records and emits audit manifests for
-pseudo/pattern/builtin facts. Bounded handwritten Clang/LLVM glue may remain
-only where the current build cannot yet consume generated Clang builtin or LLVM
-intrinsic definitions.
+owns real instruction TableGen records, audit manifests, and the minimal Clang
+builtin / LLVM intrinsic / CGBuiltin dispatch fragments for YAML entries marked
+`builtin.codegen: true`. Bounded handwritten glue remains only for the public
+`ysx_vector.h` wrappers and backend selector details that are not yet generated.
 
 **Tech Stack:** LLVM YSX backend C++/TableGen, Clang YSX resource header and
 CodeGen tests, Python auto-td generator, lit/FileCheck, CMake/Ninja build in
@@ -37,8 +37,9 @@ CodeGen tests, Python auto-td generator, lit/FileCheck, CMake/Ninja build in
 - Remove any earlier over-scoped ABI/autovec code unless needed by the minimal
   smoke.
 - Do not expose standard RVV frontend APIs for YSX.
-- Do not claim generated Clang builtin/intrinsic integration until those files
-  are actually generated and consumed by the Clang/LLVM build.
+- Generated Clang builtin/intrinsic integration must stay limited to
+  `builtin.codegen: true` proof APIs that map one-to-one to generated
+  instructions.
 
 ## Current Fact Baseline
 
@@ -49,10 +50,11 @@ CodeGen tests, Python auto-td generator, lit/FileCheck, CMake/Ninja build in
   `third_party/ysx-opcodes/extensions/rv_xtinyv` plus
   `llvm/lib/Target/YuShuXin/auto-td/instructions/tiny-v/yushuxin_vfexp.yaml`
   generate `YSX_AUTO_YUSHUXIN_VFEXP`.
-- Existing selected C API proof paths still use bounded manual Clang builtin,
-  LLVM intrinsic, CodeGen, and selector glue.
-- The new generator manifest guard makes YAML-declared `pseudos`, `patterns`,
-  and `builtin` facts visible in generated files so they cannot silently drift.
+- Existing selected C API proof paths now use generated Clang builtin,
+  generated LLVM intrinsic, and generated CGBuiltin dispatch fragments for the
+  `builtin.codegen: true` YAML slice.
+- The generator manifest guard makes YAML-declared `pseudos`, `patterns`, and
+  `builtin` facts visible in generated files so they cannot silently drift.
 
 ## Task 1: Baseline And Cleanup
 
@@ -100,8 +102,9 @@ ninja -C build clang llc llvm-mc llvm-objdump FileCheck opt llvm-readelf
   broad ABI/autovec work is out of scope.
 - [x] Update the original auto-td design with the stricter current contract:
   generated instruction records are implemented; generated pseudo/pattern/
-  builtin manifests are implemented; generated Clang builtin/intrinsic
-  consumption remains a future integration step.
+  builtin manifests are implemented; generated Clang builtin, LLVM intrinsic,
+  and CGBuiltin dispatch consumption is implemented only for entries explicitly
+  marked `builtin.codegen: true`.
 - [x] Update the blog with:
   - the idea and motivation
   - the implementation shape
@@ -140,10 +143,12 @@ rg -n "YUSHUXIN_VEXP|yushuxin.vexp|auto-td-(pseudo|pattern|builtin)" \
 ```
 
 5. Add MC asm/object tests for the generated instruction record.
-6. If a C API is needed, add the smallest bounded Clang/LLVM glue until the
-   generated manifest is wired into Clang builtin and LLVM intrinsic TableGen.
-7. Add a C-to-ASM/object smoke proving the API maps to the generated
-   instruction and does not require a full vector ABI.
+6. If a C API is needed, add `builtin` metadata with `codegen: true` only when
+   the prototype has a supported one-to-one lowering shape. The generator emits
+   the Clang builtin TD, LLVM intrinsic TD, and CGBuiltin dispatch fragment.
+7. Keep any remaining manual work to the public `ysx_vector.h` wrapper and
+   backend selector path. Add a C-to-ASM/object smoke proving the API maps to
+   the generated instruction and does not require a full vector ABI.
 
 ## Task 5: Minimal Vector Smoke Only
 
@@ -152,8 +157,11 @@ rg -n "YUSHUXIN_VEXP|yushuxin.vexp|auto-td-(pseudo|pattern|builtin)" \
   and `yushuxin.vfexp`.
 - [x] Do not add full direct vector ABI tests.
 - [x] Do not add broad loop-vectorizer coverage.
-- [x] If fixed-width or vscale IR smoke is added later, require only
+- [x] Keep optional IR smoke fixed-width only in this pass, requiring
   one-to-one mapping to existing generated instructions and no new ABI claim.
+- [x] Keep the current public C API proof fixed at 128-bit
+  `ysx_vint32m1_t` / `ysx_vfloat32m1_t` wrappers. Do not describe it as a full
+  scalable-vector C ABI.
 
 ## Task 6: Verification
 
@@ -167,8 +175,13 @@ python3 llvm/lib/Target/YuShuXin/auto-td/tools/ysx_auto_td_gen.py \
   --riscv-opcodes third_party/riscv-opcodes \
   --ysx-opcodes third_party/ysx-opcodes \
   --out-dir build/ysx-auto-td-final-review \
-  --coverage build/ysx-auto-td-final-review/coverage.md
+  --coverage build/ysx-auto-td-final-review/coverage.md \
+  --clang-builtins-td build/ysx-auto-td-final-review/YSXGenAutoTinyVClangBuiltins.td \
+  --clang-builtin-cg-inc build/ysx-auto-td-final-review/YSXGenAutoTinyVBuiltinCG.inc \
+  --llvm-intrinsics-td build/ysx-auto-td-final-review/YSXGenAutoTinyVIntrinsics.td
 rg -n "auto_full: 50|retained_schema_gap: 0|yushuxin.vfexp|auto-td-builtin" \
+  build/ysx-auto-td-final-review
+rg -n "def vfexp_v_f32m1|Intrinsic::ysx_vfexp|def int_ysx_vfexp" \
   build/ysx-auto-td-final-review
 python3 build/bin/llvm-lit -sv \
   llvm/test/MC/YSX/tinyf-auto-td.s \
@@ -187,6 +200,8 @@ Expected:
 - Coverage still reports `auto_full: 50` and `retained_schema_gap: 0`.
 - Generated tiny-V builtins manifest contains `ysx_vfexp_v_f32m1`.
 - Generated tiny-V pattern manifest contains `intrinsic=ysx.vfexp`.
+- Generated Clang/LLVM fragments contain `vfexp_v_f32m1`,
+  `Intrinsic::ysx_vfexp`, and `int_ysx_vfexp`.
 - Lit output proves MC and C-to-ASM/object smoke for `yushuxin.vfexp`.
 
 ## Acceptance Criteria
@@ -199,8 +214,9 @@ Expected:
   record, MC asm/object, and selected C API smoke.
 - Docs explain the idea, implementation, effect, and new-instruction workflow
   clearly enough to seed future blog generation.
-- Docs explicitly state that generated Clang builtin/intrinsic consumption is
-  not yet complete and remains the next automation step.
+- Docs explicitly state that generated Clang builtin/intrinsic/CGBuiltin
+  consumption is complete for the `builtin.codegen: true` proof slice, while
+  public header wrappers and broader selector automation remain bounded/manual.
 - Vectorization scope is reduced to minimal one-to-one mapping smoke.
 - No generic RVV frontend exposure, full direct vector ABI claim, or full
   autovec claim is introduced.

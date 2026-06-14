@@ -12,3 +12,4 @@ builtin:
   header: ysx_vector.h
   names: [ysx_vfredsum_vs_f32m1]
   overloaded: false
+  codegen: true

@@ -161,6 +161,7 @@ add_clang_library(clangCodeGen
   DEPENDS
   vt_gen
   intrinsics_gen
+  ClangYSXAutoTDGen
   ClangDriverOptions
   # These generated headers are included transitively.
   target_parser_gen

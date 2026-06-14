@@ -2,4 +2,12 @@ mnemonic: vrgather.vv
 opcode_source: {repo: riscv-opcodes, extension: rv_v, key: vrgather_vv}
 spec_ref: tinyv.vector-shuffle.gather_vv
 features: {required: [xtinyv]}
-status: auto_full
+pseudos:
+  matrix: {element_types: [i32], lmuls: standard, masked: true, policy: llvm_default}
+patterns:
+  - {kind: intrinsic_to_pseudo, intrinsic: ysx.vrgather, operation: gather}
+builtin:
+  header: ysx_vector.h
+  names: [ysx_vrgather_vv_i32m1]
+  overloaded: false
+  codegen: true

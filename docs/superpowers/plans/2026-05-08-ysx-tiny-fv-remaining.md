@@ -4,7 +4,7 @@
 
 **Goal:** Finish the remaining YSX tiny-F/tiny-V plan after the initial auto-td builtin proof.
 
-**Architecture:** Keep per-instruction facts in structured YAML and opcode-source files, extend the generator only for repeated mechanical surfaces, and keep handwritten C++ limited to reusable lowering/ABI/vectorizer behavior. Work proceeds from MC/source authority to explicit builtin CodeGen, then to ABI and vectorizer smoke tests.
+**Architecture:** Keep per-instruction facts in structured YAML and opcode-source files, extend the generator only for repeated mechanical surfaces, and keep handwritten C++ limited to reusable lowering behavior. After the 2026-06-14 priority reset, direct vector ABI and broad vectorizer work are out of scope for this auto-td completion pass.
 
 **Tech Stack:** LLVM TableGen, YSX backend C++, Clang target builtins/resource headers, Python auto-td generator, lit/FileCheck, pinned `riscv-opcodes`.
 
@@ -18,7 +18,7 @@
 - `llvm/lib/Target/YuShuXin/auto-td/instructions/tiny-v/*.yaml`: vector instruction source records.
 - `llvm/lib/Target/YuShuXin/YSXInstrInfo.td`: shared operand classes and generated include anchors.
 - `llvm/lib/Target/YuShuXin/YSXRegisterInfo.td`: FPR/VR register classes and ABI support boundaries.
-- `llvm/lib/Target/YuShuXin/YSXISelLowering.cpp`: legal types, operation actions, ABI lowering, and vectorizer hooks.
+- `llvm/lib/Target/YuShuXin/YSXISelLowering.cpp`: fixed proof vector legal types, operation actions, and explicit builtin lowering only.
 - `llvm/lib/Target/YuShuXin/YSXISelDAGToDAG.cpp`: custom selection for proof DAG nodes and generated instruction records.
 - `llvm/lib/Target/YuShuXin/YSXInstrInfo.cpp`: copy/spill/load/store helper emission.
 - `clang/include/clang/Basic/BuiltinsYSX.td`, `clang/lib/Headers/ysx_vector.h`, `clang/lib/CodeGen/TargetBuiltins/RISCV.cpp`: explicit C builtin surface.
@@ -243,81 +243,27 @@ Expected: representative ALU, reduction, and shuffle builtins compile to asm/obj
 
 ## Task 5: Direct Vector ABI Boundary
 
-**Files:**
-- Modify: `llvm/lib/Target/YuShuXin/YSXISelLowering.cpp`
-- Modify: `llvm/lib/Target/YuShuXin/YSXISelDAGToDAG.cpp`
-- Create: `clang/test/CodeGen/YSX/tinyv-vector-abi.c`
+**Status:** Superseded by the 2026-06-14 priority reset.
 
-- [ ] **Step 1: Write red test for direct vector return**
-
-Add a test that compiles a function returning `ysx_vint32m1_t` from `ysx_vadd_vv_i32m1` with `-O2 -S`.
-
-- [ ] **Step 2: Verify red**
-
-Run:
-
-```bash
-./build/bin/clang -cc1 -triple ysx64-unknown-elf -target-feature +xtinyv -target-feature +zvl128b -Iclang/lib/Headers -O2 -S -o - clang/test/CodeGen/YSX/tinyv-vector-abi.c
-```
-
-Expected before implementation: selection failure around vector extract/bitcast/return.
-
-- [ ] **Step 3: Implement the narrow ABI path or document retained gap**
-
-If the fix is local, lower fixed 128-bit vector return/passing through stack memory or a documented hidden memory convention. If this requires broad ABI design, keep the test as an explicit unsupported/diagnostic boundary and update spec/checklist/blog with `retained_schema_gap` ownership instead of over-claiming support.
-
-- [ ] **Step 4: Verify and commit**
-
-Run:
-
-```bash
-python3 build/bin/llvm-lit -sv clang/test/CodeGen/YSX/tinyv-vector-abi.c
-git diff --check
-git add clang/test/CodeGen/YSX/tinyv-vector-abi.c llvm/lib/Target/YuShuXin docs/superpowers
-git commit -m "feat: define YSX tiny-v vector ABI boundary"
-```
-
-Expected: either a passing direct ABI proof or an explicit checked boundary that prevents future accidental claims.
+Do not implement direct vector ABI passing or returning as part of this auto-td
+completion pass. The accepted proof shape is explicit fixed 128-bit
+`ysx_vector.h` / `__builtin_ysx_*` use that stores results to memory and maps
+one-to-one to generated instruction records. Direct vector ABI design remains
+future work and must not be mixed into the auto-td generator completion.
 
 ## Task 6: Automatic Vectorization Smoke
 
-**Files:**
-- Modify: `llvm/lib/Target/YuShuXin/YSXISelLowering.cpp`
-- Modify: `llvm/lib/Target/YuShuXin/YSXSubtarget.cpp`
-- Create: `llvm/test/CodeGen/YSX/tinyv-autovec.ll`
-- Create: `clang/test/CodeGen/YSX/tinyv-autovec.c`
+**Status:** Superseded by the 2026-06-14 priority reset.
 
-- [ ] **Step 1: Write red autovec smoke tests**
+Do not implement this task as originally written. The current accepted scope is
+explicit fixed 128-bit `ysx_vector.h` / `__builtin_ysx_*` proof APIs and
+one-to-one fixed-width IR smoke only. Do not add generic loop-vectorizer hooks,
+`YSXTargetTransformInfo` policy, direct vector ABI tests, vscale frontend
+plumbing, or broad autovec coverage while completing the auto-td goal.
 
-Add contiguous add and reduce smoke tests guarded by `+xtinyv,+zvl128b`, expecting vector loop IR or final generated tiny-v instructions only for legal i32/f32 e32 cases.
-
-- [ ] **Step 2: Verify red**
-
-Run:
-
-```bash
-python3 build/bin/llvm-lit -sv llvm/test/CodeGen/YSX/tinyv-autovec.ll clang/test/CodeGen/YSX/tinyv-autovec.c
-```
-
-Expected before implementation: scalar output or vectorizer refusal.
-
-- [ ] **Step 3: Implement minimal vectorizer hooks**
-
-Add the smallest legal type, register width, operation action, and cost hooks needed for contiguous add/reduce smoke. Do not enable generic RVV frontend macros.
-
-- [ ] **Step 4: Verify and commit**
-
-Run:
-
-```bash
-ninja -C build clang llc opt FileCheck
-python3 build/bin/llvm-lit -sv llvm/test/CodeGen/YSX/tinyv-autovec.ll clang/test/CodeGen/YSX/tinyv-autovec.c
-git diff --check
-git add llvm clang
-git commit -m "feat: add YSX tiny-v autovec smoke"
-```
-
-Expected: minimal autovec smoke uses legal tiny-v instructions without claiming full RVV.
+The replacement work is to generate and consume the selected
+`builtin.codegen: true` YAML facts in Clang and LLVM TableGen, then prove the
+explicit C API maps to generated instruction records.
 
 ## Task 7: Final Validation, Review, and Docs
 

@@ -206,6 +206,26 @@ class GeneratorTest(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "builtin.overloaded must be a bool"):
                 load_instruction_set(ysx_root, tmp / "riscv-opcodes", tmp / "ysx-opcodes")
 
+    def test_loader_rejects_non_boolean_builtin_codegen_manifest(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            ysx_root = tmp / "YuShuXin"
+            self._write_opcode(tmp / "riscv-opcodes", "rv_v", "vadd.vv 31..26=0x00 vd")
+            self._write_instruction(
+                ysx_root,
+                "bad.yaml",
+                "mnemonic: vadd.vv\n"
+                "opcode_source: {repo: riscv-opcodes, extension: rv_v, key: vadd_vv}\n"
+                "spec_ref: tinyv.vector-alu.int_add\n"
+                "builtin:\n"
+                "  header: ysx_vector.h\n"
+                "  names: [ysx_vadd_vv_i32m1]\n"
+                "  codegen: \"true\"\n",
+            )
+
+            with self.assertRaisesRegex(ValueError, "builtin.codegen must be a bool"):
+                load_instruction_set(ysx_root, tmp / "riscv-opcodes", tmp / "ysx-opcodes")
+
     def test_loader_attaches_taxonomy_operands_and_effects(self):
         instructions = load_instruction_set(
             YSX_ROOT,
@@ -352,6 +372,103 @@ class GeneratorTest(unittest.TestCase):
             ):
                 validate_instruction_set([instruction])
 
+    def test_validator_rejects_codegen_builtin_without_intrinsic_pattern(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            path = Path(tmpdir) / "bad.yaml"
+            path.write_text("mnemonic: vadd.vv\n")
+            instruction = self._instruction(
+                path,
+                builtin={
+                    "header": "ysx_vector.h",
+                    "names": ("ysx_vadd_vv_i32m1",),
+                    "overloaded": False,
+                    "codegen": True,
+                },
+            )
+
+            with self.assertRaisesRegex(
+                ValueError, "builtin.codegen requires intrinsic pattern"
+            ):
+                validate_instruction_set([instruction])
+
+    def test_validator_rejects_codegen_builtin_unsupported_operation(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            path = Path(tmpdir) / "bad.yaml"
+            path.write_text("mnemonic: vadd.vv\n")
+            instruction = self._instruction(
+                path,
+                patterns=(
+                    {
+                        "kind": "intrinsic_to_pseudo",
+                        "intrinsic": "ysx.vadd",
+                        "operation": "wide_loop",
+                    },
+                ),
+                builtin={
+                    "header": "ysx_vector.h",
+                    "names": ("ysx_vadd_vv_i32m1",),
+                    "overloaded": False,
+                    "codegen": True,
+                },
+            )
+
+            with self.assertRaisesRegex(
+                ValueError, "unsupported builtin.codegen operation wide_loop"
+            ):
+                validate_instruction_set([instruction])
+
+    def test_validator_rejects_codegen_builtin_bad_name_prefix(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            path = Path(tmpdir) / "bad.yaml"
+            path.write_text("mnemonic: vadd.vv\n")
+            instruction = self._instruction(
+                path,
+                patterns=(
+                    {
+                        "kind": "intrinsic_to_pseudo",
+                        "intrinsic": "ysx.vadd",
+                        "operation": "add",
+                    },
+                ),
+                builtin={
+                    "header": "ysx_vector.h",
+                    "names": ("riscv_vadd_vv_i32m1",),
+                    "overloaded": False,
+                    "codegen": True,
+                },
+            )
+
+            with self.assertRaisesRegex(
+                ValueError, "builtin.codegen name must start with ysx_"
+            ):
+                validate_instruction_set([instruction])
+
+    def test_validator_rejects_codegen_builtin_unsupported_type(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            path = Path(tmpdir) / "bad.yaml"
+            path.write_text("mnemonic: vadd.vv\n")
+            instruction = self._instruction(
+                path,
+                patterns=(
+                    {
+                        "kind": "intrinsic_to_pseudo",
+                        "intrinsic": "ysx.vadd",
+                        "operation": "add",
+                    },
+                ),
+                builtin={
+                    "header": "ysx_vector.h",
+                    "names": ("ysx_vadd_vv_i64m1",),
+                    "overloaded": False,
+                    "codegen": True,
+                },
+            )
+
+            with self.assertRaisesRegex(
+                ValueError, "unsupported builtin vector type"
+            ):
+                validate_instruction_set([instruction])
+
     def test_coverage_lists_instruction_status_and_opcode_source(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             tmp = Path(tmpdir)
@@ -406,6 +523,12 @@ class GeneratorTest(unittest.TestCase):
                     str(out),
                     "--coverage",
                     str(coverage),
+                    "--clang-builtins-td",
+                    str(out / "YSXGenAutoTinyVClangBuiltins.td"),
+                    "--clang-builtin-cg-inc",
+                    str(out / "YSXGenAutoTinyVBuiltinCG.inc"),
+                    "--llvm-intrinsics-td",
+                    str(out / "YSXGenAutoTinyVIntrinsics.td"),
                 ],
                 env=self._generator_env(),
             )
@@ -416,6 +539,9 @@ class GeneratorTest(unittest.TestCase):
             pseudos = (out / "YSXGenAutoTinyVPseudos.inc").read_text()
             patterns = (out / "YSXGenAutoTinyVPatterns.inc").read_text()
             builtins = (out / "YSXGenAutoTinyVBuiltins.inc").read_text()
+            clang_builtins = (out / "YSXGenAutoTinyVClangBuiltins.td").read_text()
+            clang_codegen = (out / "YSXGenAutoTinyVBuiltinCG.inc").read_text()
+            llvm_intrinsics = (out / "YSXGenAutoTinyVIntrinsics.td").read_text()
             text = coverage.read_text()
 
         self.assertIn("def YSXAutoVMaskAsmOperand", tinyv)
@@ -510,13 +636,27 @@ class GeneratorTest(unittest.TestCase):
             patterns,
         )
         self.assertIn(
-            "// auto-td-builtin: yushuxin.vfexp header=ysx_vector.h name=ysx_vfexp_v_f32m1 overloaded=false record=YSX_AUTO_YUSHUXIN_VFEXP",
+            "// auto-td-builtin: yushuxin.vfexp header=ysx_vector.h name=ysx_vfexp_v_f32m1 overloaded=false codegen=true record=YSX_AUTO_YUSHUXIN_VFEXP",
             builtins,
         )
         self.assertIn(
-            "// auto-td-builtin: vadd.vv header=ysx_vector.h name=ysx_vadd_vv_i32m1 overloaded=false record=YSX_AUTO_VADD_VV",
+            "// auto-td-builtin: vadd.vv header=ysx_vector.h name=ysx_vadd_vv_i32m1 overloaded=false codegen=true record=YSX_AUTO_VADD_VV",
             builtins,
         )
+        self.assertIn(
+            'def vadd_vv_i32m1 : YSXBuiltin<"_ExtVector<4, int>(_ExtVector<4, int>, _ExtVector<4, int>, unsigned long int)", "xtinyv,zvl128b">;',
+            clang_builtins,
+        )
+        self.assertIn(
+            'def vfexp_v_f32m1 : YSXBuiltin<"_ExtVector<4, float>(_ExtVector<4, float>, unsigned long int)", "xtinyv,zvl128b">;',
+            clang_builtins,
+        )
+        self.assertIn("case YSX::BI__builtin_ysx_vadd_vv_i32m1:", clang_codegen)
+        self.assertIn("Intrinsic::ysx_vadd", clang_codegen)
+        self.assertIn("case YSX::BI__builtin_ysx_vfexp_v_f32m1:", clang_codegen)
+        self.assertIn("Intrinsic::ysx_vfexp", clang_codegen)
+        self.assertIn("def int_ysx_vadd", llvm_intrinsics)
+        self.assertIn("def int_ysx_vfexp", llvm_intrinsics)
 
         for mnemonic in (
             "vle32.v",
@@ -654,6 +794,8 @@ class GeneratorTest(unittest.TestCase):
         status="auto_full",
         source=None,
         opcode=None,
+        patterns=(),
+        builtin=None,
     ):
         source = source or OpcodeSource("riscv-opcodes", "rv_v", "vadd_vv")
         opcode = opcode or OpcodeRecord(
@@ -670,6 +812,8 @@ class GeneratorTest(unittest.TestCase):
             opcode=opcode,
             spec_ref="test.spec",
             status=status,
+            patterns=patterns,
+            builtin=builtin,
         )
 
     def _write_instruction(self, ysx_root, name, text):

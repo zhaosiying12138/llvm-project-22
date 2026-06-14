@@ -8,6 +8,7 @@
 - Generated tiny-f MC definitions for 15 selected scalar f32 instructions: `flw`, `fsw`, `fadd.s`, `fsub.s`, `fmul.s`, `fsgnj.s`, `feq.s`, `flt.s`, `fle.s`, `fcvt.w.s`, `fcvt.wu.s`, `fcvt.s.w`, `fcvt.s.wu`, `fmv.x.w`, and `fmv.w.x`.
 - Generated tiny-v MC definitions for 35 selected e32 memory, integer ALU, reduction, shuffle/move, `vset*`, and custom instructions, including `vadd.vv`, `vsub.vv`, `vmul.vv`, `vredsum.vs`, `vfredusum.vs`, `vrgather.vv`, `vslideup.vx`, and `yushuxin.vfexp`.
 - Generated tiny-v pseudo/pattern/builtin manifests for YAML-declared facts, including `ysx_vfexp_v_f32m1` and `intrinsic=ysx.vfexp`.
+- Generated Clang builtin TD, LLVM intrinsic TD, and CGBuiltin dispatch fragments for the explicit `builtin.codegen: true` tiny-v proof APIs.
 - YSX custom opcode source for `yushuxin.vfexp` in `third_party/ysx-opcodes`.
 - `ysx_vector.h` typed proof APIs for `ysx_vadd_vv_i32m1`, `ysx_vsub_vv_i32m1`, `ysx_vmul_vv_i32m1`, `ysx_vredsum_vs_i32m1`, `ysx_vfredsum_vs_f32m1`, `ysx_vrgather_vv_i32m1`, `ysx_vslideup_vx_i32m1`, and `ysx_vfexp_v_f32m1`.
 - Matching `__builtin_ysx_*` Clang proof builtins lowered to YSX-owned LLVM IR intrinsics.
@@ -25,6 +26,7 @@
 - Task 6 wires the generated target TableGen fragments into `YSXInstrInfo.td`: `YSXGenAutoTinyFInstrInfo.inc`, `YSXGenAutoTinyVInstrInfo.inc`, `YSXGenAutoTinyVPseudos.inc`, and `YSXGenAutoTinyVPatterns.inc`.
 - Task 6 generates `YSXGenAutoTinyVBuiltins.inc` as a build output/dependency only; it is intentionally not included by LLVM target TableGen yet.
 - Priority-reset continuation changed `YSXGenAutoTinyVPseudos.inc`, `YSXGenAutoTinyVPatterns.inc`, and `YSXGenAutoTinyVBuiltins.inc` from empty placeholders into generated manifest files for YAML pseudo, pattern, and builtin facts.
+- Current continuation adds generated Clang/LLVM consumer fragments for the same YAML facts: `YSXGenAutoTinyVClangBuiltins.td`, `YSXGenAutoTinyVBuiltinCG.inc`, and `YSXGenAutoTinyVIntrinsics.td`.
 - Task 7 and the continuation work emit real tiny-f/tiny-v MC instruction records from YAML plus opcode-source fixed bits and `riscv-opcodes/arg_lut.csv` operand field ranges. Current generated coverage is 50 `auto_full` instructions and 0 retained schema gaps.
 - Task 7 review fix makes the emitter consume taxonomy operand/effect records instead of inferring assembly operand shape from field-name heuristics.
 - Task 7 generated mask asm strings intentionally follow the upstream RISCV `$operand$vm` convention; `printVMaskReg` emits the leading comma for explicit `v0.t`.
@@ -42,13 +44,13 @@
 - Task 5 added frontend macro support for `__riscv_xtinyf`, `__riscv_xtinyv`, and `__riscv_zvl128b` without enabling generic RVV builtins/types or `__riscv_vector` / `__riscv_v_intrinsic` for YSX.
 - Task 5 added FPR32, tiny vector M1, mask, and minimal `vl`/`vtype` register scaffolding, plus minimal future instruction format/opcode metadata for `LOAD_FP`, `STORE_FP`, `OP_FP`, `OP_V`, `CUSTOM_0`, and R4 format.
 - Task 5 review fix made YSX ISA parsing accept emitted versioned tiny extension forms (`xtinyf1p0`, `xtinyv1p0`, `zvl128b1p0`) and made `.attribute arch` re-emit the parsed canonical arch attribute so tiny features are preserved.
-- Task 6 added CMake dependency tracking for the auto-td generator Python files, instruction/schema/taxonomy YAML files, and opcode extension source files from `third_party/riscv-opcodes` and `third_party/ysx-opcodes`.
+- Task 6 added CMake dependency tracking for the auto-td generator Python files, instruction/schema/taxonomy YAML files, opcode extension source files, and opcode `arg_lut.csv` inputs from `third_party/riscv-opcodes` and `third_party/ysx-opcodes`.
 - Task 7 added the minimal YSX MC glue required by generated tiny-v instructions: optional `v0.t` mask parsing/defaulting, mask printing and encoding, vector register disassembly decode helpers, and `.insn` major-opcode retention for `LOAD_FP`, `STORE_FP`, `OP_FP`, `OP_V`, and `CUSTOM_0`.
 - Task 7 review fix adds a target operand type for generated vector masks (`YSXOp::OPERAND_VMASK`) and rejects malformed alias entries instead of silently dropping them.
 - Task 8 added the first Clang tiny-v builtin proof path: `clang/lib/Headers/ysx_vector.h`, YSX-prefixed builtin declaration `__builtin_ysx_vadd_vv_i32m1`, private frontend macro `__YSX_TINY_VECTOR__`, and LLVM IR intrinsic `llvm.ysx.vadd`.
 - Task 8 intentionally models the proof vector type with fixed 128-bit Clang extended vectors (`_ExtVector<4, int>`) instead of standard RVV frontend types, so YSX still does not expose generic RVV resource-header types or macros.
 - Task 11 added the matching Clang IR proof path for the custom tiny-v instruction `yushuxin.vfexp`: `ysx_vfexp_v_f32m1` in `ysx_vector.h`, YSX-prefixed builtin declaration `__builtin_ysx_vfexp_v_f32m1`, and LLVM IR intrinsic `llvm.ysx.vfexp`.
-- Priority-reset continuation keeps the Clang builtin, LLVM intrinsic, CGBuiltin, and selector glue bounded and explicit. Those pieces are not yet generated from the manifest; wiring that generated consumption is the next automation step.
+- Current continuation generates the Clang builtin, LLVM intrinsic, and CGBuiltin dispatch pieces for YAML entries marked `builtin.codegen: true`. Public `ysx_vector.h` wrappers and backend selector glue remain bounded and explicit.
 - Final proof fix routes `ysx64` target builtins through `EmitRISCVBuiltinExpr` while registering only the YSX builtin shard, so YSX can reuse the RISCV builtin lowering function without importing RISCV/RVV builtin declarations.
 - Final backend proof fix makes `v4i32` and `v4f32` legal in the YSX vector register class and manually selects the proof intrinsic/load/store DAG nodes to generated auto-td instruction records.
 - Final review fix inserts `vsetivli` for fixed 4-lane proof vector memory operations and `vsetvli` for builtin operations using the user-supplied `vl`.
@@ -158,6 +160,16 @@
 - Priority-reset focused lit result: passed, `Total Discovered Tests: 7`, `Passed: 7 (100.00%)`.
 - Priority-reset whitespace command: `git diff --check`
 - Priority-reset whitespace result: passed with no output.
+- Generated Clang/LLVM consumer smoke command: `python3 llvm/lib/Target/YuShuXin/auto-td/tools/ysx_auto_td_gen.py --ysx-root llvm/lib/Target/YuShuXin --riscv-opcodes third_party/riscv-opcodes --ysx-opcodes third_party/ysx-opcodes --out-dir build/ysx-auto-td-final-review --coverage build/ysx-auto-td-final-review/coverage.md --clang-builtins-td build/ysx-auto-td-final-review/YSXGenAutoTinyVClangBuiltins.td --clang-builtin-cg-inc build/ysx-auto-td-final-review/YSXGenAutoTinyVBuiltinCG.inc --llvm-intrinsics-td build/ysx-auto-td-final-review/YSXGenAutoTinyVIntrinsics.td`
+- Generated Clang/LLVM consumer smoke result: passed; coverage reports `auto_full: 50` and `retained_schema_gap: 0`; generated files contain `def vfexp_v_f32m1`, `Intrinsic::ysx_vfexp`, and `def int_ysx_vfexp`.
+- Generated Clang/LLVM build command: `ninja -C build clang llc llvm-mc llvm-objdump FileCheck opt llvm-readelf`
+- Generated Clang/LLVM build result: passed; CMake reran and Ninja generated `YSX Clang auto-td builtin fragments`, `YSX LLVM intrinsic auto-td fragments`, and `YSX auto TableGen fragments` before rebuilding the affected TableGen and Clang CodeGen users.
+- Generated Clang/LLVM build-tree check command: `test -f build/tools/clang/include/clang/Basic/YSXGenAutoTinyVClangBuiltins.td && test -f build/tools/clang/include/clang/Basic/YSXGenAutoTinyVBuiltinCG.inc && test -f build/include/llvm/IR/YSXGenAutoTinyVIntrinsics.td && rg -n "def vfexp_v_f32m1|Intrinsic::ysx_vfexp|def int_ysx_vfexp" build/tools/clang/include/clang/Basic/YSXGenAutoTinyVClangBuiltins.td build/tools/clang/include/clang/Basic/YSXGenAutoTinyVBuiltinCG.inc build/include/llvm/IR/YSXGenAutoTinyVIntrinsics.td`
+- Generated Clang/LLVM build-tree check result: passed; the build-tree generated files contain the `yushuxin.vfexp` C API, LLVM intrinsic, and CGBuiltin lowering fragments.
+- Generated Clang/LLVM full auto-td unittest command: `python3 -m unittest discover -s llvm/lib/Target/YuShuXin/auto-td/tests -p 'test_*.py' -v`
+- Generated Clang/LLVM full auto-td unittest result: passed, `Ran 40 tests`, `OK`.
+- Generated Clang/LLVM focused lit command: `python3 build/bin/llvm-lit -sv llvm/test/MC/YSX/tinyf-auto-td.s llvm/test/MC/YSX/tinyv-auto-td.s llvm/test/MC/YSX/tinyv-invalid-disassemble.s llvm/test/CodeGen/YSX/tinyv-builtins-isel.ll clang/test/CodeGen/YSX/tinyv-builtins.c clang/test/CodeGen/YSX/tinyv-builtins-asm.c clang/test/CodeGen/YSX/yushuxin-vfexp.c`
+- Generated Clang/LLVM focused lit result: passed, `Total Discovered Tests: 7`, `Passed: 7 (100.00%)`.
 
 ## Retained Schema Gaps
 
@@ -165,9 +177,9 @@
 
 ## Known Remaining Scope
 
-- Bulk tiny-F/tiny-V MC import for the agreed first slice is implemented; remaining work is generated consumption of Clang builtin/LLVM intrinsic metadata and broader CodeGen coverage beyond the selected scalar tiny-F and explicit tiny-V builtin proof paths.
-- Automatic vectorization is intentionally reduced to minimal one-to-one smoke only. This branch proves explicit `ysx_vector.h` / `__builtin_ysx_*` use and should not grow a full RVV autovec implementation in the remaining-complete pass.
-- Broader backend lowering remains intentionally narrow: the current object proof covers fixed 128-bit `<4 x i32>` and `<4 x float>` values plus selected zero-offset proof vector loads/stores and explicit builtins.
+- Bulk tiny-F/tiny-V MC import for the agreed first slice is implemented; generated Clang builtin/LLVM intrinsic/CGBuiltin consumption is implemented for the selected `builtin.codegen: true` proof APIs. Remaining work is broader CodeGen coverage and selector automation beyond the selected scalar tiny-F and explicit tiny-V builtin proof paths.
+- Automatic vectorization is intentionally reduced to minimal one-to-one smoke only. This branch proves explicit fixed 128-bit `ysx_vector.h` / `__builtin_ysx_*` use and should not grow a full RVV autovec implementation in the remaining-complete pass.
+- Broader backend lowering remains intentionally narrow: the current object proof covers fixed 128-bit `<4 x i32>` and `<4 x float>` values plus selected zero-offset proof vector loads/stores and explicit builtins. vscale frontend plumbing is outside this completion pass.
 - Direct C ABI passing/returning of tiny-v vector values remains future work; the current C-to-object proof stores builtin results to memory.
 - Full unordered f32 compare lowering and true i64/f32 conversion lowering remain future work; unsupported tests now lock those boundaries down.
 

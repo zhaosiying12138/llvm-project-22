@@ -154,10 +154,14 @@ def _load_builtin(path: Path, data: dict) -> dict | None:
     overloaded = builtin.get("overloaded", False)
     if not isinstance(overloaded, bool):
         raise ValueError(f"{path}: builtin.overloaded must be a bool")
+    codegen = builtin.get("codegen", False)
+    if not isinstance(codegen, bool):
+        raise ValueError(f"{path}: builtin.codegen must be a bool")
     return {
         "header": header,
         "names": tuple(names),
         "overloaded": overloaded,
+        "codegen": codegen,
     }
 
 

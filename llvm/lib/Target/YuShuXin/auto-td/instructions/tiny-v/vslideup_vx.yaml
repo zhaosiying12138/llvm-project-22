@@ -2,4 +2,12 @@ mnemonic: vslideup.vx
 opcode_source: {repo: riscv-opcodes, extension: rv_v, key: vslideup_vx}
 spec_ref: tinyv.vector-shuffle.slide_vx
 features: {required: [xtinyv]}
-status: auto_full
+pseudos:
+  matrix: {element_types: [i32], lmuls: standard, masked: true, policy: llvm_default}
+patterns:
+  - {kind: intrinsic_to_pseudo, intrinsic: ysx.vslideup, operation: slideup}
+builtin:
+  header: ysx_vector.h
+  names: [ysx_vslideup_vx_i32m1]
+  overloaded: false
+  codegen: true

@@ -10,3 +10,4 @@ builtin:
   header: ysx_vector.h
   names: [ysx_vfexp_v_f32m1]
   overloaded: false
+  codegen: true

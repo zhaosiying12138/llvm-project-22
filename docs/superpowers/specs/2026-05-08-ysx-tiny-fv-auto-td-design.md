@@ -114,8 +114,10 @@ The first user-facing path is explicit YSX vector builtins:
 ysx_vector.h / __builtin_ysx_* -> LLVM IR/intrinsic -> DAG/pseudo -> asm -> object
 ```
 
-Automatic vectorization is enabled after the same legal type, pseudo, pattern,
-and lowering infrastructure is available.
+Automatic vectorization is only a later consumer after the same legal type,
+pseudo, pattern, and lowering infrastructure is available. It is not part of
+the current acceptance gate unless it is a one-to-one smoke from C API or
+fixed-width IR to an already generated instruction.
 
 ### Feature Surface
 
@@ -172,9 +174,11 @@ Explicitly out of scope for the first stage:
 
 ### Tiny-V
 
-Tiny-V uses scalable vector semantics. It supports standard RVV-like VLEN/LMUL
-expression, including LMUL and fractional LMUL, but legal data elements are
-restricted to:
+Tiny-V is designed to remain compatible with future scalable vector semantics,
+but the current proof path uses fixed 128-bit m1 C API and IR values. Any
+future RVV-like VLEN/LMUL expression, including LMUL and fractional LMUL,
+remains outside the current completion pass. Legal data elements for the proof
+surface are restricted to:
 
 - i32
 - f32
@@ -475,15 +479,16 @@ Automatic vectorization is a second-stage consumer of the same tiny-V legal
 types, pseudo matrix, patterns, and cost model.
 
 For the current completion pass, automatic vectorization is deliberately reduced
-to minimal smoke only. A test is useful only when it proves a C API, fixed-width
-IR, or vscale IR operation maps one-to-one to already generated instructions.
-It must not become a full RVV autovec project.
+to minimal smoke only. A test is useful only when it proves a C API or
+fixed-width IR operation maps one-to-one to already generated instructions. It
+must not become a vscale frontend ABI or full RVV autovec project.
 
-Longer-term intended scope is:
+Longer-term intended scope, outside the current completion pass and not an
+actionable task in this branch, is:
 
-- contiguous loops
-- strided loops
-- gather/scatter loops
+- future contiguous loop-vectorizer experiments
+- future strided loop-vectorizer experiments
+- future gather/scatter loop-vectorizer experiments
 
 Automatic vectorization should not be used as the first debug path. The first
 debug path is explicit `ysx_vector.h` builtin code.
@@ -510,10 +515,11 @@ The instruction is implemented through the same auto-td-gen path:
 4. Generate the MC def, asm/disasm, pseudo/pattern, and builtin metadata.
 5. Check the generated pseudo/pattern/builtin manifests so C API facts did not
    silently disappear.
-6. Add the minimal C++/Clang lowering glue only if a C API is needed before the
-   generated manifest is wired into Clang builtin and LLVM intrinsic TableGen.
-7. Add `ysx_vector.h` API and end-to-end tests when the instruction needs a C
-   API proof.
+6. If a C API is needed and the shape is supported, set `builtin.codegen: true`
+   so the Clang builtin TD, LLVM intrinsic TD, and CGBuiltin dispatch fragment
+   are generated.
+7. Add only the public `ysx_vector.h` wrapper and backend selector smoke still
+   needed around the generated Clang/LLVM builtin consumption.
 
 The final blog must be written as a new standalone document:
 
@@ -581,9 +587,11 @@ argue concretely that this framework:
 
 ### Automatic Vectorization
 
-- After builtin proof, add smoke tests for contiguous, strided, and
-  gather/scatter loops.
-- Verify the vectorizer only uses legal tiny-V element types and operations.
+- Do not add broad automatic vectorization in the current completion pass.
+- Future smoke in this pass may cover only C API or fixed-width IR when it maps
+  one-to-one to already generated tiny-V instructions.
+- Contiguous, strided, and gather/scatter loop-vectorizer coverage remains
+  future work after the explicit builtin path and generated metadata are stable.
 
 ## Multi-Agent Implementation Strategy
 

@@ -31,11 +31,11 @@ Create these new files and directories:
 - `llvm/lib/Target/YuShuXin/auto-td/tools/ysx_auto_td_gen.py`: generator entrypoint.
 - `llvm/lib/Target/YuShuXin/auto-td/tools/ysx_auto_td/`: focused Python modules for parsing, validation, emission, and reporting.
 - `llvm/lib/Target/YuShuXin/auto-td/tests/`: generator unit tests and snapshot fixtures.
-- `clang/lib/Headers/ysx_vector.h`: checked-in shim that includes the generated build header when building in-tree, or expands stable declarations directly if the generated header is installed.
+- `clang/lib/Headers/ysx_vector.h`: checked-in fixed 128-bit YSX wrapper header for the selected proof APIs.
 - `clang/test/CodeGen/YSX/tinyv-builtins.c`: builtin-to-IR/asm smoke tests.
 - `llvm/test/MC/YSX/tinyv-auto-td.s`: generated tiny-V MC encoding tests.
 - `llvm/test/CodeGen/YSX/tinyv-builtins.ll`: backend lowering tests.
-- `llvm/test/CodeGen/YSX/tinyv-autovec.ll`: automatic vectorization smoke tests.
+- Superseded old autovec smoke tests: do not create `tinyv-autovec.ll` for the current completion pass.
 - `docs/superpowers/blog/2026-05-08-ysx-tiny-fv-auto-td.md`: standalone final concise blog.
 - `docs/superpowers/implementation/ysx-tiny-fv-feature-checklist.md`: implementation checklist for blog reuse.
 
@@ -1214,13 +1214,13 @@ Create `llvm/test/CodeGen/YSX/tinyv-builtins.ll`:
 ```llvm
 ; RUN: llc -mtriple=ysx64 -mattr=+xtinyv,+zvl128b < %s | FileCheck %s
 
-declare <vscale x 4 x i32> @llvm.ysx.vadd.nxv4i32(<vscale x 4 x i32>, <vscale x 4 x i32>, i64)
+declare <4 x i32> @llvm.ysx.vadd.v4i32.i64(<4 x i32>, <4 x i32>, i64)
 
-define <vscale x 4 x i32> @vadd_i32m1(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b, i64 %vl) {
+define <4 x i32> @vadd_i32m1(<4 x i32> %a, <4 x i32> %b, i64 %vl) {
 ; CHECK-LABEL: vadd_i32m1:
 ; CHECK: vadd.vv
-  %r = call <vscale x 4 x i32> @llvm.ysx.vadd.nxv4i32(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b, i64 %vl)
-  ret <vscale x 4 x i32> %r
+  %r = call <4 x i32> @llvm.ysx.vadd.v4i32.i64(<4 x i32> %a, <4 x i32> %b, i64 %vl)
+  ret <4 x i32> %r
 }
 ```
 
@@ -1295,7 +1295,7 @@ ysx_vint32m1_t test_vadd(ysx_vint32m1_t a, ysx_vint32m1_t b, unsigned long vl) {
 }
 
 // IR-LABEL: define {{.*}}test_vadd
-// IR: call <vscale x 4 x i32> @llvm.ysx.vadd
+// IR: call <4 x i32> @llvm.ysx.vadd
 ```
 
 - [ ] **Step 2: Add header shim**
@@ -1594,56 +1594,22 @@ git commit -m "feat: add custom YSX vfexp instruction"
 
 ## Task 12: Automatic Vectorization Smoke Tests
 
-**Files:**
-- Modify: `llvm/lib/Target/YuShuXin/YSXTargetTransformInfo.h`
-- Modify: `llvm/lib/Target/YuShuXin/YSXISelLowering.cpp`
-- Create: `llvm/test/CodeGen/YSX/tinyv-autovec.ll`
-- Create: `clang/test/CodeGen/YSX/tinyv-autovec.c`
+**Status:** Superseded by the 2026-06-14 priority reset.
 
-- [ ] **Step 1: Add simple C autovec test**
+Do not execute the original autovec implementation steps in this plan. The
+current scope keeps vector work to fixed 128-bit `ysx_vector.h` / `__builtin_ysx_*`
+proof APIs and fixed-width IR smoke that maps one-to-one to an already
+generated instruction. Do not add `YSXTargetTransformInfo` hooks, broad
+loop-vectorizer enablement, vscale frontend plumbing, direct vector ABI tests,
+strided autovec, or gather/scatter autovec as part of this auto-td completion
+pass.
 
-Create `clang/test/CodeGen/YSX/tinyv-autovec.c`:
+The accepted automation work instead is generated consumption of
+`builtin.codegen: true` YAML facts into:
 
-```c
-// RUN: %clang --target=ysx64-unknown-elf -march=rv64ima_xtinyv_zvl128b -O2 -S %s -o - | FileCheck %s
-
-void add_i32(int *restrict c, const int *restrict a, const int *restrict b, int n) {
-  for (int i = 0; i < n; ++i)
-    c[i] = a[i] + b[i];
-}
-
-// CHECK: vadd.vv
-```
-
-- [ ] **Step 2: Enable tiny-V legal vectorization hooks**
-
-In `YSXTargetTransformInfo.h`, add hooks matching the tiny element set:
-
-```c++
-bool isLegalElementTypeForYSXTinyV(Type *Ty) const;
-```
-
-Implement it so only i32 and f32 vector elements return true.
-
-- [ ] **Step 3: Run autovec test**
-
-Run:
-
-```bash
-ninja -C build clang
-python3 build/bin/llvm-lit -sv clang/test/CodeGen/YSX/tinyv-autovec.c
-```
-
-Expected: the simple contiguous loop emits `vadd.vv`. Add strided and gather/scatter tests only after contiguous vectorization passes.
-
-- [ ] **Step 4: Commit autovec smoke**
-
-Run:
-
-```bash
-git add llvm/lib/Target/YuShuXin clang/test/CodeGen/YSX/tinyv-autovec.c llvm/test/CodeGen/YSX/tinyv-autovec.ll
-git commit -m "feat: enable YSX tiny vector autovec smoke"
-```
+- `YSXGenAutoTinyVClangBuiltins.td`
+- `YSXGenAutoTinyVIntrinsics.td`
+- `YSXGenAutoTinyVBuiltinCG.inc`
 
 ## Task 13: Documentation, Blog, and Final Checklist
 

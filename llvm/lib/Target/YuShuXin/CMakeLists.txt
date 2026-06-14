@@ -32,6 +32,10 @@ file(GLOB YSX_AUTO_TD_OPCODE_DEPS CONFIGURE_DEPENDS
   ${LLVM_MAIN_SRC_DIR}/../third_party/riscv-opcodes/extensions/*
   ${LLVM_MAIN_SRC_DIR}/../third_party/ysx-opcodes/extensions/*
   )
+file(GLOB YSX_AUTO_TD_ARG_LUT_DEPS CONFIGURE_DEPENDS
+  ${LLVM_MAIN_SRC_DIR}/../third_party/riscv-opcodes/arg_lut.csv
+  ${LLVM_MAIN_SRC_DIR}/../third_party/ysx-opcodes/arg_lut.csv
+  )
 
 add_custom_command(
   OUTPUT ${YSX_AUTO_TD_OUTPUTS} ${YSX_AUTO_TD_COVERAGE}
@@ -46,6 +50,7 @@ add_custom_command(
           ${YSX_AUTO_TD_PY_DEPS}
           ${YSX_AUTO_TD_YAML_DEPS}
           ${YSX_AUTO_TD_OPCODE_DEPS}
+          ${YSX_AUTO_TD_ARG_LUT_DEPS}
   VERBATIM
   COMMENT "Generating YSX auto TableGen fragments"
   )

@@ -2,4 +2,12 @@ mnemonic: vredsum.vs
 opcode_source: {repo: riscv-opcodes, extension: rv_v, key: vredsum_vs}
 spec_ref: tinyv.vector-reduce.int_reduce
 features: {required: [xtinyv]}
-status: auto_full
+pseudos:
+  matrix: {element_types: [i32], lmuls: standard, masked: true, policy: llvm_default}
+patterns:
+  - {kind: intrinsic_to_pseudo, intrinsic: ysx.vredsum, operation: ireduce_sum}
+builtin:
+  header: ysx_vector.h
+  names: [ysx_vredsum_vs_i32m1]
+  overloaded: false
+  codegen: true
