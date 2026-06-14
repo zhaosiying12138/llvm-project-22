@@ -28,6 +28,9 @@ TableGen includes consumed by the YSX target.
 - Fixed 128-bit C-to-object proof path for selected `<4 x i32>` and
   `<4 x float>` builtins, emitting generated `vset*`, `vle32.v`, `vse32.v`,
   ALU/reduce/shuffle records, and `yushuxin.vfexp`.
+- Generated pseudo, pattern, and builtin manifests for YAML-declared tiny-V
+  facts, so C API intent is visible to tests even before Clang builtin and LLVM
+  intrinsic definitions are fully generated.
 - Strict decoder handling for `vmerge.vvm` carry-in masks, so invalid mask
   encodings are rejected instead of decoded as `NoRegister`.
 
@@ -50,6 +53,21 @@ YSX auto-td keeps the facts closer to their authority:
 This avoids multi-class inheritance as a prerequisite for adding instructions.
 Review becomes checking data provenance and shared generator rules instead of
 auditing repeated handwritten bit slices.
+
+## What Is Automatic Now
+
+For a new instruction in the current slice, the real instruction TableGen record
+is automatic. The generator reads the opcode source, attaches taxonomy
+operands/effects, and emits the `YSX_AUTO_*` record consumed by MC asm,
+encoding, disassembly, and backend selection.
+
+The generator also emits manifest lines for YAML-declared pseudo, pattern, and
+builtin facts. That is an intentional guard: if an instruction says it has a C
+API or intrinsic mapping, the generated files and unit tests show that fact.
+The final Clang builtin declaration, LLVM intrinsic declaration, and CGBuiltin
+lowering are still bounded handwritten glue in this branch. They are now
+isolated as the next automation step instead of being mixed with instruction
+encoding TableGen.
 
 ## Custom Instruction: yushuxin.vfexp
 
@@ -77,19 +95,60 @@ The YAML points at `ysx-opcodes/rv_xtinyv/yushuxin_vfexp`, marks it as
 The generator emits `YSX_AUTO_YUSHUXIN_VFEXP`, with operands and fixed bits
 derived from the same parser path used for upstream `riscv-opcodes`.
 
-4. Add only shared C++ glue.
+4. Check generated manifests.
 
-For this proof, the handwritten pieces are reusable: vector register decode,
-mask parse/print/encode, fixed-width vector SelectionDAG handling, and
-frame-index memory handling. The instruction's encoding and operand facts stay
-in YAML and opcode source.
+The same YAML also declares:
 
-5. Expose and test the C API.
+```yaml
+patterns:
+  - {kind: intrinsic_to_pseudo, intrinsic: ysx.vfexp, operation: fexp}
+builtin:
+  header: ysx_vector.h
+  names: [ysx_vfexp_v_f32m1]
+  overloaded: false
+```
+
+The generator records those facts in `YSXGenAutoTinyVPatterns.inc` and
+`YSXGenAutoTinyVBuiltins.inc`. Unit tests require those manifests to be
+non-empty for instructions that declare the fields.
+
+5. Add only bounded C++/Clang glue.
+
+For this proof, the handwritten pieces are reusable or currently not generated:
+vector register decode, mask parse/print/encode, fixed-width vector
+SelectionDAG handling, frame-index memory handling, Clang builtin declaration,
+LLVM intrinsic declaration, and builtin-to-intrinsic lowering. The instruction's
+encoding, operand facts, and C API intent stay in YAML and opcode source.
+
+6. Expose and test the C API.
 
 `ysx_vfexp_v_f32m1` calls `__builtin_ysx_vfexp_v_f32m1`, which lowers to
 `llvm.ysx.vfexp`. The backend selects it to generated
 `YSX_AUTO_YUSHUXIN_VFEXP`, inserts generated `vsetvli` for the requested `vl`,
 and validates assembly/object output with `llvm-objdump`.
+
+## Adding The Next Instruction
+
+For a future `yushuxin.vexp`-style instruction:
+
+1. Add the encoding to `third_party/ysx-opcodes/extensions/rv_xtinyv`, using the
+   same `riscv-opcodes` field syntax.
+2. Add one YAML file such as
+   `llvm/lib/Target/YuShuXin/auto-td/instructions/tiny-v/yushuxin_vexp.yaml`.
+3. Point `opcode_source` at `ysx-opcodes/rv_xtinyv/yushuxin_vexp`, set the
+   feature requirement, and choose or add the taxonomy category.
+4. If the instruction has a C API, put the builtin name and intrinsic/pattern
+   intent in the YAML.
+5. Run `ysx_auto_td_gen.py` and check the generated `YSX_AUTO_YUSHUXIN_VEXP`
+   instruction plus the pseudo/pattern/builtin manifests.
+6. Add MC asm/object tests for the generated instruction.
+7. Add the smallest C API glue and a C-to-ASM/object smoke only when the
+   instruction needs a C API before generated Clang/LLVM builtin consumption is
+   implemented.
+
+The important improvement is that adding the instruction no longer starts by
+choosing a TableGen inheritance stack or copying bit slices. That complexity is
+centralized in the generator.
 
 ## Verification
 
@@ -98,6 +157,8 @@ The final checks passed in the isolated worktree:
 - `ninja -C build clang llc llvm-mc llvm-objdump FileCheck opt llvm-readelf`
 - `python3 -m unittest discover -s llvm/lib/Target/YuShuXin/auto-td/tests -p 'test_*.py' -v`
 - `python3 llvm/lib/Target/YuShuXin/auto-td/tools/ysx_auto_td_gen.py ... --out-dir build/ysx-auto-td-current`
+- manifest checks for `auto-td-pattern` and `auto-td-builtin`, including
+  `ysx_vfexp_v_f32m1`
 - focused lit tests for tiny-F MC, tiny-V MC, invalid `vmerge` disassembly,
   tiny-F CodeGen/ABI/unsupported boundaries, tiny-V builtin ISel, and Clang
   C-to-object builtins
@@ -116,4 +177,6 @@ passing/returning; the proven C path keeps vector values inside explicit
 
 Automatic vectorization is also left for the next layer. The current work gives
 that future work a generated instruction base, explicit builtin proof paths,
-and locked-down tests for the boundaries that are not supported yet.
+and locked-down tests for the boundaries that are not supported yet. Any vector
+smoke added in this branch should stay at the level of one-to-one mapping from
+C API or IR to generated instructions, not a full RVV autovec claim.

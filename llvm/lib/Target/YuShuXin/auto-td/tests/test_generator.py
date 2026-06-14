@@ -146,6 +146,66 @@ class GeneratorTest(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "aliases\\[0\\] must define mnemonic"):
                 load_instruction_set(ysx_root, tmp / "riscv-opcodes", tmp / "ysx-opcodes")
 
+    def test_loader_rejects_incomplete_intrinsic_pattern_manifest(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            ysx_root = tmp / "YuShuXin"
+            self._write_opcode(tmp / "riscv-opcodes", "rv_v", "vadd.vv 31..26=0x00 vd")
+            self._write_instruction(
+                ysx_root,
+                "bad.yaml",
+                "mnemonic: vadd.vv\n"
+                "opcode_source: {repo: riscv-opcodes, extension: rv_v, key: vadd_vv}\n"
+                "spec_ref: tinyv.vector-alu.int_add\n"
+                "patterns:\n"
+                "  - {kind: intrinsic_to_pseudo, intrinsic: ysx.vadd}\n",
+            )
+
+            with self.assertRaisesRegex(
+                ValueError, "patterns\\[0\\] must define operation"
+            ):
+                load_instruction_set(ysx_root, tmp / "riscv-opcodes", tmp / "ysx-opcodes")
+
+    def test_loader_rejects_incomplete_pseudo_matrix_manifest(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            ysx_root = tmp / "YuShuXin"
+            self._write_opcode(tmp / "riscv-opcodes", "rv_v", "vadd.vv 31..26=0x00 vd")
+            self._write_instruction(
+                ysx_root,
+                "bad.yaml",
+                "mnemonic: vadd.vv\n"
+                "opcode_source: {repo: riscv-opcodes, extension: rv_v, key: vadd_vv}\n"
+                "spec_ref: tinyv.vector-alu.int_add\n"
+                "pseudos:\n"
+                "  matrix: {element_types: [i32], lmuls: standard, masked: yes}\n",
+            )
+
+            with self.assertRaisesRegex(
+                ValueError, "pseudos.matrix must define policy"
+            ):
+                load_instruction_set(ysx_root, tmp / "riscv-opcodes", tmp / "ysx-opcodes")
+
+    def test_loader_rejects_non_boolean_builtin_overloaded_manifest(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            ysx_root = tmp / "YuShuXin"
+            self._write_opcode(tmp / "riscv-opcodes", "rv_v", "vadd.vv 31..26=0x00 vd")
+            self._write_instruction(
+                ysx_root,
+                "bad.yaml",
+                "mnemonic: vadd.vv\n"
+                "opcode_source: {repo: riscv-opcodes, extension: rv_v, key: vadd_vv}\n"
+                "spec_ref: tinyv.vector-alu.int_add\n"
+                "builtin:\n"
+                "  header: ysx_vector.h\n"
+                "  names: [ysx_vadd_vv_i32m1]\n"
+                "  overloaded: \"false\"\n",
+            )
+
+            with self.assertRaisesRegex(ValueError, "builtin.overloaded must be a bool"):
+                load_instruction_set(ysx_root, tmp / "riscv-opcodes", tmp / "ysx-opcodes")
+
     def test_loader_attaches_taxonomy_operands_and_effects(self):
         instructions = load_instruction_set(
             YSX_ROOT,
@@ -353,6 +413,9 @@ class GeneratorTest(unittest.TestCase):
             for stub in STUBS:
                 self.assertTrue((out / stub).is_file(), stub)
             tinyv = (out / "YSXGenAutoTinyVInstrInfo.inc").read_text()
+            pseudos = (out / "YSXGenAutoTinyVPseudos.inc").read_text()
+            patterns = (out / "YSXGenAutoTinyVPatterns.inc").read_text()
+            builtins = (out / "YSXGenAutoTinyVBuiltins.inc").read_text()
             text = coverage.read_text()
 
         self.assertIn("def YSXAutoVMaskAsmOperand", tinyv)
@@ -435,6 +498,25 @@ class GeneratorTest(unittest.TestCase):
         self.assertNotIn("RVInstVV", tinyv)
         self.assertNotIn("VUnitStrideLoad", tinyv)
         self.assertNotIn("VPseudo", tinyv)
+        self.assertNotIn("no generated records yet", pseudos)
+        self.assertNotIn("no generated records yet", patterns)
+        self.assertNotIn("no generated records yet", builtins)
+        self.assertIn(
+            "// auto-td-pseudo: yushuxin.vfexp matrix element_types=f32 lmuls=standard masked=true policy=llvm_default",
+            pseudos,
+        )
+        self.assertIn(
+            "// auto-td-pattern: yushuxin.vfexp intrinsic=ysx.vfexp operation=fexp record=YSX_AUTO_YUSHUXIN_VFEXP",
+            patterns,
+        )
+        self.assertIn(
+            "// auto-td-builtin: yushuxin.vfexp header=ysx_vector.h name=ysx_vfexp_v_f32m1 overloaded=false record=YSX_AUTO_YUSHUXIN_VFEXP",
+            builtins,
+        )
+        self.assertIn(
+            "// auto-td-builtin: vadd.vv header=ysx_vector.h name=ysx_vadd_vv_i32m1 overloaded=false record=YSX_AUTO_VADD_VV",
+            builtins,
+        )
 
         for mnemonic in (
             "vle32.v",

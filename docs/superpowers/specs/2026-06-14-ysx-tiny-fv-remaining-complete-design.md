@@ -6,6 +6,13 @@ Close the remaining YSX tiny-F/tiny-V auto-td work in the existing
 `ysx-tiny-fv-ccu` worktree without expanding the scope into a full standard F/V
 or full RVV backend.
 
+The first priority is the original auto-td expectation: adding a new YSX
+instruction must not require inventing a nested handwritten TableGen class
+hierarchy. Encoding and operand facts come from `riscv-opcodes` compatible
+opcode sources plus one auto-td YAML file. The generator owns the real
+instruction TableGen records and also emits audit manifests for any pseudo,
+pattern, and builtin facts declared in YAML.
+
 The work finishes the remaining-plan layer after the initial auto-td builtin
 proof. It keeps the already proven schema-first model: instruction facts stay in
 YAML, instruction encodings stay in pinned opcode-source files, generated
@@ -25,11 +32,17 @@ No new git worktree is created for this completion pass.
 
 ## Confirmed Scope
 
-This completion pass covers the remaining plan's final unresolved goals:
+This completion pass covers the remaining plan's final unresolved goals after
+the priority reset:
 
-1. Direct tiny-V vector ABI boundary.
-2. Minimal automatic vectorization smoke.
-3. Final validation, review, and documentation.
+1. Make the auto-td instruction-addition contract explicit and guarded.
+2. Keep `yushuxin.vfexp` as the custom-instruction proof, including opcode
+   source, YAML, generated instruction record, C API smoke, assembly, and object
+   evidence.
+3. Document how a future `yushuxin.vexp`-style instruction is added now.
+4. Keep vectorization work to the smallest smoke needed to show C API or
+   fixed-width IR mapping to existing generated instructions.
+5. Final validation, review, and documentation.
 
 The current implemented base is assumed to remain intact:
 
@@ -39,40 +52,37 @@ The current implemented base is assumed to remain intact:
 - Selected tiny-F scalar CodeGen proof paths.
 - Fixed 128-bit selected tiny-V builtin-to-object proof paths.
 
-## Direct Vector ABI Boundary
+## Auto-TD Contract
 
-The first task attempts a narrow direct ABI implementation for fixed 128-bit
-tiny-V vector values.
+The strict contract for this completion pass is:
 
-The narrow implementation is allowed only if it can be contained in YSX-owned
-lowering, calling-convention, copy, spill, reload, and frame-index handling for
-the already proven fixed-width vector register class. It must not claim or
-import a generic RVV C ABI, expose standard RVV frontend types, or redefine YSX
-as a full vector ABI target.
+- A real YSX tiny-F/tiny-V instruction record is generated from opcode source
+  plus YAML. Handwritten nested instruction TableGen classes are not allowed for
+  new instructions in this slice.
+- The generated instruction coverage must remain `auto_full: 50` and
+  `retained_schema_gap: 0`.
+- Custom YSX opcode sources live in `third_party/ysx-opcodes` using the
+  `riscv-opcodes` format, so `yushuxin.vfexp` and a future `yushuxin.vexp` use
+  the same parser path as standard encodings.
+- YAML-declared `pseudos`, `patterns`, and `builtin` facts must not disappear.
+  The generator emits stable manifests in `YSXGenAutoTinyVPseudos.inc`,
+  `YSXGenAutoTinyVPatterns.inc`, and `YSXGenAutoTinyVBuiltins.inc`.
+- Current C-to-ASM/object support for selected builtins remains implemented by
+  bounded Clang/LLVM glue. The manifest is the guard and migration point for a
+  future generated Clang builtin/intrinsic integration. Documentation must not
+  claim that this last Clang/intrinsic layer is already fully generated.
 
-If implementation requires broad ABI design beyond that narrow path, the task
-must instead land a checked unsupported boundary. That boundary must include
-tests proving direct tiny-V vector passing/returning is rejected or diagnosed
-instead of silently miscompiled, and documentation must state that the proven C
-path keeps vector values inside explicit builtins and stores results to memory.
+## Vector And ABI Boundary
 
-The fallback is considered successful only when it prevents future accidental
-claims of direct tiny-V C ABI support.
+The vectorization target is intentionally minimal. It is enough to prove that
+the existing YSX C API and fixed-width IR smoke map to generated instructions
+such as `vadd.vv`, `vredsum.vs`, `vle32.v`, `vse32.v`, `vsetivli`,
+`vsetvli`, and `yushuxin.vfexp`.
 
-## Automatic Vectorization Smoke
-
-The automatic vectorization target is intentionally minimal.
-
-The completion pass only needs to prove that simple contiguous `i32` add and
-integer reduction loops can use the YSX tiny-V path when compiled with
-`+xtinyv,+zvl128b`. The final assembly or lowered IR must show legal generated
-tiny-V instructions from the existing selected surface, such as `vadd.vv`,
-`vredsum.vs`, `vle32.v`, `vse32.v`, `vsetivli`, or `vsetvli` as appropriate.
-
-This does not claim full RVV autovec support. It does not require strided,
-indexed, gather/scatter, masked, scalable-vector, or non-i32 automatic
-vectorization. Unsupported behavior outside the smoke must remain bounded and
-must not enable generic RVV frontend macros or standard RVV intrinsic headers.
+This pass does not spend time on full direct vector ABI support, full RVV
+automatic vectorization, scalable-vector frontend APIs, gather/scatter autovec,
+or a generic RVV C ABI. Any previously attempted broad ABI/autovec code should
+be removed unless it is needed for the minimal smoke.
 
 ## Documentation
 
@@ -87,13 +97,14 @@ behavior:
 The docs must distinguish three claims:
 
 1. Generated auto-td instruction surface is complete for the agreed first slice.
-2. Explicit builtin CodeGen/object proof paths are supported for selected fixed
+2. YAML-declared pseudo/pattern/builtin facts are preserved in generated
+   manifests and tested.
+3. Explicit builtin CodeGen/object proof paths are supported for selected fixed
    128-bit vector operations.
-3. Automatic vectorization is only proven for the minimal smoke cases in this
-   pass.
-
-If direct vector ABI falls back to an unsupported boundary, the docs must say so
-plainly and must not present it as implemented.
+4. Automatic vectorization, if mentioned, is only a minimal mapping smoke and
+   not a backend-completeness claim.
+5. Direct tiny-V vector C ABI passing/returning is not a goal for this pass and
+   must not be presented as implemented.
 
 ## Execution Model
 
@@ -124,8 +135,12 @@ Validation is strict but focused.
 
 Task-level validation:
 
-- ABI task runs the new direct ABI proof or unsupported-boundary lit test.
-- Autovec task runs the new `tinyv-autovec.ll` and `tinyv-autovec.c` tests.
+- Auto-td generator tests check real instruction generation and non-empty
+  pseudo/pattern/builtin manifests when YAML declares those facts.
+- MC tests check generated tiny-F/tiny-V encodings, including
+  `yushuxin.vfexp`.
+- Clang smoke tests check selected `ysx_vector.h` APIs lower through LLVM IR to
+  assembly/object output.
 - Docs task runs documentation self-checks and `git diff --check`.
 
 Integration validation:
@@ -166,11 +181,12 @@ tests.
 
 - The remaining plan is closed without leaving untracked or uncommitted source
   changes in `ysx-tiny-fv-ccu`.
-- Direct tiny-V vector ABI is either narrowly implemented for the fixed 128-bit
-  proof type or explicitly locked down as an unsupported boundary with tests and
-  documentation.
-- Minimal contiguous `i32` add and reduction automatic-vectorization smoke tests
-  pass and lower to legal YSX tiny-V instruction paths.
+- New instruction records in this slice are generated from opcode source plus
+  YAML, not handwritten nested instruction TableGen.
+- YAML-declared pseudo/pattern/builtin facts generate tested manifests instead
+  of empty placeholder files.
+- Minimal vector smoke stays limited to C API or fixed-width IR mapping to legal
+  YSX tiny-V instruction paths.
 - No generic RVV frontend exposure is introduced for YSX.
 - Auto-td generator tests pass.
 - Generator coverage still reports 50 `auto_full` instructions and 0 retained
@@ -178,5 +194,5 @@ tests.
 - YSX MC, CodeGen, Driver, and Clang CodeGen lit tests pass in the focused final
   validation set.
 - Spec, checklist, blog, and remaining plan describe the final state without
-  overclaiming full F/V, full RVV, full vector ABI, or full automatic
-  vectorization.
+  overclaiming full F/V, full RVV, full vector ABI, full automatic
+  vectorization, or fully generated Clang builtin/intrinsic integration.

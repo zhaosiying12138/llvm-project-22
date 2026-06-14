@@ -38,9 +38,9 @@ def write_td_outputs(out_dir: Path, instructions) -> None:
     content = {
         "YSXGenAutoTinyFInstrInfo.inc": _emit_tiny_f_instrinfo(tiny_f),
         "YSXGenAutoTinyVInstrInfo.inc": _emit_tiny_v_instrinfo(tiny_v),
-        "YSXGenAutoTinyVPseudos.inc": _empty_file("tiny-v pseudos"),
-        "YSXGenAutoTinyVPatterns.inc": _empty_file("tiny-v patterns"),
-        "YSXGenAutoTinyVBuiltins.inc": _empty_file("tiny-v builtins"),
+        "YSXGenAutoTinyVPseudos.inc": _emit_tiny_v_pseudos(tiny_v),
+        "YSXGenAutoTinyVPatterns.inc": _emit_tiny_v_patterns(tiny_v),
+        "YSXGenAutoTinyVBuiltins.inc": _emit_tiny_v_builtins(tiny_v),
     }
 
     for output in OUTPUTS:
@@ -113,6 +113,71 @@ def _emit_tiny_v_instrinfo(instructions) -> str:
     return "\n".join(lines).rstrip() + "\n"
 
 
+def _emit_tiny_v_pseudos(instructions) -> str:
+    lines = [GENERATED_HEADER.rstrip()]
+    for instruction in sorted(instructions, key=lambda record: record.mnemonic):
+        if not instruction.pseudos:
+            continue
+        matrix = instruction.pseudos.get("matrix")
+        if isinstance(matrix, dict):
+            lines.append(
+                f"// auto-td-pseudo: {instruction.mnemonic} matrix "
+                f"element_types={_manifest_list(matrix.get('element_types', []))} "
+                f"lmuls={matrix.get('lmuls', '')} "
+                f"masked={_manifest_bool(matrix.get('masked', False))} "
+                f"policy={matrix.get('policy', '')}"
+            )
+        else:
+            lines.append(
+                f"// auto-td-pseudo: {instruction.mnemonic} "
+                f"{_manifest_mapping(instruction.pseudos)}"
+            )
+    if len(lines) == 1:
+        return _empty_file("tiny-v pseudos")
+    return "\n".join(lines).rstrip() + "\n"
+
+
+def _emit_tiny_v_patterns(instructions) -> str:
+    lines = [GENERATED_HEADER.rstrip()]
+    for instruction in sorted(instructions, key=lambda record: record.mnemonic):
+        for pattern in instruction.patterns:
+            kind = pattern.get("kind", "")
+            if kind == "intrinsic_to_pseudo":
+                lines.append(
+                    f"// auto-td-pattern: {instruction.mnemonic} "
+                    f"intrinsic={pattern.get('intrinsic', '')} "
+                    f"operation={pattern.get('operation', '')} "
+                    f"record={_record_name(instruction)}"
+                )
+            else:
+                lines.append(
+                    f"// auto-td-pattern: {instruction.mnemonic} "
+                    f"kind={kind} {_manifest_mapping(pattern, skip=('kind',))} "
+                    f"record={_record_name(instruction)}"
+                )
+    if len(lines) == 1:
+        return _empty_file("tiny-v patterns")
+    return "\n".join(lines).rstrip() + "\n"
+
+
+def _emit_tiny_v_builtins(instructions) -> str:
+    lines = [GENERATED_HEADER.rstrip()]
+    for instruction in sorted(instructions, key=lambda record: record.mnemonic):
+        if not instruction.builtin:
+            continue
+        header = instruction.builtin["header"]
+        overloaded = _manifest_bool(instruction.builtin.get("overloaded", False))
+        for name in instruction.builtin["names"]:
+            lines.append(
+                f"// auto-td-builtin: {instruction.mnemonic} "
+                f"header={header} name={name} overloaded={overloaded} "
+                f"record={_record_name(instruction)}"
+            )
+    if len(lines) == 1:
+        return _empty_file("tiny-v builtins")
+    return "\n".join(lines).rstrip() + "\n"
+
+
 def _emit_instrinfo(instructions) -> str:
     lines = [GENERATED_HEADER.rstrip()]
     for instruction in sorted(instructions, key=lambda record: record.mnemonic):
@@ -122,7 +187,7 @@ def _emit_instrinfo(instructions) -> str:
 
 
 def _emit_instruction(instruction) -> list[str]:
-    record_name = "YSX_AUTO_" + source_key_from_mnemonic(instruction.mnemonic).upper()
+    record_name = _record_name(instruction)
     outs, ins, asm_operands = _operand_dags(instruction)
     assignments = _assignments(instruction)
     declarations = _field_declarations(assignments)
@@ -150,6 +215,34 @@ def _emit_instruction(instruction) -> list[str]:
         lines.append(f"  let {inst_range} = {assignment.expr};")
     lines.append("}")
     return lines
+
+
+def _record_name(instruction) -> str:
+    return "YSX_AUTO_" + source_key_from_mnemonic(instruction.mnemonic).upper()
+
+
+def _manifest_mapping(mapping: dict, skip: tuple[str, ...] = ()) -> str:
+    items = []
+    for key in sorted(mapping):
+        if key in skip:
+            continue
+        value = mapping[key]
+        if isinstance(value, list) or isinstance(value, tuple):
+            value = _manifest_list(value)
+        elif isinstance(value, bool):
+            value = _manifest_bool(value)
+        items.append(f"{key}={value}")
+    return " ".join(items)
+
+
+def _manifest_list(value) -> str:
+    if isinstance(value, list) or isinstance(value, tuple):
+        return ",".join(str(item) for item in value)
+    return str(value)
+
+
+def _manifest_bool(value) -> str:
+    return "true" if bool(value) else "false"
 
 
 def _predicate(instruction) -> str:

@@ -52,6 +52,9 @@ class InstructionRecord:
     spec_ref: str
     status: str = "auto_full"
     aliases: tuple[str, ...] = ()
+    pseudos: dict = field(default_factory=dict)
+    patterns: tuple[dict, ...] = ()
+    builtin: dict | None = None
     operands_out: tuple[OperandSpec, ...] = ()
     operands_in: tuple[OperandSpec, ...] = ()
     effects: EffectSpec = field(default_factory=EffectSpec)

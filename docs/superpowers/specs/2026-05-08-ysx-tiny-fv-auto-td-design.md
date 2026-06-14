@@ -33,6 +33,8 @@ Completed in this branch:
   instructions
 - real generated tiny-V MC records for 35 selected e32 memory, integer ALU,
   reduction, shuffle/move, `vset*`, and custom `yushuxin.vfexp` instructions
+- generated audit manifests for YAML-declared tiny-V pseudo, pattern, and
+  builtin facts, including `yushuxin.vfexp`
 - YSX feature plumbing for `xtinyf`, `xtinyv`, and `zvl128b`
 - minimal FPR/VR/register/mask scaffolding and MC glue for generated tiny-v
   asm, encoding, disassembly, and optional `v0.t`
@@ -56,7 +58,10 @@ Completed in this branch:
 
 Known remaining work:
 
-- enable and validate automatic vectorization smoke tests
+- wire the generated builtin/pattern manifests into generated Clang builtin and
+  LLVM intrinsic TableGen consumption
+- keep any automatic-vectorization work to minimal one-to-one smoke that maps
+  C API or IR operations to existing generated instructions
 - broaden backend lowering beyond the fixed-width proof vector types, selected
   builtins, and zero-offset proof vector loads/stores
 - direct C ABI passing/returning of tiny-v vector values; the proven C path
@@ -342,7 +347,7 @@ features:
 
 builtin:
   header: ysx_vector.h
-  name: ysx_vadd_vv_i32m1
+  names: [ysx_vadd_vv_i32m1]
   overloaded: false
 
 pseudos:
@@ -368,14 +373,18 @@ The schema-first implementation targets generation of:
 - asm matcher and asm writer inputs
 - disassembler inputs
 - basic schedule references
-- RVV-like pseudo/type/mask/policy matrices
-- SelectionDAG patterns where structurally expressible
-- builtin metadata for `ysx_vector.h` and `__builtin_ysx_*`
+- audit manifests for RVV-like pseudo/type/mask/policy matrices
+- audit manifests for SelectionDAG pattern intent where structurally
+  expressible
+- audit manifests for `ysx_vector.h` and `__builtin_ysx_*` builtin metadata
 - coverage and ownership reports
 
-Necessary C++ lowering, ISel, DAG-to-DAG, and Clang glue can be handwritten, but
-only when the behavior is algorithmic or not reasonably representable as
-structured data. Per-instruction facts must stay in YAML.
+The current branch consumes generated real instruction records directly. The
+pseudo/pattern/builtin files are generated as stable comment manifests rather
+than active Clang/LLVM builtin definitions. Necessary C++ lowering, ISel,
+DAG-to-DAG, and Clang glue can be handwritten, but only when the behavior is
+algorithmic or the current build cannot yet consume that generated surface.
+Per-instruction facts must stay in YAML.
 
 ### Build Integration
 
@@ -465,7 +474,12 @@ The C-to-object smoke tests cover store-shaped `ysx_vadd_vv_i32m1`,
 Automatic vectorization is a second-stage consumer of the same tiny-V legal
 types, pseudo matrix, patterns, and cost model.
 
-The intended scope is:
+For the current completion pass, automatic vectorization is deliberately reduced
+to minimal smoke only. A test is useful only when it proves a C API, fixed-width
+IR, or vscale IR operation maps one-to-one to already generated instructions.
+It must not become a full RVV autovec project.
+
+Longer-term intended scope is:
 
 - contiguous loops
 - strided loops
@@ -494,8 +508,12 @@ The instruction is implemented through the same auto-td-gen path:
 2. Add one instruction YAML under `llvm/lib/Target/YuShuXin/auto-td/instructions/tiny-v/`.
 3. Add or reuse taxonomy for vector f32 unary math.
 4. Generate the MC def, asm/disasm, pseudo/pattern, and builtin metadata.
-5. Add the minimal C++ lowering glue only if the operation needs custom lowering.
-6. Add `ysx_vector.h` API and end-to-end tests.
+5. Check the generated pseudo/pattern/builtin manifests so C API facts did not
+   silently disappear.
+6. Add the minimal C++/Clang lowering glue only if a C API is needed before the
+   generated manifest is wired into Clang builtin and LLVM intrinsic TableGen.
+7. Add `ysx_vector.h` API and end-to-end tests when the instruction needs a C
+   API proof.
 
 The final blog must be written as a new standalone document:
 

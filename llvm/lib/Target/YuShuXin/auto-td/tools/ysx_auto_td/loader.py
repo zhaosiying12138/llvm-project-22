@@ -38,6 +38,9 @@ def load_instruction_set(
                 spec_ref=spec_ref,
                 status=data.get("status", "auto_full"),
                 aliases=_load_aliases(path, data),
+                pseudos=_load_pseudos(path, data),
+                patterns=_load_patterns(path, data),
+                builtin=_load_builtin(path, data),
                 operands_out=_load_operand_specs(category, "outs"),
                 operands_in=_load_operand_specs(category, "ins"),
                 effects=_load_effects(category),
@@ -85,6 +88,77 @@ def _load_aliases(path: Path, data: dict) -> tuple[str, ...]:
             raise ValueError(f"{path}: aliases[{index}] must define mnemonic")
         result.append(alias["mnemonic"])
     return tuple(result)
+
+
+def _load_pseudos(path: Path, data: dict) -> dict:
+    pseudos = data.get("pseudos", {})
+    if not pseudos:
+        return {}
+    if not isinstance(pseudos, dict):
+        raise ValueError(f"{path}: pseudos must be a mapping")
+    matrix = pseudos.get("matrix")
+    if matrix is not None:
+        if not isinstance(matrix, dict):
+            raise ValueError(f"{path}: pseudos.matrix must be a mapping")
+        element_types = matrix.get("element_types")
+        if not isinstance(element_types, list) or not element_types:
+            raise ValueError(f"{path}: pseudos.matrix must define element_types")
+        if not all(isinstance(item, str) and item for item in element_types):
+            raise ValueError(
+                f"{path}: pseudos.matrix element_types must be non-empty strings"
+            )
+        if not isinstance(matrix.get("lmuls"), str) or not matrix["lmuls"]:
+            raise ValueError(f"{path}: pseudos.matrix must define lmuls")
+        if "masked" not in matrix or not isinstance(matrix["masked"], bool):
+            raise ValueError(f"{path}: pseudos.matrix.masked must be a bool")
+        if not isinstance(matrix.get("policy"), str) or not matrix["policy"]:
+            raise ValueError(f"{path}: pseudos.matrix must define policy")
+    return dict(pseudos)
+
+
+def _load_patterns(path: Path, data: dict) -> tuple[dict, ...]:
+    patterns = data.get("patterns", [])
+    if not patterns:
+        return ()
+    if not isinstance(patterns, list):
+        raise ValueError(f"{path}: patterns must be a list")
+    result: list[dict] = []
+    for index, pattern in enumerate(patterns):
+        if not isinstance(pattern, dict):
+            raise ValueError(f"{path}: patterns[{index}] must be a mapping")
+        if not isinstance(pattern.get("kind"), str) or not pattern["kind"]:
+            raise ValueError(f"{path}: patterns[{index}] must define kind")
+        if pattern["kind"] == "intrinsic_to_pseudo":
+            if not isinstance(pattern.get("intrinsic"), str) or not pattern["intrinsic"]:
+                raise ValueError(f"{path}: patterns[{index}] must define intrinsic")
+            if not isinstance(pattern.get("operation"), str) or not pattern["operation"]:
+                raise ValueError(f"{path}: patterns[{index}] must define operation")
+        result.append(dict(pattern))
+    return tuple(result)
+
+
+def _load_builtin(path: Path, data: dict) -> dict | None:
+    builtin = data.get("builtin")
+    if not builtin:
+        return None
+    if not isinstance(builtin, dict):
+        raise ValueError(f"{path}: builtin must be a mapping")
+    header = builtin.get("header")
+    if not isinstance(header, str) or not header:
+        raise ValueError(f"{path}: builtin must define header")
+    names = builtin.get("names", [])
+    if not isinstance(names, list) or not names:
+        raise ValueError(f"{path}: builtin must define names")
+    if not all(isinstance(name, str) and name for name in names):
+        raise ValueError(f"{path}: builtin names must be non-empty strings")
+    overloaded = builtin.get("overloaded", False)
+    if not isinstance(overloaded, bool):
+        raise ValueError(f"{path}: builtin.overloaded must be a bool")
+    return {
+        "header": header,
+        "names": tuple(names),
+        "overloaded": overloaded,
+    }
 
 
 def _load_taxonomy(root: Path) -> dict[str, dict]:
