@@ -1,0 +1,4 @@
+clang version 23.0.0git (https://github.com/llvm/llvm-project.git 750f3bf803251abacfd440dbd883ce660597a986)
+Target: unknown
+Thread model: posix
+InstalledDir: /home/zhaosiying/codebase/llvm-project-fix_addrspace/build/bin

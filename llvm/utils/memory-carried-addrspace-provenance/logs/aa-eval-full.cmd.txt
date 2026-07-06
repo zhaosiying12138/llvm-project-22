@@ -1,0 +1,2 @@
+build/bin/opt -passes=aa-eval -print-all-alias-modref-info -disable-output llvm/utils/memory-carried-addrspace-provenance/artifacts/reduced-godbolt-pattern.ll
+exit=0

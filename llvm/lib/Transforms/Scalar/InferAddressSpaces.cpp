@@ -93,8 +93,14 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/SmallBitVector.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/AssumptionCache.h"
+#include "llvm/Analysis/CaptureTracking.h"
+#include "llvm/Analysis/MemoryLocation.h"
+#include "llvm/Analysis/MemorySSA.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/Argument.h"
@@ -179,7 +185,10 @@ public:
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
     AU.addPreserved<DominatorTreeWrapperPass>();
+    AU.addRequired<DominatorTreeWrapperPass>();
+    AU.addRequired<AAResultsWrapperPass>();
     AU.addRequired<AssumptionCacheTracker>();
+    AU.addRequired<MemorySSAWrapperPass>();
     AU.addRequired<TargetTransformInfoWrapperPass>();
   }
 
@@ -191,6 +200,8 @@ class InferAddressSpacesImpl {
   Function *F = nullptr;
   const DominatorTree *DT = nullptr;
   const TargetTransformInfo *TTI = nullptr;
+  AAResults *AA = nullptr;
+  MemorySSA *MSSA = nullptr;
   const DataLayout *DL = nullptr;
 
   /// Target specific address space which uses of should be replaced if
@@ -284,10 +295,15 @@ class InferAddressSpacesImpl {
   unsigned getPredicatedAddrSpace(const Value &PtrV,
                                   const Value *UserCtx) const;
 
+  void collectMemoryProvenanceSeeds(
+      Function &F, ValueToAddrSpaceMapTy &InferredAddrSpace) const;
+
 public:
   InferAddressSpacesImpl(AssumptionCache &AC, const DominatorTree *DT,
-                         const TargetTransformInfo *TTI, unsigned FlatAddrSpace)
-      : AC(AC), DT(DT), TTI(TTI), FlatAddrSpace(FlatAddrSpace) {}
+                         const TargetTransformInfo *TTI, AAResults *AA,
+                         MemorySSA *MSSA, unsigned FlatAddrSpace)
+      : AC(AC), DT(DT), TTI(TTI), AA(AA), MSSA(MSSA),
+        FlatAddrSpace(FlatAddrSpace) {}
   bool run(Function &F);
 };
 
@@ -297,7 +313,10 @@ char InferAddressSpaces::ID = 0;
 
 INITIALIZE_PASS_BEGIN(InferAddressSpaces, DEBUG_TYPE, "Infer address spaces",
                       false, false)
+INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)
+INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(MemorySSAWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(TargetTransformInfoWrapperPass)
 INITIALIZE_PASS_END(InferAddressSpaces, DEBUG_TYPE, "Infer address spaces",
                     false, false)
@@ -1104,6 +1123,455 @@ unsigned InferAddressSpacesImpl::joinAddressSpaces(unsigned AS1,
   return (AS1 == AS2) ? AS1 : FlatAddrSpace;
 }
 
+namespace {
+
+constexpr unsigned MemoryProvenanceVisitLimit = 128;
+constexpr unsigned MemoryProvenanceMaxCoveredSlots = 64;
+
+struct PointerArraySlot {
+  const Value *Base = nullptr;
+  uint64_t NumElements = 0;
+  std::optional<uint64_t> ConstIndex;
+  uint64_t MaxIndex = 0;
+};
+
+static bool isPreciseSameSize(MemoryLocation A, MemoryLocation B) {
+  return A.Size.isPrecise() && B.Size.isPrecise() && A.Size == B.Size;
+}
+
+[[maybe_unused]] static void printMemoryProvenanceValue(const Value *V,
+                                                       raw_ostream &OS) {
+  if (V->hasName())
+    V->printAsOperand(OS, /*PrintType=*/false);
+  else
+    OS << *V;
+}
+
+static std::optional<PointerArraySlot>
+getPointerArraySlot(const Value *Ptr, Type *ElementTy, const DataLayout &DL,
+                    AssumptionCache &AC, const DominatorTree *DT) {
+  auto *GEP = dyn_cast<GEPOperator>(Ptr);
+  if (!GEP || GEP->getNumIndices() != 2)
+    return std::nullopt;
+
+  auto *ArrayTy = dyn_cast<ArrayType>(GEP->getSourceElementType());
+  if (!ArrayTy || ArrayTy->getElementType() != ElementTy ||
+      ArrayTy->getNumElements() == 0 ||
+      ArrayTy->getNumElements() > MemoryProvenanceMaxCoveredSlots)
+    return std::nullopt;
+
+  auto It = GEP->idx_begin();
+  auto *FirstIndex = dyn_cast<ConstantInt>(It->get());
+  if (!FirstIndex || !FirstIndex->isZero())
+    return std::nullopt;
+
+  Value *ElementIndex = (++It)->get();
+  PointerArraySlot Slot;
+  Slot.Base = GEP->getPointerOperand()->stripPointerCasts();
+  Slot.NumElements = ArrayTy->getNumElements();
+
+  if (auto *CI = dyn_cast<ConstantInt>(ElementIndex)) {
+    if (CI->getValue().uge(Slot.NumElements))
+      return std::nullopt;
+    Slot.ConstIndex = CI->getZExtValue();
+    Slot.MaxIndex = *Slot.ConstIndex;
+    return Slot;
+  }
+
+  KnownBits Known = computeKnownBits(ElementIndex, DL, &AC, nullptr, DT);
+  APInt MaxIndex = Known.getMaxValue();
+  if (MaxIndex.getActiveBits() > 64 || MaxIndex.uge(Slot.NumElements))
+    return std::nullopt;
+
+  Slot.MaxIndex = MaxIndex.getZExtValue();
+  return Slot;
+}
+
+class MemoryProvenanceScanner {
+  AssumptionCache &AC;
+  const DominatorTree *DT;
+  const TargetTransformInfo *TTI;
+  MemorySSA &MSSA;
+  const DataLayout &DL;
+  unsigned FlatAddrSpace;
+
+  DenseMap<const LoadInst *, unsigned> ProvenLoads;
+  DenseSet<const LoadInst *> FailedLoads;
+  SmallPtrSet<const LoadInst *, 8> ActiveLoads;
+
+  bool joinSpecificAS(std::optional<unsigned> &Joined, unsigned AS) const {
+    if (AS == UninitializedAddressSpace || AS == FlatAddrSpace)
+      return false;
+    if (!Joined) {
+      Joined = AS;
+      return true;
+    }
+    return *Joined == AS;
+  }
+
+  std::optional<unsigned> inferPointerValueAS(Value *V, BatchAAResults &BAA,
+                                              unsigned Depth) {
+    if (Depth > MemoryProvenanceVisitLimit) {
+      LLVM_DEBUG(dbgs() << "[InferAddressSpaces] rejecting stored pointer "
+                        << "value: memory provenance recursion limit reached\n");
+      return std::nullopt;
+    }
+
+    if (!V->getType()->isPointerTy()) {
+      LLVM_DEBUG(dbgs() << "[InferAddressSpaces] rejecting stored value " << *V
+                        << ": non-pointer type\n");
+      return std::nullopt;
+    }
+
+    unsigned AS = V->getType()->getPointerAddressSpace();
+    if (AS != FlatAddrSpace) {
+      LLVM_DEBUG(dbgs() << "[InferAddressSpaces] collected stored pointer AS"
+                        << AS << " from specific-typed value ";
+                 printMemoryProvenanceValue(V, dbgs()); dbgs() << "\n");
+      return AS;
+    }
+
+    if (auto *LI = dyn_cast<LoadInst>(V))
+      return inferLoadAS(*LI, BAA, Depth + 1);
+
+    if (unsigned AssumedAS = TTI->getAssumedAddrSpace(V);
+        AssumedAS != UninitializedAddressSpace) {
+      LLVM_DEBUG(dbgs() << "[InferAddressSpaces] collected stored pointer AS"
+                        << AssumedAS << " from assumed address space of ";
+                 printMemoryProvenanceValue(V, dbgs()); dbgs() << "\n");
+      return AssumedAS;
+    }
+
+    auto *Op = dyn_cast<Operator>(V);
+    if (!Op)
+      return std::nullopt;
+
+    switch (Op->getOpcode()) {
+    case Instruction::AddrSpaceCast:
+      return inferPointerValueAS(Op->getOperand(0), BAA, Depth + 1);
+    case Instruction::BitCast:
+    case Instruction::GetElementPtr:
+      return inferPointerValueAS(Op->getOperand(0), BAA, Depth + 1);
+    case Instruction::Select: {
+      std::optional<unsigned> Joined;
+      for (Value *PtrOp : {Op->getOperand(1), Op->getOperand(2)}) {
+        std::optional<unsigned> OpAS =
+            inferPointerValueAS(PtrOp, BAA, Depth + 1);
+        if (!OpAS || !joinSpecificAS(Joined, *OpAS))
+          return std::nullopt;
+      }
+      return Joined;
+    }
+    case Instruction::PHI: {
+      std::optional<unsigned> Joined;
+      for (Value *Incoming : cast<PHINode>(Op)->incoming_values()) {
+        std::optional<unsigned> OpAS =
+            inferPointerValueAS(Incoming, BAA, Depth + 1);
+        if (!OpAS || !joinSpecificAS(Joined, *OpAS))
+          return std::nullopt;
+      }
+      return Joined;
+    }
+    default:
+      return std::nullopt;
+    }
+  }
+
+  bool walkReachingStores(MemoryAccess *MA, const MemoryLocation &LoadLoc,
+                          SmallVectorImpl<StoreInst *> &Stores,
+                          bool &SawLiveOnEntry,
+                          SmallPtrSetImpl<MemoryAccess *> &Visited,
+                          unsigned &NumVisited, BatchAAResults &BAA) {
+    if (!MA || ++NumVisited > MemoryProvenanceVisitLimit) {
+      LLVM_DEBUG(dbgs() << "[InferAddressSpaces] rejecting load candidate: "
+                        << "MemorySSA reaching-store walk limit reached\n");
+      return false;
+    }
+
+    if (MSSA.isLiveOnEntryDef(MA)) {
+      LLVM_DEBUG(dbgs() << "[InferAddressSpaces] saw live-on-entry while "
+                        << "walking reaching stores for pointer load\n");
+      SawLiveOnEntry = true;
+      return true;
+    }
+
+    if (!Visited.insert(MA).second)
+      return true;
+
+    if (auto *Phi = dyn_cast<MemoryPhi>(MA)) {
+      LLVM_DEBUG(dbgs() << "[InferAddressSpaces] walking MemoryPhi for "
+                        << "pointer-load provenance: " << *Phi << "\n");
+      for (Use &Incoming : Phi->incoming_values())
+        if (!walkReachingStores(cast<MemoryAccess>(Incoming.get()), LoadLoc,
+                                Stores, SawLiveOnEntry, Visited, NumVisited,
+                                BAA))
+          return false;
+      return true;
+    }
+
+    auto *MUD = dyn_cast<MemoryUseOrDef>(MA);
+    if (!MUD)
+      return false;
+
+    auto *Def = dyn_cast<MemoryDef>(MUD);
+    if (!Def)
+      return walkReachingStores(MUD->getDefiningAccess(), LoadLoc, Stores,
+                                SawLiveOnEntry, Visited, NumVisited, BAA);
+
+    Instruction *DefI = Def->getMemoryInst();
+    if (auto *SI = dyn_cast<StoreInst>(DefI)) {
+      MemoryLocation StoreLoc = MemoryLocation::get(SI);
+      AliasResult Alias = BAA.alias(LoadLoc, StoreLoc);
+      LLVM_DEBUG(dbgs() << "[InferAddressSpaces] AA result for pointer-load "
+                        << "slot vs reaching store: " << Alias << " store="
+                        << *SI << "\n");
+      if (Alias == AliasResult::NoAlias)
+        return walkReachingStores(Def->getDefiningAccess(), LoadLoc, Stores,
+                                  SawLiveOnEntry, Visited, NumVisited, BAA);
+
+      if (SI->isVolatile()) {
+        LLVM_DEBUG(dbgs() << "[InferAddressSpaces] rejecting load candidate: "
+                          << "reaching store is volatile: " << *SI << "\n");
+        return false;
+      }
+      if (SI->isAtomic()) {
+        LLVM_DEBUG(dbgs() << "[InferAddressSpaces] rejecting load candidate: "
+                          << "reaching store is atomic: " << *SI << "\n");
+        return false;
+      }
+      if (Alias == AliasResult::PartialAlias) {
+        LLVM_DEBUG(dbgs() << "[InferAddressSpaces] rejecting load candidate: "
+                          << "partial alias with reaching store: " << *SI
+                          << "\n");
+        return false;
+      }
+      if (!isPreciseSameSize(LoadLoc, StoreLoc)) {
+        LLVM_DEBUG(dbgs() << "[InferAddressSpaces] rejecting load candidate: "
+                          << "load/store memory sizes are imprecise or "
+                          << "different: " << *SI << "\n");
+        return false;
+      }
+      if (!SI->getValueOperand()->getType()->isPointerTy()) {
+        LLVM_DEBUG(dbgs() << "[InferAddressSpaces] rejecting load candidate: "
+                          << "reaching store does not store a pointer: "
+                          << *SI << "\n");
+        return false;
+      }
+
+      LLVM_DEBUG(dbgs() << "[InferAddressSpaces] collecting reaching pointer "
+                        << "store: " << *SI << "\n");
+      Stores.push_back(SI);
+
+      if (Alias == AliasResult::MustAlias)
+        return true;
+
+      return walkReachingStores(Def->getDefiningAccess(), LoadLoc, Stores,
+                                SawLiveOnEntry, Visited, NumVisited, BAA);
+    }
+
+    if (isModSet(BAA.getModRefInfo(DefI, LoadLoc))) {
+      LLVM_DEBUG(dbgs() << "[InferAddressSpaces] rejecting load candidate: "
+                        << "intervening memory definition may modify slot: "
+                        << *DefI << "\n");
+      return false;
+    }
+
+    return walkReachingStores(Def->getDefiningAccess(), LoadLoc, Stores,
+                              SawLiveOnEntry, Visited, NumVisited, BAA);
+  }
+
+  bool isCompletelyInitializedByDominatingStores(
+      LoadInst &LI, ArrayRef<StoreInst *> Stores) const {
+    std::optional<PointerArraySlot> LoadSlot =
+        getPointerArraySlot(LI.getPointerOperand(), LI.getType(), DL, AC, DT);
+    if (!LoadSlot)
+      return false;
+
+    SmallBitVector Covered(static_cast<unsigned>(LoadSlot->MaxIndex + 1));
+    for (StoreInst *SI : Stores) {
+      if (!DT->dominates(SI, &LI))
+        continue;
+
+      std::optional<PointerArraySlot> StoreSlot = getPointerArraySlot(
+          SI->getPointerOperand(), LI.getType(), DL, AC, DT);
+      if (!StoreSlot || !StoreSlot->ConstIndex ||
+          StoreSlot->Base != LoadSlot->Base ||
+          StoreSlot->NumElements != LoadSlot->NumElements ||
+          *StoreSlot->ConstIndex > LoadSlot->MaxIndex)
+        continue;
+
+      Covered.set(static_cast<unsigned>(*StoreSlot->ConstIndex));
+    }
+
+    return Covered.all();
+  }
+
+  std::optional<unsigned> inferLoadASImpl(LoadInst &LI, BatchAAResults &BAA,
+                                          unsigned Depth) {
+    LLVM_DEBUG(dbgs() << "[InferAddressSpaces] considering pointer-typed load "
+                      << "candidate: " << LI << "\n");
+    if (Depth > MemoryProvenanceVisitLimit) {
+      LLVM_DEBUG(dbgs() << "[InferAddressSpaces] rejecting load candidate: "
+                        << "memory provenance recursion limit reached\n");
+      return std::nullopt;
+    }
+    if (!LI.getType()->isPointerTy()) {
+      LLVM_DEBUG(dbgs() << "[InferAddressSpaces] rejecting load candidate: "
+                        << "non-pointer result type\n");
+      return std::nullopt;
+    }
+    if (LI.getType()->getPointerAddressSpace() != FlatAddrSpace) {
+      LLVM_DEBUG(dbgs() << "[InferAddressSpaces] rejecting load candidate: "
+                        << "result is not in flat address space\n");
+      return std::nullopt;
+    }
+    if (LI.isVolatile()) {
+      LLVM_DEBUG(dbgs() << "[InferAddressSpaces] rejecting load candidate: "
+                        << "volatile load\n");
+      return std::nullopt;
+    }
+    if (LI.isAtomic()) {
+      LLVM_DEBUG(dbgs() << "[InferAddressSpaces] rejecting load candidate: "
+                        << "atomic load\n");
+      return std::nullopt;
+    }
+
+    MemoryLocation LoadLoc = MemoryLocation::get(&LI);
+    if (!LoadLoc.Size.isPrecise()) {
+      LLVM_DEBUG(dbgs() << "[InferAddressSpaces] rejecting load candidate: "
+                        << "imprecise load memory size\n");
+      return std::nullopt;
+    }
+
+    Value *Object = getUnderlyingObject(LI.getPointerOperand());
+    if (!isa<AllocaInst>(Object)) {
+      LLVM_DEBUG(dbgs() << "[InferAddressSpaces] rejecting load candidate: "
+                        << "slot is not based on an alloca\n");
+      return std::nullopt;
+    }
+
+    if (!DT) {
+      LLVM_DEBUG(dbgs() << "[InferAddressSpaces] rejecting load candidate: "
+                        << "no dominator tree available\n");
+      return std::nullopt;
+    }
+    if (PointerMayBeCapturedBefore(Object, /*ReturnCaptures=*/true, &LI, DT,
+                                   /*IncludeI=*/false,
+                                   MemoryProvenanceVisitLimit)) {
+      LLVM_DEBUG(dbgs() << "[InferAddressSpaces] rejecting load candidate: "
+                        << "slot alloca may be captured before reload\n");
+      return std::nullopt;
+    }
+
+    MemoryAccess *MA = MSSA.getMemoryAccess(&LI);
+    if (!MA) {
+      LLVM_DEBUG(dbgs() << "[InferAddressSpaces] rejecting load candidate: "
+                        << "no MemorySSA access for load\n");
+      return std::nullopt;
+    }
+
+    MemoryAccess *Start =
+        MSSA.getWalker()->getClobberingMemoryAccess(&LI, BAA);
+    if (!Start)
+      Start = cast<MemoryUseOrDef>(MA)->getDefiningAccess();
+
+    SmallVector<StoreInst *, 8> Stores;
+    bool SawLiveOnEntry = false;
+    SmallPtrSet<MemoryAccess *, 16> Visited;
+    unsigned NumVisited = 0;
+    if (!walkReachingStores(Start, LoadLoc, Stores, SawLiveOnEntry, Visited,
+                            NumVisited, BAA) ||
+        Stores.empty()) {
+      LLVM_DEBUG(dbgs() << "[InferAddressSpaces] rejecting load candidate: "
+                        << "reaching stores are incomplete or empty\n");
+      return std::nullopt;
+    }
+
+    if (SawLiveOnEntry &&
+        !isCompletelyInitializedByDominatingStores(LI, Stores)) {
+      LLVM_DEBUG(dbgs() << "[InferAddressSpaces] rejecting load candidate: "
+                        << "live-on-entry path is not covered by dominating "
+                        << "stores to every possible slot\n");
+      return std::nullopt;
+    }
+
+    std::optional<unsigned> JoinedAS;
+    for (StoreInst *SI : Stores) {
+      std::optional<unsigned> StoreAS =
+          inferPointerValueAS(SI->getValueOperand(), BAA, Depth + 1);
+      if (!StoreAS) {
+        LLVM_DEBUG(dbgs() << "[InferAddressSpaces] rejecting load candidate: "
+                          << "could not infer stored pointer address space "
+                          << "from store: " << *SI << "\n");
+        return std::nullopt;
+      }
+      LLVM_DEBUG(dbgs() << "[InferAddressSpaces] joining stored pointer AS"
+                        << *StoreAS << " from store: " << *SI << "\n");
+      if (!joinSpecificAS(JoinedAS, *StoreAS)) {
+        LLVM_DEBUG(dbgs() << "[InferAddressSpaces] rejecting load candidate: "
+                          << "stored pointer address spaces do not agree\n");
+        return std::nullopt;
+      }
+    }
+
+    LLVM_DEBUG(dbgs() << "[InferAddressSpaces] proved load result address "
+                      << "space AS" << *JoinedAS << " for " << LI << "\n");
+    return JoinedAS;
+  }
+
+public:
+  MemoryProvenanceScanner(AssumptionCache &AC, const DominatorTree *DT,
+                          const TargetTransformInfo *TTI, MemorySSA &MSSA,
+                          const DataLayout &DL,
+                          unsigned FlatAddrSpace)
+      : AC(AC), DT(DT), TTI(TTI), MSSA(MSSA), DL(DL),
+        FlatAddrSpace(FlatAddrSpace) {}
+
+  std::optional<unsigned> inferLoadAS(LoadInst &LI, BatchAAResults &BAA,
+                                      unsigned Depth = 0) {
+    if (auto I = ProvenLoads.find(&LI); I != ProvenLoads.end())
+      return I->second;
+    if (FailedLoads.contains(&LI))
+      return std::nullopt;
+    if (!ActiveLoads.insert(&LI).second)
+      return std::nullopt;
+
+    std::optional<unsigned> AS = inferLoadASImpl(LI, BAA, Depth);
+    ActiveLoads.erase(&LI);
+    if (AS)
+      ProvenLoads[&LI] = *AS;
+    else
+      FailedLoads.insert(&LI);
+    return AS;
+  }
+};
+
+} // end anonymous namespace
+
+void InferAddressSpacesImpl::collectMemoryProvenanceSeeds(
+    Function &F, ValueToAddrSpaceMapTy &InferredAddrSpace) const {
+  if (!AA || !MSSA) {
+    LLVM_DEBUG(dbgs() << "[InferAddressSpaces] skipping memory-carried "
+                      << "provenance: no AA or MemorySSA available\n");
+    return;
+  }
+
+  BatchAAResults BAA(*AA);
+  MemoryProvenanceScanner Scanner(AC, DT, TTI, *MSSA, *DL, FlatAddrSpace);
+  for (Instruction &I : instructions(F)) {
+    auto *LI = dyn_cast<LoadInst>(&I);
+    if (!LI)
+      continue;
+
+    std::optional<unsigned> AS = Scanner.inferLoadAS(*LI, BAA);
+    if (AS && *AS != FlatAddrSpace) {
+      LLVM_DEBUG(dbgs() << "[InferAddressSpaces] adding memory provenance seed "
+                        << "AS" << *AS << " for load " << *LI << "\n");
+      InferredAddrSpace[LI] = *AS;
+    }
+  }
+}
+
 bool InferAddressSpacesImpl::run(Function &CurFn) {
   F = &CurFn;
   DL = &F->getDataLayout();
@@ -1125,6 +1593,7 @@ bool InferAddressSpacesImpl::run(Function &CurFn) {
   // Runs a data-flow analysis to refine the address spaces of every expression
   // in Postorder.
   ValueToAddrSpaceMapTy InferredAddrSpace;
+  collectMemoryProvenanceSeeds(*F, InferredAddrSpace);
   PredicatedAddrSpaceMapTy PredicatedAS;
   inferAddressSpaces(Postorder, InferredAddrSpace, PredicatedAS);
 
@@ -1521,6 +1990,40 @@ bool InferAddressSpacesImpl::rewriteWithNewAddressSpaces(
   // construction.
   ValueToValueMapTy ValueWithNewAddrSpace;
   SmallVector<const Use *, 32> PoisonUsesToFix;
+  SmallVector<WeakTrackingVH, 16> RewriteOrder(Postorder.begin(),
+                                               Postorder.end());
+
+  // Pointer-typed loads whose value provenance was proven through memory are
+  // seeds only: keep the load's slot representation unchanged and materialize a
+  // casted value for downstream users.
+  for (Instruction &I : instructions(F)) {
+    auto *LI = dyn_cast<LoadInst>(&I);
+    if (!LI)
+      continue;
+
+    auto ASI = InferredAddrSpace.find(LI);
+    if (ASI == InferredAddrSpace.end())
+      continue;
+
+    unsigned NewAddrSpace = ASI->second;
+    if (NewAddrSpace == UninitializedAddressSpace ||
+        NewAddrSpace == FlatAddrSpace)
+      continue;
+
+    Type *NewPtrTy = getPtrOrVecOfPtrsWithNewAS(LI->getType(), NewAddrSpace);
+    std::optional<BasicBlock::iterator> InsertPoint =
+        LI->getInsertionPointAfterDef();
+    if (!InsertPoint)
+      continue;
+
+    auto *NewV = new AddrSpaceCastInst(LI, NewPtrTy, "", *InsertPoint);
+    NewV->setDebugLoc(LI->getDebugLoc());
+    LLVM_DEBUG(dbgs() << "[InferAddressSpaces] inserting post-reload "
+                      << "addrspacecast for proven load: " << *NewV << "\n");
+    ValueWithNewAddrSpace[LI] = NewV;
+    RewriteOrder.push_back(LI);
+  }
+
   for (Value *V : Postorder) {
     unsigned NewAddrSpace = InferredAddrSpace.lookup(V);
 
@@ -1561,7 +2064,7 @@ bool InferAddressSpacesImpl::rewriteWithNewAddressSpaces(
   ValueMapper VMapper(VMap, RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
 
   // Replaces the uses of the old address expressions with the new ones.
-  for (const WeakTrackingVH &WVH : Postorder) {
+  for (const WeakTrackingVH &WVH : RewriteOrder) {
     assert(WVH && "value was unexpectedly deleted");
     Value *V = WVH;
     Value *NewV = ValueWithNewAddrSpace.lookup(V);
@@ -1633,11 +2136,12 @@ bool InferAddressSpaces::runOnFunction(Function &F) {
   if (skipFunction(F))
     return false;
 
-  auto *DTWP = getAnalysisIfAvailable<DominatorTreeWrapperPass>();
-  DominatorTree *DT = DTWP ? &DTWP->getDomTree() : nullptr;
+  DominatorTree *DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
   return InferAddressSpacesImpl(
              getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F), DT,
              &getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F),
+             &getAnalysis<AAResultsWrapperPass>().getAAResults(),
+             &getAnalysis<MemorySSAWrapperPass>().getMSSA(),
              FlatAddrSpace)
       .run(F);
 }
@@ -1653,11 +2157,14 @@ InferAddressSpacesPass::InferAddressSpacesPass(unsigned AddressSpace)
 
 PreservedAnalyses InferAddressSpacesPass::run(Function &F,
                                               FunctionAnalysisManager &AM) {
-  bool Changed =
-      InferAddressSpacesImpl(AM.getResult<AssumptionAnalysis>(F),
-                             AM.getCachedResult<DominatorTreeAnalysis>(F),
-                             &AM.getResult<TargetIRAnalysis>(F), FlatAddrSpace)
-          .run(F);
+  bool Changed = InferAddressSpacesImpl(
+                     AM.getResult<AssumptionAnalysis>(F),
+                     &AM.getResult<DominatorTreeAnalysis>(F),
+                     &AM.getResult<TargetIRAnalysis>(F),
+                     &AM.getResult<AAManager>(F),
+                     &AM.getResult<MemorySSAAnalysis>(F).getMSSA(),
+                     FlatAddrSpace)
+                     .run(F);
   if (Changed) {
     PreservedAnalyses PA;
     PA.preserveSet<CFGAnalyses>();

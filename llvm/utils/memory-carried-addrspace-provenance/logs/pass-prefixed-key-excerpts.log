@@ -1,0 +1,183 @@
+[MemorySSA] MemorySSA reaching definitions identify MemoryDef stores and MemoryPhi joins that can feed pointer reloads.
+[MemorySSA] llvm/utils/memory-carried-addrspace-provenance/logs/memoryssa.full.log:14: ; 1 = MemoryDef(liveOnEntry)
+[MemorySSA] llvm/utils/memory-carried-addrspace-provenance/logs/memoryssa.full.log:15:   store ptr %sh.generic, ptr addrspace(5) %slot, align 8
+[MemorySSA] llvm/utils/memory-carried-addrspace-provenance/logs/memoryssa.full.log:16: ; MemoryUse(1)
+[MemorySSA] llvm/utils/memory-carried-addrspace-provenance/logs/memoryssa.full.log:17:   %p.reload = load ptr, ptr addrspace(5) %slot, align 8
+[MemorySSA] llvm/utils/memory-carried-addrspace-provenance/logs/memoryssa.full.log:18: ; MemoryUse(liveOnEntry)
+[MemorySSA] llvm/utils/memory-carried-addrspace-provenance/logs/memoryssa.full.log:19:   %value = load i32, ptr %p.reload, align 4
+[MemorySSA] llvm/utils/memory-carried-addrspace-provenance/logs/memoryssa.full.log:30: ; 1 = MemoryDef(liveOnEntry)
+[MemorySSA] llvm/utils/memory-carried-addrspace-provenance/logs/memoryssa.full.log:31:   store ptr %gen0, ptr addrspace(5) %slot0, align 8
+[MemorySSA] llvm/utils/memory-carried-addrspace-provenance/logs/memoryssa.full.log:35: ; 2 = MemoryDef(1)
+[MemorySSA] llvm/utils/memory-carried-addrspace-provenance/logs/memoryssa.full.log:36:   store ptr %gen1, ptr addrspace(5) %slot1, align 8
+[MemorySSA] llvm/utils/memory-carried-addrspace-provenance/logs/memoryssa.full.log:40: ; 3 = MemoryDef(2)
+[MemorySSA] llvm/utils/memory-carried-addrspace-provenance/logs/memoryssa.full.log:41:   store ptr %gen2, ptr addrspace(5) %slot2, align 8
+[MemorySSA] llvm/utils/memory-carried-addrspace-provenance/logs/memoryssa.full.log:45: ; 4 = MemoryDef(3)
+[MemorySSA] llvm/utils/memory-carried-addrspace-provenance/logs/memoryssa.full.log:46:   store ptr %gen3, ptr addrspace(5) %slot3, align 8
+[MemorySSA] llvm/utils/memory-carried-addrspace-provenance/logs/memoryssa.full.log:48:   %slot.dynamic = getelementptr inbounds [4 x ptr], ptr addrspace(5) %slots, i32 0, i32 %which
+[MemorySSA] llvm/utils/memory-carried-addrspace-provenance/logs/memoryssa.full.log:49: ; MemoryUse(4)
+[MemorySSA] llvm/utils/memory-carried-addrspace-provenance/logs/memoryssa.full.log:50:   %p.reload = load ptr, ptr addrspace(5) %slot.dynamic, align 8
+[MemorySSA] llvm/utils/memory-carried-addrspace-provenance/logs/memoryssa.full.log:51: ; MemoryUse(liveOnEntry)
+[MemorySSA] llvm/utils/memory-carried-addrspace-provenance/logs/memoryssa.full.log:52:   %value = load i32, ptr %p.reload, align 4
+[MemorySSA] llvm/utils/memory-carried-addrspace-provenance/logs/memoryssa.full.log:54: ; MemoryUse(liveOnEntry)
+[MemorySSA] llvm/utils/memory-carried-addrspace-provenance/logs/memoryssa.full.log:69: ; 1 = MemoryDef(liveOnEntry)
+[MemorySSA] llvm/utils/memory-carried-addrspace-provenance/logs/memoryssa.full.log:70:   store ptr %gen0, ptr addrspace(5) %slot, align 8
+[MemorySSA] llvm/utils/memory-carried-addrspace-provenance/logs/memoryssa.full.log:76: ; 2 = MemoryDef(liveOnEntry)
+[MemorySSA] llvm/utils/memory-carried-addrspace-provenance/logs/memoryssa.full.log:77:   store ptr %gen1, ptr addrspace(5) %slot, align 8
+[MemorySSA] llvm/utils/memory-carried-addrspace-provenance/logs/memoryssa.full.log:81: ; 3 = MemoryPhi({left,1},{right,2})
+[MemorySSA] llvm/utils/memory-carried-addrspace-provenance/logs/memoryssa.full.log:82: ; MemoryUse(3)
+[MemorySSA] llvm/utils/memory-carried-addrspace-provenance/logs/memoryssa.full.log:83:   %p.reload = load ptr, ptr addrspace(5) %slot, align 8
+[MemorySSA] llvm/utils/memory-carried-addrspace-provenance/logs/memoryssa.full.log:84: ; MemoryUse(liveOnEntry)
+[MemorySSA] llvm/utils/memory-carried-addrspace-provenance/logs/memoryssa.full.log:85:   %value = load i32, ptr %p.reload, align 4
+[MemorySSA] llvm/utils/memory-carried-addrspace-provenance/logs/memoryssa.full.log:98: ; 1 = MemoryDef(liveOnEntry)
+[MemorySSA] llvm/utils/memory-carried-addrspace-provenance/logs/memoryssa.full.log:99:   store ptr %sh.gen, ptr addrspace(5) %slot, align 8
+[MemorySSA] llvm/utils/memory-carried-addrspace-provenance/logs/memoryssa.full.log:105: ; 2 = MemoryDef(liveOnEntry)
+[MemorySSA] llvm/utils/memory-carried-addrspace-provenance/logs/memoryssa.full.log:106:   store ptr %gl.gen, ptr addrspace(5) %slot, align 8
+[MemorySSA] llvm/utils/memory-carried-addrspace-provenance/logs/memoryssa.full.log:110: ; 3 = MemoryPhi({shared,1},{global,2})
+[MemorySSA] llvm/utils/memory-carried-addrspace-provenance/logs/memoryssa.full.log:111: ; MemoryUse(3)
+[MemorySSA] llvm/utils/memory-carried-addrspace-provenance/logs/memoryssa.full.log:112:   %p.reload = load ptr, ptr addrspace(5) %slot, align 8
+[MemorySSA] llvm/utils/memory-carried-addrspace-provenance/logs/memoryssa.full.log:113: ; MemoryUse(liveOnEntry)
+[MemorySSA] llvm/utils/memory-carried-addrspace-provenance/logs/memoryssa.full.log:114:   %value = load i32, ptr %p.reload, align 4
+[MemorySSA] llvm/utils/memory-carried-addrspace-provenance/logs/memoryssa.full.log:125: ; 1 = MemoryDef(liveOnEntry)
+[MemorySSA] llvm/utils/memory-carried-addrspace-provenance/logs/memoryssa.full.log:126:   store ptr %sh.gen, ptr addrspace(5) %slot0, align 8
+[MemorySSA] llvm/utils/memory-carried-addrspace-provenance/logs/memoryssa.full.log:128:   %slot.dynamic = getelementptr inbounds [2 x ptr], ptr addrspace(5) %slots, i32 0, i32 %which
+[MemorySSA] llvm/utils/memory-carried-addrspace-provenance/logs/memoryssa.full.log:129: ; MemoryUse(1)
+[MemorySSA] llvm/utils/memory-carried-addrspace-provenance/logs/memoryssa.full.log:130:   %p.reload = load ptr, ptr addrspace(5) %slot.dynamic, align 8
+[MemorySSA] llvm/utils/memory-carried-addrspace-provenance/logs/memoryssa.full.log:131: ; MemoryUse(liveOnEntry)
+[MemorySSA] llvm/utils/memory-carried-addrspace-provenance/logs/memoryssa.full.log:132:   %value = load i32, ptr %p.reload, align 4
+[MemorySSA] llvm/utils/memory-carried-addrspace-provenance/logs/memoryssa.full.log:142: ; 1 = MemoryDef(liveOnEntry)
+[MemorySSA] llvm/utils/memory-carried-addrspace-provenance/logs/memoryssa.full.log:143:   store ptr %sh.gen, ptr addrspace(5) %slot, align 8
+[MemorySSA] llvm/utils/memory-carried-addrspace-provenance/logs/memoryssa.full.log:144: ; 2 = MemoryDef(1)
+[MemorySSA] llvm/utils/memory-carried-addrspace-provenance/logs/memoryssa.full.log:146: ; MemoryUse(2)
+[MemorySSA] llvm/utils/memory-carried-addrspace-provenance/logs/memoryssa.full.log:147:   %p.reload = load ptr, ptr addrspace(5) %slot, align 8
+[MemorySSA] llvm/utils/memory-carried-addrspace-provenance/logs/memoryssa.full.log:148: ; MemoryUse(2)
+[MemorySSA] llvm/utils/memory-carried-addrspace-provenance/logs/memoryssa.full.log:149:   %value = load i32, ptr %p.reload, align 4
+[MemorySSA] llvm/utils/memory-carried-addrspace-provenance/logs/memoryssa.full.log:159: ; 1 = MemoryDef(liveOnEntry)
+[MemorySSA] llvm/utils/memory-carried-addrspace-provenance/logs/memoryssa.full.log:160:   store ptr %sh.gen, ptr addrspace(5) %slot, align 8
+[MemorySSA] llvm/utils/memory-carried-addrspace-provenance/logs/memoryssa.full.log:161: ; 2 = MemoryDef(1)
+[MemorySSA] llvm/utils/memory-carried-addrspace-provenance/logs/memoryssa.full.log:162:   %p.reload = load volatile ptr, ptr addrspace(5) %slot, align 8
+[MemorySSA] llvm/utils/memory-carried-addrspace-provenance/logs/memoryssa.full.log:163: ; MemoryUse(liveOnEntry)
+[MemorySSA] llvm/utils/memory-carried-addrspace-provenance/logs/memoryssa.full.log:164:   %value = load i32, ptr %p.reload, align 4
+[MemorySSA] llvm/utils/memory-carried-addrspace-provenance/logs/memoryssa.full.log:174: ; 1 = MemoryDef(liveOnEntry)
+[MemorySSA] llvm/utils/memory-carried-addrspace-provenance/logs/memoryssa.full.log:175:   store ptr %sh.gen, ptr addrspace(5) %slot, align 8
+[MemorySSA] llvm/utils/memory-carried-addrspace-provenance/logs/memoryssa.full.log:176: ; 2 = MemoryDef(1)
+[MemorySSA] llvm/utils/memory-carried-addrspace-provenance/logs/memoryssa.full.log:177:   %p.reload = load atomic ptr, ptr addrspace(5) %slot monotonic, align 8
+[MemorySSA] llvm/utils/memory-carried-addrspace-provenance/logs/memoryssa.full.log:178: ; MemoryUse(liveOnEntry)
+[MemorySSA] llvm/utils/memory-carried-addrspace-provenance/logs/memoryssa.full.log:179:   %value = load i32, ptr %p.reload, align 4
+[MemorySSA] llvm/utils/memory-carried-addrspace-provenance/logs/memoryssa.full.log:187: ; 1 = MemoryDef(liveOnEntry)
+[MemorySSA] llvm/utils/memory-carried-addrspace-provenance/logs/memoryssa.full.log:188:   store ptr %unknown, ptr addrspace(5) %slot, align 8
+[MemorySSA] llvm/utils/memory-carried-addrspace-provenance/logs/memoryssa.full.log:189: ; MemoryUse(1)
+[MemorySSA] llvm/utils/memory-carried-addrspace-provenance/logs/memoryssa.full.log:190:   %p.reload = load ptr, ptr addrspace(5) %slot, align 8
+[MemorySSA] llvm/utils/memory-carried-addrspace-provenance/logs/memoryssa.full.log:191: ; MemoryUse(liveOnEntry)
+[MemorySSA] llvm/utils/memory-carried-addrspace-provenance/logs/memoryssa.full.log:192:   %value = load i32, ptr %p.reload, align 4
+[MemorySSA] llvm/utils/memory-carried-addrspace-provenance/logs/memoryssa.full.log:201: ; 1 = MemoryDef(liveOnEntry)
+[MemorySSA] llvm/utils/memory-carried-addrspace-provenance/logs/memoryssa.full.log:202:   store ptr %p, ptr addrspace(5) %slot, align 8
+[MemorySSA] llvm/utils/memory-carried-addrspace-provenance/logs/memoryssa.full.log:203: ; MemoryUse(1)
+[MemorySSA] llvm/utils/memory-carried-addrspace-provenance/logs/memoryssa.full.log:204:   %p.reload = load ptr, ptr addrspace(5) %slot, align 8
+[MemorySSA] llvm/utils/memory-carried-addrspace-provenance/logs/memoryssa.full.log:205: ; MemoryUse(liveOnEntry)
+[MemorySSA] llvm/utils/memory-carried-addrspace-provenance/logs/memoryssa.full.log:206:   %value = load i32, ptr %p.reload, align 4
+
+[AAEval] Alias analysis is used to distinguish slot stores that may/must alias the dynamic reload slot from unrelated stores.
+[AAEval] llvm/utils/memory-carried-addrspace-provenance/logs/aa-eval.full.log:7: Function: positive_single_slot: 2 pointers, 0 call sites
+[AAEval] llvm/utils/memory-carried-addrspace-provenance/logs/aa-eval.full.log:8:   NoAlias:	i32* %p.reload, ptr addrspace(5)* %slot
+[AAEval] llvm/utils/memory-carried-addrspace-provenance/logs/aa-eval.full.log:10:   NoAlias:	ptr addrspace(5)* %slot0, ptr addrspace(5)* %slot1
+[AAEval] llvm/utils/memory-carried-addrspace-provenance/logs/aa-eval.full.log:11:   NoAlias:	ptr addrspace(5)* %slot0, ptr addrspace(5)* %slot2
+[AAEval] llvm/utils/memory-carried-addrspace-provenance/logs/aa-eval.full.log:12:   NoAlias:	ptr addrspace(5)* %slot1, ptr addrspace(5)* %slot2
+[AAEval] llvm/utils/memory-carried-addrspace-provenance/logs/aa-eval.full.log:13:   NoAlias:	ptr addrspace(5)* %slot0, ptr addrspace(5)* %slot3
+[AAEval] llvm/utils/memory-carried-addrspace-provenance/logs/aa-eval.full.log:14:   NoAlias:	ptr addrspace(5)* %slot1, ptr addrspace(5)* %slot3
+[AAEval] llvm/utils/memory-carried-addrspace-provenance/logs/aa-eval.full.log:15:   NoAlias:	ptr addrspace(5)* %slot2, ptr addrspace(5)* %slot3
+[AAEval] llvm/utils/memory-carried-addrspace-provenance/logs/aa-eval.full.log:16:   MayAlias:	ptr addrspace(5)* %slot.dynamic, ptr addrspace(5)* %slot0
+[AAEval] llvm/utils/memory-carried-addrspace-provenance/logs/aa-eval.full.log:17:   MayAlias:	ptr addrspace(5)* %slot.dynamic, ptr addrspace(5)* %slot1
+[AAEval] llvm/utils/memory-carried-addrspace-provenance/logs/aa-eval.full.log:18:   MayAlias:	ptr addrspace(5)* %slot.dynamic, ptr addrspace(5)* %slot2
+[AAEval] llvm/utils/memory-carried-addrspace-provenance/logs/aa-eval.full.log:19:   MayAlias:	ptr addrspace(5)* %slot.dynamic, ptr addrspace(5)* %slot3
+[AAEval] llvm/utils/memory-carried-addrspace-provenance/logs/aa-eval.full.log:20:   NoAlias:	i32* %p.reload, ptr addrspace(5)* %slot0
+[AAEval] llvm/utils/memory-carried-addrspace-provenance/logs/aa-eval.full.log:21:   NoAlias:	i32* %p.reload, ptr addrspace(5)* %slot1
+[AAEval] llvm/utils/memory-carried-addrspace-provenance/logs/aa-eval.full.log:22:   NoAlias:	i32* %p.reload, ptr addrspace(5)* %slot2
+[AAEval] llvm/utils/memory-carried-addrspace-provenance/logs/aa-eval.full.log:23:   NoAlias:	i32* %p.reload, ptr addrspace(5)* %slot3
+[AAEval] llvm/utils/memory-carried-addrspace-provenance/logs/aa-eval.full.log:24:   NoAlias:	i32* %p.reload, ptr addrspace(5)* %slot.dynamic
+[AAEval] llvm/utils/memory-carried-addrspace-provenance/logs/aa-eval.full.log:25:   NoAlias:	i32 addrspace(1)* %global.gep, ptr addrspace(5)* %slot0
+[AAEval] llvm/utils/memory-carried-addrspace-provenance/logs/aa-eval.full.log:26:   NoAlias:	i32 addrspace(1)* %global.gep, ptr addrspace(5)* %slot1
+[AAEval] llvm/utils/memory-carried-addrspace-provenance/logs/aa-eval.full.log:27:   NoAlias:	i32 addrspace(1)* %global.gep, ptr addrspace(5)* %slot2
+[AAEval] llvm/utils/memory-carried-addrspace-provenance/logs/aa-eval.full.log:28:   NoAlias:	i32 addrspace(1)* %global.gep, ptr addrspace(5)* %slot3
+[AAEval] llvm/utils/memory-carried-addrspace-provenance/logs/aa-eval.full.log:29:   NoAlias:	i32 addrspace(1)* %global.gep, ptr addrspace(5)* %slot.dynamic
+[AAEval] llvm/utils/memory-carried-addrspace-provenance/logs/aa-eval.full.log:30:   MayAlias:	i32 addrspace(1)* %global.gep, i32* %p.reload
+[AAEval] llvm/utils/memory-carried-addrspace-provenance/logs/aa-eval.full.log:32:   NoAlias:	i32* %p.reload, ptr addrspace(5)* %slot
+[AAEval] llvm/utils/memory-carried-addrspace-provenance/logs/aa-eval.full.log:34:   NoAlias:	i32* %p.reload, ptr addrspace(5)* %slot
+[AAEval] llvm/utils/memory-carried-addrspace-provenance/logs/aa-eval.full.log:36:   MayAlias:	ptr addrspace(5)* %slot.dynamic, ptr addrspace(5)* %slot0
+[AAEval] llvm/utils/memory-carried-addrspace-provenance/logs/aa-eval.full.log:37:   NoAlias:	i32* %p.reload, ptr addrspace(5)* %slot0
+[AAEval] llvm/utils/memory-carried-addrspace-provenance/logs/aa-eval.full.log:38:   NoAlias:	i32* %p.reload, ptr addrspace(5)* %slot.dynamic
+[AAEval] llvm/utils/memory-carried-addrspace-provenance/logs/aa-eval.full.log:40:   MayAlias:	i32* %p.reload, ptr addrspace(5)* %slot
+[AAEval] llvm/utils/memory-carried-addrspace-provenance/logs/aa-eval.full.log:41:   Both ModRef:  Ptr: ptr* %slot	<->  call void @unknown_clobber(ptr addrspace(5) %slot)
+[AAEval] llvm/utils/memory-carried-addrspace-provenance/logs/aa-eval.full.log:42:   Both ModRef:  Ptr: i32* %p.reload	<->  call void @unknown_clobber(ptr addrspace(5) %slot)
+[AAEval] llvm/utils/memory-carried-addrspace-provenance/logs/aa-eval.full.log:43: Function: negative_volatile_slot_load: 2 pointers, 0 call sites
+[AAEval] llvm/utils/memory-carried-addrspace-provenance/logs/aa-eval.full.log:44:   NoAlias:	i32* %p.reload, ptr addrspace(5)* %slot
+[AAEval] llvm/utils/memory-carried-addrspace-provenance/logs/aa-eval.full.log:45: Function: negative_atomic_slot_load: 2 pointers, 1 call sites
+[AAEval] llvm/utils/memory-carried-addrspace-provenance/logs/aa-eval.full.log:46:   NoAlias:	i32* %p.reload, ptr addrspace(5)* %slot
+[AAEval] llvm/utils/memory-carried-addrspace-provenance/logs/aa-eval.full.log:47:   Both ModRef:  Ptr: ptr* %slot	<->  %p.reload = load atomic ptr, ptr addrspace(5) %slot monotonic, align 8
+[AAEval] llvm/utils/memory-carried-addrspace-provenance/logs/aa-eval.full.log:48:   NoModRef:  Ptr: i32* %p.reload	<->  %p.reload = load atomic ptr, ptr addrspace(5) %slot monotonic, align 8
+[AAEval] llvm/utils/memory-carried-addrspace-provenance/logs/aa-eval.full.log:49: Function: negative_slot_address_space_is_not_value_address_space: 2 pointers, 0 call sites
+[AAEval] llvm/utils/memory-carried-addrspace-provenance/logs/aa-eval.full.log:50:   NoAlias:	i32* %p.reload, ptr addrspace(5)* %slot
+[AAEval] llvm/utils/memory-carried-addrspace-provenance/logs/aa-eval.full.log:51: Function: negative_inttoptr_stored_value: 2 pointers, 0 call sites
+[AAEval] llvm/utils/memory-carried-addrspace-provenance/logs/aa-eval.full.log:52:   NoAlias:	i32* %p.reload, ptr addrspace(5)* %slot
+[AAEval] llvm/utils/memory-carried-addrspace-provenance/logs/aa-eval.full.log:60:   4 Total ModRef Queries Performed
+
+[InferAddressSpaces] The pass uses the MemorySSA+AA seed to insert a post-reload addrspacecast and rewrite downstream dereferences.
+[InferAddressSpaces] llvm/utils/memory-carried-addrspace-provenance/logs/infer-address-spaces.debug.full.log:20: ; *** IR Dump Before InferAddressSpacesPass on positive_single_slot ***
+[InferAddressSpaces] llvm/utils/memory-carried-addrspace-provenance/logs/infer-address-spaces.debug.full.log:26:   %sh.generic = addrspacecast ptr addrspace(3) %sh.gep to ptr
+[InferAddressSpaces] llvm/utils/memory-carried-addrspace-provenance/logs/infer-address-spaces.debug.full.log:32: Running pass: InferAddressSpacesPass on positive_single_slot (8 instructions)
+[InferAddressSpaces] llvm/utils/memory-carried-addrspace-provenance/logs/infer-address-spaces.debug.full.log:45: ; *** IR Dump After InferAddressSpacesPass on positive_single_slot ***
+[InferAddressSpaces] llvm/utils/memory-carried-addrspace-provenance/logs/infer-address-spaces.debug.full.log:51:   %sh.generic = addrspacecast ptr addrspace(3) %sh.gep to ptr
+[InferAddressSpaces] llvm/utils/memory-carried-addrspace-provenance/logs/infer-address-spaces.debug.full.log:54:   %1 = addrspacecast ptr %p.reload to ptr addrspace(3)
+[InferAddressSpaces] llvm/utils/memory-carried-addrspace-provenance/logs/infer-address-spaces.debug.full.log:55:   %value = load i32, ptr addrspace(3) %1, align 4
+[InferAddressSpaces] llvm/utils/memory-carried-addrspace-provenance/logs/infer-address-spaces.debug.full.log:58: ; *** IR Dump Before InferAddressSpacesPass on positive_dynamic_array ***
+[InferAddressSpaces] llvm/utils/memory-carried-addrspace-provenance/logs/infer-address-spaces.debug.full.log:64:   %gen0 = addrspacecast ptr addrspace(3) %sh0 to ptr
+[InferAddressSpaces] llvm/utils/memory-carried-addrspace-provenance/logs/infer-address-spaces.debug.full.log:68:   %gen1 = addrspacecast ptr addrspace(3) %sh1 to ptr
+[InferAddressSpaces] llvm/utils/memory-carried-addrspace-provenance/logs/infer-address-spaces.debug.full.log:72:   %gen2 = addrspacecast ptr addrspace(3) %sh2 to ptr
+[InferAddressSpaces] llvm/utils/memory-carried-addrspace-provenance/logs/infer-address-spaces.debug.full.log:76:   %gen3 = addrspacecast ptr addrspace(3) %sh3 to ptr
+[InferAddressSpaces] llvm/utils/memory-carried-addrspace-provenance/logs/infer-address-spaces.debug.full.log:88: Running pass: InferAddressSpacesPass on positive_dynamic_array (26 instructions)
+[InferAddressSpaces] llvm/utils/memory-carried-addrspace-provenance/logs/infer-address-spaces.debug.full.log:101: ; *** IR Dump After InferAddressSpacesPass on positive_dynamic_array ***
+[InferAddressSpaces] llvm/utils/memory-carried-addrspace-provenance/logs/infer-address-spaces.debug.full.log:107:   %gen0 = addrspacecast ptr addrspace(3) %sh0 to ptr
+[InferAddressSpaces] llvm/utils/memory-carried-addrspace-provenance/logs/infer-address-spaces.debug.full.log:111:   %gen1 = addrspacecast ptr addrspace(3) %sh1 to ptr
+[InferAddressSpaces] llvm/utils/memory-carried-addrspace-provenance/logs/infer-address-spaces.debug.full.log:115:   %gen2 = addrspacecast ptr addrspace(3) %sh2 to ptr
+[InferAddressSpaces] llvm/utils/memory-carried-addrspace-provenance/logs/infer-address-spaces.debug.full.log:119:   %gen3 = addrspacecast ptr addrspace(3) %sh3 to ptr
+[InferAddressSpaces] llvm/utils/memory-carried-addrspace-provenance/logs/infer-address-spaces.debug.full.log:125:   %1 = addrspacecast ptr %p.reload to ptr addrspace(3)
+[InferAddressSpaces] llvm/utils/memory-carried-addrspace-provenance/logs/infer-address-spaces.debug.full.log:126:   %value = load i32, ptr addrspace(3) %1, align 4
+[InferAddressSpaces] llvm/utils/memory-carried-addrspace-provenance/logs/infer-address-spaces.debug.full.log:132: ; *** IR Dump Before InferAddressSpacesPass on positive_cfg_merge ***
+[InferAddressSpaces] llvm/utils/memory-carried-addrspace-provenance/logs/infer-address-spaces.debug.full.log:141:   %gen0 = addrspacecast ptr addrspace(3) %sh0 to ptr
+[InferAddressSpaces] llvm/utils/memory-carried-addrspace-provenance/logs/infer-address-spaces.debug.full.log:147:   %gen1 = addrspacecast ptr addrspace(3) %sh1 to ptr
+[InferAddressSpaces] llvm/utils/memory-carried-addrspace-provenance/logs/infer-address-spaces.debug.full.log:156: Running pass: InferAddressSpacesPass on positive_cfg_merge (14 instructions)
+[InferAddressSpaces] llvm/utils/memory-carried-addrspace-provenance/logs/infer-address-spaces.debug.full.log:169: ; *** IR Dump After InferAddressSpacesPass on positive_cfg_merge ***
+[InferAddressSpaces] llvm/utils/memory-carried-addrspace-provenance/logs/infer-address-spaces.debug.full.log:178:   %gen0 = addrspacecast ptr addrspace(3) %sh0 to ptr
+[InferAddressSpaces] llvm/utils/memory-carried-addrspace-provenance/logs/infer-address-spaces.debug.full.log:184:   %gen1 = addrspacecast ptr addrspace(3) %sh1 to ptr
+[InferAddressSpaces] llvm/utils/memory-carried-addrspace-provenance/logs/infer-address-spaces.debug.full.log:190:   %1 = addrspacecast ptr %p.reload to ptr addrspace(3)
+[InferAddressSpaces] llvm/utils/memory-carried-addrspace-provenance/logs/infer-address-spaces.debug.full.log:191:   %value = load i32, ptr addrspace(3) %1, align 4
+[InferAddressSpaces] llvm/utils/memory-carried-addrspace-provenance/logs/infer-address-spaces.debug.full.log:194: ; *** IR Dump Before InferAddressSpacesPass on negative_conflicting_shared_global ***
+[InferAddressSpaces] llvm/utils/memory-carried-addrspace-provenance/logs/infer-address-spaces.debug.full.log:203:   %sh.gen = addrspacecast ptr addrspace(3) %sh to ptr
+[InferAddressSpaces] llvm/utils/memory-carried-addrspace-provenance/logs/infer-address-spaces.debug.full.log:218: Running pass: InferAddressSpacesPass on negative_conflicting_shared_global (14 instructions)
+[InferAddressSpaces] llvm/utils/memory-carried-addrspace-provenance/logs/infer-address-spaces.debug.full.log:231: ; *** IR Dump After InferAddressSpacesPass on negative_conflicting_shared_global ***
+[InferAddressSpaces] llvm/utils/memory-carried-addrspace-provenance/logs/infer-address-spaces.debug.full.log:240:   %sh.gen = addrspacecast ptr addrspace(3) %sh to ptr
+[InferAddressSpaces] llvm/utils/memory-carried-addrspace-provenance/logs/infer-address-spaces.debug.full.log:255: ; *** IR Dump Before InferAddressSpacesPass on negative_partial_dynamic_array_init ***
+[InferAddressSpaces] llvm/utils/memory-carried-addrspace-provenance/logs/infer-address-spaces.debug.full.log:261:   %sh.gen = addrspacecast ptr addrspace(3) %sh to ptr
+[InferAddressSpaces] llvm/utils/memory-carried-addrspace-provenance/logs/infer-address-spaces.debug.full.log:270: Running pass: InferAddressSpacesPass on negative_partial_dynamic_array_init (11 instructions)
+[InferAddressSpaces] llvm/utils/memory-carried-addrspace-provenance/logs/infer-address-spaces.debug.full.log:283: ; *** IR Dump After InferAddressSpacesPass on negative_partial_dynamic_array_init ***
+[InferAddressSpaces] llvm/utils/memory-carried-addrspace-provenance/logs/infer-address-spaces.debug.full.log:289:   %sh.gen = addrspacecast ptr addrspace(3) %sh to ptr
+[InferAddressSpaces] llvm/utils/memory-carried-addrspace-provenance/logs/infer-address-spaces.debug.full.log:298: ; *** IR Dump Before InferAddressSpacesPass on negative_unknown_call_clobber ***
+[InferAddressSpaces] llvm/utils/memory-carried-addrspace-provenance/logs/infer-address-spaces.debug.full.log:304:   %sh.gen = addrspacecast ptr addrspace(3) %sh to ptr
+[InferAddressSpaces] llvm/utils/memory-carried-addrspace-provenance/logs/infer-address-spaces.debug.full.log:311: Running pass: InferAddressSpacesPass on negative_unknown_call_clobber (9 instructions)
+[InferAddressSpaces] llvm/utils/memory-carried-addrspace-provenance/logs/infer-address-spaces.debug.full.log:324: ; *** IR Dump After InferAddressSpacesPass on negative_unknown_call_clobber ***
+[InferAddressSpaces] llvm/utils/memory-carried-addrspace-provenance/logs/infer-address-spaces.debug.full.log:330:   %sh.gen = addrspacecast ptr addrspace(3) %sh to ptr
+[InferAddressSpaces] llvm/utils/memory-carried-addrspace-provenance/logs/infer-address-spaces.debug.full.log:337: ; *** IR Dump Before InferAddressSpacesPass on negative_volatile_slot_load ***
+[InferAddressSpaces] llvm/utils/memory-carried-addrspace-provenance/logs/infer-address-spaces.debug.full.log:343:   %sh.gen = addrspacecast ptr addrspace(3) %sh to ptr
+[InferAddressSpaces] llvm/utils/memory-carried-addrspace-provenance/logs/infer-address-spaces.debug.full.log:349: Running pass: InferAddressSpacesPass on negative_volatile_slot_load (8 instructions)
+[InferAddressSpaces] llvm/utils/memory-carried-addrspace-provenance/logs/infer-address-spaces.debug.full.log:362: ; *** IR Dump After InferAddressSpacesPass on negative_volatile_slot_load ***
+[InferAddressSpaces] llvm/utils/memory-carried-addrspace-provenance/logs/infer-address-spaces.debug.full.log:368:   %sh.gen = addrspacecast ptr addrspace(3) %sh to ptr
+[InferAddressSpaces] llvm/utils/memory-carried-addrspace-provenance/logs/infer-address-spaces.debug.full.log:374: ; *** IR Dump Before InferAddressSpacesPass on negative_atomic_slot_load ***
+[InferAddressSpaces] llvm/utils/memory-carried-addrspace-provenance/logs/infer-address-spaces.debug.full.log:380:   %sh.gen = addrspacecast ptr addrspace(3) %sh to ptr
+[InferAddressSpaces] llvm/utils/memory-carried-addrspace-provenance/logs/infer-address-spaces.debug.full.log:386: Running pass: InferAddressSpacesPass on negative_atomic_slot_load (8 instructions)
+[InferAddressSpaces] llvm/utils/memory-carried-addrspace-provenance/logs/infer-address-spaces.debug.full.log:399: ; *** IR Dump After InferAddressSpacesPass on negative_atomic_slot_load ***
+[InferAddressSpaces] llvm/utils/memory-carried-addrspace-provenance/logs/infer-address-spaces.debug.full.log:405:   %sh.gen = addrspacecast ptr addrspace(3) %sh to ptr
+[InferAddressSpaces] llvm/utils/memory-carried-addrspace-provenance/logs/infer-address-spaces.debug.full.log:411: ; *** IR Dump Before InferAddressSpacesPass on negative_slot_address_space_is_not_value_address_space ***
+[InferAddressSpaces] llvm/utils/memory-carried-addrspace-provenance/logs/infer-address-spaces.debug.full.log:421: Running pass: InferAddressSpacesPass on negative_slot_address_space_is_not_value_address_space (6 instructions)
+[InferAddressSpaces] llvm/utils/memory-carried-addrspace-provenance/logs/infer-address-spaces.debug.full.log:434: ; *** IR Dump After InferAddressSpacesPass on negative_slot_address_space_is_not_value_address_space ***
+[InferAddressSpaces] llvm/utils/memory-carried-addrspace-provenance/logs/infer-address-spaces.debug.full.log:444: ; *** IR Dump Before InferAddressSpacesPass on negative_inttoptr_stored_value ***
+[InferAddressSpaces] llvm/utils/memory-carried-addrspace-provenance/logs/infer-address-spaces.debug.full.log:455: Running pass: InferAddressSpacesPass on negative_inttoptr_stored_value (7 instructions)
+[InferAddressSpaces] llvm/utils/memory-carried-addrspace-provenance/logs/infer-address-spaces.debug.full.log:468: ; *** IR Dump After InferAddressSpacesPass on negative_inttoptr_stored_value ***

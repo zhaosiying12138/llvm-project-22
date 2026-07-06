@@ -1,0 +1,2 @@
+build/bin/clang++ --version
+exit=0

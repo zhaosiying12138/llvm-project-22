@@ -1,0 +1,9 @@
+LLVM (http://llvm.org/):
+  LLVM version 23.0.0git
+  Optimized build.
+  Default target: 
+  Host CPU: tigerlake
+
+  Registered Targets:
+    nvptx   - NVIDIA PTX 32-bit
+    nvptx64 - NVIDIA PTX 64-bit

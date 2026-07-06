@@ -1,0 +1,2 @@
+build/bin/llc -march=nvptx64 -mcpu=sm_80 llvm/utils/memory-carried-addrspace-provenance/artifacts/reduced-godbolt-pattern.ll -o llvm/utils/memory-carried-addrspace-provenance/artifacts/reduced-godbolt-pattern.before-infer.ptx
+exit=0

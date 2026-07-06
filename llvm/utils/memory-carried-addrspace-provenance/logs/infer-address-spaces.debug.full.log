@@ -1,0 +1,483 @@
+PRIMARY COMMAND: build/bin/opt -debug-only=infer-address-spaces -S -passes=verify,infer-address-spaces,verify llvm/utils/memory-carried-addrspace-provenance/artifacts/reduced-godbolt-pattern.ll -o llvm/utils/memory-carried-addrspace-provenance/artifacts/debug-run.after-infer.ll
+EXIT: 1
+
+STDOUT:
+
+STDERR:
+opt: Unknown command line argument '-debug-only=infer-address-spaces'.  Try: 'build/bin/opt --help'
+opt: Did you mean '--debug-pass=infer-address-spaces'?
+
+
+FALLBACK COMMAND: build/bin/opt -debug-pass-manager -print-before=infer-address-spaces -print-after=infer-address-spaces -S -passes=verify,infer-address-spaces,verify llvm/utils/memory-carried-addrspace-provenance/artifacts/reduced-godbolt-pattern.ll -o llvm/utils/memory-carried-addrspace-provenance/artifacts/debug-run.after-infer.ll
+EXIT: 0
+
+STDOUT:
+
+STDERR:
+Running pass: VerifierPass on [module]
+Running analysis: VerifierAnalysis on [module]
+Running analysis: InnerAnalysisManagerProxy<FunctionAnalysisManager, Module> on [module]
+; *** IR Dump Before InferAddressSpacesPass on positive_single_slot ***
+define i32 @positive_single_slot(i32 %idx) {
+entry:
+  %slot.generic = alloca ptr, align 8
+  %slot = addrspacecast ptr %slot.generic to ptr addrspace(5)
+  %sh.gep = getelementptr inbounds [256 x i32], ptr addrspace(3) @shared_storage, i32 0, i32 %idx
+  %sh.generic = addrspacecast ptr addrspace(3) %sh.gep to ptr
+  store ptr %sh.generic, ptr addrspace(5) %slot, align 8
+  %p.reload = load ptr, ptr addrspace(5) %slot, align 8
+  %value = load i32, ptr %p.reload, align 4
+  ret i32 %value
+}
+Running pass: InferAddressSpacesPass on positive_single_slot (8 instructions)
+Running analysis: AssumptionAnalysis on positive_single_slot
+Running analysis: TargetIRAnalysis on positive_single_slot
+Running analysis: DominatorTreeAnalysis on positive_single_slot
+Running analysis: AAManager on positive_single_slot
+Running analysis: TargetLibraryAnalysis on positive_single_slot
+Running analysis: NVPTXAA on positive_single_slot
+Running analysis: BasicAA on positive_single_slot
+Running analysis: ScopedNoAliasAA on positive_single_slot
+Running analysis: TypeBasedAA on positive_single_slot
+Running analysis: OuterAnalysisManagerProxy<ModuleAnalysisManager, Function> on positive_single_slot
+Running analysis: MemorySSAAnalysis on positive_single_slot
+Invalidating analysis: MemorySSAAnalysis on positive_single_slot
+; *** IR Dump After InferAddressSpacesPass on positive_single_slot ***
+define i32 @positive_single_slot(i32 %idx) {
+entry:
+  %slot.generic = alloca ptr, align 8
+  %0 = addrspacecast ptr %slot.generic to ptr addrspace(5)
+  %sh.gep = getelementptr inbounds [256 x i32], ptr addrspace(3) @shared_storage, i32 0, i32 %idx
+  %sh.generic = addrspacecast ptr addrspace(3) %sh.gep to ptr
+  store ptr %sh.generic, ptr addrspace(5) %0, align 8
+  %p.reload = load ptr, ptr addrspace(5) %0, align 8
+  %1 = addrspacecast ptr %p.reload to ptr addrspace(3)
+  %value = load i32, ptr addrspace(3) %1, align 4
+  ret i32 %value
+}
+; *** IR Dump Before InferAddressSpacesPass on positive_dynamic_array ***
+define i32 @positive_dynamic_array(i32 %selector) {
+entry:
+  %slots.generic = alloca [4 x ptr], align 8
+  %slots = addrspacecast ptr %slots.generic to ptr addrspace(5)
+  %sh0 = getelementptr inbounds [256 x i32], ptr addrspace(3) @shared_storage, i32 0, i32 0
+  %gen0 = addrspacecast ptr addrspace(3) %sh0 to ptr
+  %slot0 = getelementptr inbounds [4 x ptr], ptr addrspace(5) %slots, i32 0, i32 0
+  store ptr %gen0, ptr addrspace(5) %slot0, align 8
+  %sh1 = getelementptr inbounds [256 x i32], ptr addrspace(3) @shared_storage, i32 0, i32 1
+  %gen1 = addrspacecast ptr addrspace(3) %sh1 to ptr
+  %slot1 = getelementptr inbounds [4 x ptr], ptr addrspace(5) %slots, i32 0, i32 1
+  store ptr %gen1, ptr addrspace(5) %slot1, align 8
+  %sh2 = getelementptr inbounds [256 x i32], ptr addrspace(3) @shared_storage, i32 0, i32 2
+  %gen2 = addrspacecast ptr addrspace(3) %sh2 to ptr
+  %slot2 = getelementptr inbounds [4 x ptr], ptr addrspace(5) %slots, i32 0, i32 2
+  store ptr %gen2, ptr addrspace(5) %slot2, align 8
+  %sh3 = getelementptr inbounds [256 x i32], ptr addrspace(3) @shared_storage, i32 0, i32 3
+  %gen3 = addrspacecast ptr addrspace(3) %sh3 to ptr
+  %slot3 = getelementptr inbounds [4 x ptr], ptr addrspace(5) %slots, i32 0, i32 3
+  store ptr %gen3, ptr addrspace(5) %slot3, align 8
+  %which = and i32 %selector, 3
+  %slot.dynamic = getelementptr inbounds [4 x ptr], ptr addrspace(5) %slots, i32 0, i32 %which
+  %p.reload = load ptr, ptr addrspace(5) %slot.dynamic, align 8
+  %value = load i32, ptr %p.reload, align 4
+  %global.gep = getelementptr inbounds [256 x i32], ptr addrspace(1) @global_storage, i32 0, i32 %which
+  %global = load i32, ptr addrspace(1) %global.gep, align 4
+  %sum = add i32 %value, %global
+  ret i32 %sum
+}
+Running pass: InferAddressSpacesPass on positive_dynamic_array (26 instructions)
+Running analysis: AssumptionAnalysis on positive_dynamic_array
+Running analysis: TargetIRAnalysis on positive_dynamic_array
+Running analysis: DominatorTreeAnalysis on positive_dynamic_array
+Running analysis: AAManager on positive_dynamic_array
+Running analysis: TargetLibraryAnalysis on positive_dynamic_array
+Running analysis: NVPTXAA on positive_dynamic_array
+Running analysis: BasicAA on positive_dynamic_array
+Running analysis: ScopedNoAliasAA on positive_dynamic_array
+Running analysis: TypeBasedAA on positive_dynamic_array
+Running analysis: OuterAnalysisManagerProxy<ModuleAnalysisManager, Function> on positive_dynamic_array
+Running analysis: MemorySSAAnalysis on positive_dynamic_array
+Invalidating analysis: MemorySSAAnalysis on positive_dynamic_array
+; *** IR Dump After InferAddressSpacesPass on positive_dynamic_array ***
+define i32 @positive_dynamic_array(i32 %selector) {
+entry:
+  %slots.generic = alloca [4 x ptr], align 8
+  %0 = addrspacecast ptr %slots.generic to ptr addrspace(5)
+  %sh0 = getelementptr inbounds [256 x i32], ptr addrspace(3) @shared_storage, i32 0, i32 0
+  %gen0 = addrspacecast ptr addrspace(3) %sh0 to ptr
+  %slot0 = getelementptr inbounds [4 x ptr], ptr addrspace(5) %0, i32 0, i32 0
+  store ptr %gen0, ptr addrspace(5) %slot0, align 8
+  %sh1 = getelementptr inbounds [256 x i32], ptr addrspace(3) @shared_storage, i32 0, i32 1
+  %gen1 = addrspacecast ptr addrspace(3) %sh1 to ptr
+  %slot1 = getelementptr inbounds [4 x ptr], ptr addrspace(5) %0, i32 0, i32 1
+  store ptr %gen1, ptr addrspace(5) %slot1, align 8
+  %sh2 = getelementptr inbounds [256 x i32], ptr addrspace(3) @shared_storage, i32 0, i32 2
+  %gen2 = addrspacecast ptr addrspace(3) %sh2 to ptr
+  %slot2 = getelementptr inbounds [4 x ptr], ptr addrspace(5) %0, i32 0, i32 2
+  store ptr %gen2, ptr addrspace(5) %slot2, align 8
+  %sh3 = getelementptr inbounds [256 x i32], ptr addrspace(3) @shared_storage, i32 0, i32 3
+  %gen3 = addrspacecast ptr addrspace(3) %sh3 to ptr
+  %slot3 = getelementptr inbounds [4 x ptr], ptr addrspace(5) %0, i32 0, i32 3
+  store ptr %gen3, ptr addrspace(5) %slot3, align 8
+  %which = and i32 %selector, 3
+  %slot.dynamic = getelementptr inbounds [4 x ptr], ptr addrspace(5) %0, i32 0, i32 %which
+  %p.reload = load ptr, ptr addrspace(5) %slot.dynamic, align 8
+  %1 = addrspacecast ptr %p.reload to ptr addrspace(3)
+  %value = load i32, ptr addrspace(3) %1, align 4
+  %global.gep = getelementptr inbounds [256 x i32], ptr addrspace(1) @global_storage, i32 0, i32 %which
+  %global = load i32, ptr addrspace(1) %global.gep, align 4
+  %sum = add i32 %value, %global
+  ret i32 %sum
+}
+; *** IR Dump Before InferAddressSpacesPass on positive_cfg_merge ***
+define i32 @positive_cfg_merge(i1 %cond) {
+entry:
+  %slot.generic = alloca ptr, align 8
+  %slot = addrspacecast ptr %slot.generic to ptr addrspace(5)
+  br i1 %cond, label %left, label %right
+
+left:                                             ; preds = %entry
+  %sh0 = getelementptr inbounds [256 x i32], ptr addrspace(3) @shared_storage, i32 0, i32 10
+  %gen0 = addrspacecast ptr addrspace(3) %sh0 to ptr
+  store ptr %gen0, ptr addrspace(5) %slot, align 8
+  br label %merge
+
+right:                                            ; preds = %entry
+  %sh1 = getelementptr inbounds [256 x i32], ptr addrspace(3) @shared_storage, i32 0, i32 20
+  %gen1 = addrspacecast ptr addrspace(3) %sh1 to ptr
+  store ptr %gen1, ptr addrspace(5) %slot, align 8
+  br label %merge
+
+merge:                                            ; preds = %right, %left
+  %p.reload = load ptr, ptr addrspace(5) %slot, align 8
+  %value = load i32, ptr %p.reload, align 4
+  ret i32 %value
+}
+Running pass: InferAddressSpacesPass on positive_cfg_merge (14 instructions)
+Running analysis: AssumptionAnalysis on positive_cfg_merge
+Running analysis: TargetIRAnalysis on positive_cfg_merge
+Running analysis: DominatorTreeAnalysis on positive_cfg_merge
+Running analysis: AAManager on positive_cfg_merge
+Running analysis: TargetLibraryAnalysis on positive_cfg_merge
+Running analysis: NVPTXAA on positive_cfg_merge
+Running analysis: BasicAA on positive_cfg_merge
+Running analysis: ScopedNoAliasAA on positive_cfg_merge
+Running analysis: TypeBasedAA on positive_cfg_merge
+Running analysis: OuterAnalysisManagerProxy<ModuleAnalysisManager, Function> on positive_cfg_merge
+Running analysis: MemorySSAAnalysis on positive_cfg_merge
+Invalidating analysis: MemorySSAAnalysis on positive_cfg_merge
+; *** IR Dump After InferAddressSpacesPass on positive_cfg_merge ***
+define i32 @positive_cfg_merge(i1 %cond) {
+entry:
+  %slot.generic = alloca ptr, align 8
+  %0 = addrspacecast ptr %slot.generic to ptr addrspace(5)
+  br i1 %cond, label %left, label %right
+
+left:                                             ; preds = %entry
+  %sh0 = getelementptr inbounds [256 x i32], ptr addrspace(3) @shared_storage, i32 0, i32 10
+  %gen0 = addrspacecast ptr addrspace(3) %sh0 to ptr
+  store ptr %gen0, ptr addrspace(5) %0, align 8
+  br label %merge
+
+right:                                            ; preds = %entry
+  %sh1 = getelementptr inbounds [256 x i32], ptr addrspace(3) @shared_storage, i32 0, i32 20
+  %gen1 = addrspacecast ptr addrspace(3) %sh1 to ptr
+  store ptr %gen1, ptr addrspace(5) %0, align 8
+  br label %merge
+
+merge:                                            ; preds = %right, %left
+  %p.reload = load ptr, ptr addrspace(5) %0, align 8
+  %1 = addrspacecast ptr %p.reload to ptr addrspace(3)
+  %value = load i32, ptr addrspace(3) %1, align 4
+  ret i32 %value
+}
+; *** IR Dump Before InferAddressSpacesPass on negative_conflicting_shared_global ***
+define i32 @negative_conflicting_shared_global(i1 %cond) {
+entry:
+  %slot.generic = alloca ptr, align 8
+  %slot = addrspacecast ptr %slot.generic to ptr addrspace(5)
+  br i1 %cond, label %shared, label %global
+
+shared:                                           ; preds = %entry
+  %sh = getelementptr inbounds [256 x i32], ptr addrspace(3) @shared_storage, i32 0, i32 0
+  %sh.gen = addrspacecast ptr addrspace(3) %sh to ptr
+  store ptr %sh.gen, ptr addrspace(5) %slot, align 8
+  br label %merge
+
+global:                                           ; preds = %entry
+  %gl = getelementptr inbounds [256 x i32], ptr addrspace(1) @global_storage, i32 0, i32 0
+  %gl.gen = addrspacecast ptr addrspace(1) %gl to ptr
+  store ptr %gl.gen, ptr addrspace(5) %slot, align 8
+  br label %merge
+
+merge:                                            ; preds = %global, %shared
+  %p.reload = load ptr, ptr addrspace(5) %slot, align 8
+  %value = load i32, ptr %p.reload, align 4
+  ret i32 %value
+}
+Running pass: InferAddressSpacesPass on negative_conflicting_shared_global (14 instructions)
+Running analysis: AssumptionAnalysis on negative_conflicting_shared_global
+Running analysis: TargetIRAnalysis on negative_conflicting_shared_global
+Running analysis: DominatorTreeAnalysis on negative_conflicting_shared_global
+Running analysis: AAManager on negative_conflicting_shared_global
+Running analysis: TargetLibraryAnalysis on negative_conflicting_shared_global
+Running analysis: NVPTXAA on negative_conflicting_shared_global
+Running analysis: BasicAA on negative_conflicting_shared_global
+Running analysis: ScopedNoAliasAA on negative_conflicting_shared_global
+Running analysis: TypeBasedAA on negative_conflicting_shared_global
+Running analysis: OuterAnalysisManagerProxy<ModuleAnalysisManager, Function> on negative_conflicting_shared_global
+Running analysis: MemorySSAAnalysis on negative_conflicting_shared_global
+Invalidating analysis: MemorySSAAnalysis on negative_conflicting_shared_global
+; *** IR Dump After InferAddressSpacesPass on negative_conflicting_shared_global ***
+define i32 @negative_conflicting_shared_global(i1 %cond) {
+entry:
+  %slot.generic = alloca ptr, align 8
+  %0 = addrspacecast ptr %slot.generic to ptr addrspace(5)
+  br i1 %cond, label %shared, label %global
+
+shared:                                           ; preds = %entry
+  %sh = getelementptr inbounds [256 x i32], ptr addrspace(3) @shared_storage, i32 0, i32 0
+  %sh.gen = addrspacecast ptr addrspace(3) %sh to ptr
+  store ptr %sh.gen, ptr addrspace(5) %0, align 8
+  br label %merge
+
+global:                                           ; preds = %entry
+  %gl = getelementptr inbounds [256 x i32], ptr addrspace(1) @global_storage, i32 0, i32 0
+  %gl.gen = addrspacecast ptr addrspace(1) %gl to ptr
+  store ptr %gl.gen, ptr addrspace(5) %0, align 8
+  br label %merge
+
+merge:                                            ; preds = %global, %shared
+  %p.reload = load ptr, ptr addrspace(5) %0, align 8
+  %value = load i32, ptr %p.reload, align 4
+  ret i32 %value
+}
+; *** IR Dump Before InferAddressSpacesPass on negative_partial_dynamic_array_init ***
+define i32 @negative_partial_dynamic_array_init(i32 %selector) {
+entry:
+  %slots.generic = alloca [2 x ptr], align 8
+  %slots = addrspacecast ptr %slots.generic to ptr addrspace(5)
+  %sh = getelementptr inbounds [256 x i32], ptr addrspace(3) @shared_storage, i32 0, i32 0
+  %sh.gen = addrspacecast ptr addrspace(3) %sh to ptr
+  %slot0 = getelementptr inbounds [2 x ptr], ptr addrspace(5) %slots, i32 0, i32 0
+  store ptr %sh.gen, ptr addrspace(5) %slot0, align 8
+  %which = and i32 %selector, 1
+  %slot.dynamic = getelementptr inbounds [2 x ptr], ptr addrspace(5) %slots, i32 0, i32 %which
+  %p.reload = load ptr, ptr addrspace(5) %slot.dynamic, align 8
+  %value = load i32, ptr %p.reload, align 4
+  ret i32 %value
+}
+Running pass: InferAddressSpacesPass on negative_partial_dynamic_array_init (11 instructions)
+Running analysis: AssumptionAnalysis on negative_partial_dynamic_array_init
+Running analysis: TargetIRAnalysis on negative_partial_dynamic_array_init
+Running analysis: DominatorTreeAnalysis on negative_partial_dynamic_array_init
+Running analysis: AAManager on negative_partial_dynamic_array_init
+Running analysis: TargetLibraryAnalysis on negative_partial_dynamic_array_init
+Running analysis: NVPTXAA on negative_partial_dynamic_array_init
+Running analysis: BasicAA on negative_partial_dynamic_array_init
+Running analysis: ScopedNoAliasAA on negative_partial_dynamic_array_init
+Running analysis: TypeBasedAA on negative_partial_dynamic_array_init
+Running analysis: OuterAnalysisManagerProxy<ModuleAnalysisManager, Function> on negative_partial_dynamic_array_init
+Running analysis: MemorySSAAnalysis on negative_partial_dynamic_array_init
+Invalidating analysis: MemorySSAAnalysis on negative_partial_dynamic_array_init
+; *** IR Dump After InferAddressSpacesPass on negative_partial_dynamic_array_init ***
+define i32 @negative_partial_dynamic_array_init(i32 %selector) {
+entry:
+  %slots.generic = alloca [2 x ptr], align 8
+  %0 = addrspacecast ptr %slots.generic to ptr addrspace(5)
+  %sh = getelementptr inbounds [256 x i32], ptr addrspace(3) @shared_storage, i32 0, i32 0
+  %sh.gen = addrspacecast ptr addrspace(3) %sh to ptr
+  %slot0 = getelementptr inbounds [2 x ptr], ptr addrspace(5) %0, i32 0, i32 0
+  store ptr %sh.gen, ptr addrspace(5) %slot0, align 8
+  %which = and i32 %selector, 1
+  %slot.dynamic = getelementptr inbounds [2 x ptr], ptr addrspace(5) %0, i32 0, i32 %which
+  %p.reload = load ptr, ptr addrspace(5) %slot.dynamic, align 8
+  %value = load i32, ptr %p.reload, align 4
+  ret i32 %value
+}
+; *** IR Dump Before InferAddressSpacesPass on negative_unknown_call_clobber ***
+define i32 @negative_unknown_call_clobber() {
+entry:
+  %slot.generic = alloca ptr, align 8
+  %slot = addrspacecast ptr %slot.generic to ptr addrspace(5)
+  %sh = getelementptr inbounds [256 x i32], ptr addrspace(3) @shared_storage, i32 0, i32 0
+  %sh.gen = addrspacecast ptr addrspace(3) %sh to ptr
+  store ptr %sh.gen, ptr addrspace(5) %slot, align 8
+  call void @unknown_clobber(ptr addrspace(5) %slot)
+  %p.reload = load ptr, ptr addrspace(5) %slot, align 8
+  %value = load i32, ptr %p.reload, align 4
+  ret i32 %value
+}
+Running pass: InferAddressSpacesPass on negative_unknown_call_clobber (9 instructions)
+Running analysis: AssumptionAnalysis on negative_unknown_call_clobber
+Running analysis: TargetIRAnalysis on negative_unknown_call_clobber
+Running analysis: DominatorTreeAnalysis on negative_unknown_call_clobber
+Running analysis: AAManager on negative_unknown_call_clobber
+Running analysis: TargetLibraryAnalysis on negative_unknown_call_clobber
+Running analysis: NVPTXAA on negative_unknown_call_clobber
+Running analysis: BasicAA on negative_unknown_call_clobber
+Running analysis: ScopedNoAliasAA on negative_unknown_call_clobber
+Running analysis: TypeBasedAA on negative_unknown_call_clobber
+Running analysis: OuterAnalysisManagerProxy<ModuleAnalysisManager, Function> on negative_unknown_call_clobber
+Running analysis: MemorySSAAnalysis on negative_unknown_call_clobber
+Invalidating analysis: MemorySSAAnalysis on negative_unknown_call_clobber
+; *** IR Dump After InferAddressSpacesPass on negative_unknown_call_clobber ***
+define i32 @negative_unknown_call_clobber() {
+entry:
+  %slot.generic = alloca ptr, align 8
+  %0 = addrspacecast ptr %slot.generic to ptr addrspace(5)
+  %sh = getelementptr inbounds [256 x i32], ptr addrspace(3) @shared_storage, i32 0, i32 0
+  %sh.gen = addrspacecast ptr addrspace(3) %sh to ptr
+  store ptr %sh.gen, ptr addrspace(5) %0, align 8
+  call void @unknown_clobber(ptr addrspace(5) %0)
+  %p.reload = load ptr, ptr addrspace(5) %0, align 8
+  %value = load i32, ptr %p.reload, align 4
+  ret i32 %value
+}
+; *** IR Dump Before InferAddressSpacesPass on negative_volatile_slot_load ***
+define i32 @negative_volatile_slot_load() {
+entry:
+  %slot.generic = alloca ptr, align 8
+  %slot = addrspacecast ptr %slot.generic to ptr addrspace(5)
+  %sh = getelementptr inbounds [256 x i32], ptr addrspace(3) @shared_storage, i32 0, i32 0
+  %sh.gen = addrspacecast ptr addrspace(3) %sh to ptr
+  store ptr %sh.gen, ptr addrspace(5) %slot, align 8
+  %p.reload = load volatile ptr, ptr addrspace(5) %slot, align 8
+  %value = load i32, ptr %p.reload, align 4
+  ret i32 %value
+}
+Running pass: InferAddressSpacesPass on negative_volatile_slot_load (8 instructions)
+Running analysis: AssumptionAnalysis on negative_volatile_slot_load
+Running analysis: TargetIRAnalysis on negative_volatile_slot_load
+Running analysis: DominatorTreeAnalysis on negative_volatile_slot_load
+Running analysis: AAManager on negative_volatile_slot_load
+Running analysis: TargetLibraryAnalysis on negative_volatile_slot_load
+Running analysis: NVPTXAA on negative_volatile_slot_load
+Running analysis: BasicAA on negative_volatile_slot_load
+Running analysis: ScopedNoAliasAA on negative_volatile_slot_load
+Running analysis: TypeBasedAA on negative_volatile_slot_load
+Running analysis: OuterAnalysisManagerProxy<ModuleAnalysisManager, Function> on negative_volatile_slot_load
+Running analysis: MemorySSAAnalysis on negative_volatile_slot_load
+Invalidating analysis: MemorySSAAnalysis on negative_volatile_slot_load
+; *** IR Dump After InferAddressSpacesPass on negative_volatile_slot_load ***
+define i32 @negative_volatile_slot_load() {
+entry:
+  %slot.generic = alloca ptr, align 8
+  %0 = addrspacecast ptr %slot.generic to ptr addrspace(5)
+  %sh = getelementptr inbounds [256 x i32], ptr addrspace(3) @shared_storage, i32 0, i32 0
+  %sh.gen = addrspacecast ptr addrspace(3) %sh to ptr
+  store ptr %sh.gen, ptr addrspace(5) %0, align 8
+  %p.reload = load volatile ptr, ptr addrspace(5) %0, align 8
+  %value = load i32, ptr %p.reload, align 4
+  ret i32 %value
+}
+; *** IR Dump Before InferAddressSpacesPass on negative_atomic_slot_load ***
+define i32 @negative_atomic_slot_load() {
+entry:
+  %slot.generic = alloca ptr, align 8
+  %slot = addrspacecast ptr %slot.generic to ptr addrspace(5)
+  %sh = getelementptr inbounds [256 x i32], ptr addrspace(3) @shared_storage, i32 0, i32 0
+  %sh.gen = addrspacecast ptr addrspace(3) %sh to ptr
+  store ptr %sh.gen, ptr addrspace(5) %slot, align 8
+  %p.reload = load atomic ptr, ptr addrspace(5) %slot monotonic, align 8
+  %value = load i32, ptr %p.reload, align 4
+  ret i32 %value
+}
+Running pass: InferAddressSpacesPass on negative_atomic_slot_load (8 instructions)
+Running analysis: AssumptionAnalysis on negative_atomic_slot_load
+Running analysis: TargetIRAnalysis on negative_atomic_slot_load
+Running analysis: DominatorTreeAnalysis on negative_atomic_slot_load
+Running analysis: AAManager on negative_atomic_slot_load
+Running analysis: TargetLibraryAnalysis on negative_atomic_slot_load
+Running analysis: NVPTXAA on negative_atomic_slot_load
+Running analysis: BasicAA on negative_atomic_slot_load
+Running analysis: ScopedNoAliasAA on negative_atomic_slot_load
+Running analysis: TypeBasedAA on negative_atomic_slot_load
+Running analysis: OuterAnalysisManagerProxy<ModuleAnalysisManager, Function> on negative_atomic_slot_load
+Running analysis: MemorySSAAnalysis on negative_atomic_slot_load
+Invalidating analysis: MemorySSAAnalysis on negative_atomic_slot_load
+; *** IR Dump After InferAddressSpacesPass on negative_atomic_slot_load ***
+define i32 @negative_atomic_slot_load() {
+entry:
+  %slot.generic = alloca ptr, align 8
+  %0 = addrspacecast ptr %slot.generic to ptr addrspace(5)
+  %sh = getelementptr inbounds [256 x i32], ptr addrspace(3) @shared_storage, i32 0, i32 0
+  %sh.gen = addrspacecast ptr addrspace(3) %sh to ptr
+  store ptr %sh.gen, ptr addrspace(5) %0, align 8
+  %p.reload = load atomic ptr, ptr addrspace(5) %0 monotonic, align 8
+  %value = load i32, ptr %p.reload, align 4
+  ret i32 %value
+}
+; *** IR Dump Before InferAddressSpacesPass on negative_slot_address_space_is_not_value_address_space ***
+define i32 @negative_slot_address_space_is_not_value_address_space(ptr %unknown) {
+entry:
+  %slot.generic = alloca ptr, align 8
+  %slot = addrspacecast ptr %slot.generic to ptr addrspace(5)
+  store ptr %unknown, ptr addrspace(5) %slot, align 8
+  %p.reload = load ptr, ptr addrspace(5) %slot, align 8
+  %value = load i32, ptr %p.reload, align 4
+  ret i32 %value
+}
+Running pass: InferAddressSpacesPass on negative_slot_address_space_is_not_value_address_space (6 instructions)
+Running analysis: AssumptionAnalysis on negative_slot_address_space_is_not_value_address_space
+Running analysis: TargetIRAnalysis on negative_slot_address_space_is_not_value_address_space
+Running analysis: DominatorTreeAnalysis on negative_slot_address_space_is_not_value_address_space
+Running analysis: AAManager on negative_slot_address_space_is_not_value_address_space
+Running analysis: TargetLibraryAnalysis on negative_slot_address_space_is_not_value_address_space
+Running analysis: NVPTXAA on negative_slot_address_space_is_not_value_address_space
+Running analysis: BasicAA on negative_slot_address_space_is_not_value_address_space
+Running analysis: ScopedNoAliasAA on negative_slot_address_space_is_not_value_address_space
+Running analysis: TypeBasedAA on negative_slot_address_space_is_not_value_address_space
+Running analysis: OuterAnalysisManagerProxy<ModuleAnalysisManager, Function> on negative_slot_address_space_is_not_value_address_space
+Running analysis: MemorySSAAnalysis on negative_slot_address_space_is_not_value_address_space
+Invalidating analysis: MemorySSAAnalysis on negative_slot_address_space_is_not_value_address_space
+; *** IR Dump After InferAddressSpacesPass on negative_slot_address_space_is_not_value_address_space ***
+define i32 @negative_slot_address_space_is_not_value_address_space(ptr %unknown) {
+entry:
+  %slot.generic = alloca ptr, align 8
+  %0 = addrspacecast ptr %slot.generic to ptr addrspace(5)
+  store ptr %unknown, ptr addrspace(5) %0, align 8
+  %p.reload = load ptr, ptr addrspace(5) %0, align 8
+  %value = load i32, ptr %p.reload, align 4
+  ret i32 %value
+}
+; *** IR Dump Before InferAddressSpacesPass on negative_inttoptr_stored_value ***
+define i32 @negative_inttoptr_stored_value(i64 %raw) {
+entry:
+  %slot.generic = alloca ptr, align 8
+  %slot = addrspacecast ptr %slot.generic to ptr addrspace(5)
+  %p = inttoptr i64 %raw to ptr
+  store ptr %p, ptr addrspace(5) %slot, align 8
+  %p.reload = load ptr, ptr addrspace(5) %slot, align 8
+  %value = load i32, ptr %p.reload, align 4
+  ret i32 %value
+}
+Running pass: InferAddressSpacesPass on negative_inttoptr_stored_value (7 instructions)
+Running analysis: AssumptionAnalysis on negative_inttoptr_stored_value
+Running analysis: TargetIRAnalysis on negative_inttoptr_stored_value
+Running analysis: DominatorTreeAnalysis on negative_inttoptr_stored_value
+Running analysis: AAManager on negative_inttoptr_stored_value
+Running analysis: TargetLibraryAnalysis on negative_inttoptr_stored_value
+Running analysis: NVPTXAA on negative_inttoptr_stored_value
+Running analysis: BasicAA on negative_inttoptr_stored_value
+Running analysis: ScopedNoAliasAA on negative_inttoptr_stored_value
+Running analysis: TypeBasedAA on negative_inttoptr_stored_value
+Running analysis: OuterAnalysisManagerProxy<ModuleAnalysisManager, Function> on negative_inttoptr_stored_value
+Running analysis: MemorySSAAnalysis on negative_inttoptr_stored_value
+Invalidating analysis: MemorySSAAnalysis on negative_inttoptr_stored_value
+; *** IR Dump After InferAddressSpacesPass on negative_inttoptr_stored_value ***
+define i32 @negative_inttoptr_stored_value(i64 %raw) {
+entry:
+  %slot.generic = alloca ptr, align 8
+  %0 = addrspacecast ptr %slot.generic to ptr addrspace(5)
+  %p = inttoptr i64 %raw to ptr
+  store ptr %p, ptr addrspace(5) %0, align 8
+  %p.reload = load ptr, ptr addrspace(5) %0, align 8
+  %value = load i32, ptr %p.reload, align 4
+  ret i32 %value
+}
+Invalidating analysis: VerifierAnalysis on [module]
+Running pass: VerifierPass on [module]
+Running analysis: VerifierAnalysis on [module]
+Running pass: VerifierPass on [module]
+Running pass: PrintModulePass on [module]

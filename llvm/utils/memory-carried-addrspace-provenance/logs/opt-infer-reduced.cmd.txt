@@ -1,0 +1,2 @@
+build/bin/opt -S -passes=verify,infer-address-spaces,verify llvm/utils/memory-carried-addrspace-provenance/artifacts/reduced-godbolt-pattern.ll -o llvm/utils/memory-carried-addrspace-provenance/artifacts/reduced-godbolt-pattern.after-infer.ll
+exit=0

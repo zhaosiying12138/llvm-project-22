@@ -1,0 +1,59 @@
+Function: positive_single_slot: 2 pointers, 0 call sites
+  NoAlias:	i32* %p.reload, ptr addrspace(5)* %slot
+Function: positive_dynamic_array: 7 pointers, 0 call sites
+  NoAlias:	ptr addrspace(5)* %slot0, ptr addrspace(5)* %slot1
+  NoAlias:	ptr addrspace(5)* %slot0, ptr addrspace(5)* %slot2
+  NoAlias:	ptr addrspace(5)* %slot1, ptr addrspace(5)* %slot2
+  NoAlias:	ptr addrspace(5)* %slot0, ptr addrspace(5)* %slot3
+  NoAlias:	ptr addrspace(5)* %slot1, ptr addrspace(5)* %slot3
+  NoAlias:	ptr addrspace(5)* %slot2, ptr addrspace(5)* %slot3
+  MayAlias:	ptr addrspace(5)* %slot.dynamic, ptr addrspace(5)* %slot0
+  MayAlias:	ptr addrspace(5)* %slot.dynamic, ptr addrspace(5)* %slot1
+  MayAlias:	ptr addrspace(5)* %slot.dynamic, ptr addrspace(5)* %slot2
+  MayAlias:	ptr addrspace(5)* %slot.dynamic, ptr addrspace(5)* %slot3
+  NoAlias:	i32* %p.reload, ptr addrspace(5)* %slot0
+  NoAlias:	i32* %p.reload, ptr addrspace(5)* %slot1
+  NoAlias:	i32* %p.reload, ptr addrspace(5)* %slot2
+  NoAlias:	i32* %p.reload, ptr addrspace(5)* %slot3
+  NoAlias:	i32* %p.reload, ptr addrspace(5)* %slot.dynamic
+  NoAlias:	i32 addrspace(1)* %global.gep, ptr addrspace(5)* %slot0
+  NoAlias:	i32 addrspace(1)* %global.gep, ptr addrspace(5)* %slot1
+  NoAlias:	i32 addrspace(1)* %global.gep, ptr addrspace(5)* %slot2
+  NoAlias:	i32 addrspace(1)* %global.gep, ptr addrspace(5)* %slot3
+  NoAlias:	i32 addrspace(1)* %global.gep, ptr addrspace(5)* %slot.dynamic
+  MayAlias:	i32 addrspace(1)* %global.gep, i32* %p.reload
+Function: positive_cfg_merge: 2 pointers, 0 call sites
+  NoAlias:	i32* %p.reload, ptr addrspace(5)* %slot
+Function: negative_conflicting_shared_global: 2 pointers, 0 call sites
+  NoAlias:	i32* %p.reload, ptr addrspace(5)* %slot
+Function: negative_partial_dynamic_array_init: 3 pointers, 0 call sites
+  MayAlias:	ptr addrspace(5)* %slot.dynamic, ptr addrspace(5)* %slot0
+  NoAlias:	i32* %p.reload, ptr addrspace(5)* %slot0
+  NoAlias:	i32* %p.reload, ptr addrspace(5)* %slot.dynamic
+Function: negative_unknown_call_clobber: 2 pointers, 1 call sites
+  MayAlias:	i32* %p.reload, ptr addrspace(5)* %slot
+  Both ModRef:  Ptr: ptr* %slot	<->  call void @unknown_clobber(ptr addrspace(5) %slot)
+  Both ModRef:  Ptr: i32* %p.reload	<->  call void @unknown_clobber(ptr addrspace(5) %slot)
+Function: negative_volatile_slot_load: 2 pointers, 0 call sites
+  NoAlias:	i32* %p.reload, ptr addrspace(5)* %slot
+Function: negative_atomic_slot_load: 2 pointers, 1 call sites
+  NoAlias:	i32* %p.reload, ptr addrspace(5)* %slot
+  Both ModRef:  Ptr: ptr* %slot	<->  %p.reload = load atomic ptr, ptr addrspace(5) %slot monotonic, align 8
+  NoModRef:  Ptr: i32* %p.reload	<->  %p.reload = load atomic ptr, ptr addrspace(5) %slot monotonic, align 8
+Function: negative_slot_address_space_is_not_value_address_space: 2 pointers, 0 call sites
+  NoAlias:	i32* %p.reload, ptr addrspace(5)* %slot
+Function: negative_inttoptr_stored_value: 2 pointers, 0 call sites
+  NoAlias:	i32* %p.reload, ptr addrspace(5)* %slot
+===== Alias Analysis Evaluator Report =====
+  32 Total Alias Queries Performed
+  25 no alias responses (78.1%)
+  7 may alias responses (21.8%)
+  0 partial alias responses (0.0%)
+  0 must alias responses (0.0%)
+  Alias Analysis Evaluator Pointer Alias Summary: 78%/21%/0%/0%
+  4 Total ModRef Queries Performed
+  1 no mod/ref responses (25.0%)
+  0 mod responses (0.0%)
+  0 ref responses (0.0%)
+  3 mod & ref responses (75.0%)
+  Alias Analysis Evaluator Mod/Ref Summary: 25%/0%/0%/75%

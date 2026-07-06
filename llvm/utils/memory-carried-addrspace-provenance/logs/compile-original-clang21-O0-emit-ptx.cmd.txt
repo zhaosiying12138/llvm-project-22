@@ -1,0 +1,2 @@
+/usr/bin/clang++ --target=x86_64-unknown-linux-gnu -x cuda --cuda-gpu-arch=sm_80 --cuda-device-only -nocudainc -nocudalib -O0 -S llvm/utils/memory-carried-addrspace-provenance/godbolt_reproducer.cu -o llvm/utils/memory-carried-addrspace-provenance/artifacts/godbolt.original-clang21.O0.ptx
+exit=0

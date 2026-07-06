@@ -1,0 +1,2 @@
+/usr/bin/clang++ --version
+exit=0

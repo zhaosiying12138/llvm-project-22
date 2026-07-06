@@ -1,0 +1,2 @@
+build/bin/clang++ --target=x86_64-unknown-linux-gnu -x cuda --cuda-gpu-arch=sm_80 --cuda-device-only -nocudainc -nocudalib -O3 -S -emit-llvm llvm/utils/memory-carried-addrspace-provenance/godbolt_reproducer.cu -o llvm/utils/memory-carried-addrspace-provenance/artifacts/godbolt.patched-clang23.O3.ll
+exit=0
